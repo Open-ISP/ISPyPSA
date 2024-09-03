@@ -1,0 +1,32 @@
+[project]
+name = "template-repository"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "prakaa", email = "abiprakash007@gmail.com" }
+]
+dependencies = []
+readme = "README.md"
+requires-python = ">= 3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/template_repository"]
+
+[tool.pytest.ini_options]
+# path to tests for pytest
+testpaths = ["src", "tests"]
+# addopts = add options
+# --cov points pytest-cov to the src/ dir
+# --cov-branch runs branch coverage
+addopts = "-ra --doctest-modules --cov=src/ --cov-branch --cov-report xml:tests/coverage.xml --cov-report html:tests/htmlcov"

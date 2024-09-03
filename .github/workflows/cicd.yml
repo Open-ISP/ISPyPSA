@@ -1,0 +1,77 @@
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install rye with cache
+      - name: Install the latest version of rye
+        uses: eifinger/setup-rye@v4
+        with:
+          enable-cache: true
+      # Sync dependencies
+      - name: Sync dependencies
+        run: rye sync
+      # Run tests
+      - name: Run tests
+        run: rye test
+      # Code coverage to codecov.io
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: tests/coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+  # Publishes to PyPi if tests are passed and release is created
+  publish:
+    if: github.event_name == 'release' && github.event.action == 'created'
+    needs: test
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/isp-workbook-parser/
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      # Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install rye with cache
+      - name: Install the latest version of rye
+        uses: eifinger/setup-rye@v4
+        with:
+          enable-cache: true
+      # Sync dependencies
+      - name: Sync dependencies
+        run: rye sync
+      # Build
+      - name: Build
+        run: rye build
+      # Publish to PyPI
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
