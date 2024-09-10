@@ -166,4 +166,7 @@ scratch.py
 .~lock*.xlsx#
 
 # ispypsa ignores
-local_cache/
+model_inputs/*
+
+# ignore doit database
+.doit*
