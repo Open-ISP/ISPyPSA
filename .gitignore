@@ -161,3 +161,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 scratch.py
+
+# Excel lockfile
+.~lock*.xlsx#
+
+# ispypsa ignores
+local_cache/
