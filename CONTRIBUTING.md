@@ -40,12 +40,12 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `package_name` for local development.
+Ready to contribute? Here's how to set up `ispypsa` for local development.
 
-1. Download a copy of `package_name` locally.
+1. Download a copy of `ispypsa` locally.
 2. Install [`rye`](https://rye.astral.sh/).
-3. Install `package_name` using `rye` by running `rye sync` in the project directory.
-4. Install the `pre-commit` git hook scripts that `package_name` uses by running the following code using `rye`:
+3. Install `ispypsa` using `rye` by running `rye sync` in the project directory.
+4. Install the `pre-commit` git hook scripts that `ispypsa` uses by running the following code using `rye`:
 
       ```console
       $ rye run pre-commit install
@@ -73,5 +73,5 @@ Before you submit a pull request, check that it meets these guidelines:
 
 ## Code of Conduct
 
-Please note that the `package_name` project is released with a
+Please note that the `ispypsa` project is released with a
 [Code of Conduct](CONDUCT.md). By contributing to this project you agree to abide by its terms.
