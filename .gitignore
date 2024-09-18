@@ -166,7 +166,8 @@ scratch.py
 .~lock*.xlsx#
 
 # ispypsa ignores
-model_inputs/*
+## CSVs in model_inputs
+model_inputs/**/*.csv
 
 # ignore doit database
 .doit*
