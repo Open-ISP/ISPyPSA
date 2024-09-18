@@ -4,38 +4,91 @@ from pathlib import Path
 import pandas as pd
 import requests
 import xmltodict
+from thefuzz import process
+
+from .helpers import _fuzzy_match_names, _snakecase_string, ModelConfigOptionError
+
+_NEM_REGION_IDS = pd.Series(
+    {
+        "Queensland": "QLD",
+        "New South Wales": "NSW",
+        "Victoria": "VIC",
+        "South Australia": "SA",
+        "Tasmania": "TAS",
+    },
+    name="nem_region_id_mapping",
+)
 
 
-def template_sub_regional_network_table(
+def template_nodes(parsed_workbook_path: Path | str, resolution: str = "sub_regional"):
+    valid_resolution_options = ["sub_regional", "regional"]
+    if resolution not in valid_resolution_options:
+        raise ModelConfigOptionError(
+            f"The option '{resolution}' is not a valid option for `resolution`. "
+            + f"Select one of: {valid_resolution_options}"
+        )
+    elif resolution == "sub_regional":
+        template = _template_sub_regional_node_table(parsed_workbook_path)
+        index_col = "isp_sub_region_id"
+    elif resolution == "regional":
+        template = _template_regional_node_table(parsed_workbook_path)
+        index_col = "nem_region_id"
+    elif resolution == "copper_plate":
+        # TODO: Decide how to implement copper plate
+        print("Not implemented")
+        return None
+    # request and merge in substation coordinates for reference nodes
+    substation_coordinates = _request_transmission_substation_coordinates()
+    if not substation_coordinates.empty:
+        reference_node_col = process.extractOne("reference_node", template.columns)[0]
+        matched_subs = _fuzzy_match_names(
+            template[reference_node_col], substation_coordinates.index
+        )
+        reference_node_coordinates = pd.merge(
+            matched_subs,
+            substation_coordinates,
+            how="left",
+            left_on=reference_node_col,
+            right_index=True,
+        )
+        template = pd.concat(
+            [
+                template,
+                reference_node_coordinates["substation_latitude"],
+                reference_node_coordinates["substation_longitude"],
+            ],
+            axis=1,
+        )
+    template = template.set_index(index_col)
+    return template
+
+
+def _template_sub_regional_node_table(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
-    """Processes the 'Sub-regional network representation table' into an ISPyPSA template format
-
-    Regular expressions are used to separate the sub-regional node name and ID, and the
-    sub-regional reference node (i.e. substation) and its nominal voltage in kV.
+    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
     Returns:
-        ISPyPSA sub-regional network template in a :class:`pd.DataFrame`
+        ISPyPSA sub-regional network template in a :class:`pandas.DataFrame`
 
     """
     sub_regional_df = pd.read_csv(
         Path(parsed_workbook_path, "sub_regional_reference_nodes.csv")
     )
-    # Regular expression separates plain English names and capitalised sub-region IDs
-    split_name_id = sub_regional_df["ISP Sub-region"].str.extract(
-        r"([A-Za-z\s,]+)\s\(([A-Z]+)\)", expand=True
-    )
-    split_name_id.columns = ["isp_sub_region", "isp_sub_region_id"]
-    # Regular expression separates node name and 2-3 digit voltage
-    split_node_voltage = sub_regional_df["Sub-region Reference Node"].str.extract(
-        r"([A-Za-z\s]+)\s([0-9]{2,3})\skV"
-    )
+    name_id_col = "ISP Sub-region"
+    split_name_id = _split_name_id(sub_regional_df[name_id_col])
+    split_name_id.columns = [
+        _snakecase_string(name_id_col),
+        _snakecase_string(name_id_col + " ID"),
+    ]
+    node_voltage_col = "Sub-region Reference Node"
+    split_node_voltage = _split_node_voltage(sub_regional_df[node_voltage_col])
     split_node_voltage.columns = [
-        "sub_region_reference_node",
-        "sub_region_reference_node_voltage_kV",
+        _snakecase_string(node_voltage_col),
+        _snakecase_string(node_voltage_col + " Voltage (kV)"),
     ]
     sub_regional_network = pd.concat(
         [
@@ -45,8 +98,57 @@ def template_sub_regional_network_table(
         ],
         axis=1,
     )
-    sub_regional_network = sub_regional_network.set_index("isp_sub_region")
+    sub_regional_network["nem_region"] = _fuzzy_match_names(
+        sub_regional_network["nem_region"], _NEM_REGION_IDS.keys()
+    )
+    sub_regional_network["nem_region_id"] = sub_regional_network["nem_region"].replace(
+        _NEM_REGION_IDS
+    )
     return sub_regional_network
+
+
+def _template_regional_node_table(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
+    """Processes the 'Regional reference nodes' table into an ISPyPSA template format
+
+    Args:
+        parsed_workbook_path: Path to directory containing CSVs that are the output
+            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+    Returns:
+        ISPyPSA regional network template in a :class:`pandas.DataFrame`
+
+    """
+    regional_df = pd.read_csv(
+        Path(parsed_workbook_path, "regional_reference_nodes.csv")
+    )
+    name_id_col = "ISP Sub-region"
+    split_name_id = _split_name_id(regional_df[name_id_col])
+    split_name_id.columns = [
+        _snakecase_string(name_id_col),
+        _snakecase_string(name_id_col + " ID"),
+    ]
+    node_voltage_col = "Regional Reference Node"
+    split_node_voltage = _split_node_voltage(regional_df[node_voltage_col])
+    split_node_voltage.columns = [
+        _snakecase_string(node_voltage_col),
+        _snakecase_string(node_voltage_col + " Voltage (kV)"),
+    ]
+    regional_network = pd.concat(
+        [
+            regional_df["NEM Region"].rename("nem_region"),
+            split_name_id,
+            split_node_voltage,
+        ],
+        axis=1,
+    )
+    regional_network["nem_region"] = _fuzzy_match_names(
+        regional_network["nem_region"], _NEM_REGION_IDS.keys()
+    )
+    regional_network["nem_region_id"] = regional_network["nem_region"].replace(
+        _NEM_REGION_IDS
+    )
+    return regional_network
 
 
 def _request_transmission_substation_coordinates() -> pd.DataFrame:
@@ -60,7 +162,7 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
     using the same tools that are used to parse XML.
 
     Returns:
-        Substation names, latitude and longitude within a :class:`pd.DataFrame`.
+        Substation names, latitude and longitude within a :class:`pandas.DataFrame`.
         If request error is encountered or the HTTP status of the request is not OK,
         then an empty DataFrame will be returned with a warning that network node data
         will be templated without coordinate data
@@ -89,7 +191,10 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
                     "gml:Point"
                 ]["gml:pos"]
                 lat, long = coordinates.split(" ")
-                substation_coordinates[name] = {"latitude": lat, "longitude": long}
+                substation_coordinates[name] = {
+                    "substation_latitude": lat,
+                    "substation_longitude": long,
+                }
         else:
             logging.warning(
                 f"Failed to fetch substation coordinates. HTTP Status code: {r.status_code}."
@@ -97,5 +202,30 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
     except requests.exceptions.RequestException as e:
         logging.error(f"Error requesting substation coordinate data:\n{e}.")
     if not substation_coordinates:
-        logging.warning("Network node data will be templated without coordinate data")
+        logging.warning(
+            "Could not get substation coordinate data. "
+            + "Network node data will be templated without coordinate data."
+        )
     return pd.DataFrame(substation_coordinates).T
+
+
+def _split_name_id(series: pd.Series) -> pd.DataFrame:
+    """
+    Separate the a name (plain English) and ID in parentheses (capitalised letters)
+    using a regular expression
+    """
+    split_name_id = series.str.extract(
+        r"(?P<name>[A-Za-z\s,]+)\s\((?P<id>[A-Z]+)\)", expand=True
+    )
+    return split_name_id
+
+
+def _split_node_voltage(series: pd.Series) -> pd.DataFrame:
+    """
+    Separate the node name (plain English) and 2-3 digit voltage in kV using a regular
+    expression
+    """
+    split_node_voltage = series.str.extract(
+        r"(?P<name>[A-Za-z\s]+)\s(?P<voltage>[0-9]{2,3})\skV"
+    )
+    return split_node_voltage
