@@ -18,5 +18,6 @@ def task_cache_required_tables():
         "actions": [(build_parsed_workbook_cache, [cache_location])],
         "targets": [Path(cache_location, table + ".csv") for table in REQUIRED_TABLES],
         # force doit to always mark the task as up-to-date (unless target removed)
+        # N.B. this will NOT run if target exists but has been modified
         "uptodate": [True],
     }
