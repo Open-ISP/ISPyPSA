@@ -21,7 +21,7 @@ _NEM_REGION_IDS = pd.Series(
 
 
 def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_regional"):
-    valid_granularity_options = ["sub_regional", "regional"]
+    valid_granularity_options = ["sub_regional", "regional", "single_region"]
     if granularity not in valid_granularity_options:
         raise ModelConfigOptionError(
             f"The option '{granularity}' is not a valid option for `granularity`. "
@@ -33,10 +33,19 @@ def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_reg
     elif granularity == "regional":
         template = _template_regional_node_table(parsed_workbook_path)
         index_col = "nem_region_id"
-    elif granularity == "copper_plate":
-        # TODO: Decide how to implement copper plate
-        print("Not implemented")
-        return None
+
+    elif granularity == "single_region":
+        # TODO: Clarify `single_region`/`copper_plate` implementation
+        template = {
+            "isp_sub_region_id": "SNW",
+            "isp_sub_region": "Sydney, New Castle, Wollongong",
+            "reference_node": "Sydney West",
+            "reference_node_voltage_kv": 330,
+            "nem_region": "New South Wales",
+            "single_region_id": "NEM",
+        }
+        template = pd.DataFrame(template, index=[0])
+        index_col = "single_region_id"
     # request and merge in substation coordinates for reference nodes
     substation_coordinates = _request_transmission_substation_coordinates()
     if not substation_coordinates.empty:
