@@ -4,9 +4,33 @@ from typing import Iterable
 import pandas as pd
 from thefuzz import process
 
+_NEM_REGION_IDS = pd.Series(
+    {
+        "Queensland": "QLD",
+        "New South Wales": "NSW",
+        "Victoria": "VIC",
+        "South Australia": "SA",
+        "Tasmania": "TAS",
+    },
+    name="nem_region_id_mapping",
+)
 
-class ModelConfigOptionError(Exception):
-    """Raised when an invalid option is specified in the model configuration"""
+_ISP_SUBREGION_TO_NEM_REGION_IDS = pd.Series(
+    {
+        "NQ": "QLD",
+        "CQ": "QLD",
+        "GG": "QLD",
+        "SQ": "QLD",
+        "NNSW": "NSW",
+        "CNSW": "NSW",
+        "SNSW": "NSW",
+        "SNW": "NSW",
+        "VIC": "VIC",
+        "SA": "SA",
+        "CESA": "SA",
+        "TAS": "TAS",
+    }
+)
 
 
 def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Series:
@@ -59,3 +83,7 @@ def _snakecase_string(string: str) -> str:
     replace_duplicated_underscores = re.sub(r"_+", "_", replace_parentheses)
     snaked = replace_duplicated_underscores.lower()
     return snaked
+
+
+class ModelConfigOptionError(Exception):
+    """Raised when an invalid option is specified in the model configuration"""

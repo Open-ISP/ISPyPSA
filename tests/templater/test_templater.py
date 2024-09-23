@@ -9,7 +9,7 @@ from ispypsa.templater.helpers import (
     _fuzzy_match_names,
     _snakecase_string,
 )
-from ispypsa.templater.network import _NEM_REGION_IDS, template_nodes
+from ispypsa.templater.nodes import _NEM_REGION_IDS, template_nodes
 
 
 def test_fuzzy_matching() -> None:

@@ -6,21 +6,17 @@ import requests
 import xmltodict
 from thefuzz import process
 
-from .helpers import _fuzzy_match_names, _snakecase_string, ModelConfigOptionError
-
-_NEM_REGION_IDS = pd.Series(
-    {
-        "Queensland": "QLD",
-        "New South Wales": "NSW",
-        "Victoria": "VIC",
-        "South Australia": "SA",
-        "Tasmania": "TAS",
-    },
-    name="nem_region_id_mapping",
+from .helpers import (
+    _fuzzy_match_names,
+    _snakecase_string,
+    ModelConfigOptionError,
+    _NEM_REGION_IDS,
 )
 
 
-def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_regional"):
+def template_nodes(
+    parsed_workbook_path: Path | str, granularity: str = "sub_regional"
+) -> pd.DataFrame:
     valid_granularity_options = ["sub_regional", "regional", "single_region"]
     if granularity not in valid_granularity_options:
         raise ModelConfigOptionError(
