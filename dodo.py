@@ -28,7 +28,7 @@ def create_template_from_config(
     if not template_location.exists():
         template_location.mkdir(parents=True)
     node_template = template_nodes(
-        workbook_cache_location, config["network"]["resolution"]
+        workbook_cache_location, config["network"]["granularity"]
     )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "node_template.csv"))
