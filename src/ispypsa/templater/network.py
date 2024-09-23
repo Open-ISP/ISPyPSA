@@ -20,20 +20,20 @@ _NEM_REGION_IDS = pd.Series(
 )
 
 
-def template_nodes(parsed_workbook_path: Path | str, resolution: str = "sub_regional"):
-    valid_resolution_options = ["sub_regional", "regional"]
-    if resolution not in valid_resolution_options:
+def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_regional"):
+    valid_granularity_options = ["sub_regional", "regional"]
+    if granularity not in valid_granularity_options:
         raise ModelConfigOptionError(
-            f"The option '{resolution}' is not a valid option for `resolution`. "
-            + f"Select one of: {valid_resolution_options}"
+            f"The option '{granularity}' is not a valid option for `granularity`. "
+            + f"Select one of: {valid_granularity_options}"
         )
-    elif resolution == "sub_regional":
+    elif granularity == "sub_regional":
         template = _template_sub_regional_node_table(parsed_workbook_path)
         index_col = "isp_sub_region_id"
-    elif resolution == "regional":
+    elif granularity == "regional":
         template = _template_regional_node_table(parsed_workbook_path)
         index_col = "nem_region_id"
-    elif resolution == "copper_plate":
+    elif granularity == "copper_plate":
         # TODO: Decide how to implement copper plate
         print("Not implemented")
         return None

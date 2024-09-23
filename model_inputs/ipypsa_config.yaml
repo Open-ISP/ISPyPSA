@@ -1,7 +1,7 @@
 network:
-  # The resolution of the modelled network (i.e. the number of network nodes)
+  # The geographical granularity of the modelled network (i.e. the number of network nodes)
   # Options:
   #   "sub_regional": ISP Sub-regions are used to create network nodes (12 nodes)
   #   "regional": NEM regions are used to create network nodes (5 nodes)
   #   "copper_plate": All network components are located at a single NEM node
-  resolution: sub_regional
+  granularity: sub_regional
