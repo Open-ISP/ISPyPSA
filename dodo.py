@@ -2,7 +2,7 @@ from pathlib import Path
 import yaml
 
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
-from ispypsa.templater.network import template_nodes
+from ispypsa.templater.nodes import template_nodes
 
 _PARSED_WORKBOOK_CACHE = Path("model_inputs", "workbook_table_cache")
 _TEMPLATE_DIRECTORY = Path("model_inputs", "template")
