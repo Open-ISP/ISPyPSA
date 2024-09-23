@@ -33,11 +33,11 @@ def template_nodes(
     elif granularity == "single_region":
         # TODO: Clarify `single_region`/`copper_plate` implementation
         template = {
-            "isp_sub_region_id": "SNW",
-            "isp_sub_region": "Sydney, New Castle, Wollongong",
-            "reference_node": "Sydney West",
-            "regional_reference_node_voltage_kv": 330,
-            "nem_region": "New South Wales",
+            "isp_sub_region_id": "VIC",
+            "isp_sub_region": "Victoria",
+            "reference_node": "Thomastown",
+            "regional_reference_node_voltage_kv": 66,
+            "nem_region": "Victoria",
             "single_region_id": "NEM",
         }
         template = pd.DataFrame(template, index=[0])

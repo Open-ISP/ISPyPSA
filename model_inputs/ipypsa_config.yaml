@@ -3,6 +3,6 @@ network:
   # Options:
   #   "sub_regional": ISP Sub-regions are used to create network nodes (12 nodes)
   #   "regional": NEM regions are used to create network nodes (5 nodes)
-  #   "single_region": Existing generation and new entrants for the Sydney, Newcastle, Wollongong sub-region are attached to a single node (1 node)
+  #   "single_region": Existing generation and new entrants for the Victorian sub-region are attached to a single node (1 node)
   #   TODO: Clarify `single_region`/`copper_plate` implementation
   granularity: sub_regional
