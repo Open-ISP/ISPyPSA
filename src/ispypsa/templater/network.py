@@ -40,7 +40,7 @@ def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_reg
             "isp_sub_region_id": "SNW",
             "isp_sub_region": "Sydney, New Castle, Wollongong",
             "reference_node": "Sydney West",
-            "reference_node_voltage_kv": 330,
+            "regional_reference_node_voltage_kv": 330,
             "nem_region": "New South Wales",
             "single_region_id": "NEM",
         }
@@ -68,7 +68,7 @@ def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_reg
             ],
             axis=1,
         )
-        template.index = template[index_col].copy(deep=True).rename("node_id")
+    template.index = template[index_col].copy(deep=True).rename("node_id")
     return template
 
 
@@ -99,6 +99,11 @@ def _template_sub_regional_node_table(
         _snakecase_string(node_voltage_col),
         _snakecase_string(node_voltage_col + " Voltage (kV)"),
     ]
+    split_node_voltage[_snakecase_string(node_voltage_col + " Voltage (kV)")] = (
+        split_node_voltage[
+            _snakecase_string(node_voltage_col + " Voltage (kV)")
+        ].astype(int)
+    )
     sub_regional_network = pd.concat(
         [
             split_name_id,
@@ -143,6 +148,11 @@ def _template_regional_node_table(
         _snakecase_string(node_voltage_col),
         _snakecase_string(node_voltage_col + " Voltage (kV)"),
     ]
+    split_node_voltage[_snakecase_string(node_voltage_col + " Voltage (kV)")] = (
+        split_node_voltage[
+            _snakecase_string(node_voltage_col + " Voltage (kV)")
+        ].astype(int)
+    )
     regional_network = pd.concat(
         [
             regional_df["NEM Region"].rename("nem_region"),
