@@ -88,9 +88,9 @@ def test_node_templater_sub_regional(workbook_table_cache_test_path: Path):
 def test_node_templater_single_region(workbook_table_cache_test_path: Path):
     node_template = template_nodes(workbook_table_cache_test_path, "single_region")
     assert node_template.index.name == "node_id"
-    assert set(node_template.regional_reference_node_voltage_kv) == set((330,))
+    assert set(node_template.regional_reference_node_voltage_kv) == set((66,))
     assert set(node_template.index) == set(("NEM",))
-    assert set(node_template.nem_region) == set(("New South Wales",))
+    assert set(node_template.nem_region) == set(("Victoria",))
     assert not node_template.substation_longitude.empty
     assert not node_template.substation_latitude.empty
 
@@ -103,7 +103,7 @@ def test_invalid_granularity(workbook_table_cache_test_path: Path):
 def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker):
     mocker.patch(
         # api_call is from slow.py but imported to main.py
-        "ispypsa.templater.network._request_transmission_substation_coordinates",
+        "ispypsa.templater.nodes._request_transmission_substation_coordinates",
         return_value=pd.DataFrame(({})).T,
     )
     node_template = template_nodes(workbook_table_cache_test_path, "sub_regional")
