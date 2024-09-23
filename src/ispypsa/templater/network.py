@@ -59,7 +59,7 @@ def template_nodes(parsed_workbook_path: Path | str, granularity: str = "sub_reg
             ],
             axis=1,
         )
-    template = template.set_index(index_col)
+        template.index = template[index_col].copy(deep=True).rename("node_id")
     return template
 
 
