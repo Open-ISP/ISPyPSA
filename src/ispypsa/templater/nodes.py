@@ -9,21 +9,17 @@ from thefuzz import process
 from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
-    ModelConfigOptionError,
     _NEM_REGION_IDS,
 )
+
+from ..config.validators import validate_granularity
 
 
 def template_nodes(
     parsed_workbook_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
-    valid_granularity_options = ["sub_regional", "regional", "single_region"]
-    if granularity not in valid_granularity_options:
-        raise ModelConfigOptionError(
-            f"The option '{granularity}' is not a valid option for `granularity`. "
-            + f"Select one of: {valid_granularity_options}"
-        )
-    elif granularity == "sub_regional":
+    validate_granularity(granularity)
+    if granularity == "sub_regional":
         template = _template_sub_regional_node_table(parsed_workbook_path)
         index_col = "isp_sub_region_id"
     elif granularity == "regional":

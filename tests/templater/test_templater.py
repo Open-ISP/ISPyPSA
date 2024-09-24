@@ -1,11 +1,11 @@
+import logging
 from pathlib import Path
 
 import pandas as pd
 import pytest
-import logging
 
+from ispypsa.config.validators import ModelConfigOptionError
 from ispypsa.templater.helpers import (
-    ModelConfigOptionError,
     _fuzzy_match_names,
     _snakecase_string,
 )
