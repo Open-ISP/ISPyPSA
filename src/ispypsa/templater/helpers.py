@@ -32,6 +32,14 @@ _ISP_SUBREGION_TO_NEM_REGION_IDS = pd.Series(
     }
 )
 
+_HVDC_FLOW_PATHS = pd.DataFrame(
+    {
+        "node_from": ["NNSW", "VIC", "TAS"],
+        "node_to": ["SQ", "CSA", "VIC"],
+        "flow_path_name": ["Terranora", "Murraylink", "Basslink"],
+    }
+)
+
 
 def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Series:
     """
@@ -83,7 +91,3 @@ def _snakecase_string(string: str) -> str:
     replace_duplicated_underscores = re.sub(r"_+", "_", replace_parentheses)
     snaked = replace_duplicated_underscores.lower()
     return snaked
-
-
-class ModelConfigOptionError(Exception):
-    """Raised when an invalid option is specified in the model configuration"""
