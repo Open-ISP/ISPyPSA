@@ -226,10 +226,10 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
 
 def _split_name_id(series: pd.Series) -> pd.DataFrame:
     """
-    Separate the a name (plain English) and ID in parentheses (capitalised letters)
-    using a regular expression
+    Capture the name (plain English) and ID in parentheses (capitalised letters)
+    using a regular expression on a string `pandas.Series`.
     """
-    split_name_id = series.str.extract(
+    split_name_id = series.str.strip().str.extract(
         r"(?P<name>[A-Za-z\s,]+)\s\((?P<id>[A-Z]+)\)", expand=True
     )
     return split_name_id
@@ -237,10 +237,10 @@ def _split_name_id(series: pd.Series) -> pd.DataFrame:
 
 def _split_node_voltage(series: pd.Series) -> pd.DataFrame:
     """
-    Separate the node name (plain English) and 2-3 digit voltage in kV using a regular
-    expression
+    Capture the node name (plain English) and 2-3 digit voltage in kV using a regular
+    expression on a string `pandas.Series`.
     """
-    split_node_voltage = series.str.extract(
+    split_node_voltage = series.str.strip().str.extract(
         r"(?P<name>[A-Za-z\s]+)\s(?P<voltage>[0-9]{2,3})\skV"
     )
     return split_node_voltage
