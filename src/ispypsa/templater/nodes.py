@@ -18,6 +18,18 @@ from ..config.validators import validate_granularity
 def template_nodes(
     parsed_workbook_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
+    """
+    Creates a node template that describes the nodes (i.e. buses) that will be modelled
+    using ISPyPSA based on the `granularity` specified in the model configuration.
+
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+          outputs from the `isp-workbook-parser`.
+        granularity: Geographical granularity obtained from the model configuration
+
+    Returns:
+        Node template as a `pd.DataFrame`
+    """
     validate_granularity(granularity)
     if granularity == "sub_regional":
         template = _template_sub_regional_node_table(parsed_workbook_path)
