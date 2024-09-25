@@ -7,6 +7,8 @@ REQUIRED_TABLES = [
     "existing_generator_summary",
     "regional_topology_representation",
     "regional_reference_nodes",
+    "flow_path_transfer_capability",
+    "interconnector_transfer_capability",
 ]
 
 
