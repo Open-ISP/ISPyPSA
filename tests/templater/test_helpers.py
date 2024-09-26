@@ -48,6 +48,8 @@ snakecase_test_cases = {
     "line\nbreaks\tand\ttabs": "line_breaks_and_tabs",
     # Columns with units
     "FOM ($/kW/annum)": "fom_$/kw/annum",
+    "VOM ($/MWh sent-out)": "vom_$/mwh_sent_out",
+    "Capacity (MW)": "capacity_mw",
     # Columns with years
     "Mean time to repair_Partial outage_Post 2022": "mean_time_to_repair_partial_outage_post_2022",
 }

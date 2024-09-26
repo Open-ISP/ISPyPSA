@@ -64,21 +64,23 @@ def _snakecase_string(string: str) -> str:
 
     Steps:
         1. Strip leading and tailing spaces
-        2. Replaces words starting with an uppercase character (and not otherwise
+        2. Catch units that are not properly handled by following steps (e.g. "MWh")
+        3. Replaces words starting with an uppercase character (and not otherwise
             containing capitals) that are not at the start of the string or preceded
             by an underscore, with the same word preceded by an underscore
-        2. Replaces groups of numbers (2+ digits) that are not at the start of the string
+        4. Replaces groups of numbers (2+ digits) that are not at the start of the string
             or preceded by an underscore, with the same group of numbers preceded
             by an underscore
-        3. Replaces hyphens with underscores
+        5. Replaces hyphens with underscores
         4. Replaces spaces not followed by an underscore with an underscore, and any
             remaining spaces with nothing
-        5. Replaces parentheses with nothing
-        6. Removese duplicated underscores
-        7. Makes all characters lowercase
+        6. Replaces parentheses with nothing
+        7. Removese duplicated underscores
+        8. Makes all characters lowercase
     """
+    string = string.strip().replace("MWh", "mwh")
     precede_words_with_capital_with_underscore = re.sub(
-        r"(?<!^)(?<!_)([A-Z][a-z0-9]+)", r"_\1", string.strip()
+        r"(?<!^)(?<!_)([A-Z][a-z0-9]+)", r"_\1", string
     )
     precede_number_groups_with_underscore = re.sub(
         r"(?<!^)(?<!_)([0-9]{2,}+)(?![a-zA-Z]+)",
