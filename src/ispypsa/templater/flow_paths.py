@@ -13,10 +13,10 @@ from ..config.validators import validate_granularity
 def template_flow_paths(
     parsed_workbook_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
-    """
-    Creates a flow path template that describes the flow paths (i.e. lines)
-    that will be modelled using ISPyPSA based on the `granularity`
-    specified in the model configuration.
+    """Creates a flow path template that describes the flow paths (i.e. lines) to be modelled
+
+    The function behaviour depends on the `granularity` specified in the model
+    configuration.
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
@@ -24,7 +24,7 @@ def template_flow_paths(
         granularity: Geographical granularity obtained from the model configuration
 
     Returns:
-        Flow path template as a `pd.DataFrame`
+        `pd.DataFrame`: ISPyPSA flow path template
     """
     validate_granularity(granularity)
     if granularity == "sub_regional":
@@ -38,23 +38,18 @@ def template_flow_paths(
     return template
 
 
-def _template_regional_interconnectors(
-    parsed_workbook_path: Path | str,
-) -> pd.DataFrame:
-    interconnector_capabilities = pd.read_csv(
-        Path(parsed_workbook_path, "interconnector_transfer_capability.csv")
-    )
-    from_to_carrier = _get_flow_path_name_from_to_carrier(
-        interconnector_capabilities.iloc[:, 0], granularity="regional"
-    )
-    capability_columns = _clean_capability_columns(interconnector_capabilities)
-    regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
-    return regional_capabilities
-
-
 def _template_sub_regional_flow_paths(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
+    """Processes the 'Flow path transfer capability' table into an ISPyPSA template format
+
+    Args:
+        parsed_workbook_path: Path to directory containing CSVs that are the output
+            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA sub-regional flow path template
+    """
     flow_path_capabilities = pd.read_csv(
         Path(parsed_workbook_path, "flow_path_transfer_capability.csv")
     )
@@ -64,6 +59,29 @@ def _template_sub_regional_flow_paths(
     capability_columns = _clean_capability_columns(flow_path_capabilities)
     sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
     return sub_regional_capabilities
+
+
+def _template_regional_interconnectors(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
+    """Processes the 'Interconnector transfer capability' table into an ISPyPSA template format
+
+    Args:
+        parsed_workbook_path: Path to directory containing CSVs that are the output
+            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA regional flow path template
+    """
+    interconnector_capabilities = pd.read_csv(
+        Path(parsed_workbook_path, "interconnector_transfer_capability.csv")
+    )
+    from_to_carrier = _get_flow_path_name_from_to_carrier(
+        interconnector_capabilities.iloc[:, 0], granularity="regional"
+    )
+    capability_columns = _clean_capability_columns(interconnector_capabilities)
+    regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
+    return regional_capabilities
 
 
 def _get_flow_path_name_from_to_carrier(

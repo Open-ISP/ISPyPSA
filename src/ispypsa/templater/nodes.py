@@ -18,9 +18,10 @@ from ..config.validators import validate_granularity
 def template_nodes(
     parsed_workbook_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
-    """
-    Creates a node template that describes the nodes (i.e. buses) that will be modelled
-    using ISPyPSA based on the `granularity` specified in the model configuration.
+    """Creates a node template that describes the nodes (i.e. buses) to be modelled
+
+    The function behaviour depends on the `granularity` specified in the model
+    configuration.
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
@@ -28,7 +29,7 @@ def template_nodes(
         granularity: Geographical granularity obtained from the model configuration
 
     Returns:
-        Node template as a `pd.DataFrame`
+        `pd.DataFrame`: ISPyPSA node template
     """
     validate_granularity(granularity)
     if granularity == "sub_regional":
@@ -84,8 +85,9 @@ def _template_sub_regional_node_table(
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+
     Returns:
-        ISPyPSA sub-regional network template in a :class:`pandas.DataFrame`
+        `pd.DataFrame`: ISPyPSA sub-regional node template
 
     """
     sub_regional_df = pd.read_csv(
@@ -108,7 +110,7 @@ def _template_sub_regional_node_table(
             _snakecase_string(node_voltage_col + " Voltage (kV)")
         ].astype(int)
     )
-    sub_regional_network = pd.concat(
+    sub_regional_nodes = pd.concat(
         [
             split_name_id,
             split_node_voltage,
@@ -116,13 +118,13 @@ def _template_sub_regional_node_table(
         ],
         axis=1,
     )
-    sub_regional_network["nem_region"] = _fuzzy_match_names(
-        sub_regional_network["nem_region"], _NEM_REGION_IDS.keys()
+    sub_regional_nodes["nem_region"] = _fuzzy_match_names(
+        sub_regional_nodes["nem_region"], _NEM_REGION_IDS.keys()
     )
-    sub_regional_network["nem_region_id"] = sub_regional_network["nem_region"].replace(
+    sub_regional_nodes["nem_region_id"] = sub_regional_nodes["nem_region"].replace(
         _NEM_REGION_IDS
     )
-    return sub_regional_network
+    return sub_regional_nodes
 
 
 def _template_regional_node_table(
@@ -133,8 +135,9 @@ def _template_regional_node_table(
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+
     Returns:
-        ISPyPSA regional network template in a :class:`pandas.DataFrame`
+        `pd.DataFrame`: ISPyPSA regional node template
 
     """
     regional_df = pd.read_csv(
@@ -157,7 +160,7 @@ def _template_regional_node_table(
             _snakecase_string(node_voltage_col + " Voltage (kV)")
         ].astype(int)
     )
-    regional_network = pd.concat(
+    regional_nodes = pd.concat(
         [
             regional_df["NEM Region"].rename("nem_region"),
             split_name_id,
@@ -165,13 +168,13 @@ def _template_regional_node_table(
         ],
         axis=1,
     )
-    regional_network["nem_region"] = _fuzzy_match_names(
-        regional_network["nem_region"], _NEM_REGION_IDS.keys()
+    regional_nodes["nem_region"] = _fuzzy_match_names(
+        regional_nodes["nem_region"], _NEM_REGION_IDS.keys()
     )
-    regional_network["nem_region_id"] = regional_network["nem_region"].replace(
+    regional_nodes["nem_region_id"] = regional_nodes["nem_region"].replace(
         _NEM_REGION_IDS
     )
-    return regional_network
+    return regional_nodes
 
 
 def _request_transmission_substation_coordinates() -> pd.DataFrame:
