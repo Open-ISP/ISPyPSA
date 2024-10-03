@@ -6,13 +6,12 @@ import requests
 import xmltodict
 from thefuzz import process
 
+from ..config.validators import validate_granularity
 from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
-    _NEM_REGION_IDS,
 )
-
-from ..config.validators import validate_granularity
+from .mappings import _NEM_REGION_IDS
 
 
 def template_nodes(
@@ -25,7 +24,7 @@ def template_nodes(
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
-          outputs from the `isp-workbook-parser`.
+            outputs from the `isp-workbook-parser`.
         granularity: Geographical granularity obtained from the model configuration
 
     Returns:
