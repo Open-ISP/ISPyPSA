@@ -1,6 +1,7 @@
 import re
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
 from thefuzz import process
 
@@ -23,6 +24,28 @@ def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Ser
     return matched_series
 
 
+def _fuzzy_match_names_above_threshold(
+    name_series: pd.Series, choices: Iterable[str], threshold: int
+) -> pd.Series:
+    """
+    Fuzzy matches values in `name_series` with values in `choices` and applies the match
+    only if the Levenshtein distance exceeds `threshold`.
+
+    Args:
+        name_series: :class:`pandas.Series` with names to be matched with values in
+            `choices`
+
+    Returns:
+        :class:`pandas.Series` with selective fuzzy matching
+    """
+    matched_series = name_series.apply(
+        lambda x: process.extractOne(x, choices)[0]
+        if process.extractOne(x, choices)[1] > threshold
+        else x
+    )
+    return matched_series
+
+
 def _snakecase_string(string: str) -> str:
     """Returns the input string in snakecase
 
@@ -41,6 +64,9 @@ def _snakecase_string(string: str) -> str:
         6. Replaces parentheses with nothing
         7. Removese duplicated underscores
         8. Makes all characters lowercase
+
+    Args:
+        string: String to be snakecased
     """
     string = string.strip().replace("MWh", "mwh")
     precede_words_with_capital_with_underscore = re.sub(
@@ -57,3 +83,28 @@ def _snakecase_string(string: str) -> str:
     replace_duplicated_underscores = re.sub(r"_+", "_", replace_parentheses)
     snaked = replace_duplicated_underscores.lower()
     return snaked
+
+
+def _where_any_substring_appears(
+    series: pd.Series, substrings: Iterable[str]
+) -> pd.Series:
+    """Returns elements of a series that contain any of the substrings (not case sensitive)
+
+    Args:
+        series: :class:`pd.Series`
+        substrings: Iterable containing substrings to use for selection
+
+    Returns:
+        Boolean :class:`pd.Series` with `True` where a substring appears
+    """
+    substrings = list(substrings)
+    wheres = []
+    for string in substrings:
+        wheres.append(series.str.contains(string, case=False, na=False))
+    if len(wheres) < 2:
+        boolean = wheres.pop()
+    else:
+        boolean = np.logical_or(wheres[0], wheres[1])
+        for i in range(2, len(wheres)):
+            boolean = np.logical_or(boolean, wheres[i])
+    return boolean
