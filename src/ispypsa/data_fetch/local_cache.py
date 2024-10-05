@@ -25,6 +25,13 @@ _GENERATOR_PROPERTIES = {
     "variable_opex": _CONDENSED_GENERATOR_TYPES,
     "marginal_loss_factors": _ALL_GENERATOR_TYPES,
     "auxiliary_load": _CONDENSED_GENERATOR_TYPES,
+    "heat_rates": _CONDENSED_GENERATOR_TYPES,
+    "outages_2023-2024": ["existing_generators"],
+    "long_duration_outages": ["existing_generators"],
+    "outages": ["new_entrants"],
+    "full_outages_forecast": ["existing_generators"],
+    "partial_outages_forecast": ["existing_generators"],
+    "gpg_min_stable_level": ["existing_generators", "new_entrants"],
 }
 
 _GENERATOR_PROPERTY_TABLES = [
@@ -47,6 +54,7 @@ REQUIRED_TABLES = [
     "additional_projects_summary",
     "new_entrants_summary",
     "expected_closure_years",
+    "coal_minimum_stable_level",
 ] + _GENERATOR_PROPERTY_TABLES
 
 
