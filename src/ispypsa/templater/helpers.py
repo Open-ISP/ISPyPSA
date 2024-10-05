@@ -15,6 +15,7 @@ def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Ser
     Args:
         name_series: :class:`pandas.Series` with names to be matched with values in
             `choices`
+        choices: Iterable of `choices` that are replacement values
 
     Returns:
         :class:`pandas.Series` with values from `choices` that correspond to the closest
@@ -25,7 +26,10 @@ def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Ser
 
 
 def _fuzzy_match_names_above_threshold(
-    name_series: pd.Series, choices: Iterable[str], threshold: int
+    name_series: pd.Series,
+    choices: Iterable[str],
+    threshold: int,
+    not_match: str = "existing",
 ) -> pd.Series:
     """
     Fuzzy matches values in `name_series` with values in `choices` and applies the match
@@ -34,15 +38,27 @@ def _fuzzy_match_names_above_threshold(
     Args:
         name_series: :class:`pandas.Series` with names to be matched with values in
             `choices`
-
+        choices: Iterable of `choices` that are replacement values
+        threshold: Threshold to exceed for replacement. Between 0 and 100
+        not_match: optional. Defaults to "existing". If "existing", wherever a match
+            that exceeds the threshold does not exist, the existing value is retained.
+            If any other string, this will be used to replace the existing value
+            where a match that exceeds the threshold does not exist.
     Returns:
         :class:`pandas.Series` with selective fuzzy matching
     """
-    matched_series = name_series.apply(
-        lambda x: process.extractOne(x, choices)[0]
-        if process.extractOne(x, choices)[1] > threshold
-        else x
-    )
+    if not_match == "existing":
+        matched_series = name_series.apply(
+            lambda x: process.extractOne(x, choices)[0]
+            if process.extractOne(x, choices)[1] > threshold
+            else x
+        )
+    else:
+        matched_series = name_series.apply(
+            lambda x: process.extractOne(x, choices)[0]
+            if process.extractOne(x, choices)[1] > threshold
+            else not_match
+        )
     return matched_series
 
 
