@@ -31,8 +31,10 @@ def _template_existing_generators(
         Path(parsed_workbook_path, "existing_generator_summary.csv")
     )
     cleaned_existing_generators = _clean_generator_summary(existing_generators)
-    merged_cleaned_existing_generators = _merge_existing_generators_static_properties(
-        cleaned_existing_generators, parsed_workbook_path
+    merged_cleaned_existing_generators = (
+        _merge_and_set_existing_generators_static_properties(
+            cleaned_existing_generators, parsed_workbook_path
+        )
     )
     return merged_cleaned_existing_generators
 
@@ -78,10 +80,10 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _merge_existing_generators_static_properties(
+def _merge_and_set_existing_generators_static_properties(
     df: pd.DataFrame, parsed_workbook_path: Path | str
 ) -> pd.DataFrame:
-    """Merges static (i.e. not time-varying) generator properties into the
+    """Merges into and sets static (i.e. not time-varying) generator properties in the
     "Existing generator summary" template, and renames columns if this is specified
     in the mapping.
 
@@ -114,7 +116,6 @@ def _merge_existing_generators_static_properties(
         if re.search("outage", col):
             df[col] = _rename_summary_outage_mappings(df[col])
         # handles slight difference in capitalisation e.g. Bongong/Mackay vs Bogong/MacKay
-        # fuzzy matching requires that columns only contain string
         df[col] = _fuzzy_match_names_above_threshold(
             df[col], replacement_dict.keys(), 99
         )
@@ -128,25 +129,15 @@ def _merge_existing_generators_static_properties(
     for col, csv_attrs in _EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
         data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
         df = _merge_csv_data(df, col, data, csv_attrs)
+    df = _process_and_merge_existing_gpg_min_load(df, parsed_workbook_path)
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
     df = _zero_renewable_minimum_load(df, "minimum_load_mw")
+    df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         df = _zero_wind_solar_outages(df, outage_col)
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
     return df
-
-
-def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
-    """Renames values in the outage summary column to match those in the outages
-    workbook tables
-    """
-    return outage_series.replace(
-        {
-            "Steam Turbine & CCGT": "CCGT + Steam Turbine",
-            "OCGT Small": "Small peaking plants",
-        }
-    )
 
 
 def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
@@ -169,10 +160,79 @@ def _zero_renewable_minimum_load(
     return df
 
 
+def _zero_ocgt_recip_minimum_load(
+    df: pd.DataFrame, minimum_load_col: str
+) -> pd.DataFrame:
+    """Set values for OCGT and Reciprocating =Engine minimum loads to 0"""
+    df.loc[
+        _where_any_substring_appears(
+            df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
+        ),
+        minimum_load_col,
+    ] = 0.0
+    return df
+
+
 def _zero_wind_solar_outages(df: pd.DataFrame, outage_col: str) -> pd.DataFrame:
     """Set values for wind and solar in the outage column to 0"""
     df.loc[
         _where_any_substring_appears(df[outage_col], ["solar", "wind"]),
         outage_col,
     ] = 0.0
+    return df
+
+
+def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
+    """Renames values in the outage summary column to match those in the outages
+    workbook tables
+    """
+    return outage_series.replace(
+        {
+            "Steam Turbine & CCGT": "CCGT + Steam Turbine",
+            "OCGT Small": "Small peaking plants",
+        }
+    )
+
+
+def _process_and_merge_existing_gpg_min_load(
+    df: pd.DataFrame, parsed_workbook_path: Path | str
+) -> pd.DataFrame:
+    """Processes and merges in gas-fired generation minimum load data
+
+    Only retains first Gas Turbine min load if there are multiple turbines (OPINIONATED).
+    """
+    existing_gpg_min_loads = pd.read_csv(
+        Path(parsed_workbook_path, "gpg_min_stable_level_existing_generators.csv")
+    )
+    to_merge = []
+    for station in existing_gpg_min_loads["Generator Station"].drop_duplicates():
+        station_rows = existing_gpg_min_loads[
+            existing_gpg_min_loads["Generator Station"] == station
+        ]
+        if len(station_rows) > 1:
+            # CCGTs with ST and GTs
+            if all(
+                [re.search("CCGT", tt) for tt in set(station_rows["Technology Type"])]
+            ):
+                gt_rows = station_rows.loc[
+                    station_rows["Technology Type"].str.contains("Gas Turbine")
+                ]
+                to_merge.append(gt_rows.iloc[0, :].squeeze())
+            # Handles cases like TIPSB
+            else:
+                to_merge.append(station_rows.iloc[0, :].squeeze())
+        else:
+            to_merge.append(station_rows.squeeze())
+    processed_gpg_min_loads = pd.concat(to_merge, axis=1).T
+    # manual corrections
+    processed_gpg_min_loads["Generator Station"] = processed_gpg_min_loads[
+        "Generator Station"
+    ].replace(
+        {"Tamar Valley": "Tamar Valley Combined Cycle", "Condamine": "Condamine A"}
+    )
+    processed_gpg_min_loads = processed_gpg_min_loads.set_index("Generator Station")
+    for gen, row in processed_gpg_min_loads.iterrows():
+        df.loc[df["existing_generator"] == gen, "minimum_load_mw"] = row[
+            "Min Stable Level (MW)"
+        ]
     return df
