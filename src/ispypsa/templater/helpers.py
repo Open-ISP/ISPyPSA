@@ -75,11 +75,12 @@ def _snakecase_string(string: str) -> str:
             or preceded by an underscore, with the same group of numbers preceded
             by an underscore
         5. Replaces hyphens with underscores
-        4. Replaces spaces not followed by an underscore with an underscore, and any
+        6. Replaces commas with underscores
+        7. Replaces spaces not followed by an underscore with an underscore, and any
             remaining spaces with nothing
-        6. Replaces parentheses with nothing
-        7. Removese duplicated underscores
-        8. Makes all characters lowercase
+        8. Replaces parentheses with nothing
+        9. Removese duplicated underscores
+        10. Makes all characters lowercase
 
     Args:
         string: String to be snakecased
@@ -94,7 +95,8 @@ def _snakecase_string(string: str) -> str:
         precede_words_with_capital_with_underscore,
     )
     replace_hyphens = re.sub(r"-", "_", precede_number_groups_with_underscore)
-    replace_spaces = re.sub(r"\s(?!_)", "_", replace_hyphens).replace(" ", "")
+    replace_commas = re.sub(r",", "_", replace_hyphens)
+    replace_spaces = re.sub(r"\s(?!_)", "_", replace_commas).replace(" ", "")
     replace_parentheses = re.sub(r"\(|\)|", "", replace_spaces)
     replace_duplicated_underscores = re.sub(r"_+", "_", replace_parentheses)
     snaked = replace_duplicated_underscores.lower()
