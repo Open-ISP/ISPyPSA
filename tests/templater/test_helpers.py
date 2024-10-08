@@ -3,7 +3,9 @@ import pytest
 
 from ispypsa.templater.helpers import (
     _fuzzy_match_names,
+    _fuzzy_match_names_above_threshold,
     _snakecase_string,
+    _where_any_substring_appears,
 )
 from ispypsa.templater.nodes import _NEM_REGION_IDS
 
@@ -17,6 +19,46 @@ def test_fuzzy_matching() -> None:
     )
     test_results = _fuzzy_match_names(region_typos, _NEM_REGION_IDS.keys())
     assert (test_results == expected).all()
+
+
+def test_fuzzy_matching_above_threshold() -> None:
+    region_typos = pd.Series(
+        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
+    )
+    test_results = _fuzzy_match_names_above_threshold(
+        region_typos,
+        _NEM_REGION_IDS.keys(),
+        70,
+    )
+    assert (
+        test_results
+        == [
+            "New South Wales",
+            "Coinsland",
+            "South Australia",
+            "Victoria",
+            "Tasmania",
+        ]
+    ).all()
+
+
+def test_fuzzy_matching_above_threshold_replace() -> None:
+    region_typos = pd.Series(
+        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
+    )
+    test_results = _fuzzy_match_names_above_threshold(
+        region_typos, _NEM_REGION_IDS.keys(), 70, not_match="replacement"
+    )
+    assert (
+        test_results
+        == [
+            "New South Wales",
+            "replacement",
+            "South Australia",
+            "Victoria",
+            "Tasmania",
+        ]
+    ).all()
 
 
 snakecase_test_cases = {
@@ -61,3 +103,20 @@ snakecase_test_cases = {
 def test_snakecase(input: str, expected: str):
     processed_input = _snakecase_string(input)
     assert processed_input == expected
+
+
+def test_where_any_substring_appears():
+    test_input = [
+        "Wind",
+        "wind",
+        "OCGT",
+        "All Solar PV",
+        "Hydroelectric",
+        "Solar thermal",
+    ]
+    output = _where_any_substring_appears(
+        pd.Series(test_input), ["solar", "wind", "hydro"]
+    )
+    assert (output == [True, True, False, True, True, True]).all()
+    output_2 = _where_any_substring_appears(pd.Series(test_input), ["solar"])
+    assert (output_2 == [False, False, False, True, False, True]).all()
