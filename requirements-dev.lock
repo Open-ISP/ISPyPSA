@@ -121,7 +121,7 @@ ipython==8.27.0
     # via ipdb
     # via ipykernel
     # via myst-nb
-isp-workbook-parser==1.3.0
+isp-workbook-parser==2.0.0
     # via ispypsa
 jedi==0.19.1
     # via ipython
@@ -357,6 +357,7 @@ tables==3.10.1
 tabulate==0.9.0
     # via jupyter-cache
 thefuzz==0.22.1
+    # via isp-workbook-parser
     # via ispypsa
 toolz==0.12.1
     # via dask
