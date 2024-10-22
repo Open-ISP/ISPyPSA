@@ -13,7 +13,8 @@ from .mappings import _HVDC_FLOW_PATHS
 def template_flow_paths(
     parsed_workbook_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
-    """Creates a flow path template that describes the flow paths (i.e. lines) to be modelled
+    """Creates a flow path template that describes the flow paths (i.e. lines) to be
+    modelled
 
     The function behaviour depends on the `granularity` specified in the model
     configuration.
@@ -56,7 +57,7 @@ def _template_sub_regional_flow_paths(
     from_to_carrier = _get_flow_path_name_from_to_carrier(
         flow_path_capabilities.iloc[:, 0], granularity="sub_regional"
     )
-    capability_columns = _clean_capability_columns(flow_path_capabilities)
+    capability_columns = _clean_capability_column_names(flow_path_capabilities)
     sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
     return sub_regional_capabilities
 
@@ -79,7 +80,7 @@ def _template_regional_interconnectors(
     from_to_carrier = _get_flow_path_name_from_to_carrier(
         interconnector_capabilities.iloc[:, 0], granularity="regional"
     )
-    capability_columns = _clean_capability_columns(interconnector_capabilities)
+    capability_columns = _clean_capability_column_names(interconnector_capabilities)
     regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
     return regional_capabilities
 
@@ -163,12 +164,12 @@ def _determine_flow_path_name(
     return name
 
 
-def _clean_capability_columns(capability_df: pd.DataFrame) -> dict:
+def _clean_capability_column_names(capability_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Cleans flow path capability column names (e.g. drops references to notes) and
-    converts column values with notes or string-like value (e.g. "1,250") to integers
+    Cleans and simplifies flow path capability column names (e.g. drops references to
+    notes)
     """
-    capabilities = []
+    capability_columns = []
     for direction in ("Forward direction", "Reverse direction"):
         direction_cols = [
             col for col in capability_df.columns if direction in col and "(MW)" in col
@@ -176,19 +177,5 @@ def _clean_capability_columns(capability_df: pd.DataFrame) -> dict:
         for col in direction_cols:
             qualifier = re.search(r".*_([A-Za-z\s]+)$", col).group(1)
             col_name = _snakecase_string(direction + " (MW) " + qualifier)
-            capabilities.append(_get_mw_capability(capability_df[col]).rename(col_name))
-    return pd.concat(capabilities, axis=1)
-
-
-def _get_mw_capability(mw_capability_series: pd.Series) -> pd.Series:
-    """
-    Capture the MW capability approximation from a string `pandas.Series` that contains
-    a MW value and may also contain a note or qualification, and then convert values
-    to integers. The returned `pandas.Series` has the name
-    '<column_qualifier>_capability_approximation_mw'.
-    """
-    mw_capability = mw_capability_series.str.extract(
-        r"^(?P<capability_approximation_mw>[0-9\,]+).*", expand=False
-    )
-    mw_capability = mw_capability.str.replace(",", "")
-    return pd.to_numeric(mw_capability, downcast="integer")
+            capability_columns.append(capability_df[col].rename(col_name))
+    return pd.concat(capability_columns, axis=1)
