@@ -106,19 +106,29 @@ def _snakecase_string(string: str) -> str:
 def _where_any_substring_appears(
     series: pd.Series, substrings: Iterable[str]
 ) -> pd.Series:
-    """Returns elements of a series that contain any of the substrings (not case sensitive)
+    """Returns string elements of a series that contain any of the provided
+    substrings (not case sensitive).
 
     Args:
         series: :class:`pd.Series`
         substrings: Iterable containing substrings to use for selection
 
     Returns:
-        Boolean :class:`pd.Series` with `True` where a substring appears
+        Boolean :class:`pd.Series` with `True` where a substring appears in a string
     """
+    series_where_str = series.apply(lambda x: isinstance(x, str))
+    false_series = pd.Series(np.repeat(False, len(series)))
+    if not any(series_where_str):
+        return false_series
     substrings = list(substrings)
     wheres = []
     for string in substrings:
-        wheres.append(series.str.contains(string, case=False, na=False))
+        wheres.append(
+            false_series.where(
+                ~series_where_str,
+                series.str.contains(string, case=False, na=False),
+            )
+        )
     if len(wheres) < 2:
         boolean = wheres.pop()
     else:
