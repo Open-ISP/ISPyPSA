@@ -1,5 +1,11 @@
 import pandas as pd
 
+from .lists import (
+    _ALL_GENERATOR_STORAGE_TYPES,
+    _CONDENSED_GENERATOR_TYPES,
+    _ECAA_GENERATOR_TYPES,
+)
+
 _NEM_REGION_IDS = pd.Series(
     {
         "Queensland": "QLD",
@@ -19,9 +25,26 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
     }
 )
 
-_EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
+_GENERATOR_PROPERTIES = {
+    "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,
+    "seasonal_ratings": _ALL_GENERATOR_STORAGE_TYPES,
+    "maintenance": ["existing_generators"],
+    "fixed_opex": _CONDENSED_GENERATOR_TYPES,
+    "variable_opex": _CONDENSED_GENERATOR_TYPES,
+    "marginal_loss_factors": _ALL_GENERATOR_STORAGE_TYPES,
+    "auxiliary_load": _CONDENSED_GENERATOR_TYPES,
+    "heat_rates": _CONDENSED_GENERATOR_TYPES,
+    "outages_2023-2024": ["existing_generators"],
+    "long_duration_outages": ["existing_generators"],
+    "outages": ["new_entrants"],
+    "full_outages_forecast": ["existing_generators"],
+    "partial_outages_forecast": ["existing_generators"],
+    "gpg_min_stable_level": ["existing_generators", "new_entrants"],
+}
+
+_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
-        csv="maximum_capacity_existing_generators",
+        csv=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
         csv_lookup="Generator",
         csv_values="Installed capacity (MW)",
     ),
@@ -52,7 +75,7 @@ _EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         new_col_name="heat_rate_gj/mwh",
     ),
     "mlf": dict(
-        csv="marginal_loss_factors_existing_generators",
+        csv=[f"marginal_loss_factors_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
         csv_lookup="Generator",
         csv_values="MLF",
     ),
