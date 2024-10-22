@@ -8,35 +8,46 @@ from .helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from .mappings import _EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .lists import _ECAA_GENERATOR_TYPES
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
 ]
 
 
-def _template_existing_generators(
+def _template_ecaa_generators(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
-    """Processes the 'Existing generator summary' table into an ISPyPSA template format
+    """Processes the existing, commited, anticipated and additional (ECAA) generators
+    summary tables into an ISPyPSA template format
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
 
     Returns:
-        `pd.DataFrame`: ISPyPSA existing generators template
+        `pd.DataFrame`: ISPyPSA ECAA generators template
     """
-    existing_generators = pd.read_csv(
-        Path(parsed_workbook_path, "existing_generator_summary.csv")
+    ecaa_generator_summaries = []
+    for gen_type in _ECAA_GENERATOR_TYPES:
+        df = pd.read_csv(
+            Path(parsed_workbook_path, _snakecase_string(gen_type) + "_summary.csv")
+        )
+        df.columns = ["Generator", *df.columns[1:]]
+        ecaa_generator_summaries.append(df)
+    ecaa_generator_summaries = pd.concat(ecaa_generator_summaries, axis=0).reset_index(
+        drop=True
     )
-    cleaned_existing_generators = _clean_generator_summary(existing_generators)
-    merged_cleaned_existing_generators = (
-        _merge_and_set_existing_generators_static_properties(
-            cleaned_existing_generators, parsed_workbook_path
+    cleaned_ecaa_generator_summaries = _clean_generator_summary(
+        ecaa_generator_summaries
+    )
+    merged_cleaned_ecaa_generator_summaries = (
+        _merge_and_set_ecaa_generators_static_properties(
+            cleaned_ecaa_generator_summaries, parsed_workbook_path
         )
     )
-    return merged_cleaned_existing_generators
+    return merged_cleaned_ecaa_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -80,14 +91,14 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _merge_and_set_existing_generators_static_properties(
+def _merge_and_set_ecaa_generators_static_properties(
     df: pd.DataFrame, parsed_workbook_path: Path | str
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "Existing generator summary" template, and renames columns if this is specified
     in the mapping.
 
-    Uses `ispypsa.templater.mappings._EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    Uses `ispypsa.templater.mappings._ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     as the mapping.
 
     Args:
@@ -100,11 +111,11 @@ def _merge_and_set_existing_generators_static_properties(
     """
 
     def _merge_csv_data(
-        df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict[str, str]
+        df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
     ) -> pd.DataFrame:
         """Replace values in the provided column of the summary mapping with those
         in the CSV data using the provided attributes in
-        `_EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+        `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
         """
         replacement_dict = (
             csv_data.loc[:, [csv_attrs["csv_lookup"], csv_attrs["csv_values"]]]
@@ -116,22 +127,31 @@ def _merge_and_set_existing_generators_static_properties(
         if re.search("outage", col):
             df[col] = _rename_summary_outage_mappings(df[col])
         # handles slight difference in capitalisation e.g. Bongong/Mackay vs Bogong/MacKay
-        df[col] = _fuzzy_match_names_above_threshold(
-            df[col], replacement_dict.keys(), 99
+        where_str = df[col].apply(lambda x: isinstance(x, str))
+        df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
+            df.loc[where_str, col], replacement_dict.keys(), 99
         )
-        df[col] = df[col].replace(replacement_dict).infer_objects(copy=False)
+        df[col] = df[col].replace(replacement_dict)
         if "new_col_name" in csv_attrs.keys():
             df = df.rename(columns={col: csv_attrs["new_col_name"]})
         return df
 
     # adds a max capacity column that takes the existing generator name mapping
-    df["maximum_capacity_mw"] = df["existing_generator"]
-    for col, csv_attrs in _EXISTING_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
-        data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
+    df["maximum_capacity_mw"] = df["generator"]
+    # merge in static properties using the static property mapping
+    for col, csv_attrs in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
+        if type(csv_attrs["csv"]) is list:
+            data = [
+                pd.read_csv(Path(parsed_workbook_path, csv + ".csv"))
+                for csv in csv_attrs["csv"]
+            ]
+            data = pd.concat(data, axis=0)
+        else:
+            data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
         df = _merge_csv_data(df, col, data, csv_attrs)
     df = _process_and_merge_existing_gpg_min_load(df, parsed_workbook_path)
-    df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
-    df = _zero_renewable_minimum_load(df, "minimum_load_mw")
+    df = _zero_renewable_bess_heat_rates(df, "heat_rate_gj/mwh")
+    df = _zero_renewable_bess_minimum_load(df, "minimum_load_mw")
     df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         df = _zero_wind_solar_outages(df, outage_col)
@@ -140,21 +160,35 @@ def _merge_and_set_existing_generators_static_properties(
     return df
 
 
-def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
-    """Set renewable energy (solar, wind, hydro) heat rates to 0"""
+def _zero_renewable_bess_heat_rates(
+    df: pd.DataFrame, heat_rate_col: str
+) -> pd.DataFrame:
+    """
+    Fill any empty heat rate values with the technology type, and then set
+    renewable energy (solar, wind, hydro) and battery storage heat rates to 0
+    """
+    df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(df[heat_rate_col], ["solar", "wind", "hydro"]),
+        _where_any_substring_appears(
+            df[heat_rate_col], ["solar", "wind", "hydro", "battery"]
+        ),
         heat_rate_col,
     ] = 0.0
     return df
 
 
-def _zero_renewable_minimum_load(
+def _zero_renewable_bess_minimum_load(
     df: pd.DataFrame, minimum_load_col: str
 ) -> pd.DataFrame:
-    """Set values for renewable energy (solar, wind, hydro) minimum loads to 0"""
+    """
+    Fill any empty minimum load values with the technology type, and then set values for
+    renewable energy (solar, wind, hydro) and battery storage minimum loads to 0
+    """
+    df[minimum_load_col] = df[minimum_load_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(df[minimum_load_col], ["solar", "wind", "hydro"]),
+        _where_any_substring_appears(
+            df[minimum_load_col], ["solar", "wind", "hydro", "battery"]
+        ),
         minimum_load_col,
     ] = 0.0
     return df
@@ -163,7 +197,9 @@ def _zero_renewable_minimum_load(
 def _zero_ocgt_recip_minimum_load(
     df: pd.DataFrame, minimum_load_col: str
 ) -> pd.DataFrame:
-    """Set values for OCGT and Reciprocating =Engine minimum loads to 0"""
+    """
+    Set values for OCGT and Reciprocating Engine minimum loads to 0
+    """
     df.loc[
         _where_any_substring_appears(
             df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
@@ -232,7 +268,5 @@ def _process_and_merge_existing_gpg_min_load(
     )
     processed_gpg_min_loads = processed_gpg_min_loads.set_index("Generator Station")
     for gen, row in processed_gpg_min_loads.iterrows():
-        df.loc[df["existing_generator"] == gen, "minimum_load_mw"] = row[
-            "Min Stable Level (MW)"
-        ]
+        df.loc[df["generator"] == gen, "minimum_load_mw"] = row["Min Stable Level (MW)"]
     return df
