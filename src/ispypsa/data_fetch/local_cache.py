@@ -1,38 +1,8 @@
 from pathlib import Path
 
 from isp_workbook_parser import Parser
+from ..templater.mappings import _GENERATOR_PROPERTIES
 
-_ALL_GENERATOR_TYPES = [
-    "existing_generators",
-    "committed_generators",
-    "anticipated_projects",
-    "additional_projects",
-    "new_entrants",
-    "existing_committed_and_anticipated_batteries",
-]
-
-_CONDENSED_GENERATOR_TYPES = [
-    "existing_committed_anticipated_additional_generators",
-    "new_entrants",
-]
-
-
-_GENERATOR_PROPERTIES = {
-    "maximum_capacity": _ALL_GENERATOR_TYPES,
-    "seasonal_ratings": _ALL_GENERATOR_TYPES,
-    "maintenance": ["existing_generators"],
-    "fixed_opex": _CONDENSED_GENERATOR_TYPES,
-    "variable_opex": _CONDENSED_GENERATOR_TYPES,
-    "marginal_loss_factors": _ALL_GENERATOR_TYPES,
-    "auxiliary_load": _CONDENSED_GENERATOR_TYPES,
-    "heat_rates": _CONDENSED_GENERATOR_TYPES,
-    "outages_2023-2024": ["existing_generators"],
-    "long_duration_outages": ["existing_generators"],
-    "outages": ["new_entrants"],
-    "full_outages_forecast": ["existing_generators"],
-    "partial_outages_forecast": ["existing_generators"],
-    "gpg_min_stable_level": ["existing_generators", "new_entrants"],
-}
 
 _GENERATOR_PROPERTY_TABLES = [
     table_name
@@ -47,8 +17,8 @@ REQUIRED_TABLES = [
     "regional_reference_nodes",
     "flow_path_transfer_capability",
     "interconnector_transfer_capability",
-    "existing_generator_summary",
-    "committed_generator_summary",
+    "existing_generators_summary",
+    "committed_generators_summary",
     "anticipated_projects_summary",
     "batteries_summary",
     "additional_projects_summary",
