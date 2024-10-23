@@ -137,7 +137,7 @@ def _merge_and_set_ecaa_generators_static_properties(
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
-    return df
+    return df.infer_objects()
 
 
 def _merge_csv_data(
