@@ -42,6 +42,11 @@ def _template_ecaa_generators(
     cleaned_ecaa_generator_summaries = _clean_generator_summary(
         ecaa_generator_summaries
     )
+    # drop any energy storage
+    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.loc[
+        ~cleaned_ecaa_generator_summaries["technology_type"].str.contains("Battery"),
+        :,
+    ].reset_index(drop=True)
     merged_cleaned_ecaa_generator_summaries = (
         _merge_and_set_ecaa_generators_static_properties(
             cleaned_ecaa_generator_summaries, parsed_workbook_path
@@ -123,9 +128,12 @@ def _merge_and_set_ecaa_generators_static_properties(
             data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
         df = _merge_csv_data(df, col, data, csv_attrs)
     df = _process_and_merge_existing_gpg_min_load(df, parsed_workbook_path)
-    df = _zero_renewable_bess_heat_rates(df, "heat_rate_gj/mwh")
-    df = _zero_renewable_bess_minimum_load(df, "minimum_load_mw")
+    df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
+    df = _zero_renewable_minimum_load(df, "minimum_load_mw")
     df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
+    df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
+        df, "partial_outage_derating_factor_%"
+    )
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
@@ -165,24 +173,20 @@ def _merge_csv_data(
     return df
 
 
-def _zero_renewable_bess_heat_rates(
-    df: pd.DataFrame, heat_rate_col: str
-) -> pd.DataFrame:
+def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
     """
     Fill any empty heat rate values with the technology type, and then set
     renewable energy (solar, wind, hydro) and battery storage heat rates to 0
     """
     df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(
-            df[heat_rate_col], ["solar", "wind", "hydro", "battery"]
-        ),
+        _where_any_substring_appears(df[heat_rate_col], ["solar", "wind", "hydro"]),
         heat_rate_col,
     ] = 0.0
     return df
 
 
-def _zero_renewable_bess_minimum_load(
+def _zero_renewable_minimum_load(
     df: pd.DataFrame, minimum_load_col: str
 ) -> pd.DataFrame:
     """
@@ -191,9 +195,7 @@ def _zero_renewable_bess_minimum_load(
     """
     df[minimum_load_col] = df[minimum_load_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(
-            df[minimum_load_col], ["solar", "wind", "hydro", "battery"]
-        ),
+        _where_any_substring_appears(df[minimum_load_col], ["solar", "wind", "hydro"]),
         minimum_load_col,
     ] = 0.0
     return df
@@ -210,6 +212,23 @@ def _zero_ocgt_recip_minimum_load(
             df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
         ),
         minimum_load_col,
+    ] = 0.0
+    return df
+
+
+def _zero_solar_wind_h2gt_partial_outage_derating_factor(
+    df: pd.DataFrame, po_derating_col: str
+) -> pd.DataFrame:
+    """
+    Fill any empty partial outage derating factor values with the technology type, and
+    then set values for solar, wind and H2 gas turbines to 0
+    """
+    df[po_derating_col] = df[po_derating_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(
+            df[po_derating_col], ["solar", "wind", "hydrogen-based gas turbine"]
+        ),
+        po_derating_col,
     ] = 0.0
     return df
 
