@@ -1,0 +1,96 @@
+Generator,MLF,Shadow connection point
+NE_CAN,0.8383,Uranquinty PS Unit 11
+NE_SNW,0.9831,Colongra PS Unit 1
+NE_NNSW,0.9646,Bayswater PS Unit 1
+NE_CNSW,0.9646,Bayswater PS Unit 1
+NE_SNSW,0.8383,Uranquinty PS Unit 11
+NE_NQ,0.9164,Mt Stuart PS Unit 1
+NE_CQ,0.9096,Callide C PS Unit 3
+NE_GG,0.9329,Gladstone PS (275 kV) Unit 1
+NE_SQ,0.9987,Swanbank E GT
+NE_CSA,0.9997,Torrens Island B
+NE_SESA,0.9553,Ladbroke Grove
+NE_VIC1,0.9937,Newport PS
+NE_TAS1,1.0,Tamar Valley CCGT
+REZ_Q1_Solar,0.9222,Hughenden Solar Farm
+REZ_Q2_Solar,0.9222,Hughenden Solar Farm
+REZ_Q3_Solar,0.9222,Hughenden Solar Farm
+REZ_Q4_Solar,0.8981,Clare Solar Farm
+REZ_Q5_Solar,0.915,Barcaldine Solar at Lilyvale (132)
+REZ_Q6_Solar,0.9329,Gladstone PS (275 kV) Unit 1
+REZ_Q7_Solar,0.9601,Bungala One Solar Farm
+REZ_Q8_Solar,0.9762,Darling Downs Solar Farm
+REZ_Q9_Solar,0.9222,Hughenden Solar Farm
+REZ_N1_Solar,0.7977,Moree Solar Farm
+REZ_N2_Solar,0.8697,White Rock Solar Farm
+REZ_N3_Solar,0.9897,Burrendong Hydro PS
+REZ_N4_Solar,0.8324,Broken Hill Solar Farm
+REZ_N5_Solar,0.8894,Coleambally Solar Farm
+REZ_N6_Solar,0.911,Bomen Solar Farm
+REZ_N7_Solar,1.0,Default
+REZ_N8_Solar,0.9668,Royalla Solar Farm
+REZ_N9_Solar,0.9439,Wellington Solar Farm
+REZ_V1_Solar,1.0,Default
+REZ_V2_Solar,0.8947,Bannerton Solar Farm
+REZ_V3_Solar,0.8894,Coleambally Solar Farm
+REZ_V4_Solar,1.0,Default
+REZ_V5_Solar,0.9825,Bald Hills Wind Farm
+REZ_V6_Solar,0.9413,Cohuna Solar Farm
+REZ_S1_Solar,1.003,Tailem Bend Solar Farm
+REZ_S2_Solar,0.9601,Bungala One Solar Farm
+REZ_S3_Solar,0.9601,Bungala One Solar Farm
+REZ_S4_Solar,0.8073,Wattle Point Wind Farm
+REZ_S5_Solar,0.9601,Bungala One Solar Farm
+REZ_S6_Solar,0.9601,Bungala One Solar Farm
+REZ_S7_Solar,0.9601,Bungala One Solar Farm
+REZ_S8_Solar,0.9601,Bungala One Solar Farm
+REZ_S9_Solar,0.9601,Bungala One Solar Farm
+REZ_T1_Solar,0.9119,Musselroe
+REZ_T2_Solar,0.9555,Poatina
+REZ_T3_Solar,0.8888,Lake Echo
+N0_Solar,1.0,Default
+V0_Solar,1.0,Default
+REZ_Q1_Wind,0.9472,Mount Emerald Wind farm
+REZ_Q2_Wind,0.9938,Woree
+REZ_Q3_Wind,0.9472,Mount Emerald Wind farm
+REZ_Q4_Wind,0.9938,Woree
+REZ_Q5_Wind,0.9329,Gladstone PS (275 kV) Unit 1
+REZ_Q6_Wind,0.9329,Gladstone PS (275 kV) Unit 1
+REZ_Q7_Wind,0.9259,Mt Millar Wind Farm
+REZ_Q8_Wind,0.9762,Darling Downs Solar Farm
+REZ_Q9_Wind,0.9472,Mount Emerald Wind farm
+REZ_N1_Wind,0.8697,White Rock Solar Farm
+REZ_N2_Wind,0.8697,White Rock Solar Farm
+REZ_N3_Wind,0.9622,Bodangora Wind Farm
+REZ_N4_Wind,0.8101,Silverton Wind Farm
+REZ_N5_Wind,1.0,Default
+REZ_N6_Wind,1.0,Default
+REZ_N7_Wind,1.0,Default
+REZ_N8_Wind,0.9444,Boco Rock Wind Farm
+REZ_N9_Wind,0.9622,Bodangora Wind Farm
+REZ_N10_Wind,0.9848,Eraring 330 PS Unit 1
+REZ_N11_Wind,0.9856,Tallawarra PS
+REZ_V1_Wind,1.0,Default
+REZ_V2_Wind,0.8899,Ararat Wind Farm
+REZ_V3_Wind,0.924,Waubra Wind Farm
+REZ_V4_Wind,0.9849,Macarthur Wind Farm
+REZ_V5_Wind,0.9825,Bald Hills Wind Farm
+REZ_V6_Wind,0.8899,Ararat Wind Farm
+REZ_V7_Wind,0.9825,Bald Hills Wind Farm
+REZ_V8_Wind,0.9849,Macarthur Wind Farm
+REZ_S1_Wind,0.9656,Lake Bonney Wind Farm
+REZ_S2_Wind,0.9599,Waterloo Wind Farm
+REZ_S3_Wind,0.9467,Hornsdale Wind Farm Stage 1
+REZ_S4_Wind,0.8899,Ararat Wind Farm
+REZ_S5_Wind,0.9812,Davenport 33
+REZ_S6_Wind,0.9812,Davenport 33
+REZ_S7_Wind,0.9601,Lincoln Gap Wind Farm
+REZ_S8_Wind,0.9259,Mt Millar Wind Farm
+REZ_S9_Wind,0.9259,Mt Millar Wind Farm
+REZ_T1_Wind,1.0,George Town
+REZ_T2_Wind,0.9555,Poatina
+REZ_T3_Wind,0.9836,Wild Cattle Hill Wind Farm
+REZ_T4_Wind,0.9555,Poatina
+REZ_T5_Wind,1.0,George Town
+N0_Wind,1.0,Default
+V0_Wind,1.0,Default

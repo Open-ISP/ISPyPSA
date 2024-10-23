@@ -1,0 +1,71 @@
+Generator,Technology,Fixed OPEX ($/kW/year)
+Bayswater,Steam Sub Critical,64.5
+Eraring,Steam Sub Critical,64.5
+Liddell,Steam Sub Critical,64.5
+Mt Piper,Steam Sub Critical,64.5
+Vales Point B,Steam Sub Critical,64.5
+Callide B,Steam Sub Critical,63.48
+Callide C,Steam Super Critical,63.48
+Gladstone,Steam Sub Critical,63.48
+Kogan Creek,Steam Super Critical,63.48
+Millmerran,Steam Super Critical,63.48
+Stanwell,Steam Sub Critical,63.48
+Tarong,Steam Sub Critical,63.48
+Tarong North,Steam Super Critical,63.48
+Loy Yang A Power Station,Steam Sub Critical,163.64
+Loy Yang B,Steam Sub Critical,163.64
+Yallourn W,Steam Sub Critical,163.64
+Tallawarra,CCGT,12.53
+Condamine A,CCGT,12.53
+Darling Downs,CCGT,12.53
+Swanbank E GT,CCGT,12.53
+Townsville Power Station,CCGT,12.53
+Yarwun Cogen,CCGT,12.53
+Osborne,CCGT,12.53
+Pelican Point,CCGT,12.53
+Tamar Valley Combined Cycle,CCGT,125.93
+Colongra,OCGT,18.08
+Smithfield Energy Facility,OCGT,18.08
+Uranquinty,OCGT,18.08
+Barcaldine Power Station,OCGT,18.08
+Braemar,OCGT,18.08
+Braemar 2 Power Station,OCGT,18.08
+Mt Stuart,OCGT,18.08
+Oakey Power Station,OCGT,18.08
+Roma,OCGT,18.08
+Dry Creek GT,OCGT,18.08
+Hallett GT,OCGT,18.08
+Ladbroke Grove,OCGT,18.08
+Mintaro GT,OCGT,18.08
+Port Lincoln GT,OCGT,18.08
+Quarantine,OCGT,18.08
+Snapper Point Power Station,OCGT,13.47
+Snuggery,OCGT,18.08
+Bell Bay Three,OCGT,18.08
+Tamar Valley Peaking,OCGT,18.08
+Bairnsdale,OCGT,18.08
+Jeeralang A,OCGT,18.08
+Jeeralang B,OCGT,18.08
+Laverton North,OCGT,18.08
+Mortlake,OCGT,18.08
+Somerton,OCGT,18.08
+Valley Power,OCGT,18.08
+Newport,Gas-powered steam turbine,56.24
+Torrens Island B,Gas-powered steam turbine,56.24
+Angaston,Reciprocating Engine,18.04
+Barker Inlet Power Station,Reciprocating Engine,18.04
+Lonsdale,Reciprocating Engine,18.04
+Port Stanvac 1,Reciprocating Engine,18.04
+Kurri Kurri OCGT,OCGT,10.91
+Tallawarra B,OCGT,10.91
+Bolivar Power Station,OCGT,13.47
+Kogan Gas,Hydrogen-based gas turbines,69.5045
+SA Hydrogen Turbine,Hydrogen-based gas turbines,69.5045
+All Battery storage (1hr storage),Battery storage (1hr storage),7.59
+All Battery storage (2hrs storage),Battery storage (2hrs storage),10.8
+All Battery storage (4hrs storage),Battery storage (4hrs storage),17.32
+All Battery storage (8hrs storage),Battery storage (8hrs storage),30.688909999999996
+All Hydro,Hydro,69.51
+All Pumped Hydro,Pumped Hydro,19.092475847369
+All Large scale solar PV,Large scale Solar PV,18.18
+All Wind,Wind,26.73
