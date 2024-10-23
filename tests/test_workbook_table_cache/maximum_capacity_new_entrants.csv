@@ -1,0 +1,20 @@
+Generator type,Unit size (MW),Number of units,Total plant size (MW)
+OCGT (small GT),49.0,5.0,245.0
+OCGT (large GT),265.0,1.0,265.0
+CCGT,409.0,1.0,409.0
+CCGT with CCS,409.0,1.0,409.0
+Biomass,30.0,1.0,30.0
+Large scale Solar PV,,,
+Solar Thermal (15hrs storage),,,
+Battery storage (1hr storage),,,
+Battery storage (2hrs storage),,,
+Battery storage (4hrs storage),,,
+Battery Storage (8hrs storage),,,
+Wind,,,
+Wind - offshore (fixed),,,
+Wind - offshore (floating),,,
+Pumped Hydro (8hrs storage),,,
+Pumped Hydro (24hrs storage),,,
+Pumped Hydro (48hrs storage),,,
+BOTN - Cethana,750.0,1.0,750.0
+Hydrogen reciprocating engines 6,17.6,12.0,211.2
