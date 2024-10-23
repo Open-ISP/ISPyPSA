@@ -109,33 +109,6 @@ def _merge_and_set_ecaa_generators_static_properties(
     Returns:
         `pd.DataFrame`: Existing generator template with static properties filled in
     """
-
-    def _merge_csv_data(
-        df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
-    ) -> pd.DataFrame:
-        """Replace values in the provided column of the summary mapping with those
-        in the CSV data using the provided attributes in
-        `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
-        """
-        replacement_dict = (
-            csv_data.loc[:, [csv_attrs["csv_lookup"], csv_attrs["csv_values"]]]
-            .set_index(csv_attrs["csv_lookup"])
-            .squeeze()
-            .to_dict()
-        )
-        # handles differences of mapping values between summmary and outage tables
-        if re.search("outage", col):
-            df[col] = _rename_summary_outage_mappings(df[col])
-        # handles slight difference in capitalisation e.g. Bongong/Mackay vs Bogong/MacKay
-        where_str = df[col].apply(lambda x: isinstance(x, str))
-        df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
-            df.loc[where_str, col], replacement_dict.keys(), 99
-        )
-        df[col] = df[col].replace(replacement_dict)
-        if "new_col_name" in csv_attrs.keys():
-            df = df.rename(columns={col: csv_attrs["new_col_name"]})
-        return df
-
     # adds a max capacity column that takes the existing generator name mapping
     df["maximum_capacity_mw"] = df["generator"]
     # merge in static properties using the static property mapping
@@ -154,9 +127,41 @@ def _merge_and_set_ecaa_generators_static_properties(
     df = _zero_renewable_bess_minimum_load(df, "minimum_load_mw")
     df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
-        df = _zero_wind_solar_outages(df, outage_col)
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
+    return df
+
+
+def _merge_csv_data(
+    df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
+) -> pd.DataFrame:
+    """Replace values in the provided column of the summary mapping with those
+    in the CSV data using the provided attributes in
+    `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    """
+    # handle alternative lookup and value columns
+    for alt_attr in ("lookup", "value"):
+        if f"alternative_{alt_attr}s" in csv_attrs.keys():
+            csv_col = csv_attrs[f"csv_{alt_attr}"]
+            for alt_col in csv_attrs[f"alternative_{alt_attr}s"]:
+                csv_data[csv_col] = csv_data[csv_col].where(pd.notna, csv_data[alt_col])
+    replacement_dict = (
+        csv_data.loc[:, [csv_attrs["csv_lookup"], csv_attrs["csv_value"]]]
+        .set_index(csv_attrs["csv_lookup"])
+        .squeeze()
+        .to_dict()
+    )
+    # handles differences of mapping values between summmary and outage tables
+    if re.search("outage", col):
+        df[col] = _rename_summary_outage_mappings(df[col])
+    # handles slight difference in capitalisation e.g. Bongong/Mackay vs Bogong/MacKay
+    where_str = df[col].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
+        df.loc[where_str, col], replacement_dict.keys(), 99
+    )
+    df[col] = df[col].replace(replacement_dict)
+    if "new_col_name" in csv_attrs.keys():
+        df = df.rename(columns={col: csv_attrs["new_col_name"]})
     return df
 
 
@@ -205,15 +210,6 @@ def _zero_ocgt_recip_minimum_load(
             df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
         ),
         minimum_load_col,
-    ] = 0.0
-    return df
-
-
-def _zero_wind_solar_outages(df: pd.DataFrame, outage_col: str) -> pd.DataFrame:
-    """Set values for wind and solar in the outage column to 0"""
-    df.loc[
-        _where_any_substring_appears(df[outage_col], ["solar", "wind"]),
-        outage_col,
     ] = 0.0
     return df
 
