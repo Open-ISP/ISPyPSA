@@ -4,6 +4,7 @@ import yaml
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.templater.nodes import template_nodes
 from ispypsa.templater.flow_paths import template_flow_paths
+from ispypsa.templater.generators import _template_ecaa_generators
 
 _PARSED_WORKBOOK_CACHE = Path("model_inputs", "workbook_table_cache")
 _TEMPLATE_DIRECTORY = Path("model_inputs", "template")
@@ -34,10 +35,15 @@ def create_template_from_config(
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
+    ecaa_generators_template = _template_ecaa_generators(workbook_cache_location)
     if node_template is not None:
         node_template.to_csv(Path(template_location, "node_template.csv"))
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths_template.csv"))
+    if ecaa_generators_template is not None:
+        ecaa_generators_template.to_csv(
+            Path(template_location, "ecaa_generators_template.csv")
+        )
 
 
 def task_cache_required_tables():
@@ -65,5 +71,6 @@ def task_create_template():
         "targets": [
             Path(_TEMPLATE_DIRECTORY, "node_template.csv"),
             Path(_TEMPLATE_DIRECTORY, "flow_paths_template.csv"),
+            Path(_TEMPLATE_DIRECTORY, "ecaa_generators_template.csv"),
         ],
     }

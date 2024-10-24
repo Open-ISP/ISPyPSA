@@ -52,7 +52,7 @@ def _template_ecaa_generators(
             cleaned_ecaa_generator_summaries, parsed_workbook_path
         )
     )
-    return merged_cleaned_ecaa_generator_summaries
+    return merged_cleaned_ecaa_generator_summaries.set_index("generator")
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
