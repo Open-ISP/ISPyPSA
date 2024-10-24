@@ -162,8 +162,13 @@ cython_debug/
 .idea/
 scratch.py
 
-# Excel lockfile
+# Lockfiles
 .~lock*.xlsx#
+.~lock*.csv#
 
 # ispypsa ignores
-local_cache/
+## CSVs in model_inputs
+model_inputs/**/*.csv
+
+# ignore doit database
+.doit*

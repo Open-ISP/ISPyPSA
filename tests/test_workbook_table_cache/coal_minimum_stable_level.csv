@@ -1,0 +1,45 @@
+Generator Station,Generating unit,Minimum Stable Level (MW)
+Bayswater,BW01,250
+Bayswater,BW02,250
+Bayswater,BW03,250
+Bayswater,BW04,250
+Eraring,ER01,210
+Eraring,ER02,210
+Eraring,ER03,210
+Eraring,ER04,210
+Mt Piper,MP1,270
+Mt Piper,MP2,270
+Vales Point B,VP5,250
+Vales Point B,VP6,250
+Callide B,CALL_B_1,155
+Callide B,CALL_B_2,155
+Callide C,CPP_3,180
+Callide C,CPP_4,180
+Gladstone,GSTONE1,110
+Gladstone,GSTONE2,110
+Gladstone,GSTONE3,110
+Gladstone,GSTONE4,110
+Gladstone,GSTONE5,110
+Gladstone,GSTONE6,110
+Kogan Creek,KPP_1,330
+Millmerran,MPP_1,200
+Millmerran,MPP_2,200
+Stanwell,STAN-1,140
+Stanwell,STAN-2,140
+Stanwell,STAN-3,140
+Stanwell,STAN-4,140
+Tarong,TARONG#1,140
+Tarong,TARONG#2,140
+Tarong,TARONG#3,140
+Tarong,TARONG#4,140
+Tarong North,TNPS1,180
+Loy Yang B,LOYYB1,320
+Loy Yang B,LOYYB2,320
+Loy Yang A Power Station,LYA1,300
+Loy Yang A Power Station,LYA2,300
+Loy Yang A Power Station,LYA3,300
+Loy Yang A Power Station,LYA4,300
+Yallourn W,YWPS1,200
+Yallourn W,YWPS2,200
+Yallourn W,YWPS3,200
+Yallourn W,YWPS4,200

@@ -1,0 +1,13 @@
+Generator type,Proportion of time out (%),Equivalent average days per year on planned outage
+Black Coal,5.47945205479452,20.0
+Brown Coal,5.47945205479452,20.0
+Hydro,0.273972602739726,1.0
+CCGT,5.47945205479452,20.0
+OCGT,1.36986301369863,5.0
+Gas-powered steam turbine,0.684931506849315,2.5
+Reciprocating Engine,1.643835616438356,6.0
+Large scale Solar PV,0.0,0.0
+Solar Thermal,0.0,0.0
+Battery storage,0.0,0.0
+Wind,0.0,0.0
+Hydrogen-based gas turbines,1.37,5.0

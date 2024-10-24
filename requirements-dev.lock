@@ -121,7 +121,7 @@ ipython==8.27.0
     # via ipdb
     # via ipykernel
     # via myst-nb
-isp-workbook-parser==1.2.0
+isp-workbook-parser==2.0.0
     # via ispypsa
 jedi==0.19.1
     # via ipython
@@ -274,7 +274,9 @@ pypsa==0.30.0
     # via ispypsa
 pytest==8.3.2
     # via pytest-cov
+    # via pytest-mock
 pytest-cov==5.0.0
+pytest-mock==3.14.0
 python-dateutil==2.9.0.post0
     # via jupyter-client
     # via matplotlib
@@ -292,11 +294,15 @@ pyyaml==6.0.2
 pyzmq==26.2.0
     # via ipykernel
     # via jupyter-client
+rapidfuzz==3.9.7
+    # via thefuzz
 referencing==0.35.1
     # via jsonschema
     # via jsonschema-specifications
 requests==2.32.3
+    # via requests-mock
     # via sphinx
+requests-mock==1.12.1
 rpds-py==0.20.0
     # via jsonschema
     # via referencing
@@ -350,6 +356,9 @@ tables==3.10.1
     # via pypsa
 tabulate==0.9.0
     # via jupyter-cache
+thefuzz==0.22.1
+    # via isp-workbook-parser
+    # via ispypsa
 toolz==0.12.1
     # via dask
     # via linopy
@@ -396,5 +405,7 @@ wheel==0.44.0
 xarray==2024.7.0
     # via linopy
     # via pypsa
+xmltodict==0.13.0
+    # via ispypsa
 zipp==3.20.1
     # via importlib-metadata

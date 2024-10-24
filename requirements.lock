@@ -50,7 +50,7 @@ highspy==1.7.2
     # via pypsa
 importlib-metadata==8.5.0
     # via doit
-isp-workbook-parser==1.2.0
+isp-workbook-parser==2.0.0
     # via ispypsa
 kiwisolver==1.4.5
     # via matplotlib
@@ -136,6 +136,8 @@ pyyaml==6.0.2
     # via dask
     # via isp-workbook-parser
     # via ispypsa
+rapidfuzz==3.9.7
+    # via thefuzz
 scipy==1.14.1
     # via linopy
     # via pypsa
@@ -145,6 +147,9 @@ six==1.16.0
     # via python-dateutil
 tables==3.10.1
     # via pypsa
+thefuzz==0.22.1
+    # via isp-workbook-parser
+    # via ispypsa
 toolz==0.12.1
     # via dask
     # via linopy
@@ -162,5 +167,7 @@ validators==0.33.0
 xarray==2024.7.0
     # via linopy
     # via pypsa
+xmltodict==0.13.0
+    # via ispypsa
 zipp==3.20.2
     # via importlib-metadata
