@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 
@@ -27,6 +28,7 @@ def template_flow_paths(
     Returns:
         `pd.DataFrame`: ISPyPSA flow path template
     """
+    logging.info(f"Creating a flow paths template with {granularity} granularity")
     validate_granularity(granularity)
     if granularity == "sub_regional":
         template = _template_sub_regional_flow_paths(parsed_workbook_path)
