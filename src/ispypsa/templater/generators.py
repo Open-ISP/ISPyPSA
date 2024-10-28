@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 
@@ -8,8 +9,8 @@ from .helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
 from .lists import _ECAA_GENERATOR_TYPES
+from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -29,6 +30,9 @@ def _template_ecaa_generators(
     Returns:
         `pd.DataFrame`: ISPyPSA ECAA generators template
     """
+    logging.info(
+        "Creating an existing, committed, anticipated and additional generators template"
+    )
     ecaa_generator_summaries = []
     for gen_type in _ECAA_GENERATOR_TYPES:
         df = pd.read_csv(

@@ -30,6 +30,7 @@ def template_nodes(
     Returns:
         `pd.DataFrame`: ISPyPSA node template
     """
+    logging.info(f"Creating a nodes template with {granularity} granularity")
     validate_granularity(granularity)
     if granularity == "sub_regional":
         template = _template_sub_regional_node_table(parsed_workbook_path)
@@ -203,7 +204,7 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
     url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
     substation_coordinates = {}
     try:
-        r = requests.get(url, params=params)
+        r = requests.get(url, params=params, timeout=30)
         if r.status_code == 200:
             data = xmltodict.parse(r.content)
             features = data["wfs:FeatureCollection"]["wfs:member"]
