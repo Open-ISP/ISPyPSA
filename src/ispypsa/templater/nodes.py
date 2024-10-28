@@ -56,7 +56,9 @@ def template_nodes(
     if not substation_coordinates.empty:
         reference_node_col = process.extractOne("reference_node", template.columns)[0]
         matched_subs = _fuzzy_match_names(
-            template[reference_node_col], substation_coordinates.index
+            template[reference_node_col],
+            substation_coordinates.index,
+            "merging in substation coordinate data",
         )
         reference_node_coordinates = pd.merge(
             matched_subs,
@@ -119,7 +121,9 @@ def _template_sub_regional_node_table(
         axis=1,
     )
     sub_regional_nodes["nem_region"] = _fuzzy_match_names(
-        sub_regional_nodes["nem_region"], _NEM_REGION_IDS.keys()
+        sub_regional_nodes["nem_region"],
+        _NEM_REGION_IDS.keys(),
+        "determining the NEM region",
     )
     sub_regional_nodes["nem_region_id"] = sub_regional_nodes["nem_region"].replace(
         _NEM_REGION_IDS
@@ -169,7 +173,9 @@ def _template_regional_node_table(
         axis=1,
     )
     regional_nodes["nem_region"] = _fuzzy_match_names(
-        regional_nodes["nem_region"], _NEM_REGION_IDS.keys()
+        regional_nodes["nem_region"],
+        _NEM_REGION_IDS.keys(),
+        "determining the NEM region",
     )
     regional_nodes["nem_region_id"] = regional_nodes["nem_region"].replace(
         _NEM_REGION_IDS
@@ -204,7 +210,7 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
     url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
     substation_coordinates = {}
     try:
-        r = requests.get(url, params=params, timeout=30)
+        r = requests.get(url, params=params, timeout=60)
         if r.status_code == 200:
             data = xmltodict.parse(r.content)
             features = data["wfs:FeatureCollection"]["wfs:member"]
