@@ -17,7 +17,7 @@ def test_fuzzy_matching() -> None:
     expected = pd.Series(
         ["New South Wales", "Queensland", "South Australia", "Victoria", "Tasmania"]
     )
-    test_results = _fuzzy_match_names(region_typos, _NEM_REGION_IDS.keys())
+    test_results = _fuzzy_match_names(region_typos, _NEM_REGION_IDS.keys(), "testing")
     assert (test_results == expected).all()
 
 
@@ -26,9 +26,7 @@ def test_fuzzy_matching_above_threshold() -> None:
         ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
     )
     test_results = _fuzzy_match_names_above_threshold(
-        region_typos,
-        _NEM_REGION_IDS.keys(),
-        70,
+        region_typos, _NEM_REGION_IDS.keys(), 70, "testing"
     )
     assert (
         test_results
@@ -47,7 +45,7 @@ def test_fuzzy_matching_above_threshold_replace() -> None:
         ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
     )
     test_results = _fuzzy_match_names_above_threshold(
-        region_typos, _NEM_REGION_IDS.keys(), 70, not_match="replacement"
+        region_typos, _NEM_REGION_IDS.keys(), 70, "testing", not_match="replacement"
     )
     assert (
         test_results
