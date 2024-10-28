@@ -8,7 +8,7 @@ from ispypsa.templater.generators import _template_ecaa_generators
 
 _PARSED_WORKBOOK_CACHE = Path("model_inputs", "workbook_table_cache")
 _TEMPLATE_DIRECTORY = Path("model_inputs", "template")
-_CONFIG_PATH = Path("model_inputs", "ipypsa_config.yaml")
+_CONFIG_PATH = Path("model_inputs", "ispypsa_config.yaml")
 
 
 def build_parsed_workbook_cache(cache_location: Path) -> None:
