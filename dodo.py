@@ -21,9 +21,12 @@ from ispypsa.config.validators import validate_config
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
-from ispypsa.templater.nodes import template_nodes
+from ispypsa.templater.static_generator_properties import (
+    _template_ecaa_generators_static_properties
+)
 from ispypsa.translator.generators import _translate_ecaa_generators, _translate_generator_timeseries
 from ispypsa.translator.buses import _translate_nodes_to_buses, _translate_buses_timeseries
+
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "template")
