@@ -1,14 +1,18 @@
 from pathlib import Path
+
 import yaml
 
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
-from ispypsa.templater.nodes import template_nodes
+from ispypsa.logging import configure_logging
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.generators import _template_ecaa_generators
+from ispypsa.templater.nodes import template_nodes
 
 _PARSED_WORKBOOK_CACHE = Path("model_inputs", "workbook_table_cache")
 _TEMPLATE_DIRECTORY = Path("model_inputs", "template")
 _CONFIG_PATH = Path("model_inputs", "ispypsa_config.yaml")
+
+configure_logging()
 
 
 def build_parsed_workbook_cache(cache_location: Path) -> None:
