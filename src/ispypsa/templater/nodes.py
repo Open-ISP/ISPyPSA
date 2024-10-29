@@ -6,6 +6,7 @@ import requests
 import xmltodict
 from thefuzz import process
 
+from ..config.validators import _validate_granularity
 from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
@@ -49,6 +50,8 @@ def template_nodes(
         }
         template = pd.DataFrame(template, index=[0])
         index_col = "single_region_id"
+    else:
+        _validate_granularity(granularity)
     # request and merge in substation coordinates for reference nodes
     substation_coordinates = _request_transmission_substation_coordinates()
     if not substation_coordinates.empty:
