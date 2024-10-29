@@ -6,6 +6,8 @@ from isp_trace_parser import get_data
 
 from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
 
+from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
+
 
 def _translate_ecaa_generators(
     ispypsa_inputs_path: Path | str,  granularity: str = "sub_regional"
@@ -101,3 +103,4 @@ def _translate_generator_timeseries(
             year_type=year_type
         )
         trace.to_parquet(Path(output_trace_path, f"{gen}.parquet"), index=False)
+
