@@ -9,6 +9,7 @@ from ispypsa.templater.nodes import template_nodes
 from ispypsa.templater.static_generator_properties import (
     _template_ecaa_generators_static_properties,
 )
+from ispypsa.config.validators import validate_config
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
@@ -33,6 +34,7 @@ def create_ispypsa_inputs_from_config(
 ) -> None:
     with open(config_location, "r") as file:
         config = yaml.safe_load(file)
+    validate_config(config)
     if not template_location.exists():
         template_location.mkdir(parents=True)
     node_template = template_nodes(
