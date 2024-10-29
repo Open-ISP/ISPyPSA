@@ -5,7 +5,19 @@ class ModelConfigOptionError(Exception):
     """Raised when an invalid option is specified in the model configuration"""
 
 
-def validate_scenario(scenario: str) -> None:
+def validate_config(loaded_config: dict) -> None:
+    """Validates the ISPyPSA config file
+
+    Args:
+        loaded_config (dict): The config as a dictionary
+    Raises:
+        {class}`ispypsa.config.validators.ModelConfigOptionError`
+    """
+    _validate_granularity(loaded_config["network"]["granularity"])
+    _validate_scenario(loaded_config["scenario"])
+
+
+def _validate_scenario(scenario: str) -> None:
     """
     Raises {class}`ModelConfigOptionError` if an invalid scenario option is passed.
 
@@ -21,7 +33,7 @@ def validate_scenario(scenario: str) -> None:
         )
 
 
-def validate_granularity(granularity: str) -> None:
+def _validate_granularity(granularity: str) -> None:
     """
     Raises {class}`ModelConfigOptionError` if an invalid granularity option is passed.
 
