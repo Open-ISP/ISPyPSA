@@ -1,3 +1,11 @@
+# The ISP scenario for which to generate ISPyPSA inputs
+# Options (descriptions lifted from the 2024 ISP):
+#   "Progressive Change": Reflects slower economic growth and energy investment with
+#       economic and international factors placing industrial demands at greater risk and slower
+#       decarbonisation action beyond current commitments
+#   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
+#   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
+scenario: Step Change
 network:
   # The geographical granularity of the modelled network (i.e. the number of network nodes)
   # Options:
