@@ -9,7 +9,7 @@ from ispypsa.templater.generators import _template_ecaa_generators
 from ispypsa.templater.nodes import template_nodes
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
-_TEMPLATE_DIRECTORY = Path("model_data", "ispypsa_inputs")
+_ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
 _CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
 
 configure_logging()
@@ -26,7 +26,7 @@ def build_parsed_workbook_cache(cache_location: Path) -> None:
     build_local_cache(cache_location, workbook_path)
 
 
-def create_template_from_config(
+def create_ispypsa_inputs_from_config(
     config_location: Path, workbook_cache_location: Path, template_location: Path
 ) -> None:
     with open(config_location, "r") as file:
@@ -60,19 +60,19 @@ def task_cache_required_tables():
     }
 
 
-def task_create_template():
+def task_create_ispypsa_inputs():
     return {
         "actions": [
             (
-                create_template_from_config,
-                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _TEMPLATE_DIRECTORY],
+                create_ispypsa_inputs_from_config,
+                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUTS_DIRECTORY],
             )
         ],
         "file_dep": [_CONFIG_PATH]
         + [Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES],
         "targets": [
-            Path(_TEMPLATE_DIRECTORY, "nodes.csv"),
-            Path(_TEMPLATE_DIRECTORY, "flow_paths.csv"),
-            Path(_TEMPLATE_DIRECTORY, "ecaa_generators.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
         ],
     }
