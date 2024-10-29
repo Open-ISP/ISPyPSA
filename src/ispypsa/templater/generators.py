@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 
@@ -8,8 +9,8 @@ from .helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
 from .lists import _ECAA_GENERATOR_TYPES
+from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -29,6 +30,9 @@ def _template_ecaa_generators(
     Returns:
         `pd.DataFrame`: ISPyPSA ECAA generators template
     """
+    logging.info(
+        "Creating an existing, committed, anticipated and additional generators template"
+    )
     ecaa_generator_summaries = []
     for gen_type in _ECAA_GENERATOR_TYPES:
         df = pd.read_csv(
@@ -162,10 +166,13 @@ def _merge_csv_data(
     # handles differences of mapping values between summmary and outage tables
     if re.search("outage", col):
         df[col] = _rename_summary_outage_mappings(df[col])
-    # handles slight difference in capitalisation e.g. Bongong/Mackay vs Bogong/MacKay
+    # handles slight difference in capitalisation e.g. Bogong/Mackay vs Bogong/MacKay
     where_str = df[col].apply(lambda x: isinstance(x, str))
     df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
-        df.loc[where_str, col], replacement_dict.keys(), 99
+        df.loc[where_str, col],
+        replacement_dict.keys(),
+        99,
+        "merging in existing, committed, anticipated and additional generator static properties",
     )
     df[col] = df[col].replace(replacement_dict)
     if "new_col_name" in csv_attrs.keys():

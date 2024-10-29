@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Iterable
 
@@ -6,7 +7,9 @@ import pandas as pd
 from thefuzz import process
 
 
-def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Series:
+def _fuzzy_match_names(
+    name_series: pd.Series, choices: Iterable[str], task_desc: str
+) -> pd.Series:
     """
     Fuzzy matches values in `name_series` with values in `choices`.
     Fuzzy matching is used where typos or minor differences in names in raw data
@@ -16,12 +19,14 @@ def _fuzzy_match_names(name_series: pd.Series, choices: Iterable[str]) -> pd.Ser
         name_series: :class:`pandas.Series` with names to be matched with values in
             `choices`
         choices: Iterable of `choices` that are replacement values
+        task_desc: Task description to include in logging information
 
     Returns:
         :class:`pandas.Series` with values from `choices` that correspond to the closest
             match to the original values in `name_series`
     """
     matched_series = name_series.apply(lambda x: process.extractOne(x, choices)[0])
+    _log_fuzzy_match(name_series, matched_series, task_desc)
     return matched_series
 
 
@@ -29,6 +34,7 @@ def _fuzzy_match_names_above_threshold(
     name_series: pd.Series,
     choices: Iterable[str],
     threshold: int,
+    task_desc: str,
     not_match: str = "existing",
 ) -> pd.Series:
     """
@@ -40,6 +46,7 @@ def _fuzzy_match_names_above_threshold(
             `choices`
         choices: Iterable of `choices` that are replacement values
         threshold: Threshold to exceed for replacement. Between 0 and 100
+        task_desc: Task description to include in logging information
         not_match: optional. Defaults to "existing". If "existing", wherever a match
             that exceeds the threshold does not exist, the existing value is retained.
             If any other string, this will be used to replace the existing value
@@ -59,7 +66,19 @@ def _fuzzy_match_names_above_threshold(
             if process.extractOne(x, choices)[1] > threshold
             else not_match
         )
+    _log_fuzzy_match(name_series, matched_series, task_desc)
     return matched_series
+
+
+def _log_fuzzy_match(
+    original_series: pd.Series, matched_series: pd.Series, task_desc: str
+) -> None:
+    """Log any fuzzy matches at the INFO level"""
+    if any(diff := matched_series != original_series):
+        originals = original_series[diff]
+        matches = matched_series[diff]
+        for original, match in zip(originals, matches):
+            logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
 
 
 def _snakecase_string(string: str) -> str:
