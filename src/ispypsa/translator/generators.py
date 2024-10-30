@@ -56,7 +56,6 @@ def _translate_ecaa_generators(
     ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.set_index(
         "name", drop=True
     )
-
     return ecaa_generators_pypsa_format
 
 
