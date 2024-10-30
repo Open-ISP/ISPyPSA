@@ -13,6 +13,7 @@ from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
 from ispypsa.config.validators import validate_config
+from ispypsa.templater.regions_and_zones import template_region_and_zone_mapping
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
@@ -43,6 +44,9 @@ def create_ispypsa_inputs_from_config(
     node_template = template_nodes(
         workbook_cache_location, config["network"]["granularity"]
     )
+    region_and_zone_mapping_template = template_region_and_zone_mapping(
+        workbook_cache_location
+    )
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
@@ -54,6 +58,8 @@ def create_ispypsa_inputs_from_config(
     )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
+    if region_and_zone_mapping_template is not None:
+        region_and_zone_mapping_template.to_csv(Path(template_location, "region_and_zone_mapping.csv"))
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
     if ecaa_generators_template is not None:
@@ -97,5 +103,6 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "full_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "region_and_zone_mapping.csv"),
         ],
     }

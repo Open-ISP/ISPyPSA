@@ -14,6 +14,7 @@ _NETWORK_REQUIRED_TABLES = [
     "sub_regional_reference_nodes",
     "regional_topology_representation",
     "regional_reference_nodes",
+    "renewable_energy_zones",
     "flow_path_transfer_capability",
     "interconnector_transfer_capability",
 ]
