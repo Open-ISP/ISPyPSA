@@ -9,6 +9,9 @@ from ispypsa.templater.nodes import template_nodes
 from ispypsa.templater.static_generator_properties import (
     _template_ecaa_generators_static_properties,
 )
+from ispypsa.templater.dynamic_generator_properties import (
+    template_generator_dynamic_properties,
+)
 from ispypsa.config.validators import validate_config
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
@@ -46,12 +49,20 @@ def create_ispypsa_inputs_from_config(
     ecaa_generators_template = _template_ecaa_generators_static_properties(
         workbook_cache_location
     )
+    dynamic_generator_property_templates = template_generator_dynamic_properties(
+        workbook_cache_location, config["scenario"]
+    )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
     if ecaa_generators_template is not None:
         ecaa_generators_template.to_csv(Path(template_location, "ecaa_generators.csv"))
+    if dynamic_generator_property_templates is not None:
+        for gen_property in dynamic_generator_property_templates.keys():
+            dynamic_generator_property_templates[gen_property].to_csv(
+                Path(template_location, f"{gen_property}.csv")
+            )
 
 
 def task_cache_required_tables():
