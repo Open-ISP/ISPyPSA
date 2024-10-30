@@ -47,7 +47,9 @@ def create_ispypsa_inputs_from_config(
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
     if region_and_zone_mapping_template is not None:
-        region_and_zone_mapping_template.to_csv(Path(template_location, "region_and_zone_mapping.csv"))
+        region_and_zone_mapping_template.to_csv(
+            Path(template_location, "region_and_zone_mapping.csv")
+        )
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
     if ecaa_generators_template is not None:
