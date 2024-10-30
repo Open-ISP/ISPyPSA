@@ -109,7 +109,7 @@ def _snakecase_string(string: str) -> str:
         r"(?<!^)(?<!_)([A-Z][a-z0-9]+)", r"_\1", string
     )
     precede_number_groups_with_underscore = re.sub(
-        r"(?<!^)(?<!_)([0-9]{2,}+)(?![a-zA-Z]+)",
+        r"(?<!^)(?<!_)(?<![0-9])([0-9]{2,}+)(?![a-zA-Z]+)",
         r"_\1",
         precede_words_with_capital_with_underscore,
     )
