@@ -19,6 +19,7 @@ from ispypsa.config.validators import validate_config
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
+from ispypsa.templater.regions_and_zones import template_region_and_zone_mapping
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
@@ -63,6 +64,9 @@ def create_ispypsa_inputs_from_config(
         workbook_cache_location
     )
 
+    region_and_zone_mapping_template = template_region_and_zone_mapping(
+        workbook_cache_location
+    )
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
@@ -123,5 +127,6 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
+            Path(_TEMPLATE_DIRECTORY, "region_and_zone_mapping.csv"),
         ],
     }
