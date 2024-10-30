@@ -145,15 +145,17 @@ def _split_out_sub_region_name_and_id(data):
     print(data)
     name_id_col = "ISP Sub-region"
     sub_region_name_and_id = _capture_just_name(data[name_id_col])
-    print(sub_region_name_and_id['name'])
-    sub_region_name_and_id['name'] = _fuzzy_match_names(
-        sub_region_name_and_id['name'],
+    print(sub_region_name_and_id["name"])
+    sub_region_name_and_id["name"] = _fuzzy_match_names(
+        sub_region_name_and_id["name"],
         _NEM_SUB_REGION_IDS.keys(),
         "determining the NEM subregion region",
     )
     sub_region_name_and_id.columns = [_snakecase_string(name_id_col)]
     sub_region_name_and_id[_snakecase_string(name_id_col + " ID")] = (
-        sub_region_name_and_id[_snakecase_string(name_id_col)].replace(_NEM_SUB_REGION_IDS)
+        sub_region_name_and_id[
+            _snakecase_string(name_id_col)
+        ].replace(_NEM_SUB_REGION_IDS)
     )
     return sub_region_name_and_id
 
@@ -164,9 +166,7 @@ def _match_region_name_and_id(data):
         _NEM_REGION_IDS.keys(),
         "determining the NEM region",
     )
-    data["nem_region_id"] = data["nem_region"].replace(
-        _NEM_REGION_IDS
-    )
+    data["nem_region_id"] = data["nem_region"].replace(_NEM_REGION_IDS)
     return data
 
 
@@ -177,9 +177,7 @@ def _extract_voltage(data, column):
         _snakecase_string(column + " Voltage (kV)"),
     ]
     split_node_voltage[_snakecase_string(column + " Voltage (kV)")] = (
-        split_node_voltage[
-            _snakecase_string(column + " Voltage (kV)")
-        ].astype(int)
+        split_node_voltage[_snakecase_string(column + " Voltage (kV)")].astype(int)
     )
     return split_node_voltage
 
