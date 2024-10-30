@@ -13,7 +13,7 @@ def test_node_templater_regional(workbook_table_cache_test_path: Path):
     assert node_template.index.name == "node_id"
     assert set(node_template.regional_reference_node_voltage_kv) == set((132,))
     assert set(node_template.index) == set(("QLD", "VIC"))
-    assert set(node_template.isp_sub_region) == set(("Gas Town", "Bullet Farm"))
+    assert set(node_template.isp_sub_region) == set(("South Queensland", "Victoria"))
     assert not node_template.substation_longitude.empty
     assert not node_template.substation_latitude.empty
 
@@ -22,7 +22,7 @@ def test_node_templater_sub_regional(workbook_table_cache_test_path: Path):
     node_template = template_nodes(workbook_table_cache_test_path, "sub_regional")
     assert node_template.index.name == "node_id"
     assert set(node_template.sub_region_reference_node_voltage_kv) == set((132,))
-    assert set(node_template.index) == set(("GT", "BF"))
+    assert set(node_template.index) == set(("SQ", "VIC"))
     assert set(node_template.nem_region_id) == set(("QLD", "VIC"))
     assert not node_template.substation_longitude.empty
     assert not node_template.substation_latitude.empty
@@ -52,7 +52,7 @@ def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker)
     node_template = template_nodes(workbook_table_cache_test_path, "sub_regional")
     assert node_template.index.name == "node_id"
     assert set(node_template.sub_region_reference_node_voltage_kv) == set((132,))
-    assert set(node_template.index) == set(("GT", "BF"))
+    assert set(node_template.index) == set(("SQ", "VIC"))
     assert set(node_template.nem_region_id) == set(("QLD", "VIC"))
     assert len(node_template) == 2
     assert len(node_template.columns) == 6
