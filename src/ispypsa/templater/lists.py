@@ -15,3 +15,5 @@ _CONDENSED_GENERATOR_TYPES = [
     "existing_committed_anticipated_additional_generators",
     "new_entrants",
 ]
+
+_ISP_SCENARIOS = ["Progressive Change", "Step Change", "Green Energy Exports"]
