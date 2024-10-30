@@ -22,10 +22,16 @@ from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
 from ispypsa.templater.static_generator_properties import (
-    _template_ecaa_generators_static_properties
+    _template_ecaa_generators_static_properties,
 )
-from ispypsa.translator.generators import _translate_ecaa_generators, _translate_generator_timeseries
-from ispypsa.translator.buses import _translate_nodes_to_buses, _translate_buses_timeseries
+from ispypsa.translator.generators import (
+    _translate_ecaa_generators,
+    _translate_generator_timeseries,
+)
+from ispypsa.translator.buses import (
+    _translate_nodes_to_buses,
+    _translate_buses_timeseries,
+)
 
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
@@ -104,7 +110,10 @@ def create_ispypsa_inputs_from_config(
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
-    config_location: Path, ispypsa_inputs_location: Path, trace_data_path: Path, pypsa_inputs_location: Path
+    config_location: Path,
+    ispypsa_inputs_location: Path,
+    trace_data_path: Path,
+    pypsa_inputs_location: Path,
 ) -> None:
     with open(config_location, "r") as file:
         config = yaml.safe_load(file)
@@ -113,41 +122,39 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 
     pypsa_inputs = {}
 
-    pypsa_inputs['generators'] = _translate_ecaa_generators(
+    pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config["network"]["granularity"]
     )
 
-    pypsa_inputs['buses'] = _translate_nodes_to_buses(
+    pypsa_inputs["buses"] = _translate_nodes_to_buses(
         ispypsa_inputs_location,
     )
 
     for name, table in pypsa_inputs.items():
-        table.to_csv(
-            Path(pypsa_inputs_location, f"{name}.csv")
-        )
+        table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
 
     reference_year_mapping = construct_reference_year_mapping(
         start_year=config["traces"]["start_year"],
         end_year=config["traces"]["end_year"],
-        reference_years=config["traces"]["reference_year_cycle"]
+        reference_years=config["traces"]["reference_year_cycle"],
     )
 
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
         pypsa_inputs_location,
-        generator_type='solar',
+        generator_type="solar",
         reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
+        year_type=config["traces"]["year_type"],
     )
 
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
         pypsa_inputs_location,
-        generator_type='wind',
+        generator_type="wind",
         reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
+        year_type=config["traces"]["year_type"],
     )
 
     _translate_buses_timeseries(
@@ -157,9 +164,8 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         scenario=config["scenario"],
         granularity=config["network"]["granularity"],
         reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
+        year_type=config["traces"]["year_type"],
     )
-
 
 def task_cache_required_tables():
     return {
