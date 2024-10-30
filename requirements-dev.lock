@@ -129,11 +129,15 @@ ipython==8.27.0
     # via myst-nb
 isp-workbook-parser==2.0.1
     # via ispypsa
+isp-trace-parser==1.0.0
+    # via ispypsa
 jedi==0.19.1
     # via ipython
 jinja2==3.1.4
     # via myst-parser
     # via sphinx
+joblib==1.4.2
+    # via isp-trace-parser
 jsonschema==4.23.0
     # via nbformat
 jsonschema-specifications==2023.12.1
@@ -228,6 +232,7 @@ packaging==24.1
     # via xarray
 pandas==2.2.2
     # via geopandas
+    # via isp-trace-parser
     # via isp-workbook-parser
     # via ispypsa
     # via pypsa
@@ -243,7 +248,8 @@ platformdirs==4.2.2
     # via virtualenv
 pluggy==1.5.0
     # via pytest
-polars==1.6.0
+polars==1.12.0
+    # via isp-trace-parser
     # via linopy
 pre-commit==3.8.0
 prompt-toolkit==3.0.47
@@ -255,9 +261,12 @@ pure-eval==0.2.3
 py-cpuinfo==9.0.0
     # via blosc2
     # via tables
-pydantic==2.9.1
+pyarrow==18.0.0
+    # via ispypsa
+pydantic==2.9.2
+    # via isp-trace-parser
     # via isp-workbook-parser
-pydantic-core==2.23.3
+pydantic-core==2.23.4
     # via pydantic
 pydata-sphinx-theme==0.15.4
     # via sphinx-book-theme

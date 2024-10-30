@@ -2,6 +2,8 @@ from pathlib import Path
 
 import yaml
 
+from isp_trace_parser import construct_reference_year_mapping
+
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.templater.flow_paths import template_flow_paths
@@ -19,10 +21,15 @@ from ispypsa.config.validators import validate_config
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
+from ispypsa.templater.nodes import template_nodes
+from ispypsa.translator.generators import _translate_ecaa_generators, _translate_generator_timeseries
+from ispypsa.translator.buses import _translate_nodes_to_buses, _translate_buses_timeseries
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
-_ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
-_CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
+_ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "template")
+_PYPSA_INPUTS_DIRECTORY = Path("model_data", "pypsa")
+_PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
+_CONFIG_PATH = Path("model_data", "ispypsa_config.yaml")
 
 configure_logging()
 
@@ -89,6 +96,63 @@ def create_ispypsa_inputs_from_config(
             )
 
 
+def create_pypsa_inputs_from_config_and_ispypsa_inputs(
+    config_location: Path, ispypsa_inputs_location: Path, trace_data_path: Path, pypsa_inputs_location: Path
+) -> None:
+    with open(config_location, "r") as file:
+        config = yaml.safe_load(file)
+    if not pypsa_inputs_location.exists():
+        pypsa_inputs_location.mkdir(parents=True)
+
+    pypsa_inputs = {}
+
+    pypsa_inputs['generators'] = _translate_ecaa_generators(
+        ispypsa_inputs_location, config["network"]["granularity"]
+    )
+
+    pypsa_inputs['buses'] = _translate_nodes_to_buses(
+        ispypsa_inputs_location,
+    )
+
+    for name, table in pypsa_inputs.items():
+        table.to_csv(
+            Path(pypsa_inputs_location, f"{name}.csv")
+        )
+
+    reference_year_mapping = construct_reference_year_mapping(
+        start_year=config["traces"]["start_year"],
+        end_year=config["traces"]["end_year"],
+        reference_years=config["traces"]["reference_year_cycle"]
+    )
+
+    _translate_generator_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        generator_type='solar',
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+    _translate_generator_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        generator_type='wind',
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+    _translate_buses_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        scenario=config["scenario"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+
 def task_cache_required_tables():
     return {
         "actions": [(build_parsed_workbook_cache, [_PARSED_WORKBOOK_CACHE])],
@@ -123,5 +187,24 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "full_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
+        ],
+    }
+
+
+def task_create_pypsa_inputs():
+    return {
+        "actions": [
+            (
+                create_pypsa_inputs_from_config_and_ispypsa_inputs,
+                [_CONFIG_PATH, _TEMPLATE_DIRECTORY, _PARSED_TRACE_DIRECTORY, _PYPSA_INPUTS_DIRECTORY],
+            )
+        ],
+        "file_dep": [
+            Path(_TEMPLATE_DIRECTORY, "node_template.csv"),
+            Path(_TEMPLATE_DIRECTORY, "flow_paths_template.csv"),
+            Path(_TEMPLATE_DIRECTORY, "ecaa_generators_template.csv"),
+        ],
+        "targets": [
+            Path(_TEMPLATE_DIRECTORY, "generators.csv")
         ],
     }
