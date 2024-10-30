@@ -30,6 +30,7 @@ _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES = [
 _GENERATORS_REQUIRED_PROPERTY_TABLES = [
     "expected_closure_years",
     "coal_minimum_stable_level",
+    "liquid_fuel_prices",
 ] + _GENERATOR_PROPERTY_TABLES
 
 REQUIRED_TABLES = (
