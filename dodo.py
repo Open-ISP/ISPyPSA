@@ -27,6 +27,9 @@ from ispypsa.templater.static_generator_properties import (
 from ispypsa.translator.generators import _translate_ecaa_generators, _translate_generator_timeseries
 from ispypsa.translator.buses import _translate_nodes_to_buses, _translate_buses_timeseries
 
+from ispypsa.templater.dynamic_generator_properties import (
+    template_generator_dynamic_properties,
+)
 from ispypsa.config.validators import validate_config
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
