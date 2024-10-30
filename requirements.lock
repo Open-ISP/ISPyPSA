@@ -53,9 +53,9 @@ highspy==1.7.2
     # via pypsa
 importlib-metadata==8.5.0
     # via doit
-isp-workbook-parser==2.0.1
-    # via ispypsa
 isp-trace-parser==1.0.0
+    # via ispypsa
+isp-workbook-parser==2.0.1
     # via ispypsa
 joblib==1.4.2
     # via isp-trace-parser
