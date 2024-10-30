@@ -121,7 +121,7 @@ ipython==8.27.0
     # via ipdb
     # via ipykernel
     # via myst-nb
-isp-workbook-parser==2.0.0
+isp-workbook-parser==2.0.1
     # via ispypsa
 jedi==0.19.1
     # via ipython
