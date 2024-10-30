@@ -153,6 +153,63 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     )
 
 
+def create_pypsa_inputs_from_config_and_ispypsa_inputs(
+    config_location: Path, ispypsa_inputs_location: Path, trace_data_path: Path, pypsa_inputs_location: Path
+) -> None:
+    with open(config_location, "r") as file:
+        config = yaml.safe_load(file)
+    if not pypsa_inputs_location.exists():
+        pypsa_inputs_location.mkdir(parents=True)
+
+    pypsa_inputs = {}
+
+    pypsa_inputs['generators'] = _translate_ecaa_generators(
+        ispypsa_inputs_location, config["network"]["granularity"]
+    )
+
+    pypsa_inputs['buses'] = _translate_nodes_to_buses(
+        ispypsa_inputs_location,
+    )
+
+    for name, table in pypsa_inputs.items():
+        table.to_csv(
+            Path(pypsa_inputs_location, f"{name}.csv")
+        )
+
+    reference_year_mapping = construct_reference_year_mapping(
+        start_year=config["traces"]["start_year"],
+        end_year=config["traces"]["end_year"],
+        reference_years=config["traces"]["reference_year_cycle"]
+    )
+
+    _translate_generator_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        generator_type='solar',
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+    _translate_generator_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        generator_type='wind',
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+    _translate_buses_timeseries(
+        ispypsa_inputs_location,
+        trace_data_path,
+        pypsa_inputs_location,
+        scenario=config["scenario"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config["traces"]["year_type"]
+    )
+
+
 def task_cache_required_tables():
     return {
         "actions": [(build_parsed_workbook_cache, [_PARSED_WORKBOOK_CACHE])],
@@ -196,15 +253,15 @@ def task_create_pypsa_inputs():
         "actions": [
             (
                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
-                [_CONFIG_PATH, _TEMPLATE_DIRECTORY, _PARSED_TRACE_DIRECTORY, _PYPSA_INPUTS_DIRECTORY],
+                [_CONFIG_PATH, _ISPYPSA_INPUTS_DIRECTORY, _PARSED_TRACE_DIRECTORY, _PYPSA_INPUTS_DIRECTORY],
             )
         ],
         "file_dep": [
-            Path(_TEMPLATE_DIRECTORY, "node_template.csv"),
-            Path(_TEMPLATE_DIRECTORY, "flow_paths_template.csv"),
-            Path(_TEMPLATE_DIRECTORY, "ecaa_generators_template.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "node_template.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths_template.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators_template.csv"),
         ],
         "targets": [
-            Path(_TEMPLATE_DIRECTORY, "generators.csv")
+            Path(_PYPSA_INPUTS_DIRECTORY, "generators.csv")
         ],
     }
