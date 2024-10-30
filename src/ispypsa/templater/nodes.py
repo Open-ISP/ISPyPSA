@@ -10,7 +10,7 @@ from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
 )
-from .mappings import _NEM_REGION_IDS
+from .mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
 
 
 def template_nodes(
@@ -94,39 +94,18 @@ def _template_sub_regional_node_table(
     sub_regional_df = pd.read_csv(
         Path(parsed_workbook_path, "sub_regional_reference_nodes.csv")
     )
-    name_id_col = "ISP Sub-region"
-    split_name_id = _split_name_id(sub_regional_df[name_id_col])
-    split_name_id.columns = [
-        _snakecase_string(name_id_col),
-        _snakecase_string(name_id_col + " ID"),
-    ]
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(sub_regional_df)
     node_voltage_col = "Sub-region Reference Node"
-    split_node_voltage = _split_node_voltage(sub_regional_df[node_voltage_col])
-    split_node_voltage.columns = [
-        _snakecase_string(node_voltage_col),
-        _snakecase_string(node_voltage_col + " Voltage (kV)"),
-    ]
-    split_node_voltage[_snakecase_string(node_voltage_col + " Voltage (kV)")] = (
-        split_node_voltage[
-            _snakecase_string(node_voltage_col + " Voltage (kV)")
-        ].astype(int)
-    )
+    split_node_voltage = _extract_voltage(sub_regional_df, node_voltage_col)
     sub_regional_nodes = pd.concat(
         [
-            split_name_id,
+            sub_region_name_and_id,
             split_node_voltage,
             sub_regional_df["NEM Region"].rename("nem_region"),
         ],
         axis=1,
     )
-    sub_regional_nodes["nem_region"] = _fuzzy_match_names(
-        sub_regional_nodes["nem_region"],
-        _NEM_REGION_IDS.keys(),
-        "determining the NEM region",
-    )
-    sub_regional_nodes["nem_region_id"] = sub_regional_nodes["nem_region"].replace(
-        _NEM_REGION_IDS
-    )
+    sub_regional_nodes = _match_region_name_and_id(sub_regional_nodes)
     return sub_regional_nodes
 
 
@@ -146,40 +125,62 @@ def _template_regional_node_table(
     regional_df = pd.read_csv(
         Path(parsed_workbook_path, "regional_reference_nodes.csv")
     )
-    name_id_col = "ISP Sub-region"
-    split_name_id = _split_name_id(regional_df[name_id_col])
-    split_name_id.columns = [
-        _snakecase_string(name_id_col),
-        _snakecase_string(name_id_col + " ID"),
-    ]
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(regional_df)
     node_voltage_col = "Regional Reference Node"
-    split_node_voltage = _split_node_voltage(regional_df[node_voltage_col])
-    split_node_voltage.columns = [
-        _snakecase_string(node_voltage_col),
-        _snakecase_string(node_voltage_col + " Voltage (kV)"),
-    ]
-    split_node_voltage[_snakecase_string(node_voltage_col + " Voltage (kV)")] = (
-        split_node_voltage[
-            _snakecase_string(node_voltage_col + " Voltage (kV)")
-        ].astype(int)
-    )
+    split_node_voltage = _extract_voltage(regional_df, node_voltage_col)
     regional_nodes = pd.concat(
         [
             regional_df["NEM Region"].rename("nem_region"),
-            split_name_id,
+            sub_region_name_and_id,
             split_node_voltage,
         ],
         axis=1,
     )
-    regional_nodes["nem_region"] = _fuzzy_match_names(
-        regional_nodes["nem_region"],
+    regional_nodes = _match_region_name_and_id(regional_nodes)
+    return regional_nodes
+
+
+def _split_out_sub_region_name_and_id(data):
+    print(data)
+    name_id_col = "ISP Sub-region"
+    sub_region_name_and_id = _capture_just_name(data[name_id_col])
+    print(sub_region_name_and_id['name'])
+    sub_region_name_and_id['name'] = _fuzzy_match_names(
+        sub_region_name_and_id['name'],
+        _NEM_SUB_REGION_IDS.keys(),
+        "determining the NEM subregion region",
+    )
+    sub_region_name_and_id.columns = [_snakecase_string(name_id_col)]
+    sub_region_name_and_id[_snakecase_string(name_id_col + " ID")] = (
+        sub_region_name_and_id[_snakecase_string(name_id_col)].replace(_NEM_SUB_REGION_IDS)
+    )
+    return sub_region_name_and_id
+
+
+def _match_region_name_and_id(data):
+    data["nem_region"] = _fuzzy_match_names(
+        data["nem_region"],
         _NEM_REGION_IDS.keys(),
         "determining the NEM region",
     )
-    regional_nodes["nem_region_id"] = regional_nodes["nem_region"].replace(
+    data["nem_region_id"] = data["nem_region"].replace(
         _NEM_REGION_IDS
     )
-    return regional_nodes
+    return data
+
+
+def _extract_voltage(data, column):
+    split_node_voltage = _split_node_voltage(data[column])
+    split_node_voltage.columns = [
+        _snakecase_string(column),
+        _snakecase_string(column + " Voltage (kV)"),
+    ]
+    split_node_voltage[_snakecase_string(column + " Voltage (kV)")] = (
+        split_node_voltage[
+            _snakecase_string(column + " Voltage (kV)")
+        ].astype(int)
+    )
+    return split_node_voltage
 
 
 def _request_transmission_substation_coordinates() -> pd.DataFrame:
@@ -247,6 +248,17 @@ def _split_name_id(series: pd.Series) -> pd.DataFrame:
     """
     split_name_id = series.str.strip().str.extract(
         r"(?P<name>[A-Za-z\s,]+)\s\((?P<id>[A-Z]+)\)", expand=True
+    )
+    return split_name_id
+
+
+def _capture_just_name(series: pd.Series) -> pd.DataFrame:
+    """
+    Capture the name (plain English) and not the ID in parentheses (capitalised letters)
+    using a regular expression on a string `pandas.Series`.
+    """
+    split_name_id = series.str.strip().str.extract(
+        r"(?P<name>[A-Za-z\s,]+)(?=\s\([A-Z]+\))", expand=True
     )
     return split_name_id
 
