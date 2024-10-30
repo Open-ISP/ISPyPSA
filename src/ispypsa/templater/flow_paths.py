@@ -24,6 +24,7 @@ def template_flow_paths(
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
         granularity: Geographical granularity obtained from the model configuration
+            Defaults to "sub_regional".
 
     Returns:
         `pd.DataFrame`: ISPyPSA flow path template
