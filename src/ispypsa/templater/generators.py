@@ -121,6 +121,7 @@ def _merge_and_set_ecaa_generators_static_properties(
     # adds a max capacity column that takes the existing generator name mapping
     df["maximum_capacity_mw"] = df["generator"]
     # merge in static properties using the static property mapping
+    merged_static_cols = []
     for col, csv_attrs in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
         if type(csv_attrs["csv"]) is list:
             data = [
@@ -130,7 +131,8 @@ def _merge_and_set_ecaa_generators_static_properties(
             data = pd.concat(data, axis=0)
         else:
             data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
-        df = _merge_csv_data(df, col, data, csv_attrs)
+        df, col = _merge_csv_data(df, col, data, csv_attrs)
+        merged_static_cols.append(col)
     df = _process_and_merge_existing_gpg_min_load(df, parsed_workbook_path)
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
     df = _zero_renewable_minimum_load(df, "minimum_load_mw")
@@ -141,12 +143,16 @@ def _merge_and_set_ecaa_generators_static_properties(
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
-    return df.infer_objects()
+    # replace remaining string values in static property columns
+    df = df.infer_objects()
+    for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
+        df[col] = df[col].apply(lambda x: pd.NA if isinstance(x, str) else x)
+    return df
 
 
 def _merge_csv_data(
     df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, str]:
     """Replace values in the provided column of the summary mapping with those
     in the CSV data using the provided attributes in
     `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
@@ -174,10 +180,15 @@ def _merge_csv_data(
         99,
         "merging in existing, committed, anticipated and additional generator static properties",
     )
-    df[col] = df[col].replace(replacement_dict)
+    if "generator_status" in csv_attrs.keys():
+        row_filter = df["status"] == csv_attrs["generator_status"]
+        df.loc[row_filter, col] = df.loc[row_filter, col].replace(replacement_dict)
+    else:
+        df[col] = df[col].replace(replacement_dict)
     if "new_col_name" in csv_attrs.keys():
         df = df.rename(columns={col: csv_attrs["new_col_name"]})
-    return df
+        col = csv_attrs["new_col_name"]
+    return df, col
 
 
 def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
