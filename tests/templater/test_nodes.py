@@ -68,3 +68,10 @@ def test_substation_coordinate_http_error(
         template_nodes(workbook_table_cache_test_path)
     assert "Failed to fetch substation coordinates" in caplog.text
     assert "Network node data will be templated without coordinate data" in caplog.text
+
+
+def test_regional_sub_regional_mapping(workbook_table_cache_test_path: Path):
+    node_template = template_nodes(workbook_table_cache_test_path, "sub_regional")
+    assert node_template.index.name == "sub_regional_id"
+    assert set(node_template.index) == set(("SQ", "VIC"))
+    assert set(node_template.nem_region_id) == set(("QLD", "VIC"))
