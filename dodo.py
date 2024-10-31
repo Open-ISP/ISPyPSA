@@ -6,8 +6,8 @@ from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.generators import _template_ecaa_generators
-from ispypsa.templater.nodes import template_nodes
-from ispypsa.templater.regions_and_zones import template_region_and_zone_mapping
+from ispypsa.templater.nodes import template_nodes, template_regional_sub_regional_mapping
+from ispypsa.templater.renewable_energy_zones import template_renewable_energy_zone_locations
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
@@ -34,21 +34,30 @@ def create_ispypsa_inputs_from_config(
         config = yaml.safe_load(file)
     if not template_location.exists():
         template_location.mkdir(parents=True)
+
     node_template = template_nodes(
         workbook_cache_location, config["network"]["granularity"]
     )
-    region_and_zone_mapping_template = template_region_and_zone_mapping(
+
+    if config["network"]["granularity"] == 'regional':
+        regional_sub_regional_mapping = template_regional_sub_regional_mapping(workbook_cache_location)
+        regional_sub_regional_mapping.to_csv(Path(template_location, "regional_sub_regional_mapping.csv"))
+
+    renewable_energy_zone_locations = template_renewable_energy_zone_locations(
         workbook_cache_location
     )
+
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
+
     ecaa_generators_template = _template_ecaa_generators(workbook_cache_location)
+
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
-    if region_and_zone_mapping_template is not None:
-        region_and_zone_mapping_template.to_csv(
-            Path(template_location, "region_and_zone_mapping.csv")
+    if renewable_energy_zone_locations is not None:
+        renewable_energy_zone_locations.to_csv(
+            Path(template_location, "renewable_energy_zone_locations.csv")
         )
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
@@ -80,6 +89,7 @@ def task_create_ispypsa_inputs():
         + [Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES],
         "targets": [
             Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "regional_sub_regional_mapping.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "region_and_zone_mapping.csv"),
