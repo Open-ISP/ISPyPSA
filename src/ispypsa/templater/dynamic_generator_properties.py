@@ -124,6 +124,41 @@ def _template_liquid_fuel_prices(
     return liquid_fuel_prices_scenario
 
 
+    cols[0] = "generator"
+    gas_prices.columns = cols
+    gas_prices = gas_prices.drop(columns="gas_price_scenario").set_index("generator")
+    gas_prices = _convert_financial_year_columns_to_float(gas_prices)
+    return gas_prices
+
+
+def _template_liquid_fuel_prices(
+    parsed_workbook_path: Path | str, scenario: str
+) -> pd.Series:
+    """Creates a liquid fuel prices template
+
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+            outputs from the `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for liquid fuel prices
+    """
+    liquid_fuel_prices = pd.read_csv(
+        Path(parsed_workbook_path, "liquid_fuel_prices.csv")
+    )
+    liquid_fuel_prices.columns = _add_units_to_financial_year_columns(
+        liquid_fuel_prices.columns
+    )
+    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price").set_index(
+        "liquid_fuel_price_scenario"
+    )
+    liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
+    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[scenario, :]
+    liquid_fuel_prices_scenario.index.set_names("FY", inplace=True)
+    return liquid_fuel_prices_scenario
+
+
 def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.DataFrame:
     """Creates a full outage forecast template for existing generators
 
