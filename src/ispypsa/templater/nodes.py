@@ -79,6 +79,24 @@ def template_nodes(
     return template
 
 
+def template_regional_sub_regional_mapping(parsed_workbook_path: Path | str):
+    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format that maps Sub-region
+    IDs to NEM region IDs.
+
+    Args:
+        parsed_workbook_path: Path to directory containing CSVs that are the output
+            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA regional to subregional mapping template
+
+    """
+    regional_sub_regional_mapping = _template_sub_regional_node_table(parsed_workbook_path)
+    regional_sub_regional_mapping.index = (
+        regional_sub_regional_mapping["sub_region_id"].copy(deep=True).rename("node_id"))
+    return regional_sub_regional_mapping.loc[:, ["nem_region_id"]]
+
+
 def _template_sub_regional_node_table(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
@@ -141,11 +159,9 @@ def _template_regional_node_table(
     return regional_nodes
 
 
-def _split_out_sub_region_name_and_id(data):
-    print(data)
+def _split_out_sub_region_name_and_id(data: pd.DataFrame):
     name_id_col = "ISP Sub-region"
     sub_region_name_and_id = _capture_just_name(data[name_id_col])
-    print(sub_region_name_and_id["name"])
     sub_region_name_and_id["name"] = _fuzzy_match_names(
         sub_region_name_and_id["name"],
         _NEM_SUB_REGION_IDS.keys(),
@@ -160,7 +176,7 @@ def _split_out_sub_region_name_and_id(data):
     return sub_region_name_and_id
 
 
-def _match_region_name_and_id(data):
+def _match_region_name_and_id(data: pd.DataFrame):
     data["nem_region"] = _fuzzy_match_names(
         data["nem_region"],
         _NEM_REGION_IDS.keys(),
@@ -170,7 +186,7 @@ def _match_region_name_and_id(data):
     return data
 
 
-def _extract_voltage(data, column):
+def _extract_voltage(data: pd.DataFrame, column: str):
     split_node_voltage = _split_node_voltage(data[column])
     split_node_voltage.columns = [
         _snakecase_string(column),
@@ -257,7 +273,7 @@ def _capture_just_name(series: pd.Series) -> pd.DataFrame:
     using a regular expression on a string `pandas.Series`.
     """
     split_name_id = series.str.strip().str.extract(
-        r"(?P<name>[A-Za-z\s,]+)(?=\s\([A-Z]+\))", expand=True
+        r"(?P<name>[A-Za-z\s,]+)(?=\s\([A-Z]+\))"
     )
     return split_name_id
 
