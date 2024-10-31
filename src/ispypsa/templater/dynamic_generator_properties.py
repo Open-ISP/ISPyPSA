@@ -27,12 +27,14 @@ def template_generator_dynamic_properties(
     logging.info("Creating a template for dynamic generator properties")
     coal_prices = _template_coal_prices(parsed_workbook_path, scenario)
     gas_prices = _template_gas_prices(parsed_workbook_path, scenario)
+    liquid_fuel_prices = _template_liquid_fuel_prices(parsed_workbook_path)
     full_outage_forecasts = _template_full_outage_forecasts(parsed_workbook_path)
     partial_outage_forecasts = _template_partial_outage_forecasts(parsed_workbook_path)
     seasonal_ratings = _template_seasonal_ratings(parsed_workbook_path)
     return {
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
+        "liquid_fuel_prices": liquid_fuel_prices,
         "full_outage_forecasts": full_outage_forecasts,
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
@@ -99,6 +101,30 @@ def _template_gas_prices(
     gas_prices.columns = cols
     gas_prices = gas_prices.drop(columns="gas_price_scenario")
     return gas_prices.set_index("generator")
+
+
+def _template_liquid_fuel_prices(parsed_workbook_path: Path | str) -> pd.DataFrame:
+    """Creates a liquid fuel prices template
+
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+            outputs from the `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for liquid fuel prices
+    """
+    liquid_fuel_prices = pd.read_csv(
+        Path(parsed_workbook_path, "liquid_fuel_prices.csv")
+    )
+    cols = [
+        _snakecase_string(col + "_$/GJ")
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+        else _snakecase_string(col)
+        for col in liquid_fuel_prices.columns
+    ]
+    liquid_fuel_prices.columns = cols
+    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price")
+    return liquid_fuel_prices.set_index("liquid_fuel_price_scenario")
 
 
 def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.DataFrame:
