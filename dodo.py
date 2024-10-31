@@ -67,6 +67,7 @@ def create_ispypsa_inputs_from_config(
     region_and_zone_mapping_template = template_region_and_zone_mapping(
         workbook_cache_location
     )
+
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
