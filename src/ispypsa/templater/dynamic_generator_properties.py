@@ -61,14 +61,11 @@ def _template_coal_prices(
     coal_prices = pd.read_csv(
         Path(parsed_workbook_path, f"coal_prices_{snakecase_scenario}.csv")
     )
-    coal_prices.columns = [
-        _snakecase_string(col + "_$/GJ")
-        if re.match(r"[0-9]{4}-[0-9]{2}", col)
-        else _snakecase_string(col)
-        for col in coal_prices.columns
-    ]
+    coal_prices.columns = _add_units_to_financial_year_columns(coal_prices.columns)
     coal_prices = coal_prices.drop(columns="coal_price_scenario")
-    return coal_prices.set_index("generator")
+    coal_prices = coal_prices.set_index("generator")
+    coal_prices = _convert_financial_year_columns_to_float(coal_prices)
+    return coal_prices
 
 
 def _template_gas_prices(
@@ -91,16 +88,12 @@ def _template_gas_prices(
     gas_prices = pd.read_csv(
         Path(parsed_workbook_path, f"gas_prices_{snakecase_scenario}.csv")
     )
-    cols = [
-        _snakecase_string(col + "_$/GJ")
-        if re.match(r"[0-9]{4}-[0-9]{2}", col)
-        else _snakecase_string(col)
-        for col in gas_prices.columns
-    ]
+    cols = _add_units_to_financial_year_columns(gas_prices.columns)
     cols[0] = "generator"
     gas_prices.columns = cols
-    gas_prices = gas_prices.drop(columns="gas_price_scenario")
-    return gas_prices.set_index("generator")
+    gas_prices = gas_prices.drop(columns="gas_price_scenario").set_index("generator")
+    gas_prices = _convert_financial_year_columns_to_float(gas_prices)
+    return gas_prices
 
 
 def _template_liquid_fuel_prices(parsed_workbook_path: Path | str) -> pd.DataFrame:
@@ -116,15 +109,14 @@ def _template_liquid_fuel_prices(parsed_workbook_path: Path | str) -> pd.DataFra
     liquid_fuel_prices = pd.read_csv(
         Path(parsed_workbook_path, "liquid_fuel_prices.csv")
     )
-    cols = [
-        _snakecase_string(col + "_$/GJ")
-        if re.match(r"[0-9]{4}-[0-9]{2}", col)
-        else _snakecase_string(col)
-        for col in liquid_fuel_prices.columns
-    ]
-    liquid_fuel_prices.columns = cols
-    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price")
-    return liquid_fuel_prices.set_index("liquid_fuel_price_scenario")
+    liquid_fuel_prices.columns = _add_units_to_financial_year_columns(
+        liquid_fuel_prices.columns
+    )
+    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price").set_index(
+        "liquid_fuel_price_scenario"
+    )
+    liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
+    return liquid_fuel_prices
 
 
 def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.DataFrame:
@@ -144,14 +136,11 @@ def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.Data
         _snakecase_string(col) for col in full_outages_forecast.columns
     ]
     full_outages_forecast = full_outages_forecast.set_index("fuel_type")
-    where_coal_average = full_outages_forecast.loc["All Coal Average", :].notna()
-    for coal_row in full_outages_forecast.index[
-        full_outages_forecast.index.str.contains("Coal")
-    ]:
-        full_outages_forecast.loc[coal_row, where_coal_average] = (
-            full_outages_forecast.loc["All Coal Average", where_coal_average]
-        )
-    return full_outages_forecast.drop(index="All Coal Average")
+    full_outages_forecast = _apply_all_coal_averages(full_outages_forecast)
+    full_outages_forecast = _convert_financial_year_columns_to_float(
+        full_outages_forecast.drop(index="All Coal Average")
+    )
+    return full_outages_forecast
 
 
 def _template_partial_outage_forecasts(
@@ -173,14 +162,11 @@ def _template_partial_outage_forecasts(
         _snakecase_string(col) for col in partial_outages_forecast.columns
     ]
     partial_outages_forecast = partial_outages_forecast.set_index("fuel_type")
-    where_coal_average = partial_outages_forecast.loc["All Coal Average", :].notna()
-    for coal_row in partial_outages_forecast.index[
-        partial_outages_forecast.index.str.contains("Coal")
-    ]:
-        partial_outages_forecast.loc[coal_row, where_coal_average] = (
-            partial_outages_forecast.loc["All Coal Average", where_coal_average]
-        )
-    return partial_outages_forecast.drop(index="All Coal Average")
+    partial_outages_forecast = _apply_all_coal_averages(partial_outages_forecast)
+    partial_outages_forecast = _convert_financial_year_columns_to_float(
+        partial_outages_forecast.drop(index="All Coal Average")
+    )
+    return partial_outages_forecast
 
 
 def _template_seasonal_ratings(
@@ -203,4 +189,46 @@ def _template_seasonal_ratings(
     seasonal_rating.columns = [
         _snakecase_string(col) for col in seasonal_rating.columns
     ]
-    return seasonal_rating.set_index("generator")
+    seasonal_rating = _convert_seasonal_columns_to_float(seasonal_rating)
+    return seasonal_rating
+
+
+def _add_units_to_financial_year_columns(columns: pd.Index) -> list[str]:
+    """Adds _$/GJ to the financial year columns"""
+    cols = [
+        _snakecase_string(col + "_$/GJ")
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+        else _snakecase_string(col)
+        for col in columns
+    ]
+    return cols
+
+
+def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Forcefully converts FY columns to float columns"""
+    cols = [
+        df[col].astype(float) if re.match(r"[0-9]{4}_[0-9]{2}", col) else df[col]
+        for col in df.columns
+    ]
+    return pd.concat(cols, axis=1)
+
+
+def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Forcefully converts seasonal columns to float columns"""
+    cols = [
+        df[col].astype(float)
+        if re.match(r"summer", col) or re.match(r"winter", col)
+        else df[col]
+        for col in df.columns
+    ]
+    return pd.concat(cols, axis=1)
+
+
+def _apply_all_coal_averages(outages_df: pd.DataFrame) -> pd.DataFrame:
+    """Applies the All Coal Average to each coal fuel type"""
+    where_coal_average = outages_df.loc["All Coal Average", :].notna()
+    for coal_row in outages_df.index[outages_df.index.str.contains("Coal")]:
+        outages_df.loc[coal_row, where_coal_average] = outages_df.loc[
+            "All Coal Average", where_coal_average
+        ]
+    return outages_df
