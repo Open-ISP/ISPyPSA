@@ -27,9 +27,6 @@ click==8.1.7
 cloudpickle==3.0.0
     # via dask
     # via doit
-colorama==0.4.6
-    # via click
-    # via tqdm
 contourpy==1.3.0
     # via matplotlib
 cycler==0.12.1
