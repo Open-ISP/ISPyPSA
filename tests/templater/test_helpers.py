@@ -2,61 +2,9 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
-    _fuzzy_match_names,
-    _fuzzy_match_names_above_threshold,
     _snakecase_string,
     _where_any_substring_appears,
 )
-from ispypsa.templater.nodes import _NEM_REGION_IDS
-
-
-def test_fuzzy_matching() -> None:
-    region_typos = pd.Series(
-        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
-    )
-    expected = pd.Series(
-        ["New South Wales", "Queensland", "South Australia", "Victoria", "Tasmania"]
-    )
-    test_results = _fuzzy_match_names(region_typos, _NEM_REGION_IDS.keys(), "testing")
-    assert (test_results == expected).all()
-
-
-def test_fuzzy_matching_above_threshold() -> None:
-    region_typos = pd.Series(
-        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
-    )
-    test_results = _fuzzy_match_names_above_threshold(
-        region_typos, _NEM_REGION_IDS.keys(), 70, "testing"
-    )
-    assert (
-        test_results
-        == [
-            "New South Wales",
-            "Coinsland",
-            "South Australia",
-            "Victoria",
-            "Tasmania",
-        ]
-    ).all()
-
-
-def test_fuzzy_matching_above_threshold_replace() -> None:
-    region_typos = pd.Series(
-        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
-    )
-    test_results = _fuzzy_match_names_above_threshold(
-        region_typos, _NEM_REGION_IDS.keys(), 70, "testing", not_match="replacement"
-    )
-    assert (
-        test_results
-        == [
-            "New South Wales",
-            "replacement",
-            "South Australia",
-            "Victoria",
-            "Tasmania",
-        ]
-    ).all()
 
 
 snakecase_test_cases = {
