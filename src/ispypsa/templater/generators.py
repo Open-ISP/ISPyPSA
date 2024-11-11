@@ -172,8 +172,8 @@ def _merge_csv_data(
         df.loc[where_str, col],
         replacement_dict.keys(),
         "merging in existing, committed, anticipated and additional generator static properties",
-        not_match='existing',
-        threshold=90
+        not_match="existing",
+        threshold=90,
     )
     df[col] = df[col].replace(replacement_dict)
     if "new_col_name" in csv_attrs.keys():
