@@ -128,6 +128,6 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
-            Path(_TEMPLATE_DIRECTORY, "region_and_zone_mapping.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "region_and_zone_mapping.csv"),
         ],
     }
