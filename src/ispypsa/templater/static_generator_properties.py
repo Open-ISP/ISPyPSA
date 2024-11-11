@@ -177,9 +177,9 @@ def _merge_csv_data(
     df.loc[where_str, col] = _fuzzy_match_names(
         df.loc[where_str, col],
         replacement_dict.keys(),
-        "merging in existing, committed, anticipated and additional generator static properties",
-        not_match="existing",
-        threshold=90,
+        f"merging in the existing, committed, anticipated and additional generator static property {col}",
+        not_match='existing',
+        threshold=90
     )
     if "generator_status" in csv_attrs.keys():
         row_filter = df["status"] == csv_attrs["generator_status"]
