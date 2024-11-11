@@ -91,6 +91,19 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         csv="outages_2023-2024_existing_generators",
         csv_lookup="Fuel type",
         csv_value="Partial Outage Derating Factor (%)",
+        generator_status="Existing",
+    ),
+    "mean_time_to_repair_full_outage": dict(
+        csv="outages_2023-2024_existing_generators",
+        csv_lookup="Fuel type",
+        csv_value="Mean time to repair (hrs)_Full outage",
+        generator_status="Existing",
+    ),
+    "mean_time_to_repair_partial_outage": dict(
+        csv="outages_2023-2024_existing_generators",
+        csv_lookup="Fuel type",
+        csv_value="Mean time to repair (hrs)_Partial outage",
+        generator_status="Existing",
     ),
 }
 """
