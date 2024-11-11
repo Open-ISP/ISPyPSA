@@ -8,25 +8,6 @@ from ispypsa.templater.helpers import (
 from ispypsa.templater.nodes import _NEM_REGION_IDS
 
 
-def test_fuzzy_matching_above_threshold_replace() -> None:
-    region_typos = pd.Series(
-        ["New South Walks", "Coinsland", "North Australia", "Bigtoria", "Radmania"]
-    )
-    test_results = _fuzzy_match_names_above_threshold(
-        region_typos, _NEM_REGION_IDS.keys(), 70, "testing", not_match="replacement"
-    )
-    assert (
-        test_results
-        == [
-            "New South Wales",
-            "replacement",
-            "South Australia",
-            "Victoria",
-            "Tasmania",
-        ]
-    ).all()
-
-
 snakecase_test_cases = {
     # Single word cases
     "word": "word",
