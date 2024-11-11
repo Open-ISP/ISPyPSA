@@ -5,35 +5,39 @@ from ispypsa.templater.helpers import _fuzzy_match_names
 
 def test_regions() -> None:
     regions_with_errors_mapped_to_correct_names = {
-        'New South Walks': 'New South Wales',
-        'Coinsland': 'Queensland',
-        'North Australia': 'South Australia',
-        'Bigtoria': 'Victoria',
-        'Radmania': 'Tasmania'
+        "New South Walks": "New South Wales",
+        "Coinsland": "Queensland",
+        "North Australia": "South Australia",
+        "Bigtoria": "Victoria",
+        "Radmania": "Tasmania",
     }
-    sub_regions_with_errors, correct_names = zip(*regions_with_errors_mapped_to_correct_names.items())
+    sub_regions_with_errors, correct_names = zip(
+        *regions_with_errors_mapped_to_correct_names.items()
+    )
     matches = _fuzzy_match_names(
-    name_series = pd.Series(sub_regions_with_errors),
-    choices = correct_names,
-    task_desc = 'testing'
+        name_series=pd.Series(sub_regions_with_errors),
+        choices=correct_names,
+        task_desc="testing",
     )
     assert (matches == pd.Series(correct_names)).all()
 
 
 def test_fuzzy_matching_above_threshold() -> None:
     regions_with_errors_mapped_to_correct_names = {
-        'New South Walks': 'New South Wales',
-        'Coinsland': 'Queensland',
-        'North Australia': 'South Australia',
-        'Bigtoria': 'Victoria',
-        'Radmania': 'Tasmania'
+        "New South Walks": "New South Wales",
+        "Coinsland": "Queensland",
+        "North Australia": "South Australia",
+        "Bigtoria": "Victoria",
+        "Radmania": "Tasmania",
     }
-    sub_regions_with_errors, correct_names = zip(*regions_with_errors_mapped_to_correct_names.items())
+    sub_regions_with_errors, correct_names = zip(
+        *regions_with_errors_mapped_to_correct_names.items()
+    )
     matches = _fuzzy_match_names(
-        name_series = pd.Series(sub_regions_with_errors),
-        choices = correct_names,
-        task_desc = 'testing',
-        threshold = 70
+        name_series=pd.Series(sub_regions_with_errors),
+        choices=correct_names,
+        task_desc="testing",
+        threshold=70,
     )
     assert (
         matches
