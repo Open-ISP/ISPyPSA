@@ -8,7 +8,11 @@ from thefuzz import fuzz
 
 
 def _fuzzy_match_names(
-    name_series: pd.Series, choices: Iterable[str], task_desc: str, not_match: str = "existing", threshold: int = 0.0
+    name_series: pd.Series,
+    choices: Iterable[str],
+    task_desc: str,
+    not_match: str = "existing",
+    threshold: int = 0.0,
 ) -> pd.Series:
     """
     Fuzzy matches values in `name_series` with values in `choices`.
@@ -33,13 +37,17 @@ def _fuzzy_match_names(
         :class:`pandas.Series` with values from `choices` that correspond to the closest
             match to the original values in `name_series`
     """
-    match_dict = _one_to_one_priority_based_fuzzy_matching(set(name_series), set(choices), not_match, threshold)
+    match_dict = _one_to_one_priority_based_fuzzy_matching(
+        set(name_series), set(choices), not_match, threshold
+    )
     matched_series = name_series.apply(lambda x: match_dict[x])
     _log_fuzzy_match(name_series, matched_series, task_desc)
     return matched_series
 
 
-def _one_to_one_priority_based_fuzzy_matching(strings_to_match: set, choices: set, not_match: str, threshold: int):
+def _one_to_one_priority_based_fuzzy_matching(
+    strings_to_match: set, choices: set, not_match: str, threshold: int
+):
     """
     Find matches between two sets of strings, prioritizing exact matches first, then matching remaining strings by
     finding the highest similarity pair recording the best match, and then iteratively repeating with the remaining
@@ -110,7 +118,7 @@ def _one_to_one_priority_based_fuzzy_matching(strings_to_match: set, choices: se
             break
 
     for str_to_match in remaining_strings_to_match_list:
-        if not_match == 'existing':
+        if not_match == "existing":
             matches.append((str_to_match, str_to_match))
         else:
             matches.append((str_to_match, not_match))
