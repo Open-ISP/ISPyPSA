@@ -5,7 +5,6 @@ from ispypsa.templater.helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from ispypsa.templater.nodes import _NEM_REGION_IDS
 
 
 def test_fuzzy_matching_above_threshold_replace() -> None:
