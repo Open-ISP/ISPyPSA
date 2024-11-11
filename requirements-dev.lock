@@ -53,12 +53,18 @@ cloudpickle==3.0.0
     # via dask
     # via doit
 colorama==0.4.6
+    # via click
+    # via ipython
+    # via pytest
+    # via sphinx
     # via sphinx-autobuild
+    # via tqdm
 comm==0.2.2
     # via ipykernel
 contourpy==1.3.0
     # via matplotlib
 coverage==7.6.1
+    # via coverage
     # via pytest-cov
 cycler==0.12.1
     # via matplotlib
@@ -230,8 +236,6 @@ parso==0.8.4
     # via jedi
 partd==1.4.2
     # via dask
-pexpect==4.9.0
-    # via ipython
 pillow==10.4.0
     # via matplotlib
 platformdirs==4.2.2
@@ -246,8 +250,6 @@ prompt-toolkit==3.0.47
     # via ipython
 psutil==6.0.0
     # via ipykernel
-ptyprocess==0.7.0
-    # via pexpect
 pure-eval==0.2.3
     # via stack-data
 py-cpuinfo==9.0.0
@@ -283,6 +285,8 @@ python-dateutil==2.9.0.post0
     # via pandas
 pytz==2024.1
     # via pandas
+pywin32==308
+    # via jupyter-core
 pyyaml==6.0.2
     # via dask
     # via isp-workbook-parser
@@ -309,8 +313,6 @@ rpds-py==0.20.0
 scipy==1.14.1
     # via linopy
     # via pypsa
-setuptools==74.1.2
-    # via sphinx-togglebutton
 shapely==2.0.6
     # via geopandas
 six==1.16.0
@@ -409,3 +411,5 @@ xmltodict==0.13.0
     # via ispypsa
 zipp==3.20.1
     # via importlib-metadata
+setuptools==74.1.2
+    # via sphinx-togglebutton
