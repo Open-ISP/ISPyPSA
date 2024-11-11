@@ -97,10 +97,10 @@ def task_create_ispypsa_inputs():
         "file_dep": [_CONFIG_PATH]
         + [Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES],
         "targets": [
-            Path(_TEMPLATE_DIRECTORY, "nodes.csv"),
-            Path(_TEMPLATE_DIRECTORY, "regional_sub_regional_mapping.csv"),
-            Path(_TEMPLATE_DIRECTORY, "flow_paths.csv"),
-            Path(_TEMPLATE_DIRECTORY, "ecaa_generators.csv"),
-            Path(_TEMPLATE_DIRECTORY, "region_and_zone_mapping.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "region_and_zone_mapping.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
         ],
     }
