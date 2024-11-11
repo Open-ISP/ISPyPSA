@@ -29,7 +29,7 @@ _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "template")
 _PYPSA_INPUTS_DIRECTORY = Path("model_data", "pypsa")
 _PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
-_CONFIG_PATH = Path("model_data", "ispypsa_config.yaml")
+_CONFIG_PATH = Path("model_data/ispypsa_inputs", "ispypsa_config.yaml")
 
 configure_logging()
 
@@ -148,63 +148,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         trace_data_path,
         pypsa_inputs_location,
         scenario=config["scenario"],
-        reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
-    )
-
-
-def create_pypsa_inputs_from_config_and_ispypsa_inputs(
-    config_location: Path, ispypsa_inputs_location: Path, trace_data_path: Path, pypsa_inputs_location: Path
-) -> None:
-    with open(config_location, "r") as file:
-        config = yaml.safe_load(file)
-    if not pypsa_inputs_location.exists():
-        pypsa_inputs_location.mkdir(parents=True)
-
-    pypsa_inputs = {}
-
-    pypsa_inputs['generators'] = _translate_ecaa_generators(
-        ispypsa_inputs_location, config["network"]["granularity"]
-    )
-
-    pypsa_inputs['buses'] = _translate_nodes_to_buses(
-        ispypsa_inputs_location,
-    )
-
-    for name, table in pypsa_inputs.items():
-        table.to_csv(
-            Path(pypsa_inputs_location, f"{name}.csv")
-        )
-
-    reference_year_mapping = construct_reference_year_mapping(
-        start_year=config["traces"]["start_year"],
-        end_year=config["traces"]["end_year"],
-        reference_years=config["traces"]["reference_year_cycle"]
-    )
-
-    _translate_generator_timeseries(
-        ispypsa_inputs_location,
-        trace_data_path,
-        pypsa_inputs_location,
-        generator_type='solar',
-        reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
-    )
-
-    _translate_generator_timeseries(
-        ispypsa_inputs_location,
-        trace_data_path,
-        pypsa_inputs_location,
-        generator_type='wind',
-        reference_year_mapping=reference_year_mapping,
-        year_type=config["traces"]["year_type"]
-    )
-
-    _translate_buses_timeseries(
-        ispypsa_inputs_location,
-        trace_data_path,
-        pypsa_inputs_location,
-        scenario=config["scenario"],
+        granularity=config["network"]["granularity"],
         reference_year_mapping=reference_year_mapping,
         year_type=config["traces"]["year_type"]
     )
