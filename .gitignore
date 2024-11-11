@@ -169,6 +169,7 @@ scratch.py
 # ispypsa ignores
 ## CSVs in model_inputs
 model_data/**/*.csv
+model_data/**/*.parquet
 
 # ignore doit database
 .doit*
