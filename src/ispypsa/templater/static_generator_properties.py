@@ -178,7 +178,7 @@ def _merge_csv_data(
         df.loc[where_str, col],
         replacement_dict.keys(),
         99,
-        "merging in existing, committed, anticipated and additional generator static properties",
+        f"merging in the existing, committed, anticipated and additional generator static property {col}",
     )
     if "generator_status" in csv_attrs.keys():
         row_filter = df["status"] == csv_attrs["generator_status"]
