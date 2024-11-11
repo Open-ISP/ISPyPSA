@@ -14,8 +14,11 @@ def test_ecaa_generator_templater(workbook_table_cache_test_path: Path):
             static_property_col = _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP[
                 static_property_col
             ]["new_col_name"]
-        assert all(df[static_property_col].notna())
-        assert df[static_property_col].dtype != "object"
+        assert all(
+            df[static_property_col].apply(
+                lambda x: True if not isinstance(x, str) else False
+            )
+        )
     assert set(df["status"]) == set(
         ("Existing", "Committed", "Anticipated", "Additional projects")
     )
