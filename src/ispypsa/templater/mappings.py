@@ -17,6 +17,24 @@ _NEM_REGION_IDS = pd.Series(
     name="nem_region_id_mapping",
 )
 
+_NEM_SUB_REGION_IDS = pd.Series(
+    {
+        "Northern Queensland": "NQ",
+        "Central Queensland": "CQ",
+        "Gladstone Grid": "GG",
+        "Southern Queensland": "SQ",
+        "Northern New South Wales": "NNSW",
+        "Central New South Wales": "CNSW",
+        "Southern New South Wales": "SNSW",
+        "Sydney, Newcastle, Wollongong": "SNW",
+        "Victoria": "VIC",
+        "Central South Australia": "CSA",
+        "South East South Australia": "SESA",
+        "Tasmania": "TAS",
+    },
+    name="nem_region_id_mapping",
+)
+
 _HVDC_FLOW_PATHS = pd.DataFrame(
     {
         "node_from": ["NNSW", "VIC", "TAS"],
