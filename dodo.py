@@ -101,6 +101,6 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "regional_sub_regional_mapping.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "region_and_zone_mapping.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
         ],
     }
