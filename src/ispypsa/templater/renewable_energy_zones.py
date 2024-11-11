@@ -4,7 +4,9 @@ from pathlib import Path
 import pandas as pd
 
 
-def template_renewable_energy_zone_locations(parsed_workbook_path: Path | str) -> pd.DataFrame:
+def template_renewable_energy_zone_locations(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
     """Creates a mapping table that specifies which regions and sub regions renewable energy zones belong to.
 
     Args:
@@ -21,6 +23,12 @@ def template_renewable_energy_zone_locations(parsed_workbook_path: Path | str) -
     renewable_energy_zone_locations = renewable_energy_zone_locations.loc[
         :, ["NEM Region", "ISP Sub-region", "ID"]
     ]
-    renewable_energy_zone_locations.columns = ["nem_region_id", "isp_sub_region_id", "rez_id"]
-    renewable_energy_zone_locations = renewable_energy_zone_locations.set_index("rez_id", drop=True)
+    renewable_energy_zone_locations.columns = [
+        "nem_region_id",
+        "isp_sub_region_id",
+        "rez_id",
+    ]
+    renewable_energy_zone_locations = renewable_energy_zone_locations.set_index(
+        "rez_id", drop=True
+    )
     return renewable_energy_zone_locations

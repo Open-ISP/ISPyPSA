@@ -6,8 +6,13 @@ from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.generators import _template_ecaa_generators
-from ispypsa.templater.nodes import template_nodes, template_regional_sub_regional_mapping
-from ispypsa.templater.renewable_energy_zones import template_renewable_energy_zone_locations
+from ispypsa.templater.nodes import (
+    template_nodes,
+    template_regional_sub_regional_mapping,
+)
+from ispypsa.templater.renewable_energy_zones import (
+    template_renewable_energy_zone_locations,
+)
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "ispypsa_inputs")
@@ -39,9 +44,13 @@ def create_ispypsa_inputs_from_config(
         workbook_cache_location, config["network"]["granularity"]
     )
 
-    if config["network"]["granularity"] == 'regional':
-        regional_sub_regional_mapping = template_regional_sub_regional_mapping(workbook_cache_location)
-        regional_sub_regional_mapping.to_csv(Path(template_location, "regional_sub_regional_mapping.csv"))
+    if config["network"]["granularity"] == "regional":
+        regional_sub_regional_mapping = template_regional_sub_regional_mapping(
+            workbook_cache_location
+        )
+        regional_sub_regional_mapping.to_csv(
+            Path(template_location, "regional_sub_regional_mapping.csv")
+        )
 
     renewable_energy_zone_locations = template_renewable_energy_zone_locations(
         workbook_cache_location
@@ -93,6 +102,5 @@ def task_create_ispypsa_inputs():
             Path(_TEMPLATE_DIRECTORY, "flow_paths.csv"),
             Path(_TEMPLATE_DIRECTORY, "ecaa_generators.csv"),
             Path(_TEMPLATE_DIRECTORY, "region_and_zone_mapping.csv"),
-
         ],
     }
