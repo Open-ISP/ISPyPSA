@@ -171,10 +171,6 @@ scratch.py
 <<<<<<< HEAD
 model_data/**/*.csv
 model_data/**/*.parquet
-=======
-model_inputs/**/*.csv
-model_inputs/**/*.parquet
->>>>>>> 356eb64 (demo generator translator working)
 
 # ignore doit database
 .doit*
