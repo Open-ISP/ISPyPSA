@@ -75,7 +75,9 @@ def _translate_buses_timeseries(
         output_trace_path.mkdir(parents=True)
 
     for node in region_mapping["node_id"]:
-        sub_regions_under_node = region_mapping[region_mapping["node_id"] == node]["isp_sub_region_id"]
+        sub_regions_under_node = region_mapping[region_mapping["node_id"] == node][
+            "isp_sub_region_id"
+        ]
         node_traces = []
         for sub_region in sub_regions_under_node:
             trace = get_data.demand_multiple_reference_years(
