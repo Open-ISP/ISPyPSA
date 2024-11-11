@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from .helpers import (
-    _fuzzy_match_names_above_threshold,
+    _fuzzy_match_names,
     _snakecase_string,
     _where_any_substring_appears,
 )
@@ -174,11 +174,12 @@ def _merge_csv_data(
         df[col] = _rename_summary_outage_mappings(df[col])
     # handles slight difference in capitalisation e.g. Bogong/Mackay vs Bogong/MacKay
     where_str = df[col].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
+    df.loc[where_str, col] = _fuzzy_match_names(
         df.loc[where_str, col],
         replacement_dict.keys(),
-        99,
         f"merging in the existing, committed, anticipated and additional generator static property {col}",
+        not_match='existing',
+        threshold=90
     )
     if "generator_status" in csv_attrs.keys():
         row_filter = df["status"] == csv_attrs["generator_status"]
