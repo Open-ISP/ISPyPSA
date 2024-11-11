@@ -90,9 +90,12 @@ def template_regional_sub_regional_mapping(parsed_workbook_path: Path | str):
         `pd.DataFrame`: ISPyPSA regional to subregional mapping template
 
     """
-    regional_sub_regional_mapping = _template_sub_regional_node_table(parsed_workbook_path)
+    regional_sub_regional_mapping = _template_sub_regional_node_table(
+        parsed_workbook_path
+    )
     regional_sub_regional_mapping.index = (
-        regional_sub_regional_mapping["sub_region_id"].copy(deep=True).rename("node_id"))
+        regional_sub_regional_mapping["sub_region_id"].copy(deep=True).rename("node_id")
+    )
     return regional_sub_regional_mapping.loc[:, ["nem_region_id"]]
 
 
