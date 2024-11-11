@@ -18,7 +18,7 @@ def _translate_nodes_to_buses(
     Returns:
         `pd.DataFrame`: PyPSA style generator attributes in tabular format.
     """
-    nodes = pd.read_csv(ispypsa_inputs_path / Path("node_template.csv"))
+    nodes = pd.read_csv(ispypsa_inputs_path / Path("nodes.csv"))
 
     buses = nodes.loc[:, _BUS_ATTRIBUTES.keys()]
     buses = buses.rename(columns=_BUS_ATTRIBUTES)

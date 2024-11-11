@@ -21,7 +21,7 @@ def _translate_ecaa_generators(
         `pd.DataFrame`: PyPSA style generator attributes in tabular format.
     """
     ecaa_generators_template = (
-        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators_template.csv")))
+        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators.csv")))
 
     if granularity == "sub_regional":
         _GENERATOR_ATTRIBUTES['sub_region_id'] = "bus"
@@ -76,7 +76,7 @@ def _translate_generator_timeseries(
         None
     """
     ecaa_generators_template = (
-        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators_template.csv")))
+        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators.csv")))
 
     trace_data_path = trace_data_path / Path(generator_type)
 
