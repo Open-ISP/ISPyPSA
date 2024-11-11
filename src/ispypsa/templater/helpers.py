@@ -4,70 +4,118 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
-from thefuzz import process
+from thefuzz import fuzz
 
 
 def _fuzzy_match_names(
-    name_series: pd.Series, choices: Iterable[str], task_desc: str
+    name_series: pd.Series, choices: Iterable[str], task_desc: str, not_match: str = "existing", threshold: int = 0.0
 ) -> pd.Series:
     """
     Fuzzy matches values in `name_series` with values in `choices`.
     Fuzzy matching is used where typos or minor differences in names in raw data
-    may cause issues with exact mappings (e.g. using a dictionary mapping)
+    may cause issues with exact mappings (e.g. using a dictionary mapping).
+    This functionality is designed to work where name_series is an index column,
+    i.e. it is expected not have repeated values. Matching is done without replacement.
+    If a match cannot be found for a value then the not_match method is used.
 
     Args:
         name_series: :class:`pandas.Series` with names to be matched with values in
             `choices`
         choices: Iterable of `choices` that are replacement values
         task_desc: Task description to include in logging information
+        not_match: optional. Defaults to "existing". If "existing", wherever a match
+            that exceeds the threshold does notexisting value is retained.
+            If any other string, this will be used to replace the existing value
+            where a match that exceeds the threshold does not exist.
+        threshold: match quality threshold to exceed for replacement. Between 0 and 100
 
     Returns:
         :class:`pandas.Series` with values from `choices` that correspond to the closest
             match to the original values in `name_series`
     """
-    matched_series = name_series.apply(lambda x: process.extractOne(x, choices)[0])
+    match_dict = _one_to_one_priority_based_fuzzy_matching(set(name_series), set(choices), not_match, threshold)
+    matched_series = name_series.apply(lambda x: match_dict[x])
     _log_fuzzy_match(name_series, matched_series, task_desc)
     return matched_series
 
 
-def _fuzzy_match_names_above_threshold(
-    name_series: pd.Series,
-    choices: Iterable[str],
-    threshold: int,
-    task_desc: str,
-    not_match: str = "existing",
-) -> pd.Series:
+def _one_to_one_priority_based_fuzzy_matching(strings_to_match: set, choices: set, not_match: str, threshold: int):
     """
-    Fuzzy matches values in `name_series` with values in `choices` and applies the match
-    only if the Levenshtein distance exceeds `threshold`.
+    Find matches between two sets of strings, prioritizing exact matches first, then matching remaining strings by
+    finding the highest similarity pair recording the best match, and then iteratively repeating with the remaining
+    strings. Matching is one to one, such that each choice can only be used in a match once. As matching is one to one
+    the strings_to_match should come from a column where no repeat values are expected, i.e. an index type column that
+    has one row for each generator or region, otherwise typos where a region/generator is recorded twice with different
+    spellings will cause the matching to break.
 
     Args:
-        name_series: :class:`pandas.Series` with names to be matched with values in
-            `choices`
-        choices: Iterable of `choices` that are replacement values
-        threshold: Threshold to exceed for replacement. Between 0 and 100
-        task_desc: Task description to include in logging information
+        strings_to_match: set of strings to find a match for in the set of choices.
+        choices: set of strings to choose from when finding matches.
         not_match: optional. Defaults to "existing". If "existing", wherever a match
             that exceeds the threshold does not exist, the existing value is retained.
             If any other string, this will be used to replace the existing value
             where a match that exceeds the threshold does not exist.
+        threshold: match quality threshold to exceed for replacement. Between 0 and 100
+
     Returns:
-        :class:`pandas.Series` with selective fuzzy matching
+        dict: dict matching strings to the choice they matched with.
     """
-    if not_match == "existing":
-        matched_series = name_series.apply(
-            lambda x: process.extractOne(x, choices)[0]
-            if process.extractOne(x, choices)[1] > threshold
-            else x
-        )
-    else:
-        matched_series = name_series.apply(
-            lambda x: process.extractOne(x, choices)[0]
-            if process.extractOne(x, choices)[1] > threshold
-            else not_match
-        )
-    _log_fuzzy_match(name_series, matched_series, task_desc)
-    return matched_series
+    # if len(strings_to_match) > len(choices):
+    #     raise ValueError("To many strings to match.")
+
+    matches = []
+
+    # Keep track of which strings and choices haven't formed a match yet.
+    remaining_strings_to_match = strings_to_match
+    remaining_choices = choices
+
+    # Find and remove exact matches
+    exact_matches = remaining_strings_to_match.intersection(remaining_choices)
+    for s in exact_matches:
+        matches.append((s, s))
+        remaining_strings_to_match.remove(s)
+        remaining_choices.remove(s)
+
+    # Convert remaining sets to lists for index access
+    remaining_strings_to_match_list = list(remaining_strings_to_match)
+    remaining_choices_list = list(remaining_choices)
+
+    scores = []
+
+    # For remaining strings, use greedy approach with fuzzy matching
+    while remaining_strings_to_match_list and remaining_choices_list:
+        best_score = -1
+        best_pair = None
+
+        # Find the highest similarity score among remaining pairs
+        for i, str_a in enumerate(remaining_strings_to_match_list):
+            for j, str_b in enumerate(remaining_choices_list):
+                score = fuzz.ratio(str_a, str_b)
+                scores.append(score)
+                if score > best_score and score >= threshold:
+                    best_score = score
+                    best_pair = (i, j, str_a, str_b, score)
+
+        if best_pair:
+            i, j, str_a, str_b, score = best_pair
+            matches.append((str_a, str_b))
+
+            # Remove matched strings
+            remaining_strings_to_match_list.pop(i)
+            remaining_choices_list.pop(j)
+        else:
+            # If none of the remaining string comparisons is greater
+            # than the threshold provided break and resort to the
+            # no_match strategy.
+            break
+
+    for str_to_match in remaining_strings_to_match_list:
+        if not_match == 'existing':
+            matches.append((str_to_match, str_to_match))
+        else:
+            matches.append((str_to_match, not_match))
+
+    return dict(matches)
 
 
 def _log_fuzzy_match(

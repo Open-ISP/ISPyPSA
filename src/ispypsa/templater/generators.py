@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from .helpers import (
-    _fuzzy_match_names_above_threshold,
+    _fuzzy_match_names,
     _snakecase_string,
     _where_any_substring_appears,
 )
@@ -168,11 +168,12 @@ def _merge_csv_data(
         df[col] = _rename_summary_outage_mappings(df[col])
     # handles slight difference in capitalisation e.g. Bogong/Mackay vs Bogong/MacKay
     where_str = df[col].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, col] = _fuzzy_match_names_above_threshold(
+    df.loc[where_str, col] = _fuzzy_match_names(
         df.loc[where_str, col],
         replacement_dict.keys(),
-        99,
         "merging in existing, committed, anticipated and additional generator static properties",
+        not_match='existing',
+        threshold=90
     )
     df[col] = df[col].replace(replacement_dict)
     if "new_col_name" in csv_attrs.keys():
