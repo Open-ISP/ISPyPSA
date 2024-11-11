@@ -8,7 +8,7 @@ from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
 
 
 def _translate_ecaa_generators(
-    ispypsa_inputs_path: Path | str,  granularity: str = "sub_regional"
+    ispypsa_inputs_path: Path | str, granularity: str = "sub_regional"
 ) -> pd.DataFrame:
     """Process data on existing, committed, anticipated, and additional (ECAA) generators
     into a format aligned with PyPSA inputs.
@@ -20,44 +20,53 @@ def _translate_ecaa_generators(
     Returns:
         `pd.DataFrame`: PyPSA style generator attributes in tabular format.
     """
-    ecaa_generators_template = (
-        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators.csv")))
+    ecaa_generators_template = pd.read_csv(
+        ispypsa_inputs_path / Path("ecaa_generators.csv")
+    )
 
     if granularity == "sub_regional":
-        _GENERATOR_ATTRIBUTES['sub_region_id'] = "bus"
+        _GENERATOR_ATTRIBUTES["sub_region_id"] = "bus"
     elif granularity == "regional":
-        _GENERATOR_ATTRIBUTES['region_id'] = "bus"
+        _GENERATOR_ATTRIBUTES["region_id"] = "bus"
 
-    ecaa_generators_pypsa_format = ecaa_generators_template.loc[:, _GENERATOR_ATTRIBUTES.keys()]
-    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.rename(columns=_GENERATOR_ATTRIBUTES)
+    ecaa_generators_pypsa_format = ecaa_generators_template.loc[
+        :, _GENERATOR_ATTRIBUTES.keys()
+    ]
+    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.rename(
+        columns=_GENERATOR_ATTRIBUTES
+    )
 
     if granularity == "single_region":
-        ecaa_generators_pypsa_format['bus'] = "NEM"
+        ecaa_generators_pypsa_format["bus"] = "NEM"
 
     marginal_costs = {
-        'Black Coal': 50.0,
-        'Gas': 300.0,
-        'Liquid Fuel': 400.0,
-        'Water': 300.0,
-        'Solar': 10.0,
-        'Wind': 10.0,
-        'Hyblend': 400.0
+        "Black Coal": 50.0,
+        "Gas": 300.0,
+        "Liquid Fuel": 400.0,
+        "Water": 300.0,
+        "Solar": 10.0,
+        "Wind": 10.0,
+        "Hyblend": 400.0,
     }
 
-    ecaa_generators_pypsa_format['marginal_cost'] = ecaa_generators_pypsa_format['carrier'].map(marginal_costs)
+    ecaa_generators_pypsa_format["marginal_cost"] = ecaa_generators_pypsa_format[
+        "carrier"
+    ].map(marginal_costs)
 
-    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.set_index("name", drop=True)
+    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.set_index(
+        "name", drop=True
+    )
 
     return ecaa_generators_pypsa_format
 
 
 def _translate_generator_timeseries(
-        ispypsa_inputs_path: Path | str,
-        trace_data_path: Path | str,
-        pypsa_inputs_path: Path | str,
-        generator_type: Literal['solar', 'wind'],
-        reference_year_mapping: dict[int: int],
-        year_type: Literal['fy', 'calendar']
+    ispypsa_inputs_path: Path | str,
+    trace_data_path: Path | str,
+    pypsa_inputs_path: Path | str,
+    generator_type: Literal["solar", "wind"],
+    reference_year_mapping: dict[int:int],
+    year_type: Literal["fy", "calendar"],
 ) -> None:
     """Gets trace data for generators by constructing a timeseries from the start to end year using the reference year
     cycle provided. Trace data is then saved as a parquet file to .
@@ -75,8 +84,9 @@ def _translate_generator_timeseries(
     Returns:
         None
     """
-    ecaa_generators_template = (
-        pd.read_csv(ispypsa_inputs_path / Path("ecaa_generators.csv")))
+    ecaa_generators_template = pd.read_csv(
+        ispypsa_inputs_path / Path("ecaa_generators.csv")
+    )
 
     trace_data_path = trace_data_path / Path(generator_type)
 
@@ -85,12 +95,14 @@ def _translate_generator_timeseries(
     if not output_trace_path.exists():
         output_trace_path.mkdir(parents=True)
 
-    generators = ecaa_generators_template[ecaa_generators_template['fuel_type']==generator_type.capitalize()].copy()
-    generators = list(generators['generator'])
+    generators = ecaa_generators_template[
+        ecaa_generators_template["fuel_type"] == generator_type.capitalize()
+    ].copy()
+    generators = list(generators["generator"])
 
     query_functions = {
-        'solar': get_data.solar_project_multiple_reference_years,
-        'wind': get_data.wind_project_multiple_reference_years
+        "solar": get_data.solar_project_multiple_reference_years,
+        "wind": get_data.wind_project_multiple_reference_years,
     }
 
     for gen in generators:
@@ -98,6 +110,6 @@ def _translate_generator_timeseries(
             reference_years=reference_year_mapping,
             project=gen,
             directory=trace_data_path,
-            year_type=year_type
+            year_type=year_type,
         )
         trace.to_parquet(Path(output_trace_path, f"{gen}.parquet"), index=False)

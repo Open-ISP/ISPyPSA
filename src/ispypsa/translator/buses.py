@@ -7,9 +7,7 @@ from isp_trace_parser import get_data
 from ispypsa.translator.mappings import _BUS_ATTRIBUTES
 
 
-def _translate_nodes_to_buses(
-    ispypsa_inputs_path: Path | str
-) -> pd.DataFrame:
+def _translate_nodes_to_buses(ispypsa_inputs_path: Path | str) -> pd.DataFrame:
     """Process network node data into a format aligned with PyPSA inputs.
 
     Args:
@@ -29,13 +27,13 @@ def _translate_nodes_to_buses(
 
 
 def _translate_buses_timeseries(
-        ispypsa_inputs_path: Path | str,
-        trace_data_path: Path | str,
-        pypsa_inputs_path: Path | str,
-        scenario: str,
-        granularity: str,
-        reference_year_mapping: dict[int: int],
-        year_type: Literal['fy', 'calendar'],
+    ispypsa_inputs_path: Path | str,
+    trace_data_path: Path | str,
+    pypsa_inputs_path: Path | str,
+    scenario: str,
+    granularity: str,
+    reference_year_mapping: dict[int:int],
+    year_type: Literal["fy", "calendar"],
 ) -> None:
     """Gets trace data for operational demand by constructing a timeseries from the start to end year using the
     eference year cycle provided. Trace data is then saved as a parquet file to .
@@ -54,9 +52,13 @@ def _translate_buses_timeseries(
     Returns:
         None
     """
-    region_and_zone_mapping = pd.read_csv(ispypsa_inputs_path / Path("region_and_zone_mapping.csv"))
+    region_and_zone_mapping = pd.read_csv(
+        ispypsa_inputs_path / Path("region_and_zone_mapping.csv")
+    )
 
-    region_mapping = region_and_zone_mapping.drop_duplicates(["nem_region_id", "isp_sub_region_id"])
+    region_mapping = region_and_zone_mapping.drop_duplicates(
+        ["nem_region_id", "isp_sub_region_id"]
+    )
 
     if granularity == "regional":
         region_mapping["node_id"] = "nem_region_id"
@@ -67,13 +69,12 @@ def _translate_buses_timeseries(
 
     trace_data_path = trace_data_path / Path("demand")
 
-    output_trace_path = Path(pypsa_inputs_path, f"demand_traces")
+    output_trace_path = Path(pypsa_inputs_path, "demand_traces")
 
     if not output_trace_path.exists():
         output_trace_path.mkdir(parents=True)
 
     for node in region_mapping["node_id"]:
-        print(node)
         sub_regions_under_node = region_mapping[region_mapping["node_id"] == node]["isp_sub_region_id"]
         node_traces = []
         for sub_region in sub_regions_under_node:
@@ -84,7 +85,7 @@ def _translate_buses_timeseries(
                 scenario=scenario,
                 year_type=year_type,
                 demand_type="OPSO_MODELLING",
-                poe="POE50"
+                poe="POE50",
             )
             node_traces.append(trace)
         node_traces = pd.concat(node_traces)
