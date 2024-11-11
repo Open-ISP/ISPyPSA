@@ -214,9 +214,9 @@ def task_create_pypsa_inputs():
             )
         ],
         "file_dep": [
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "node_template.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths_template.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators_template.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
         ],
         "targets": [
             Path(_PYPSA_INPUTS_DIRECTORY, "generators.csv")

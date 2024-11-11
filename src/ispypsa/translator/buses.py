@@ -52,18 +52,13 @@ def _translate_buses_timeseries(
     Returns:
         None
     """
-    region_and_zone_mapping = pd.read_csv(
-        ispypsa_inputs_path / Path("region_and_zone_mapping.csv")
-    )
-
-    region_mapping = region_and_zone_mapping.drop_duplicates(
-        ["nem_region_id", "isp_sub_region_id"]
-    )
-
     if granularity == "regional":
-        region_mapping["node_id"] = "nem_region_id"
+        region_mapping = pd.read_csv(
+            ispypsa_inputs_path / Path("region_and_zone_mapping.csv")
+        )
+
     elif granularity == "sub_regional":
-        region_mapping["node_id"] = "isp_sub_region_id"
+        region_mapping = pd.read_csv(ispypsa_inputs_path / Path("nodes.csv"))
 
     nodes = pd.read_csv(ispypsa_inputs_path / Path("node_template.csv"))
 
