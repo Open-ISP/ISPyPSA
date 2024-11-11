@@ -12,15 +12,14 @@ def _fuzzy_match_names(
     choices: Iterable[str],
     task_desc: str,
     not_match: str = "existing",
-    threshold: int = 0.0,
+    threshold: int = 0,
 ) -> pd.Series:
     """
     Fuzzy matches values in `name_series` with values in `choices`.
     Fuzzy matching is used where typos or minor differences in names in raw data
     may cause issues with exact mappings (e.g. using a dictionary mapping).
-    This functionality is designed to work where name_series is an index column,
-    i.e. it is expected not have repeated values. Matching is done without replacement.
-    If a match cannot be found for a value then the not_match method is used.
+    This function is only suitable for use where name_series does not have
+    repeated values since matching is done without replacement
 
     Args:
         name_series: :class:`pandas.Series` with names to be matched with values in
@@ -28,7 +27,7 @@ def _fuzzy_match_names(
         choices: Iterable of `choices` that are replacement values
         task_desc: Task description to include in logging information
         not_match: optional. Defaults to "existing". If "existing", wherever a match
-            that exceeds the threshold does notexisting value is retained.
+            that exceeds the threshold does not exist the existing value is retained.
             If any other string, this will be used to replace the existing value
             where a match that exceeds the threshold does not exist.
         threshold: match quality threshold to exceed for replacement. Between 0 and 100
@@ -49,12 +48,13 @@ def _one_to_one_priority_based_fuzzy_matching(
     strings_to_match: set, choices: set, not_match: str, threshold: int
 ):
     """
-    Find matches between two sets of strings, prioritizing exact matches first, then matching remaining strings by
-    finding the highest similarity pair recording the best match, and then iteratively repeating with the remaining
-    strings. Matching is one to one, such that each choice can only be used in a match once. As matching is one to one
-    the strings_to_match should come from a column where no repeat values are expected, i.e. an index type column that
-    has one row for each generator or region, otherwise typos where a region/generator is recorded twice with different
-    spellings will cause the matching to break.
+    Find matches between two sets of strings, assuming that strings_to_match and choices
+    contain unique values (e.g. from the index column of a table) that must be matched one
+    to one. This is done by:
+
+        1. Identifying exact matches
+        2. Matching remaining strings by finding the highest similarity pair and then
+           recording the best match (iteratively).
 
     Args:
         strings_to_match: set of strings to find a match for in the set of choices.
@@ -68,12 +68,9 @@ def _one_to_one_priority_based_fuzzy_matching(
     Returns:
         dict: dict matching strings to the choice they matched with.
     """
-    # if len(strings_to_match) > len(choices):
-    #     raise ValueError("To many strings to match.")
 
     matches = []
 
-    # Keep track of which strings and choices haven't formed a match yet.
     remaining_strings_to_match = strings_to_match
     remaining_choices = choices
 
@@ -88,8 +85,6 @@ def _one_to_one_priority_based_fuzzy_matching(
     remaining_strings_to_match_list = list(remaining_strings_to_match)
     remaining_choices_list = list(remaining_choices)
 
-    scores = []
-
     # For remaining strings, use greedy approach with fuzzy matching
     while remaining_strings_to_match_list and remaining_choices_list:
         best_score = -1
@@ -99,7 +94,6 @@ def _one_to_one_priority_based_fuzzy_matching(
         for i, str_a in enumerate(remaining_strings_to_match_list):
             for j, str_b in enumerate(remaining_choices_list):
                 score = fuzz.ratio(str_a, str_b)
-                scores.append(score)
                 if score > best_score and score >= threshold:
                     best_score = score
                     best_pair = (i, j, str_a, str_b, score)

@@ -60,7 +60,7 @@ def test_sub_region_ids() -> None:
         "Northern New South Wales": "Northern New South Wales",
         "Central New South Wales": "Central New South Wales",
         "South NSW": "Southern New South Wales",
-        "Sydney, New Castle, Wollongong": "Sydney, New Castle, Wollongong",
+        "Sydney, New Castle, Wollongong": "Sydney, Newcastle, Wollongong",
         "Victoria": "Victoria",
         "Central South Australia": "Central South Australia",
         "South East South Australia": "South East South Australia",
