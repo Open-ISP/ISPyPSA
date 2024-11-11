@@ -33,6 +33,7 @@ def _translate_buses_timeseries(
         trace_data_path: Path | str,
         pypsa_inputs_path: Path | str,
         scenario: str,
+        granularity: str,
         reference_year_mapping: dict[int: int],
         year_type: Literal['fy', 'calendar'],
 ) -> None:
@@ -44,6 +45,7 @@ def _translate_buses_timeseries(
         trace_data_path: Path to directory containing trace data parsed by isp-trace-parser
         pypsa_inputs_path: Path to director where input translated to pypsa format will be saved
         scenario: str, ISP scenario to use demand traces from
+        granularity: Geographical granularity obtained from the model configuration
         reference_year_mapping: dict[int: int], mapping model years to trace data reference years
         year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial year with start_year and
             end_year specifiying the financial year to return data for, using year ending nomenclature (2016 ->
@@ -52,7 +54,14 @@ def _translate_buses_timeseries(
     Returns:
         None
     """
-    nodes = pd.read_csv(ispypsa_inputs_path / Path("node_template.csv"))
+    region_and_zone_mapping = pd.read_csv(ispypsa_inputs_path / Path("region_and_zone_mapping.csv"))
+
+    region_mapping = region_and_zone_mapping.drop_duplicates(["nem_region_id", "isp_sub_region_id"])
+
+    if granularity == "regional":
+        region_mapping["node_id"] = "nem_region_id"
+    elif granularity == "sub_regional":
+        region_mapping["node_id"] = "isp_sub_region_id"
 
     trace_data_path = trace_data_path / Path("demand")
 
@@ -61,9 +70,9 @@ def _translate_buses_timeseries(
     if not output_trace_path.exists():
         output_trace_path.mkdir(parents=True)
 
-    for node in nodes["node_id"]:
+    for node in region_mapping["node_id"]:
         print(node)
-        sub_regions_under_node = nodes[nodes["node_id"] == node]["isp_sub_region_id"]
+        sub_regions_under_node = region_mapping[region_mapping["node_id"] == node]["isp_sub_region_id"]
         node_traces = []
         for sub_region in sub_regions_under_node:
             trace = get_data.demand_multiple_reference_years(
