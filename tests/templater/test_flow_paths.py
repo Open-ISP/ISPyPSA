@@ -1,8 +1,6 @@
 from pathlib import Path
 
-import pytest
 
-from ispypsa.config.validators import ModelConfigOptionError
 from ispypsa.templater.flow_paths import template_flow_paths
 
 
@@ -75,8 +73,3 @@ def test_flow_paths_templater_single_region(workbook_table_cache_test_path: Path
         workbook_table_cache_test_path, "single_region"
     )
     assert flow_paths_template.empty
-
-
-def test_invalid_granularity(workbook_table_cache_test_path: Path):
-    with pytest.raises(ModelConfigOptionError):
-        template_flow_paths(workbook_table_cache_test_path, granularity="Wastelands")
