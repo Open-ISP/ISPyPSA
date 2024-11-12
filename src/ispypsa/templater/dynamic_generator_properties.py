@@ -190,6 +190,7 @@ def _template_seasonal_ratings(
         _snakecase_string(col) for col in seasonal_rating.columns
     ]
     seasonal_rating = _convert_seasonal_columns_to_float(seasonal_rating)
+    seasonal_rating = seasonal_rating.set_index("generator")
     return seasonal_rating
 
 
