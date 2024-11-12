@@ -5,6 +5,7 @@ from isp_trace_parser import construct_reference_year_mapping
 
 from ispypsa.config.validators import validate_config
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
+from ispypsa.config.config import load_config
 from ispypsa.logging import configure_logging
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
@@ -52,17 +53,15 @@ def build_parsed_workbook_cache(cache_location: Path) -> None:
 def create_ispypsa_inputs_from_config(
     config_location: Path, workbook_cache_location: Path, template_location: Path
 ) -> None:
-    with open(config_location, "r") as file:
-        config = yaml.safe_load(file)
-    validate_config(config)
+
+    config = load_config(config_location)
+
     if not template_location.exists():
         template_location.mkdir(parents=True)
 
-    node_template = template_nodes(
-        workbook_cache_location, config["network"]["granularity"]
-    )
+    node_template = template_nodes(workbook_cache_location, config.network.granularity)
 
-    if config["network"]["granularity"] == "regional":
+    if config.network.granularity == "regional":
         regional_sub_regional_mapping = template_regional_sub_regional_mapping(
             workbook_cache_location
         )
@@ -75,7 +74,7 @@ def create_ispypsa_inputs_from_config(
     )
 
     flow_path_template = template_flow_paths(
-        workbook_cache_location, config["network"]["granularity"]
+        workbook_cache_location, config.network.granularity
     )
     ecaa_generators_template = _template_ecaa_generators_static_properties(
         workbook_cache_location
