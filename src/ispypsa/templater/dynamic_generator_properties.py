@@ -27,7 +27,7 @@ def template_generator_dynamic_properties(
     logging.info("Creating a template for dynamic generator properties")
     coal_prices = _template_coal_prices(parsed_workbook_path, scenario)
     gas_prices = _template_gas_prices(parsed_workbook_path, scenario)
-    liquid_fuel_prices = _template_liquid_fuel_prices(parsed_workbook_path)
+    liquid_fuel_prices = _template_liquid_fuel_prices(parsed_workbook_path, scenario)
     full_outage_forecasts = _template_full_outage_forecasts(parsed_workbook_path)
     partial_outage_forecasts = _template_partial_outage_forecasts(parsed_workbook_path)
     seasonal_ratings = _template_seasonal_ratings(parsed_workbook_path)
@@ -96,12 +96,15 @@ def _template_gas_prices(
     return gas_prices
 
 
-def _template_liquid_fuel_prices(parsed_workbook_path: Path | str) -> pd.DataFrame:
+def _template_liquid_fuel_prices(
+    parsed_workbook_path: Path | str, scenario: str
+) -> pd.Series:
     """Creates a liquid fuel prices template
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
 
     Returns:
         `pd.DataFrame`: ISPyPSA template for liquid fuel prices
@@ -116,7 +119,9 @@ def _template_liquid_fuel_prices(parsed_workbook_path: Path | str) -> pd.DataFra
         "liquid_fuel_price_scenario"
     )
     liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
-    return liquid_fuel_prices
+    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[scenario, :]
+    liquid_fuel_prices_scenario.index.set_names("FY", inplace=True)
+    return liquid_fuel_prices_scenario
 
 
 def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.DataFrame:
