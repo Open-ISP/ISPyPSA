@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..config.validators import _validate_granularity
 from .helpers import (
     _snakecase_string,
 )
@@ -36,8 +35,6 @@ def template_flow_paths(
         template = _template_regional_interconnectors(parsed_workbook_path)
     elif granularity == "single_region":
         template = pd.DataFrame()
-    else:
-        _validate_granularity(granularity)
     if not template.empty:
         template = template.set_index("flow_path_name")
     return template
