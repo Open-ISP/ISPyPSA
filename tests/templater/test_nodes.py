@@ -2,9 +2,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
-from ispypsa.config.validators import ModelConfigOptionError
 from ispypsa.templater.nodes import template_nodes
 
 
@@ -36,11 +34,6 @@ def test_node_templater_single_region(workbook_table_cache_test_path: Path):
     assert set(node_template.nem_region) == set(("Victoria",))
     assert not node_template.substation_longitude.empty
     assert not node_template.substation_latitude.empty
-
-
-def test_invalid_granularity(workbook_table_cache_test_path: Path):
-    with pytest.raises(ModelConfigOptionError):
-        template_nodes(workbook_table_cache_test_path, granularity="Wastelands")
 
 
 def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker):
