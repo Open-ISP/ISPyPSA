@@ -40,6 +40,7 @@ snakecase_test_cases = {
     "Capacity (MW)": "capacity_mw",
     # Columns with years
     "Mean time to repair_Partial outage_Post 2022": "mean_time_to_repair_partial_outage_post_2022",
+    "2022-23": "2022_23",
     # String with commas
     "Existing, Committed and Anticipated batteries": "existing_committed_and_anticipated_batteries",
 }

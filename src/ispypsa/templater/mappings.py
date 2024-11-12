@@ -1,9 +1,11 @@
 import pandas as pd
 
+from .helpers import _snakecase_string
 from .lists import (
     _ALL_GENERATOR_STORAGE_TYPES,
     _CONDENSED_GENERATOR_TYPES,
     _ECAA_GENERATOR_TYPES,
+    _ISP_SCENARIOS,
 )
 
 _NEM_REGION_IDS = pd.Series(
@@ -58,6 +60,8 @@ _GENERATOR_PROPERTIES = {
     "full_outages_forecast": ["existing_generators"],
     "partial_outages_forecast": ["existing_generators"],
     "gpg_min_stable_level": ["existing_generators", "new_entrants"],
+    "coal_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
+    "gas_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
 }
 
 _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {

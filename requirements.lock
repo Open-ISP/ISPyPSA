@@ -53,7 +53,7 @@ highspy==1.7.2
     # via pypsa
 importlib-metadata==8.5.0
     # via doit
-isp-workbook-parser==2.0.0
+isp-workbook-parser==2.0.1
     # via ispypsa
 kiwisolver==1.4.5
     # via matplotlib
