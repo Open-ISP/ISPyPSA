@@ -6,7 +6,6 @@ import requests
 import xmltodict
 from thefuzz import process
 
-from ..config.validators import validate_granularity
 from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
@@ -25,13 +24,13 @@ def template_nodes(
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
-        granularity: Geographical granularity obtained from the model configuration
+        granularity: Geographical granularity obtained from the model configuration.
+            Defaults to "sub_regional".
 
     Returns:
         `pd.DataFrame`: ISPyPSA node template
     """
     logging.info(f"Creating a nodes template with {granularity} granularity")
-    validate_granularity(granularity)
     if granularity == "sub_regional":
         template = _template_sub_regional_node_table(parsed_workbook_path)
         index_col = "isp_sub_region_id"

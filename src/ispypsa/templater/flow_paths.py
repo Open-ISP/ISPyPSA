@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..config.validators import validate_granularity
 from .helpers import (
     _snakecase_string,
 )
@@ -24,12 +23,12 @@ def template_flow_paths(
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
         granularity: Geographical granularity obtained from the model configuration
+            Defaults to "sub_regional".
 
     Returns:
         `pd.DataFrame`: ISPyPSA flow path template
     """
     logging.info(f"Creating a flow paths template with {granularity} granularity")
-    validate_granularity(granularity)
     if granularity == "sub_regional":
         template = _template_sub_regional_flow_paths(parsed_workbook_path)
     elif granularity == "regional":

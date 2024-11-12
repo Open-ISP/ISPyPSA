@@ -5,11 +5,17 @@ import yaml
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.templater.flow_paths import template_flow_paths
-from ispypsa.templater.generators import _template_ecaa_generators
 from ispypsa.templater.nodes import (
     template_nodes,
     template_regional_sub_regional_mapping,
 )
+from ispypsa.templater.static_generator_properties import (
+    _template_ecaa_generators_static_properties,
+)
+from ispypsa.templater.dynamic_generator_properties import (
+    template_generator_dynamic_properties,
+)
+from ispypsa.config.validators import validate_config
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
@@ -37,6 +43,7 @@ def create_ispypsa_inputs_from_config(
 ) -> None:
     with open(config_location, "r") as file:
         config = yaml.safe_load(file)
+    validate_config(config)
     if not template_location.exists():
         template_location.mkdir(parents=True)
 
@@ -59,9 +66,12 @@ def create_ispypsa_inputs_from_config(
     flow_path_template = template_flow_paths(
         workbook_cache_location, config["network"]["granularity"]
     )
-
-    ecaa_generators_template = _template_ecaa_generators(workbook_cache_location)
-
+    ecaa_generators_template = _template_ecaa_generators_static_properties(
+        workbook_cache_location
+    )
+    dynamic_generator_property_templates = template_generator_dynamic_properties(
+        workbook_cache_location, config["scenario"]
+    )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
     if renewable_energy_zone_locations is not None:
@@ -72,6 +82,11 @@ def create_ispypsa_inputs_from_config(
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
     if ecaa_generators_template is not None:
         ecaa_generators_template.to_csv(Path(template_location, "ecaa_generators.csv"))
+    if dynamic_generator_property_templates is not None:
+        for gen_property in dynamic_generator_property_templates.keys():
+            dynamic_generator_property_templates[gen_property].to_csv(
+                Path(template_location, f"{gen_property}.csv")
+            )
 
 
 def task_cache_required_tables():
@@ -97,10 +112,16 @@ def task_create_ispypsa_inputs():
         "file_dep": [_CONFIG_PATH]
         + [Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES],
         "targets": [
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "regional_sub_regional_mapping.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "coal_prices.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "gas_prices.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "liquid_fuel_prices.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "full_outage_forecasts.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
+            Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
         ],
     }

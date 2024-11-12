@@ -17,7 +17,7 @@ _OBSOLETE_COLUMNS = [
 ]
 
 
-def _template_ecaa_generators(
+def _template_ecaa_generators_static_properties(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
     """Processes the existing, commited, anticipated and additional (ECAA) generators
