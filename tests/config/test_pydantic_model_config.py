@@ -11,4 +11,4 @@ def test_valid_granularity(granularity):
 
 def test_invalid_granularity():
     with pytest.raises(ValidationError):
-        ModelConfig(**{"network": {"granularity": "wastland"}})
+        ModelConfig(**{"network": {"granularity": "wastlands"}})
