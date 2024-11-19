@@ -17,7 +17,7 @@ class TraceConfig(BaseModel):
 
     @field_validator("end_year")
     @classmethod
-    def validate_dates(cls, end_year: float, info):
+    def validate_end_year(cls, end_year: float, info):
         if end_year < info.data.get("start_year"):
             raise ValueError(
                 "config end_year must be greater than or equal to start_year"
