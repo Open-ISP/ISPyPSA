@@ -1,42 +1,33 @@
 from pathlib import Path
 
 import yaml
-
 from isp_trace_parser import construct_reference_year_mapping
 
+from ispypsa.config.validators import validate_config
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
+from ispypsa.templater.dynamic_generator_properties import (
+    template_generator_dynamic_properties,
+)
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.nodes import (
     template_nodes,
     template_regional_sub_regional_mapping,
 )
-from ispypsa.templater.static_generator_properties import (
-    _template_ecaa_generators_static_properties,
-)
-from ispypsa.templater.dynamic_generator_properties import (
-    template_generator_dynamic_properties,
-)
-from ispypsa.config.validators import validate_config
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zone_locations,
 )
 from ispypsa.templater.static_generator_properties import (
     _template_ecaa_generators_static_properties,
 )
+from ispypsa.translator.buses import (
+    _translate_buses_timeseries,
+    _translate_nodes_to_buses,
+)
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_generator_timeseries,
 )
-from ispypsa.translator.buses import (
-    _translate_nodes_to_buses,
-    _translate_buses_timeseries,
-)
-
-from ispypsa.templater.dynamic_generator_properties import (
-    template_generator_dynamic_properties,
-)
-from ispypsa.config.validators import validate_config
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "template")
@@ -167,6 +158,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         year_type=config["traces"]["year_type"],
     )
 
+
 def task_cache_required_tables():
     return {
         "actions": [(build_parsed_workbook_cache, [_PARSED_WORKBOOK_CACHE])],
@@ -210,7 +202,12 @@ def task_create_pypsa_inputs():
         "actions": [
             (
                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
-                [_CONFIG_PATH, _ISPYPSA_INPUTS_DIRECTORY, _PARSED_TRACE_DIRECTORY, _PYPSA_INPUTS_DIRECTORY],
+                [
+                    _CONFIG_PATH,
+                    _ISPYPSA_INPUTS_DIRECTORY,
+                    _PARSED_TRACE_DIRECTORY,
+                    _PYPSA_INPUTS_DIRECTORY,
+                ],
             )
         ],
         "file_dep": [
@@ -218,7 +215,5 @@ def task_create_pypsa_inputs():
             Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
         ],
-        "targets": [
-            Path(_PYPSA_INPUTS_DIRECTORY, "generators.csv")
-        ],
+        "targets": [Path(_PYPSA_INPUTS_DIRECTORY, "generators.csv")],
     }

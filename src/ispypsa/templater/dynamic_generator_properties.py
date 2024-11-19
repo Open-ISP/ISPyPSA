@@ -124,13 +124,6 @@ def _template_liquid_fuel_prices(
     return liquid_fuel_prices_scenario
 
 
-    cols[0] = "generator"
-    gas_prices.columns = cols
-    gas_prices = gas_prices.drop(columns="gas_price_scenario").set_index("generator")
-    gas_prices = _convert_financial_year_columns_to_float(gas_prices)
-    return gas_prices
-
-
 def _template_liquid_fuel_prices(
     parsed_workbook_path: Path | str, scenario: str
 ) -> pd.Series:

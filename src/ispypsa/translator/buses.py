@@ -60,8 +60,6 @@ def _translate_buses_timeseries(
     elif granularity == "sub_regional":
         region_mapping = pd.read_csv(ispypsa_inputs_path / Path("nodes.csv"))
 
-    nodes = pd.read_csv(ispypsa_inputs_path / Path("node_template.csv"))
-
     trace_data_path = trace_data_path / Path("demand")
 
     output_trace_path = Path(pypsa_inputs_path, "demand_traces")
