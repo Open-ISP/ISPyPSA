@@ -1,16 +1,7 @@
-from typing import Literal
 import yaml
 from pathlib import Path
 
-from pydantic import BaseModel
-
-
-class NetworkConfig(BaseModel):
-    granularity: Literal["sub_regional", "regional", "single_region"]
-
-
-class ModelConfig(BaseModel):
-    network: NetworkConfig
+from ispypsa.config.validators import ModelConfig
 
 
 def load_config(config_path: str | Path) -> ModelConfig:

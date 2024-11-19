@@ -5,7 +5,7 @@ from isp_trace_parser import construct_reference_year_mapping
 
 from ispypsa.config.validators import validate_config
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
-from ispypsa.config.config import load_config
+from ispypsa.config import load_config
 from ispypsa.logging import configure_logging
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
