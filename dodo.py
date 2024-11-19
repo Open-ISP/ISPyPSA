@@ -3,7 +3,6 @@ from pathlib import Path
 import yaml
 from isp_trace_parser import construct_reference_year_mapping
 
-from ispypsa.config.validators import validate_config
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.config import load_config
 from ispypsa.logging import configure_logging
@@ -53,7 +52,6 @@ def build_parsed_workbook_cache(cache_location: Path) -> None:
 def create_ispypsa_inputs_from_config(
     config_location: Path, workbook_cache_location: Path, template_location: Path
 ) -> None:
-
     config = load_config(config_location)
 
     if not template_location.exists():
