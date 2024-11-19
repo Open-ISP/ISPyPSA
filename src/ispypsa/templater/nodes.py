@@ -94,9 +94,9 @@ def template_regional_sub_regional_mapping(parsed_workbook_path: Path | str):
         parsed_workbook_path
     )
     regional_sub_regional_mapping.index = (
-        regional_sub_regional_mapping["sub_region_id"].copy(deep=True).rename("node_id")
+        regional_sub_regional_mapping["nem_region_id"].copy(deep=True).rename("node_id")
     )
-    return regional_sub_regional_mapping.loc[:, ["nem_region_id"]]
+    return regional_sub_regional_mapping.loc[:, ["isp_sub_region_id"]]
 
 
 def _template_sub_regional_node_table(

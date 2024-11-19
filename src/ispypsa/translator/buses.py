@@ -54,7 +54,7 @@ def _translate_buses_timeseries(
     """
     if granularity == "regional":
         region_mapping = pd.read_csv(
-            ispypsa_inputs_path / Path("region_and_zone_mapping.csv")
+            ispypsa_inputs_path / Path("regional_sub_regional_mapping.csv")
         )
 
     elif granularity == "sub_regional":
