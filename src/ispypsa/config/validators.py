@@ -11,4 +11,3 @@ class NetworkConfig(BaseModel):
 class ModelConfig(BaseModel):
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     network: NetworkConfig
-
