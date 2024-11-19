@@ -14,3 +14,9 @@ network:
   #   "single_region": Existing generation and new entrants for the Victorian sub-region are attached to a single node (1 node)
   #   TODO: Clarify `single_region`/`copper_plate` implementation
   granularity: sub_regional
+
+traces:
+  year_type: fy
+  start_year: 2025
+  end_year: 2026
+  reference_year_cycle: [2018]
