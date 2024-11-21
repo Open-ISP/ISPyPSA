@@ -24,9 +24,19 @@ from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
 )
+from ispypsa.translator.lines import translate_flow_paths_to_lines
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_generator_timeseries,
+)
+from ispypsa.model import (
+    initialise_network,
+    add_buses_to_network,
+    add_ecaa_generators_to_network,
+    add_carriers_to_network,
+    add_lines_to_network,
+    run,
+    save_results,
 )
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
@@ -34,6 +44,7 @@ _ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
 _PARSED_TRACE_DIRECTORY = Path("/home/abi/isp-traces/parsed-traces")
 _CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
+_PYPSA_OUTPUTS_DIRECTORY = Path("model_data", "outputs")
 
 configure_logging()
 
@@ -126,6 +137,10 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         ispypsa_inputs_location,
     )
 
+    pypsa_inputs["lines"] = translate_flow_paths_to_lines(
+        ispypsa_inputs_location,
+    )
+
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
 
@@ -162,6 +177,24 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
+
+
+def create_and_run_pypsa_model(
+    config_location: Path, pypsa_inputs_location: Path, pypsa_outputs_location: Path
+) -> None:
+    config = load_config(config_location)
+    network = initialise_network(
+        config.traces.start_year,
+        config.traces.end_year,
+        config.traces.year_type,
+        config.temporal_resolution,
+    )
+    add_carriers_to_network(network, pypsa_inputs_location)
+    add_buses_to_network(network, pypsa_inputs_location)
+    add_lines_to_network(network, pypsa_inputs_location)
+    add_ecaa_generators_to_network(network, pypsa_inputs_location)
+    run(network)
+    save_results(network, pypsa_outputs_location)
 
 
 def task_cache_required_tables():
@@ -231,4 +264,25 @@ def task_create_pypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
         ],
         "targets": [Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv")],
+    }
+
+
+def task_create_and_run_pypsa_model():
+    return {
+        "actions": [
+            (
+                create_and_run_pypsa_model,
+                [_CONFIG_PATH, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
+            )
+        ],
+        "file_dep": [
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+        ],
+        "targets": [
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "generator_dispatch.csv"),
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p0.csv"),
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p1.csv"),
+        ],
     }

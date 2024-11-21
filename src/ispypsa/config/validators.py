@@ -32,5 +32,6 @@ class TraceConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     scenario: Literal[tuple(_ISP_SCENARIOS)]
+    temporal_resolution: Literal["30min"]
     network: NetworkConfig
     traces: TraceConfig
