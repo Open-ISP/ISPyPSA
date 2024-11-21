@@ -5,8 +5,13 @@ from pydantic import BaseModel, field_validator
 from ..templater.lists import _ISP_SCENARIOS
 
 
+class NodesConfig(BaseModel):
+    regional_granularity: Literal["sub_regions", "nem_regions", "single_region"]
+    rezs: Literal["discrete_nodes", "attached_to_parent_node"]
+
+
 class NetworkConfig(BaseModel):
-    granularity: Literal["sub_regional", "regional", "single_region"]
+    nodes: NodesConfig
 
 
 class TraceConfig(BaseModel):

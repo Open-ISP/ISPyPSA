@@ -7,13 +7,21 @@ from ispypsa.config.validators import ModelConfig
 @pytest.mark.parametrize(
     "scenario", ["Step Change", "Progressive Change", "Green Energy Exports"]
 )
-@pytest.mark.parametrize("granularity", ["sub_regional", "regional", "single_region"])
+@pytest.mark.parametrize(
+    "regional_granularity", ["sub_regions", "nem_regions", "single_region"]
+)
+@pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
-def test_valid_config(scenario, granularity, year_type):
+def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
     ModelConfig(
         **{
             "scenario": scenario,
-            "network": {"granularity": granularity},
+            "network": {
+                "nodes": {
+                    "regional_granularity": regional_granularity,
+                    "rezs": nodes_rezs,
+                }
+            },
             "traces": {
                 "year_type": year_type,
                 "start_year": 2025,
@@ -29,7 +37,12 @@ def test_invalid_scenario():
         ModelConfig(
             **{
                 "scenario": "BAU",
-                "network": {"granularity": "sub_regional"},
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
                 "traces": {
                     "year_type": "fy",
                     "start_year": 2025,
@@ -40,12 +53,38 @@ def test_invalid_scenario():
         )
 
 
-def test_invalid_granularity():
+def test_invalid_node_granularity():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
                 "scenario": "Step Change",
-                "network": {"granularity": "wastelands"},
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "wastelands",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "traces": {
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                },
+            }
+        )
+
+
+def test_invalid_nodes_rezs():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "scenario": "Step Change",
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "attached_to_regions",
+                    }
+                },
                 "traces": {
                     "year_type": "fy",
                     "start_year": 2025,
@@ -61,7 +100,12 @@ def test_invalid_end_year():
         ModelConfig(
             **{
                 "scenario": "Step Change",
-                "network": {"granularity": "sub_regional"},
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
                 "traces": {
                     "year_type": "fy",
                     "start_year": 2025,
