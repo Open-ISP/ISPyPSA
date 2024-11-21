@@ -5,3 +5,11 @@ _GENERATOR_ATTRIBUTES = {
 }
 
 _BUS_ATTRIBUTES = {"node_id": "name"}
+
+_LINE_ATTRIBUTES = {
+    "flow_path_name": "name",
+    "node_from": "bus0",
+    "node_to": "bus1",
+    "forward_direction_mw_summer_typical": "s_nom",
+    # "reverse_direction_mw_summer_typical": ""
+}
