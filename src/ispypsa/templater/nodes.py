@@ -116,7 +116,7 @@ def template_sub_regions_to_nem_regions_mapping(
     return mapping
 
 
-def template_region_to_single_sub_region(
+def template_region_to_single_sub_region_mapping(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
     """Processes the 'Regional reference node' table into an ISPyPSA template
