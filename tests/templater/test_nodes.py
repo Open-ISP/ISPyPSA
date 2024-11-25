@@ -5,7 +5,7 @@ import pandas as pd
 
 from ispypsa.templater.nodes import (
     template_nodes,
-    template_region_to_single_sub_region_mapping,
+    template_nem_region_to_single_sub_region_mapping,
     template_sub_regions_to_nem_regions_mapping,
 )
 
@@ -105,7 +105,7 @@ def test_sub_regions_to_nem_regions_mapping(workbook_table_cache_test_path: Path
 
 
 def test_region_to_single_sub_region_mapping(workbook_table_cache_test_path: Path):
-    mapping = template_region_to_single_sub_region_mapping(
+    mapping = template_nem_region_to_single_sub_region_mapping(
         workbook_table_cache_test_path
     )
     assert set(mapping.index) == set(("QLD", "VIC"))
