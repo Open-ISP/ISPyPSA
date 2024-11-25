@@ -7,14 +7,19 @@
 #   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
 network:
-  # The geographical granularity of the modelled network (i.e. the number of network nodes)
-  # Options:
-  #   "sub_regional": ISP Sub-regions are used to create network nodes (12 nodes)
-  #   "regional": NEM regions are used to create network nodes (5 nodes)
-  #   "single_region": Existing generation and new entrants for the Victorian sub-region are attached to a single node (1 node)
-  #   TODO: Clarify `single_region`/`copper_plate` implementation
-  granularity: sub_regional
-
+  nodes:
+    # The regional granularity of the nodes in the modelled network
+    # Options:
+    #   "sub_regions": ISP sub-regions are added as network nodes (12 nodes)
+    #   "nem_regions": NEM regions are added as network nodes (5 nodes)
+    #   "single_region": A single node, the Victorian sub-region, is added as a network node (1 node)
+    #   TODO: Clarify `single_region`/`copper_plate` implementation
+    regional_granularity: sub_regions
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
+    # Options:
+    #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
+    #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
+    rezs: discrete_nodes
 traces:
   year_type: fy
   start_year: 2025
