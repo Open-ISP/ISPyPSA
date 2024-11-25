@@ -11,29 +11,31 @@ from .mappings import _HVDC_FLOW_PATHS
 
 
 def template_flow_paths(
-    parsed_workbook_path: Path | str, granularity: str = "sub_regional"
+    parsed_workbook_path: Path | str, regional_granularity: str = "sub_regions"
 ) -> pd.DataFrame:
     """Creates a flow path template that describes the flow paths (i.e. lines) to be
     modelled
 
-    The function behaviour depends on the `granularity` specified in the model
+    The function behaviour depends on the `regional_granularity` specified in the model
     configuration.
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
-        granularity: Geographical granularity obtained from the model configuration
-            Defaults to "sub_regional".
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
 
     Returns:
         `pd.DataFrame`: ISPyPSA flow path template
     """
-    logging.info(f"Creating a flow paths template with {granularity} granularity")
-    if granularity == "sub_regional":
+    logging.info(
+        f"Creating a flow paths template with {regional_granularity} granularity"
+    )
+    if regional_granularity == "sub_regions":
         template = _template_sub_regional_flow_paths(parsed_workbook_path)
-    elif granularity == "regional":
+    elif regional_granularity == "nem_regions":
         template = _template_regional_interconnectors(parsed_workbook_path)
-    elif granularity == "single_region":
+    elif regional_granularity == "single_region":
         template = pd.DataFrame()
     if not template.empty:
         template = template.set_index("flow_path_name")
@@ -56,7 +58,7 @@ def _template_sub_regional_flow_paths(
         Path(parsed_workbook_path, "flow_path_transfer_capability.csv")
     )
     from_to_carrier = _get_flow_path_name_from_to_carrier(
-        flow_path_capabilities.iloc[:, 0], granularity="sub_regional"
+        flow_path_capabilities.iloc[:, 0], regional_granularity="sub_regions"
     )
     capability_columns = _clean_capability_column_names(flow_path_capabilities)
     sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
@@ -79,7 +81,7 @@ def _template_regional_interconnectors(
         Path(parsed_workbook_path, "interconnector_transfer_capability.csv")
     )
     from_to_carrier = _get_flow_path_name_from_to_carrier(
-        interconnector_capabilities.iloc[:, 0], granularity="regional"
+        interconnector_capabilities.iloc[:, 0], regional_granularity="nem_regions"
     )
     capability_columns = _clean_capability_column_names(interconnector_capabilities)
     regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
@@ -87,7 +89,7 @@ def _template_regional_interconnectors(
 
 
 def _get_flow_path_name_from_to_carrier(
-    flow_path_name_series: pd.Series, granularity: str
+    flow_path_name_series: pd.Series, regional_granularity: str
 ) -> pd.DataFrame:
     """
     Capture the name, from-node ID, the to-node ID and determines a name
@@ -123,7 +125,11 @@ def _get_flow_path_name_from_to_carrier(
     )
     from_to_desc["flow_path_name"] = from_to_desc.apply(
         lambda row: _determine_flow_path_name(
-            row.node_from, row.node_to, row.descriptor, row.carrier, granularity
+            row.node_from,
+            row.node_to,
+            row.descriptor,
+            row.carrier,
+            regional_granularity,
         ),
         axis=1,
     )
@@ -131,16 +137,20 @@ def _get_flow_path_name_from_to_carrier(
 
 
 def _determine_flow_path_name(
-    node_from: str, node_to: str, descriptor: str, carrier: str, granularity: str
+    node_from: str,
+    node_to: str,
+    descriptor: str,
+    carrier: str,
+    regional_granularity: str,
 ) -> str:
     """
     Constructs flow path name
         - If the carrier is `DC`, looks for the name in `ispypsa.templater.helpers._HVDC_FLOW_PATHS`
         - Else if there is a descriptor, uses a regular expression to extract the name
-        - Else constructs a name using typical NEM naming conventing based on `granularity`
+        - Else constructs a name using typical NEM naming conventing based on `regional_granularity`
             - First letter of `node_from`, first of `node_to` followed by "I" (interconnector)
-                if `granularity` is `regional`
-            - `<node_from>-<node_to> if `granularity` is `sub_regional`
+                if `regional_granularity` is `nem_regions`
+            - `<node_from>-<node_to> if `regional_granularity` is `sub_regions`
     """
     if carrier == "DC":
         name = _HVDC_FLOW_PATHS.loc[
@@ -158,9 +168,9 @@ def _determine_flow_path_name(
     ):
         name = match.group(1).strip('"').lstrip("\u201c").rstrip("\u201d")
     else:
-        if granularity == "regional":
+        if regional_granularity == "nem_regions":
             name = node_from[0] + node_to[0] + "I"
-        elif granularity == "sub_regional":
+        elif regional_granularity == "sub_regions":
             name = node_from + "-" + node_to
     return name
 
