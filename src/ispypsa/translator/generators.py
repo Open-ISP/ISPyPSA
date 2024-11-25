@@ -8,14 +8,15 @@ from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
 
 
 def _translate_ecaa_generators(
-    ispypsa_inputs_path: Path | str, granularity: str = "sub_regional"
+    ispypsa_inputs_path: Path | str, regional_granularity: str = "sub_regions"
 ) -> pd.DataFrame:
     """Process data on existing, committed, anticipated, and additional (ECAA) generators
     into a format aligned with PyPSA inputs.
 
     Args:
         ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
-        granularity: Geographical granularity obtained from the model configuration
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
 
     Returns:
         `pd.DataFrame`: PyPSA style generator attributes in tabular format.
@@ -24,9 +25,9 @@ def _translate_ecaa_generators(
         ispypsa_inputs_path / Path("ecaa_generators.csv")
     )
 
-    if granularity == "sub_regional":
+    if regional_granularity == "sub_regions":
         _GENERATOR_ATTRIBUTES["sub_region_id"] = "bus"
-    elif granularity == "regional":
+    elif regional_granularity == "nem_regions":
         _GENERATOR_ATTRIBUTES["region_id"] = "bus"
 
     ecaa_generators_pypsa_format = ecaa_generators_template.loc[
@@ -36,7 +37,7 @@ def _translate_ecaa_generators(
         columns=_GENERATOR_ATTRIBUTES
     )
 
-    if granularity == "single_region":
+    if regional_granularity == "single_region":
         ecaa_generators_pypsa_format["bus"] = "NEM"
 
     marginal_costs = {

@@ -11,16 +11,17 @@ from ispypsa.templater.dynamic_generator_properties import (
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.nodes import (
     template_nodes,
-    template_regional_sub_regional_mapping,
+    template_sub_regions_to_nem_regions_mapping,
+    template_nem_region_to_single_sub_region_mapping,
 )
 from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zone_locations,
+    template_renewable_energy_zones,
 )
 from ispypsa.templater.static_generator_properties import (
     _template_ecaa_generators_static_properties,
 )
 from ispypsa.translator.buses import (
-    _translate_buses_timeseries,
+    _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
 )
 from ispypsa.translator.generators import (
@@ -29,10 +30,10 @@ from ispypsa.translator.generators import (
 )
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
-_ISPYPSA_INPUTS_DIRECTORY = Path("model_data", "template")
-_PYPSA_INPUTS_DIRECTORY = Path("model_data", "pypsa")
-_PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
-_CONFIG_PATH = Path("model_data/ispypsa_inputs", "ispypsa_config.yaml")
+_ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
+_PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
+_PARSED_TRACE_DIRECTORY = Path("/home/abi/isp-traces/parsed-traces")
+_CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
 
 configure_logging()
 
@@ -56,22 +57,22 @@ def create_ispypsa_inputs_from_config(
     if not template_location.exists():
         template_location.mkdir(parents=True)
 
-    node_template = template_nodes(workbook_cache_location, config.network.granularity)
+    node_template = template_nodes(
+        workbook_cache_location, config.network.nodes.regional_granularity
+    )
 
-    if config.network.granularity == "regional":
-        regional_sub_regional_mapping = template_regional_sub_regional_mapping(
-            workbook_cache_location
-        )
-        regional_sub_regional_mapping.to_csv(
-            Path(template_location, "regional_sub_regional_mapping.csv")
-        )
-
-    renewable_energy_zone_locations = template_renewable_energy_zone_locations(
+    renewable_energy_zone_location_mapping = template_renewable_energy_zones(
+        workbook_cache_location, location_mapping_only=True
+    )
+    sub_regions_to_nem_regions_mapping = template_sub_regions_to_nem_regions_mapping(
         workbook_cache_location
+    )
+    nem_region_to_single_sub_region_mapping = (
+        template_nem_region_to_single_sub_region_mapping(workbook_cache_location)
     )
 
     flow_path_template = template_flow_paths(
-        workbook_cache_location, config.network.granularity
+        workbook_cache_location, config.network.nodes.regional_granularity
     )
     ecaa_generators_template = _template_ecaa_generators_static_properties(
         workbook_cache_location
@@ -81,9 +82,17 @@ def create_ispypsa_inputs_from_config(
     )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
-    if renewable_energy_zone_locations is not None:
-        renewable_energy_zone_locations.to_csv(
-            Path(template_location, "renewable_energy_zone_locations.csv")
+    if renewable_energy_zone_location_mapping is not None:
+        renewable_energy_zone_location_mapping.to_csv(
+            Path(template_location, "mapping_renewable_energy_zone_locations.csv")
+        )
+    if sub_regions_to_nem_regions_mapping is not None:
+        sub_regions_to_nem_regions_mapping.to_csv(
+            Path(template_location, "mapping_sub_regions_to_nem_regions.csv")
+        )
+    if nem_region_to_single_sub_region_mapping is not None:
+        nem_region_to_single_sub_region_mapping.to_csv(
+            Path(template_location, "mapping_nem_region_to_single_sub_region.csv")
         )
     if flow_path_template is not None:
         flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
@@ -110,7 +119,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     pypsa_inputs = {}
 
     pypsa_inputs["generators"] = _translate_ecaa_generators(
-        ispypsa_inputs_location, config.network.granularity
+        ispypsa_inputs_location, config.network.nodes.regional_granularity
     )
 
     pypsa_inputs["buses"] = _translate_nodes_to_buses(
@@ -144,12 +153,12 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         year_type=config.traces.year_type,
     )
 
-    _translate_buses_timeseries(
+    _translate_buses_demand_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
         pypsa_inputs_location,
         scenario=config.scenario,
-        granularity=config.network.granularity,
+        regional_granularity=config.network.nodes.regional_granularity,
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
@@ -172,23 +181,33 @@ def task_create_ispypsa_inputs():
         "actions": [
             (
                 create_ispypsa_inputs_from_config,
-                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUTS_DIRECTORY],
+                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUT_TABLES_DIRECTORY],
             )
         ],
         "file_dep": [_CONFIG_PATH]
         + [Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES],
         "targets": [
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "renewable_energy_zone_locations.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "regional_sub_regional_mapping.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "coal_prices.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "gas_prices.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "liquid_fuel_prices.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "full_outage_forecasts.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "partial_outage_forecasts.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "seasonal_ratings.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "nodes.csv"),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "mapping_renewable_energy_zone_locations.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "mapping_sub_regions_to_nem_regions.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "mapping_nem_region_to_single_sub_region.csv",
+            ),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "coal_prices.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "gas_prices.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "liquid_fuel_prices.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "full_outage_forecasts.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "partial_outage_forecasts.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "seasonal_ratings.csv"),
         ],
     }
 
@@ -200,16 +219,16 @@ def task_create_pypsa_inputs():
                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
                 [
                     _CONFIG_PATH,
-                    _ISPYPSA_INPUTS_DIRECTORY,
+                    _ISPYPSA_INPUT_TABLES_DIRECTORY,
                     _PARSED_TRACE_DIRECTORY,
-                    _PYPSA_INPUTS_DIRECTORY,
+                    _PYPSA_FRIENDLY_DIRECTORY,
                 ],
             )
         ],
         "file_dep": [
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "nodes.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "flow_paths.csv"),
-            Path(_ISPYPSA_INPUTS_DIRECTORY, "ecaa_generators.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "nodes.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
         ],
-        "targets": [Path(_PYPSA_INPUTS_DIRECTORY, "generators.csv")],
+        "targets": [Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv")],
     }

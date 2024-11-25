@@ -11,45 +11,43 @@ from .helpers import (
     _snakecase_string,
 )
 from .mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
+from .renewable_energy_zones import template_renewable_energy_zones
 
 
 def template_nodes(
-    parsed_workbook_path: Path | str, granularity: str = "sub_regional"
+    parsed_workbook_path: Path | str,
+    regional_granularity: str = "sub_regions",
+    rez_nodes: str = "discrete_nodes",
 ) -> pd.DataFrame:
     """Creates a node template that describes the nodes (i.e. buses) to be modelled
-
-    The function behaviour depends on the `granularity` specified in the model
-    configuration.
 
     Args:
         parsed_workbook_path: Path to directory with table CSVs that are the
             outputs from the `isp-workbook-parser`.
-        granularity: Geographical granularity obtained from the model configuration.
-            Defaults to "sub_regional".
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
+        rez_nodes: How Renewable Energy Zones are modelled in the network. Obtained from
+            the model configuration. Defaults to "discrete_nodes", which models REZs
+            as network nodes.
 
     Returns:
         `pd.DataFrame`: ISPyPSA node template
     """
-    logging.info(f"Creating a nodes template with {granularity} granularity")
-    if granularity == "sub_regional":
+    logging.info(f"Creating a nodes template with {regional_granularity} as nodes")
+    if regional_granularity == "sub_regions":
         template = _template_sub_regional_node_table(parsed_workbook_path)
-        index_col = "isp_sub_region_id"
-    elif granularity == "regional":
+    elif regional_granularity == "nem_regions":
         template = _template_regional_node_table(parsed_workbook_path)
-        index_col = "nem_region_id"
 
-    elif granularity == "single_region":
+    elif regional_granularity == "single_region":
         # TODO: Clarify `single_region`/`copper_plate` implementation
         template = {
-            "isp_sub_region_id": "VIC",
-            "isp_sub_region": "Victoria",
+            "name": "National Electricity Market single region",
+            "type": "single_region",
             "reference_node": "Thomastown",
             "regional_reference_node_voltage_kv": 66,
-            "nem_region": "Victoria",
-            "single_region_id": "NEM",
         }
-        template = pd.DataFrame(template, index=[0])
-        index_col = "single_region_id"
+        template = pd.DataFrame(template, index=["NEM"])
     # request and merge in substation coordinates for reference nodes
     substation_coordinates = _request_transmission_substation_coordinates()
     if not substation_coordinates.empty:
@@ -58,6 +56,7 @@ def template_nodes(
             template[reference_node_col],
             substation_coordinates.index,
             "merging in substation coordinate data",
+            threshold=85,
         )
         reference_node_coordinates = pd.merge(
             matched_subs,
@@ -74,13 +73,24 @@ def template_nodes(
             ],
             axis=1,
         )
-    template.index = template[index_col].copy(deep=True).rename("node_id")
+    # add REZs as network nodes is "discrete_nodes" is provided
+    if rez_nodes == "discrete_nodes":
+        template = pd.concat(
+            [
+                template,
+                _make_rezs_nodes(parsed_workbook_path).rename({"rez_id": "node_id"}),
+            ],
+            axis=0,
+        )
+    template.index = template.index.rename("node_id")
     return template
 
 
-def template_regional_sub_regional_mapping(parsed_workbook_path: Path | str):
-    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format that maps Sub-region
-    IDs to NEM region IDs.
+def template_sub_regions_to_nem_regions_mapping(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
+    """Processes the 'Sub-regional network representation' table into an ISPyPSA template
+    format that maps sub-region IDs to NEM region IDs.
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
@@ -90,24 +100,58 @@ def template_regional_sub_regional_mapping(parsed_workbook_path: Path | str):
         `pd.DataFrame`: ISPyPSA regional to subregional mapping template
 
     """
-    regional_sub_regional_mapping = _template_sub_regional_node_table(
-        parsed_workbook_path
+    sub_regions = pd.read_csv(
+        Path(parsed_workbook_path, "sub_regional_reference_nodes.csv")
     )
-    regional_sub_regional_mapping.index = (
-        regional_sub_regional_mapping["nem_region_id"].copy(deep=True).rename("node_id")
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(sub_regions)
+    sub_regions = pd.concat(
+        [
+            sub_region_name_and_id["isp_sub_region_id"],
+            sub_regions["NEM Region"].rename("nem_region"),
+        ],
+        axis=1,
     )
-    return regional_sub_regional_mapping.loc[:, ["isp_sub_region_id"]]
+    mapping = _match_region_name_and_id(sub_regions)
+    mapping = mapping.drop(columns=["nem_region"]).set_index("isp_sub_region_id")
+    return mapping
 
 
-def _template_sub_regional_node_table(
+def template_nem_region_to_single_sub_region_mapping(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
-    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format
+    """Processes the 'Regional reference node' table into an ISPyPSA template
+    format that maps each NEM region to a single sub-region that corresponds to the
+    sub-region of the RRN.
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
 
+    Returns:
+        pd.DataFrame: ISPyPSA region to single sub-region mapping template
+    """
+    regional_df = pd.read_csv(
+        Path(parsed_workbook_path, "regional_reference_nodes.csv")
+    )
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(regional_df)
+    mapping = pd.concat(
+        [
+            regional_df["NEM Region"].rename("nem_region"),
+            sub_region_name_and_id["isp_sub_region_id"],
+        ],
+        axis=1,
+    )
+    mapping = _match_region_name_and_id(mapping).drop(columns=["nem_region"])
+    mapping = mapping.set_index("nem_region_id")
+    return mapping
+
+
+def _template_sub_regional_node_table(parsed_workbook_path: Path | str) -> pd.DataFrame:
+    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format
+
+    Args:
+        parsed_workbook_path: Path to directory containing CSVs that are the output
+            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional node template
 
@@ -118,16 +162,25 @@ def _template_sub_regional_node_table(
     sub_region_name_and_id = _split_out_sub_region_name_and_id(sub_regional_df)
     node_voltage_col = "Sub-region Reference Node"
     split_node_voltage = _extract_voltage(sub_regional_df, node_voltage_col)
-    sub_regional_nodes = pd.concat(
+    sub_regions = pd.concat(
         [
             sub_region_name_and_id,
             split_node_voltage,
-            sub_regional_df["NEM Region"].rename("nem_region"),
         ],
         axis=1,
     )
-    sub_regional_nodes = _match_region_name_and_id(sub_regional_nodes)
-    return sub_regional_nodes
+    sub_regions = sub_regions.rename(columns={"isp_sub_region": "name"}).set_index(
+        "isp_sub_region_id"
+    )
+    sub_regions["type"] = "sub_region"
+    return sub_regions[
+        [
+            "name",
+            "type",
+            "sub_region_reference_node",
+            "sub_region_reference_node_voltage_kv",
+        ]
+    ]
 
 
 def _template_regional_node_table(
@@ -146,19 +199,35 @@ def _template_regional_node_table(
     regional_df = pd.read_csv(
         Path(parsed_workbook_path, "regional_reference_nodes.csv")
     )
-    sub_region_name_and_id = _split_out_sub_region_name_and_id(regional_df)
     node_voltage_col = "Regional Reference Node"
     split_node_voltage = _extract_voltage(regional_df, node_voltage_col)
-    regional_nodes = pd.concat(
+    regions = pd.concat(
         [
             regional_df["NEM Region"].rename("nem_region"),
-            sub_region_name_and_id,
             split_node_voltage,
         ],
         axis=1,
     )
-    regional_nodes = _match_region_name_and_id(regional_nodes)
-    return regional_nodes
+    regions = _match_region_name_and_id(regions)
+    regions = regions.rename(columns={"nem_region": "name"}).set_index("nem_region_id")
+    regions["type"] = "nem_region"
+    return regions[
+        [
+            "name",
+            "type",
+            "regional_reference_node",
+            "regional_reference_node_voltage_kv",
+        ]
+    ]
+
+
+def _make_rezs_nodes(parsed_workbook_path: Path | str) -> pd.DataFrame:
+    rezs = template_renewable_energy_zones(
+        parsed_workbook_path, location_mapping_only=False
+    )
+    rezs["type"] = "rez"
+    rezs = rezs[["name", "type"]]
+    return rezs
 
 
 def _split_out_sub_region_name_and_id(data: pd.DataFrame):
@@ -255,18 +324,11 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
             "Could not get substation coordinate data. "
             + "Network node data will be templated without coordinate data."
         )
-    return pd.DataFrame(substation_coordinates).T
-
-
-def _split_name_id(series: pd.Series) -> pd.DataFrame:
-    """
-    Capture the name (plain English) and ID in parentheses (capitalised letters)
-    using a regular expression on a string `pandas.Series`.
-    """
-    split_name_id = series.str.strip().str.extract(
-        r"(?P<name>[A-Za-z\s,]+)\s\((?P<id>[A-Z]+)\)", expand=True
-    )
-    return split_name_id
+    substation_coordinates = pd.DataFrame(substation_coordinates).T
+    substation_coordinates = substation_coordinates[
+        substation_coordinates.index.notna()
+    ]
+    return substation_coordinates
 
 
 def _capture_just_name(series: pd.Series) -> pd.DataFrame:

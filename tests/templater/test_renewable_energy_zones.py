@@ -1,14 +1,12 @@
 from pathlib import Path
 
 from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zone_locations,
+    template_renewable_energy_zones,
 )
 
 
 def test_renewable_energy_zones_locations(workbook_table_cache_test_path: Path):
-    node_template = template_renewable_energy_zone_locations(
-        workbook_table_cache_test_path
-    )
+    node_template = template_renewable_energy_zones(workbook_table_cache_test_path)
     assert node_template.index.name == "rez_id"
     assert set(node_template.index) == set(("Q1", "Q2"))
     assert set(node_template.isp_sub_region_id) == set(("NQ", "NQ"))
