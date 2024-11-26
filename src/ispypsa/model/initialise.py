@@ -5,7 +5,10 @@ import pypsa
 
 
 def prepare_snapshot_index(
-    start_year: int, end_year: int, temporal_resolution: str, year_type: str
+    start_year: int,
+    end_year: int,
+    operational_temporal_resolution_min: str,
+    year_type: str,
 ) -> pd.DatetimeIndex:
     """Creates a DatetimeIndex defining the snapshots for the model.
 
@@ -18,8 +21,7 @@ def prepare_snapshot_index(
         year_type: The year type. 'fy' for financial years, and 'calendar' for calendar
             years. For 'fy', `start_year` and `end_year` refer to the year  in which
             the financial year ends.
-        temporal_resolution: the temporal resolution of the model defined by a
-            number-unit combo accepted by `pd.date_range`, e.g. '30min', '1h', or '3h'.
+        operational_temporal_resolution_min: int defining the temporal resolution in minutes.
     """
     if year_type == "fy":
         start_date = datetime(year=start_year - 1, month=7, day=1, hour=0, minute=30)
@@ -27,13 +29,20 @@ def prepare_snapshot_index(
     else:
         start_date = datetime(year=start_year, month=1, day=1, hour=0, minute=30)
         end_date = datetime(year=end_year + 1, month=1, day=1, hour=0, minute=0)
-    time_index = pd.date_range(start=start_date, end=end_date, freq=temporal_resolution)
+    time_index = pd.date_range(
+        start=start_date,
+        end=end_date,
+        freq=str(operational_temporal_resolution_min) + "min",
+    )
     time_index.strftime("'%Y-%m-%d %H:%M:%S")
     return time_index
 
 
 def initialise_network(
-    start_year: int, end_year: int, year_type: str, temporal_resolution: str
+    start_year: int,
+    end_year: int,
+    year_type: str,
+    operational_temporal_resolution_min: int,
 ) -> pypsa.Network:
     """Creates a `pypsa.Network object` with snapshots defined.
 
@@ -43,14 +52,13 @@ def initialise_network(
         year_type: The year type. 'fy' for financial years, and 'calendar' for calendar
             years. For 'fy', `start_year` and `end_year` refer to the year  in which
             the financial year ends.
-        temporal_resolution: the temporal resolution of the model defined by a
-            number-unit combo accepted by `pd.date_range`, e.g. '30min', '1h', or '3h'.
+        operational_temporal_resolution_min: int defining the temporal resolution in minutes.
 
     Returns:
         `pypsa.Network` object
     """
     time_index = prepare_snapshot_index(
-        start_year, end_year, temporal_resolution, year_type
+        start_year, end_year, operational_temporal_resolution_min, year_type
     )
     network = pypsa.Network(snapshots=time_index)
     return network

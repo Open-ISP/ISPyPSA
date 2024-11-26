@@ -179,7 +179,7 @@ def create_and_run_pypsa_model(
         config.traces.start_year,
         config.traces.end_year,
         config.traces.year_type,
-        config.temporal_resolution,
+        config.operational_temporal_resolution_min,
     )
     add_carriers_to_network(network, pypsa_inputs_location)
     add_buses_to_network(network, pypsa_inputs_location)
