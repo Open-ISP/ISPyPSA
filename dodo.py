@@ -183,6 +183,8 @@ def create_and_run_pypsa_model(
     config_location: Path, pypsa_inputs_location: Path, pypsa_outputs_location: Path
 ) -> None:
     config = load_config(config_location)
+    if not pypsa_outputs_location.exists():
+        pypsa_outputs_location.mkdir(parents=True)
     network = initialise_network(
         config.traces.start_year,
         config.traces.end_year,
