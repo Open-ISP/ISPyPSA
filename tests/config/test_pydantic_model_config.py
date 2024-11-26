@@ -16,6 +16,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
     ModelConfig(
         **{
             "scenario": scenario,
+            "operational_temporal_resolution_min": 30,
             "network": {
                 "nodes": {
                     "regional_granularity": regional_granularity,
@@ -28,6 +29,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
             },
+            "solver": "highs",
         }
     )
 
@@ -37,6 +39,7 @@ def test_invalid_scenario():
         ModelConfig(
             **{
                 "scenario": "BAU",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
@@ -49,6 +52,7 @@ def test_invalid_scenario():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -58,6 +62,7 @@ def test_invalid_node_granularity():
         ModelConfig(
             **{
                 "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "wastelands",
@@ -70,6 +75,7 @@ def test_invalid_node_granularity():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -79,6 +85,7 @@ def test_invalid_nodes_rezs():
         ModelConfig(
             **{
                 "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
@@ -91,6 +98,7 @@ def test_invalid_nodes_rezs():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -100,6 +108,7 @@ def test_invalid_end_year():
         ModelConfig(
             **{
                 "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
@@ -112,5 +121,6 @@ def test_invalid_end_year():
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
