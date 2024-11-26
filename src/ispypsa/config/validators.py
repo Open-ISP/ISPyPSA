@@ -35,3 +35,16 @@ class ModelConfig(BaseModel):
     temporal_resolution: Literal["30min"]
     network: NetworkConfig
     traces: TraceConfig
+    solver: Literal[
+        "highs",
+        "cbc",
+        "glpk",
+        "scip",
+        "cplex",
+        "gurobi",
+        "xpress",
+        "mosek",
+        "copt",
+        "mindopt",
+        "pips",
+    ]

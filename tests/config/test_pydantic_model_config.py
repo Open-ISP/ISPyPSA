@@ -29,6 +29,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
             },
+            "solver": "highs",
         }
     )
 
@@ -51,6 +52,7 @@ def test_invalid_scenario():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -73,6 +75,7 @@ def test_invalid_node_granularity():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -95,6 +98,7 @@ def test_invalid_nodes_rezs():
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
 
@@ -117,5 +121,6 @@ def test_invalid_end_year():
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
                 },
+                "solver": "highs",
             }
         )
