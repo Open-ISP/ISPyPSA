@@ -2,7 +2,7 @@ from pathlib import Path
 import pypsa
 
 
-def save_results(network: pypsa.Network, pypsa_outputs_location: Path):
+def save_results(network: pypsa.Network, pypsa_outputs_location: Path) -> None:
     network.generators_t.p.to_parquet(
         Path(pypsa_outputs_location, "generator_dispatch.parquet")
     )

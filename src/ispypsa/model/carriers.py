@@ -4,13 +4,14 @@ import pandas as pd
 import pypsa
 
 
-def add_carriers_to_network(network: pypsa.Network, path_pypsa_inputs: Path):
-    """Adds the Carriers in the ecaa_generators.csv table (path_pypsa_inputs directory) and the AC Carrier to the
-    pypsa.Network.
+def add_carriers_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> None:
+    """Adds the Carriers in the `ecaa_generators.csv table` (located in the
+    `path_pypsa_inputs` directory), and the AC Carrier to the `pypsa.Network`.
 
     Args:
-         network: The pypsa.Network object
-         path_pypsa_inputs: pathlib.Path for directory containing pypsa inputs
+         network: The `pypsa.Network` object
+         path_pypsa_inputs: `pathlib.Path` that points to the directory containing
+              PyPSA inputs
 
     Returns: None
     """
