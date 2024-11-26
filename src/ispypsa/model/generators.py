@@ -4,30 +4,19 @@ import pandas as pd
 import pypsa
 
 
-def _get_trace_data(
-    generator_name: str, path_to_solar_traces: Path, path_to_wind_traces: Path
-):
-    """Fetches trace data for a generator from directories contain solar and wind traces.
-
-    If a trace for the generator cannot be found, the function returns None.
+def _get_trace_data(generator_name: str, path_to_traces: Path):
+    """Fetches trace data for a generator from directories containing traces.
 
     Args:
         generator_name: String defining the generator's name
-        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
-        path_to_demand_traces: `pathlib.Path` for directory containing solar traces
+        path_to_traces: `pathlib.Path` for directory containing traces
 
     Returns:
-        DataFrame with demand trace data or None value.
+        DataFrame with resource trace data.
     """
     filename = Path(f"{generator_name}.parquet")
-    solar_trace_filepath = path_to_solar_traces / filename
-    wind_trace_filepath = path_to_wind_traces / filename
-    if solar_trace_filepath.exists():
-        trace_data = pd.read_parquet(solar_trace_filepath)
-    elif wind_trace_filepath.exists():
-        trace_data = pd.read_parquet(wind_trace_filepath)
-    else:
-        trace_data = None
+    trace_filepath = path_to_traces / filename
+    trace_data = pd.read_parquet(trace_filepath)
     return trace_data
 
 
@@ -40,16 +29,26 @@ def _add_ecaa_generator_to_network(
     """Adds a generator to a pypsa.Network based on a dict containing PyPSA Generator
     attributes.
 
-    If trace data for the generator is available, then a dynamic maximum availability
+    If the carrier of a generator is Wind or Solar then a dynamic maximum availability
     for the generator is applied (via `p_max_pu`). Otherwise, the nominal capacity of the
     generator is used to apply a static maximum availability.
 
+    Args:
+        generator_definition: dict containing pypsa Generator parameters
+        network: The `pypsa.Network` object
+        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
+        path_to_wind_traces: `pathlib.Path` for directory containing wind traces
+
+    Returns: None
     """
     generator_definition["class_name"] = "Generator"
 
-    trace_data = _get_trace_data(
-        generator_definition["name"], path_to_solar_traces, path_to_wind_traces
-    )
+    if generator_definition["carrier"] == "Wind":
+        trace_data = _get_trace_data(generator_definition["name"], path_to_wind_traces)
+    elif generator_definition["carrier"] == "Solar":
+        trace_data = _get_trace_data(generator_definition["name"], path_to_solar_traces)
+    else:
+        trace_data = None
 
     if trace_data is not None:
         trace_data["Datetime"] = trace_data["Datetime"].astype("datetime64[ns]")
