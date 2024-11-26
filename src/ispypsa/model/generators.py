@@ -9,15 +9,15 @@ def _get_trace_data(
 ):
     """Fetches trace data for a generator from directories contain solar and wind traces.
 
-    If a trace for the generator cannot be found the None value returned.
+    If a trace for the generator cannot be found, the function returns None.
 
     Args:
-        generator_name: str defining the generators name
-        path_to_solar_traces: pathlib.Path for directory containing solar traces
-        path_to_demand_traces: pathlib.Path for directory containing solar traces
+        generator_name: String defining the generator's name
+        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
+        path_to_demand_traces: `pathlib.Path` for directory containing solar traces
 
     Returns:
-        Dataframe with demand trace data or None value.
+        DataFrame with demand trace data or None value.
     """
     filename = Path(f"{generator_name}.parquet")
     solar_trace_filepath = path_to_solar_traces / filename
@@ -36,11 +36,13 @@ def _add_ecaa_generator_to_network(
     network: pypsa.Network,
     path_to_solar_traces: Path,
     path_to_wind_traces: Path,
-):
-    """Adds a generator to a pypsa.Network based on dict that matches pypsa Generator attributes.
+) -> None:
+    """Adds a generator to a pypsa.Network based on a dict containing PyPSA Generator
+    attributes.
 
-    If trace data for the generator is available in then a dynamic availability for the generator (p_max_pu) is set,
-    otherwise only the nominal capacity of the generator is used.
+    If trace data for the generator is available, then a dynamic maximum availability
+    for the generator is applied (via `p_max_pu`). Otherwise, the nominal capacity of the
+    generator is used to apply a static maximum availability.
 
     """
     generator_definition["class_name"] = "Generator"
@@ -56,12 +58,16 @@ def _add_ecaa_generator_to_network(
     network.add(**generator_definition)
 
 
-def add_ecaa_generators_to_network(network: pypsa.Network, path_pypsa_inputs: Path):
-    """Adds the generators in ecaa_generators.csv table (path_pypsa_inputs directory) to the pypsa.Network.
+def add_ecaa_generators_to_network(
+    network: pypsa.Network, path_pypsa_inputs: Path
+) -> None:
+    """Adds the generators in `ecaa_generators.csv` table (located in the
+    `path_pypsa_inputs` directory) to the `pypsa.Network`.
 
     Args:
-         network: The pypsa.Network object
-         path_pypsa_inputs: pathlib.Path for directory containing pypsa inputs
+        network: The `pypsa.Network` object
+        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
+            PyPSA inputs
 
     Returns: None
     """

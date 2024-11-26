@@ -6,14 +6,16 @@ import pypsa
 
 def _add_bus_to_network(
     bus_name: str, network: pypsa.Network, path_to_demand_traces: Path
-):
+) -> None:
     """
-    Adds a Bus to the network and if a demand trace for the Bus exists also adds that as a Load attached to the Bus.
+    Adds a Bus to the network and if a demand trace for the Bus exists, also adds the
+    trace to a Load attached to the Bus.
 
     Args:
-        bus_name: str defining the buses name
-        network: The pypsa.Network object to add the buses to
-        path_to_demand_traces: pathlib.Path for the directory containing demand traces
+        bus_name: String defining the bus name
+        network: The `pypsa.Network` object
+        path_to_demand_traces: `pathlib.Path` that points to the
+            directory containing demand traces
 
     Returns: None
     """
@@ -22,6 +24,7 @@ def _add_bus_to_network(
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
+        # datetime in nanoseconds required by PyPSA
         demand["Datetime"] = demand["Datetime"].astype("datetime64[ns]")
         demand = demand.set_index("Datetime")
         network.add(
@@ -32,12 +35,14 @@ def _add_bus_to_network(
         )
 
 
-def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path):
-    """Adds buses from buses.csv in the path_pypsa_inputs directory to the pypsa.Network.
+def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> None:
+    """Adds Buses from `buses.csv` in the `path_to_pypsa_inputs` directory to
+    the `pypsa.Network`.
 
     Args:
-         network: The pypsa.Network object
-         path_pypsa_inputs: pathlib.Path for directory containing pypsa inputs
+        network: The `pypsa.Network` object
+        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
+            PyPSA inputs
 
     Returns: None
     """
