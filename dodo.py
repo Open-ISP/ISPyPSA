@@ -273,8 +273,8 @@ def task_create_and_run_pypsa_model():
             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
         ],
         "targets": [
-            Path(_PYPSA_OUTPUTS_DIRECTORY, "generator_dispatch.csv"),
-            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p0.csv"),
-            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p1.csv"),
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "generator_dispatch.parquet"),
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p0.parquet"),
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "line_flows_p1.parquet"),
         ],
     }
