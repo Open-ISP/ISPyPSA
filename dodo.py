@@ -42,7 +42,7 @@ from ispypsa.model import (
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path("/home/abi/isp-traces/parsed-traces")
+_PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
 _CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
 _PYPSA_OUTPUTS_DIRECTORY = Path("model_data", "outputs")
 
