@@ -32,5 +32,37 @@ class TraceConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     scenario: Literal[tuple(_ISP_SCENARIOS)]
+    operational_temporal_resolution_min: int
     network: NetworkConfig
     traces: TraceConfig
+    solver: Literal[
+        "highs",
+        "cbc",
+        "glpk",
+        "scip",
+        "cplex",
+        "gurobi",
+        "xpress",
+        "mosek",
+        "copt",
+        "mindopt",
+        "pips",
+    ]
+
+    @field_validator("operational_temporal_resolution_min")
+    @classmethod
+    def validate_temporal_resolution_min(cls, operational_temporal_resolution_min: int):
+        # TODO properly implement temporal aggregation so this first check can be removed.
+        if operational_temporal_resolution_min != 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must equal 30 min"
+            )
+        if operational_temporal_resolution_min < 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be greater than or equal to 30 min"
+            )
+        if (operational_temporal_resolution_min % 30) != 0:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be multiple of 30 min"
+            )
+        return operational_temporal_resolution_min

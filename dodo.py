@@ -24,16 +24,27 @@ from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
 )
+from ispypsa.translator.lines import translate_flow_paths_to_lines
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_generator_timeseries,
+)
+from ispypsa.model import (
+    initialise_network,
+    add_buses_to_network,
+    add_ecaa_generators_to_network,
+    add_carriers_to_network,
+    add_lines_to_network,
+    run,
+    save_results,
 )
 
 _PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
 _ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path("/home/abi/isp-traces/parsed-traces")
+_PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
 _CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
+_PYPSA_OUTPUTS_DIRECTORY = Path("model_data", "outputs")
 
 configure_logging()
 
@@ -112,29 +123,25 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     pypsa_inputs_location: Path,
 ) -> None:
     config = load_config(config_location)
-
     if not pypsa_inputs_location.exists():
         pypsa_inputs_location.mkdir(parents=True)
-
     pypsa_inputs = {}
-
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
     )
-
     pypsa_inputs["buses"] = _translate_nodes_to_buses(
         ispypsa_inputs_location,
     )
-
+    pypsa_inputs["lines"] = translate_flow_paths_to_lines(
+        ispypsa_inputs_location,
+    )
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
-
     reference_year_mapping = construct_reference_year_mapping(
         start_year=config.traces.start_year,
         end_year=config.traces.end_year,
         reference_years=config.traces.reference_year_cycle,
     )
-
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
@@ -143,7 +150,6 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
-
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
@@ -152,7 +158,6 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
-
     _translate_buses_demand_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
@@ -162,6 +167,26 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
+
+
+def create_and_run_pypsa_model(
+    config_location: Path, pypsa_inputs_location: Path, pypsa_outputs_location: Path
+) -> None:
+    config = load_config(config_location)
+    if not pypsa_outputs_location.exists():
+        pypsa_outputs_location.mkdir(parents=True)
+    network = initialise_network(
+        config.traces.start_year,
+        config.traces.end_year,
+        config.traces.year_type,
+        config.operational_temporal_resolution_min,
+    )
+    add_carriers_to_network(network, pypsa_inputs_location)
+    add_buses_to_network(network, pypsa_inputs_location)
+    add_lines_to_network(network, pypsa_inputs_location)
+    add_ecaa_generators_to_network(network, pypsa_inputs_location)
+    run(network, solver_name=config.solver)
+    save_results(network, pypsa_outputs_location)
 
 
 def task_cache_required_tables():
@@ -231,4 +256,21 @@ def task_create_pypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
         ],
         "targets": [Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv")],
+    }
+
+
+def task_create_and_run_pypsa_model():
+    return {
+        "actions": [
+            (
+                create_and_run_pypsa_model,
+                [_CONFIG_PATH, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
+            )
+        ],
+        "file_dep": [
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+        ],
+        "targets": [Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5")],
     }
