@@ -7,7 +7,7 @@ import pypsa
 def prepare_snapshot_index(
     start_year: int,
     end_year: int,
-    operational_temporal_resolution_min: str,
+    operational_temporal_resolution_min: int,
     year_type: str,
 ) -> pd.DatetimeIndex:
     """Creates a DatetimeIndex defining the snapshots for the model.
