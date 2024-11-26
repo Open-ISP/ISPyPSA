@@ -123,33 +123,25 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     pypsa_inputs_location: Path,
 ) -> None:
     config = load_config(config_location)
-
     if not pypsa_inputs_location.exists():
         pypsa_inputs_location.mkdir(parents=True)
-
     pypsa_inputs = {}
-
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
     )
-
     pypsa_inputs["buses"] = _translate_nodes_to_buses(
         ispypsa_inputs_location,
     )
-
     pypsa_inputs["lines"] = translate_flow_paths_to_lines(
         ispypsa_inputs_location,
     )
-
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
-
     reference_year_mapping = construct_reference_year_mapping(
         start_year=config.traces.start_year,
         end_year=config.traces.end_year,
         reference_years=config.traces.reference_year_cycle,
     )
-
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
@@ -158,7 +150,6 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
-
     _translate_generator_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
@@ -167,7 +158,6 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.traces.year_type,
     )
-
     _translate_buses_demand_timeseries(
         ispypsa_inputs_location,
         trace_data_path,
