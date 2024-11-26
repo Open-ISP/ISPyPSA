@@ -11,5 +11,6 @@ _LINE_ATTRIBUTES = {
     "node_from": "bus0",
     "node_to": "bus1",
     "forward_direction_mw_summer_typical": "s_nom",
+    # TODO: implement reverse direction limit
     # "reverse_direction_mw_summer_typical": ""
 }

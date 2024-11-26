@@ -16,7 +16,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
     ModelConfig(
         **{
             "scenario": scenario,
-            "temporal_resolution": "30min",
+            "operational_temporal_resolution_min": 30,
             "network": {
                 "nodes": {
                     "regional_granularity": regional_granularity,
@@ -39,7 +39,7 @@ def test_invalid_scenario():
         ModelConfig(
             **{
                 "scenario": "BAU",
-                "temporal_resolution": "30min",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
@@ -62,7 +62,7 @@ def test_invalid_node_granularity():
         ModelConfig(
             **{
                 "scenario": "Step Change",
-                "temporal_resolution": "30min",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "wastelands",
@@ -85,7 +85,7 @@ def test_invalid_nodes_rezs():
         ModelConfig(
             **{
                 "scenario": "Step Change",
-                "temporal_resolution": "30min",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
@@ -108,7 +108,7 @@ def test_invalid_end_year():
         ModelConfig(
             **{
                 "scenario": "Step Change",
-                "temporal_resolution": "30min",
+                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",

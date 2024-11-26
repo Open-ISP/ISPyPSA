@@ -6,7 +6,7 @@
 #   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
 #   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
-temporal_resolution: 30min
+operational_temporal_resolution_min: 30
 network:
   nodes:
     # The regional granularity of the nodes in the modelled network
