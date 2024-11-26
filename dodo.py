@@ -185,7 +185,7 @@ def create_and_run_pypsa_model(
     add_buses_to_network(network, pypsa_inputs_location)
     add_lines_to_network(network, pypsa_inputs_location)
     add_ecaa_generators_to_network(network, pypsa_inputs_location)
-    run(network)
+    run(network, solver_name=config.solver)
     save_results(network, pypsa_outputs_location)
 
 

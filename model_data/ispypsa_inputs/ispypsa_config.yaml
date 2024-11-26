@@ -26,3 +26,20 @@ traces:
   start_year: 2025
   end_year: 2025
   reference_year_cycle: [2018]
+# External solver to use
+# Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
+#   Free, and by default, installed with ISPyPSA:
+#     "highs"
+#   Free, but must be installed by the user:
+#     "cbc"
+#     "glpk"
+#     "scip"
+#   Not free and must be installed by the user:
+#     "cplex"
+#     "gurobi"
+#     "xpress"
+#     "mosek"
+#     "copt"
+#     "mindopt"
+#     "pips"
+solver: highs
