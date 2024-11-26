@@ -170,6 +170,7 @@ scratch.py
 ## CSVs in model_inputs
 model_data/**/*.csv
 model_data/**/*.parquet
+model_data/**/*.hdf5
 
 # ignore doit database
 .doit*
