@@ -1,5 +1,6 @@
 # ISPyPSA
 [![Continuous Integration and Deployment](https://github.com/Open-ISP/ISPyPSA/actions/workflows/cicd.yml/badge.svg)](https://github.com/Open-ISP/ISPyPSA/actions/workflows/cicd.yml)
+[![codecov](https://codecov.io/gh/Open-ISP/ISPyPSA/graph/badge.svg?token=rcEXuQgfOJ)](https://codecov.io/gh/Open-ISP/ISPyPSA)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/Open-ISP/ISPyPSA/main.svg)](https://results.pre-commit.ci/latest/github/Open-ISP/ISPyPSA/main)
 
 An open-source capacity expansion modelling tool based on the methodology and assumptions used by the Australian Energy Market Operator (AEMO) to produce their Integrated System Plan.
