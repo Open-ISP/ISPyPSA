@@ -25,8 +25,9 @@ network:
     #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
     rezs: discrete_nodes
 traces:
-  # The path to the folder containing parsed demand, wind and solar traces
-  path_to_parsed_traces: /home/abi/isp-traces/parsed-traces/
+  # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
+  # from the environment variable "PATH_TO_PARSED_TRACES"
+  path_to_parsed_traces: ENV
   year_type: fy
   start_year: 2025
   end_year: 2025
