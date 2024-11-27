@@ -4,7 +4,11 @@ _GENERATOR_ATTRIBUTES = {
     "fuel_type": "carrier",
 }
 
-_BUS_ATTRIBUTES = {"node_id": "name"}
+_BUS_ATTRIBUTES = {
+    "node_id": "name",
+    "substation_longitude": "x",
+    "substation_latitude": "y",
+}
 
 _LINE_ATTRIBUTES = {
     "flow_path_name": "name",
