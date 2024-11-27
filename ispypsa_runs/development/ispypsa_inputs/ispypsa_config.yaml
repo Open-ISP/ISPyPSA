@@ -1,3 +1,6 @@
+# The name of the ISPyPSA model run
+# This name is used to select the output folder within `ispypsa_runs`
+ispypsa_run_name: development
 # The ISP scenario for which to generate ISPyPSA inputs
 # Options (descriptions lifted from the 2024 ISP):
 #   "Progressive Change": Reflects slower economic growth and energy investment with

@@ -15,6 +15,7 @@ from ispypsa.config.validators import ModelConfig
 def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
     ModelConfig(
         **{
+            "ispypsa_run_name": "test",
             "scenario": scenario,
             "operational_temporal_resolution_min": 30,
             "network": {
@@ -38,6 +39,7 @@ def test_invalid_scenario():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "BAU",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -61,6 +63,7 @@ def test_invalid_node_granularity():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -84,6 +87,7 @@ def test_invalid_nodes_rezs():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -107,6 +111,7 @@ def test_invalid_end_year():
     with pytest.raises(ValueError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
