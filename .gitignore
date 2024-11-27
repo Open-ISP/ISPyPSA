@@ -170,6 +170,7 @@ scratch.py
 ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
 ispypsa_runs/**/*.hdf5
+ispypsa_runs/**/results/**
 
 # ignore doit database
 .doit*
