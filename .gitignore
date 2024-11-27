@@ -167,10 +167,9 @@ scratch.py
 .~lock*.csv#
 
 # ispypsa ignores
-## CSVs in model_inputs
-model_data/**/*.csv
-model_data/**/*.parquet
-model_data/**/*.hdf5
+ispypsa_runs/**/*.csv
+ispypsa_runs/**/*.parquet
+ispypsa_runs/**/*.hdf5
 
 # ignore doit database
 .doit*
