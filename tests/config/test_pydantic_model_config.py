@@ -25,6 +25,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
                 }
             },
             "traces": {
+                "path_to_parsed_traces": "tests/test_traces",
                 "year_type": year_type,
                 "start_year": 2025,
                 "end_year": 2026,
@@ -49,6 +50,7 @@ def test_invalid_scenario():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -73,6 +75,7 @@ def test_invalid_node_granularity():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -97,6 +100,7 @@ def test_invalid_nodes_rezs():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -121,6 +125,7 @@ def test_invalid_end_year():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2024,
