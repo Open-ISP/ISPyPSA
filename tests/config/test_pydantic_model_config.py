@@ -111,6 +111,56 @@ def test_invalid_nodes_rezs():
         )
 
 
+def test_not_a_directory_parsed_traces_path():
+    with pytest.raises(NotADirectoryError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "traces": {
+                    "path_to_parsed_traces": "tests/wrong_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                },
+                "solver": "highs",
+            }
+        )
+
+
+def test_invalid_parsed_traces_path():
+    with pytest.raises(ValueError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "traces": {
+                    "path_to_parsed_traces": "ispypsa_runs",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                },
+                "solver": "highs",
+            }
+        )
+
+
 def test_invalid_end_year():
     with pytest.raises(ValueError):
         ModelConfig(
