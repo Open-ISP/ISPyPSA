@@ -1,18 +1,30 @@
+import logging
 from pathlib import Path
+from shutil import rmtree
 
 from isp_trace_parser import construct_reference_year_mapping
 
-from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.config import load_config
+from ispypsa.config.validators import ModelConfig
+from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
+from ispypsa.model import (
+    add_buses_to_network,
+    add_carriers_to_network,
+    add_ecaa_generators_to_network,
+    add_lines_to_network,
+    initialise_network,
+    run,
+    save_results,
+)
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.nodes import (
+    template_nem_region_to_single_sub_region_mapping,
     template_nodes,
     template_sub_regions_to_nem_regions_mapping,
-    template_nem_region_to_single_sub_region_mapping,
 )
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zones,
@@ -24,29 +36,41 @@ from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
 )
-from ispypsa.translator.lines import translate_flow_paths_to_lines
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_generator_timeseries,
 )
-from ispypsa.model import (
-    initialise_network,
-    add_buses_to_network,
-    add_ecaa_generators_to_network,
-    add_carriers_to_network,
-    add_lines_to_network,
-    run,
-    save_results,
-)
+from ispypsa.translator.lines import translate_flow_paths_to_lines
 
-_PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
-_ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
-_PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path("D:/isp_2024_data/parsed_trace_data")
-_CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
-_PYPSA_OUTPUTS_DIRECTORY = Path("model_data", "outputs")
+root_folder = Path("ispypsa_runs")
+
+##### MODIFY FOR DIFFERENT MODEL RUN ####################################################
+_CONFIG_PATH = root_folder / Path(
+    "development", "ispypsa_inputs", "ispypsa_config.yaml"
+)
+#########################################################################################
+
+config = load_config(_CONFIG_PATH)
+run_folder = Path(root_folder, config.ispypsa_run_name)
+_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
+_ISPYPSA_INPUT_TABLES_DIRECTORY = Path(run_folder, "ispypsa_inputs", "tables")
+_PYPSA_FRIENDLY_DIRECTORY = Path(run_folder, "pypsa_friendly")
+_PARSED_TRACE_DIRECTORY = Path(config.traces.path_to_parsed_traces)
+_PYPSA_OUTPUTS_DIRECTORY = Path(run_folder, "outputs")
 
 configure_logging()
+
+
+def create_or_clean_task_output_folder(output_folder: Path) -> None:
+    if not output_folder.exists():
+        output_folder.mkdir(parents=True)
+    else:
+        logging.info(f"Deleting previous outputs in {output_folder}")
+        for item in output_folder.iterdir():
+            if item.is_dir():
+                rmtree(item)
+            elif item.is_file():
+                item.unlink()
 
 
 def build_parsed_workbook_cache(cache_location: Path) -> None:
@@ -61,17 +85,12 @@ def build_parsed_workbook_cache(cache_location: Path) -> None:
 
 
 def create_ispypsa_inputs_from_config(
-    config_location: Path, workbook_cache_location: Path, template_location: Path
+    config: ModelConfig, workbook_cache_location: Path, template_location: Path
 ) -> None:
-    config = load_config(config_location)
-
-    if not template_location.exists():
-        template_location.mkdir(parents=True)
-
+    create_or_clean_task_output_folder(template_location)
     node_template = template_nodes(
         workbook_cache_location, config.network.nodes.regional_granularity
     )
-
     renewable_energy_zone_location_mapping = template_renewable_energy_zones(
         workbook_cache_location, location_mapping_only=True
     )
@@ -81,7 +100,6 @@ def create_ispypsa_inputs_from_config(
     nem_region_to_single_sub_region_mapping = (
         template_nem_region_to_single_sub_region_mapping(workbook_cache_location)
     )
-
     flow_path_template = template_flow_paths(
         workbook_cache_location, config.network.nodes.regional_granularity
     )
@@ -117,14 +135,12 @@ def create_ispypsa_inputs_from_config(
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
-    config_location: Path,
+    config: ModelConfig,
     ispypsa_inputs_location: Path,
     trace_data_path: Path,
     pypsa_inputs_location: Path,
 ) -> None:
-    config = load_config(config_location)
-    if not pypsa_inputs_location.exists():
-        pypsa_inputs_location.mkdir(parents=True)
+    create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
@@ -170,11 +186,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 
 
 def create_and_run_pypsa_model(
-    config_location: Path, pypsa_inputs_location: Path, pypsa_outputs_location: Path
+    config: ModelConfig, pypsa_inputs_location: Path, pypsa_outputs_location: Path
 ) -> None:
-    config = load_config(config_location)
-    if not pypsa_outputs_location.exists():
-        pypsa_outputs_location.mkdir(parents=True)
+    create_or_clean_task_output_folder(pypsa_outputs_location)
     network = initialise_network(
         config.traces.start_year,
         config.traces.end_year,
@@ -206,7 +220,7 @@ def task_create_ispypsa_inputs():
         "actions": [
             (
                 create_ispypsa_inputs_from_config,
-                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUT_TABLES_DIRECTORY],
+                [config, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUT_TABLES_DIRECTORY],
             )
         ],
         "file_dep": [_CONFIG_PATH]
@@ -243,7 +257,7 @@ def task_create_pypsa_inputs():
             (
                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
                 [
-                    _CONFIG_PATH,
+                    config,
                     _ISPYPSA_INPUT_TABLES_DIRECTORY,
                     _PARSED_TRACE_DIRECTORY,
                     _PYPSA_FRIENDLY_DIRECTORY,
@@ -264,7 +278,7 @@ def task_create_and_run_pypsa_model():
         "actions": [
             (
                 create_and_run_pypsa_model,
-                [_CONFIG_PATH, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
+                [config, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
             )
         ],
         "file_dep": [

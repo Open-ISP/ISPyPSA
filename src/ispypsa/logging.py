@@ -2,6 +2,13 @@ import logging
 import sys
 
 
+def configure_dependency_logger(name: str, level: int = logging.WARNING) -> None:
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.propagate = True
+    logger.setLevel(level)
+
+
 def configure_logging(
     console: bool = True,
     console_level: int = logging.WARNING,
@@ -40,3 +47,4 @@ def configure_logging(
         format="[%(asctime)s] %(levelname)s: %(message)s",
         handlers=handlers,
     )
+    configure_dependency_logger("pypsa", logging.INFO)

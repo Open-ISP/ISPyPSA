@@ -15,6 +15,7 @@ from ispypsa.config.validators import ModelConfig
 def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
     ModelConfig(
         **{
+            "ispypsa_run_name": "test",
             "scenario": scenario,
             "operational_temporal_resolution_min": 30,
             "network": {
@@ -24,6 +25,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
                 }
             },
             "traces": {
+                "path_to_parsed_traces": "tests/test_traces",
                 "year_type": year_type,
                 "start_year": 2025,
                 "end_year": 2026,
@@ -38,6 +40,7 @@ def test_invalid_scenario():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "BAU",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -47,6 +50,7 @@ def test_invalid_scenario():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -61,6 +65,7 @@ def test_invalid_node_granularity():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -70,6 +75,7 @@ def test_invalid_node_granularity():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -84,6 +90,7 @@ def test_invalid_nodes_rezs():
     with pytest.raises(ValidationError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -93,6 +100,57 @@ def test_invalid_nodes_rezs():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                },
+                "solver": "highs",
+            }
+        )
+
+
+def test_not_a_directory_parsed_traces_path():
+    with pytest.raises(NotADirectoryError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "traces": {
+                    "path_to_parsed_traces": "tests/wrong_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                },
+                "solver": "highs",
+            }
+        )
+
+
+def test_invalid_parsed_traces_path():
+    with pytest.raises(ValueError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "operational_temporal_resolution_min": 30,
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "traces": {
+                    "path_to_parsed_traces": "ispypsa_runs",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2026,
@@ -107,6 +165,7 @@ def test_invalid_end_year():
     with pytest.raises(ValueError):
         ModelConfig(
             **{
+                "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "operational_temporal_resolution_min": 30,
                 "network": {
@@ -116,6 +175,7 @@ def test_invalid_end_year():
                     }
                 },
                 "traces": {
+                    "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
                     "end_year": 2024,
