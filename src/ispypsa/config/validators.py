@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -25,6 +26,11 @@ class TraceConfig(BaseModel):
     @field_validator("path_to_parsed_traces")
     @classmethod
     def validate_path_to_parsed_traces(cls, path_to_parsed_traces: str):
+        if path_to_parsed_traces == "ENV":
+            path_to_parsed_traces = os.environ.get("PATH_TO_PARSED_TRACES")
+            if path_to_parsed_traces is None:
+                raise ValueError("Environment variable PATH_TO_PARSED_TRACES not set")
+
         trace_path = Path(path_to_parsed_traces)
         if not trace_path.exists():
             raise NotADirectoryError(
