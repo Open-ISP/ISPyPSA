@@ -88,8 +88,10 @@ def _create_plot_title(config: ModelConfig) -> str:
     run_name = config.ispypsa_run_name
     (start, end) = (config.traces.start_year, config.traces.end_year)
     year_type = config.traces.year_type
-    if year_type == "fy":
+    if year_type == "fy" and start != end:
         year_range = f"FY{str(start)[-2:]}-{str(end)[-2:]}"
+    elif start == end:
+        year_range = f"{start}"
     else:
         year_range = f"{start}-{end}"
     title = (
