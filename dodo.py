@@ -16,7 +16,7 @@ from ispypsa.model import (
     initialise_network,
     run,
 )
-from ispypsa.results import save_results
+from ispypsa.results import load_results, save_results
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
@@ -41,6 +41,7 @@ from ispypsa.translator.generators import (
     _translate_generator_timeseries,
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
+from ispypsa.results.plotting import plot_map_of_energy_generation_by_carrier
 
 root_folder = Path("ispypsa_runs")
 
@@ -57,6 +58,7 @@ _ISPYPSA_INPUT_TABLES_DIRECTORY = Path(run_folder, "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path(run_folder, "pypsa_friendly")
 _PARSED_TRACE_DIRECTORY = Path(config.traces.path_to_parsed_traces)
 _PYPSA_OUTPUTS_DIRECTORY = Path(run_folder, "outputs")
+_RESULTS_DIRECTORY = Path(run_folder, "results")
 
 configure_logging()
 
@@ -203,6 +205,19 @@ def create_and_run_pypsa_model(
     save_results(network, pypsa_outputs_location)
 
 
+def create_results(
+    config: ModelConfig, pypsa_outputs_location: Path, results_location: Path
+) -> None:
+    create_or_clean_task_output_folder(results_location)
+    network = load_results(pypsa_outputs_location)
+    fig, ax = plot_map_of_energy_generation_by_carrier(
+        network, config, figure_size_in_inches=(7, 10)
+    )
+    fig.savefig(
+        Path(results_location, "map_of_total_generation_by_carrier.png"), dpi=600
+    )
+
+
 def task_cache_required_tables():
     return {
         "actions": [(build_parsed_workbook_cache, [_PARSED_WORKBOOK_CACHE])],
@@ -287,4 +302,19 @@ def task_create_and_run_pypsa_model():
             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
         ],
         "targets": [Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5")],
+    }
+
+
+def task_produce_results():
+    return {
+        "actions": [
+            (
+                create_results,
+                [config, _PYPSA_OUTPUTS_DIRECTORY, _RESULTS_DIRECTORY],
+            )
+        ],
+        "file_dep": [
+            Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5"),
+        ],
+        "targets": [Path(_RESULTS_DIRECTORY, "map_of_total_generation_by_carrier.png")],
     }
