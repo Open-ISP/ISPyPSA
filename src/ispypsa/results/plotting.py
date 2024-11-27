@@ -40,8 +40,9 @@ def plot_map_of_energy_generation_by_carrier(
     # size of ~1.0 appears to work well from trial-and-error
     if bus_size_scaling_factor is None:
         bus_size_scaling_factor = min(1.0 / gen.groupby("bus").sum())
+    # size of ~300.0 appears to work well from trial-and-error
     if flow_arrow_size_scaling_factor is None:
-        flow_arrow_size_scaling_factor = min(1.0 / network.lines_t.p0.mean().abs())
+        flow_arrow_size_scaling_factor = min(300.0 / network.lines_t.p0.mean().abs())
     title = _create_plot_title(config)
 
     fig, ax = plt.subplots(
