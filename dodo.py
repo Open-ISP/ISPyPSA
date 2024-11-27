@@ -15,8 +15,8 @@ from ispypsa.model import (
     add_lines_to_network,
     initialise_network,
     run,
-    save_results,
 )
+from ispypsa.results import save_results
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
