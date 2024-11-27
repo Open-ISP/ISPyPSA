@@ -31,6 +31,7 @@ class TraceConfig(BaseModel):
 
 
 class ModelConfig(BaseModel):
+    ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     operational_temporal_resolution_min: int
     network: NetworkConfig
