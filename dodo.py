@@ -5,6 +5,7 @@ from shutil import rmtree
 from isp_trace_parser import construct_reference_year_mapping
 
 from ispypsa.config import load_config
+from ispypsa.config.validators import ModelConfig
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.model import (
@@ -41,12 +42,21 @@ from ispypsa.translator.generators import (
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
 
-_PARSED_WORKBOOK_CACHE = Path("model_data", "workbook_table_cache")
-_ISPYPSA_INPUT_TABLES_DIRECTORY = Path("model_data", "ispypsa_inputs", "tables")
-_PYPSA_FRIENDLY_DIRECTORY = Path("model_data", "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path("/home/abi/isp-traces/parsed-traces/")
-_CONFIG_PATH = Path("model_data", "ispypsa_inputs", "ispypsa_config.yaml")
-_PYPSA_OUTPUTS_DIRECTORY = Path("model_data", "outputs")
+root_folder = Path("ispypsa_runs")
+
+##### MODIFY FOR DIFFERENT MODEL RUN ####################################################
+_CONFIG_PATH = root_folder / Path(
+    "development", "ispypsa_inputs", "ispypsa_config.yaml"
+)
+#########################################################################################
+
+config = load_config(_CONFIG_PATH)
+run_folder = Path(root_folder, config.ispypsa_run_name)
+_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
+_ISPYPSA_INPUT_TABLES_DIRECTORY = Path(run_folder, "ispypsa_inputs", "tables")
+_PYPSA_FRIENDLY_DIRECTORY = Path(run_folder, "pypsa_friendly")
+_PARSED_TRACE_DIRECTORY = Path(config.traces.path_to_parsed_traces)
+_PYPSA_OUTPUTS_DIRECTORY = Path(run_folder, "outputs")
 
 configure_logging()
 
@@ -75,9 +85,8 @@ def build_parsed_workbook_cache(cache_location: Path) -> None:
 
 
 def create_ispypsa_inputs_from_config(
-    config_location: Path, workbook_cache_location: Path, template_location: Path
+    config: ModelConfig, workbook_cache_location: Path, template_location: Path
 ) -> None:
-    config = load_config(config_location)
     create_or_clean_task_output_folder(template_location)
     node_template = template_nodes(
         workbook_cache_location, config.network.nodes.regional_granularity
@@ -126,12 +135,11 @@ def create_ispypsa_inputs_from_config(
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
-    config_location: Path,
+    config: ModelConfig,
     ispypsa_inputs_location: Path,
     trace_data_path: Path,
     pypsa_inputs_location: Path,
 ) -> None:
-    config = load_config(config_location)
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
     pypsa_inputs["generators"] = _translate_ecaa_generators(
@@ -178,9 +186,8 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 
 
 def create_and_run_pypsa_model(
-    config_location: Path, pypsa_inputs_location: Path, pypsa_outputs_location: Path
+    config: ModelConfig, pypsa_inputs_location: Path, pypsa_outputs_location: Path
 ) -> None:
-    config = load_config(config_location)
     create_or_clean_task_output_folder(pypsa_outputs_location)
     network = initialise_network(
         config.traces.start_year,
@@ -213,7 +220,7 @@ def task_create_ispypsa_inputs():
         "actions": [
             (
                 create_ispypsa_inputs_from_config,
-                [_CONFIG_PATH, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUT_TABLES_DIRECTORY],
+                [config, _PARSED_WORKBOOK_CACHE, _ISPYPSA_INPUT_TABLES_DIRECTORY],
             )
         ],
         "file_dep": [_CONFIG_PATH]
@@ -250,7 +257,7 @@ def task_create_pypsa_inputs():
             (
                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
                 [
-                    _CONFIG_PATH,
+                    config,
                     _ISPYPSA_INPUT_TABLES_DIRECTORY,
                     _PARSED_TRACE_DIRECTORY,
                     _PYPSA_FRIENDLY_DIRECTORY,
@@ -271,7 +278,7 @@ def task_create_and_run_pypsa_model():
         "actions": [
             (
                 create_and_run_pypsa_model,
-                [_CONFIG_PATH, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
+                [config, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
             )
         ],
         "file_dep": [
