@@ -43,6 +43,7 @@ from ispypsa.translator.generators import (
 from ispypsa.translator.lines import translate_flow_paths_to_lines
 from ispypsa.translator.snapshot import create_complete_snapshot_index
 
+
 root_folder = Path("ispypsa_runs")
 
 ##### MODIFY FOR DIFFERENT MODEL RUN ####################################################
