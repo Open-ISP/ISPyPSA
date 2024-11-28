@@ -1,27 +1,20 @@
+import cartopy.crs as ccrs
 import matplotlib
 import matplotlib.axes
 import matplotlib.figure
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-from matplotlib.patches import Patch
-import cartopy.crs as ccrs
 
 from ispypsa.config.validators import ModelConfig
-
-_CARRIER_COLOUR_MAPPING = {
-    # corresponds to distillate in OpenElectricity
-    "Liquid Fuel": "#E46E56",
-    "Black Coal": "#251C00",
-    "Brown Coal": "#675B42",
-    "Gas": "#E78114",
-    "Water": "#ACE9FE",
-    "Solar": "#FECE00",
-    "Wind": "#2A7E3F",
-    # corresponds to gas_hydrogen in OpenElectricity
-    "Hyblend": "#C75338",
-}
-"""Colour mapping based on mapping from OpenElectricity"""
+from ispypsa.results.plot_helpers import (
+    _DEFAULT_CARRIER_COLOUR_MAPPING,
+    _DEFAULT_FACECOLOR,
+    _DEFAULT_GEOMAP_COLOURS,
+    _add_figure_fuel_type_legend,
+    _consolidate_plot_kwargs,
+    _determine_title_year_range,
+)
 
 
 def plot_map_of_energy_generation_by_carrier(
@@ -37,14 +30,15 @@ def plot_map_of_energy_generation_by_carrier(
     figure_kwargs: dict = dict(),
     subplot_kwargs: dict = dict(),
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    # Bus pie size determined by total generation at the bus
     total_gen = _sum_generation_by_bus_and_carrier(network)
-    # size of ~1.0 appears to work well from trial-and-error
+    ## size of ~1.0 appears to work well from trial-and-error
     if bus_size_scaling_factor is None:
         bus_size_scaling_factor = min(1.0 / total_gen.groupby("bus").sum())
-    # size of ~300.0 appears to work well from trial-and-error
+    ## size of ~300.0 appears to work well from trial-and-error
     if flow_arrow_size_scaling_factor is None:
         flow_arrow_size_scaling_factor = min(300.0 / network.lines_t.p0.mean().abs())
-    title = _create_plot_title(config)
+    (main_title, sub_title) = (_create_main_title(config), _create_sub_title(config))
     fig, ax = plt.subplots(
         1,
         1,
@@ -52,18 +46,16 @@ def plot_map_of_energy_generation_by_carrier(
             dict(projection=ccrs.PlateCarree()), subplot_kwargs
         ),
         **_consolidate_plot_kwargs(
-            dict(
-                figsize=figure_size_inches,
-            ),
+            dict(figsize=figure_size_inches, facecolor=_DEFAULT_FACECOLOR),
             figure_kwargs,
         ),
     )
     pyspsa_plot_kwgs = _consolidate_plot_kwargs(
         dict(
             geomap=True,
-            color_geomap=True,
+            color_geomap=_DEFAULT_GEOMAP_COLOURS,
             ax=ax,
-            bus_colors=_CARRIER_COLOUR_MAPPING,
+            bus_colors=_DEFAULT_CARRIER_COLOUR_MAPPING,
             bus_sizes=total_gen * bus_size_scaling_factor,
             flow="mean",
             line_colors=network.lines_t.p0.mean().abs(),
@@ -75,13 +67,14 @@ def plot_map_of_energy_generation_by_carrier(
                 min_max_latitudes[0],
                 min_max_latitudes[1],
             ],
-            title=title,
+            title=sub_title,
         ),
         pypsa_plot_kwargs,
     )
     collection = network.plot(**pyspsa_plot_kwgs)
     plt.colorbar(collection[2], fraction=0.04, pad=0.04, label="Mean flow (MW)")
-    _add_fuel_type_legend(fig, _CARRIER_COLOUR_MAPPING)
+    _add_figure_fuel_type_legend(fig, _DEFAULT_CARRIER_COLOUR_MAPPING)
+    fig.suptitle(main_title, fontsize=18, x=0.6)
     return fig, ax
 
 
@@ -94,46 +87,13 @@ def _sum_generation_by_bus_and_carrier(network: pypsa.Network) -> pd.Series:
     ).total_generation.sum()
 
 
-def _consolidate_plot_kwargs(
-    predefined_kwargs: dict, user_specified_kwargs: dict
-) -> dict:
-    kwargs = predefined_kwargs
-    kwargs.update(user_specified_kwargs)
-    return kwargs
-
-
-def _create_plot_title(config: ModelConfig) -> str:
-    run_name = config.ispypsa_run_name
-    (start, end) = (config.traces.start_year, config.traces.end_year)
-    year_type = config.traces.year_type
-    if year_type == "fy" and start != end:
-        year_range = f"FY{str(start)[-2:]}-{str(end)[-2:]}"
-    elif start == end:
-        year_range = f"{start}"
-    else:
-        year_range = f"{start}-{end}"
-    title = (
-        f"ISPyPSA run '{run_name}'\nTotal energy generation by fuel type, {year_range}"
-    )
+def _create_main_title(config: ModelConfig) -> str:
+    year_range = _determine_title_year_range(config)
+    title = f"Total energy generation by fuel type, {year_range}"
     return title
 
 
-def _add_fuel_type_legend(
-    fig: matplotlib.figure.Figure,
-    carrier_colour_mapping: dict[str, str],
-    legend_kwargs=dict(),
-) -> None:
-    legend_patches = [
-        Patch(color=color, label=carrier)
-        for carrier, color in carrier_colour_mapping.items()
-    ]
-    legend_kwgs = dict(
-        title="Fuel Type",
-        loc="lower center",
-        fontsize=8,
-        title_fontsize=10,
-        ncol=4,
-        frameon=False,
-    )
-    legend_kwgs.update(legend_kwargs)
-    fig.legend(handles=legend_patches, **legend_kwgs)
+def _create_sub_title(config: ModelConfig) -> str:
+    run_name = config.ispypsa_run_name
+    title = f"ISPyPSA run: '{run_name}'"
+    return title
