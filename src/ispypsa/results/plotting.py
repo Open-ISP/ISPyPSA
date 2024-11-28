@@ -115,7 +115,8 @@ def _add_generation_circle_reference_legend(
             dict(edgecolor="black", facecolor=("black", 0.0)), patch_kwargs
         ),
         legend_kw=_consolidate_plot_kwargs(
-            dict(labelspacing=2, frameon=False), legend_kwargs
+            dict(labelspacing=1.5, frameon=False, title="Total generation"),
+            legend_kwargs,
         ),
     )
 
