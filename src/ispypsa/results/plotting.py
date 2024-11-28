@@ -76,7 +76,7 @@ def plot_map_of_energy_generation_by_carrier(
     plt.colorbar(collection[2], fraction=0.04, pad=0.04, label="Mean flow (MW)")
     _add_figure_fuel_type_legend(fig, _DEFAULT_CARRIER_COLOUR_MAPPING)
     _add_generation_circle_reference_legend(ax, max_bus_gen)
-    fig.suptitle(main_title, fontsize=16, x=0.6)
+    fig.suptitle(main_title, fontsize=16)
     return fig, ax
 
 
@@ -115,7 +115,7 @@ def _add_generation_circle_reference_legend(
             dict(edgecolor="black", facecolor=("black", 0.0)), patch_kwargs
         ),
         legend_kw=_consolidate_plot_kwargs(
-            dict(labelspacing=1.5, frameon=False, title="Total generation"),
+            dict(labelspacing=1.75, frameon=False, title="Total generation"),
             legend_kwargs,
         ),
     )
