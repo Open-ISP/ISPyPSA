@@ -16,6 +16,8 @@ blosc2==2.7.1
     # via tables
 bottleneck==1.4.0
     # via linopy
+cartopy==0.24.1
+    # via ispypsa
 certifi==2024.8.30
     # via netcdf4
     # via pyogrio
@@ -27,9 +29,6 @@ click==8.1.7
 cloudpickle==3.0.0
     # via dask
     # via doit
-colorama==0.4.6
-    # via click
-    # via tqdm
 contourpy==1.3.0
     # via matplotlib
 cycler==0.12.1
@@ -66,6 +65,7 @@ linopy==0.3.14
 locket==1.0.0
     # via partd
 matplotlib==3.9.2
+    # via cartopy
     # via pypsa
 msgpack==1.0.8
     # via blosc2
@@ -82,6 +82,7 @@ numexpr==2.10.1
 numpy==1.26.4
     # via blosc2
     # via bottleneck
+    # via cartopy
     # via cftime
     # via contourpy
     # via geopandas
@@ -100,6 +101,7 @@ numpy==1.26.4
 openpyxl==3.1.5
     # via isp-workbook-parser
 packaging==24.1
+    # via cartopy
     # via dask
     # via deprecation
     # via geopandas
@@ -136,9 +138,12 @@ pyogrio==0.9.0
 pyparsing==3.1.4
     # via matplotlib
 pyproj==3.6.1
+    # via cartopy
     # via geopandas
 pypsa==0.31.1
     # via ispypsa
+pyshp==2.3.1
+    # via cartopy
 python-dateutil==2.9.0.post0
     # via matplotlib
     # via pandas
@@ -154,6 +159,7 @@ scipy==1.14.1
     # via linopy
     # via pypsa
 shapely==2.0.6
+    # via cartopy
     # via geopandas
 six==1.16.0
     # via python-dateutil
