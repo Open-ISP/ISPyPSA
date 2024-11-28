@@ -15,14 +15,20 @@ _DEFAULT_CARRIER_COLOUR_MAPPING = {
     # corresponds to gas_hydrogen in OpenElectricity
     "Hyblend": "#C75338",
 }
-"""Colour mapping based on mapping from OpenElectricity"""
+"""Colour mapping for carriers/fuel types. Same colour scheme as OpenElectricity"""
 
 _DEFAULT_GEOMAP_COLOURS = dict(ocean="#dbdbdd", land="#fdfdfe")
+"""Colour mapping for ocean and land in the map plot"""
 
 _DEFAULT_FACECOLOR = "#faf9f6"
+"""Facecolour to use in Figures (from OpenElectricity)"""
 
 
 def _determine_title_year_range(config: ModelConfig) -> str:
+    """
+    Determines the year range string for use in plot titles based on
+    ISPyPSA configuration options.
+    """
     (start, end) = (config.traces.start_year, config.traces.end_year)
     year_type = config.traces.year_type
     if year_type == "fy" and start != end:
@@ -39,6 +45,16 @@ def _add_figure_fuel_type_legend(
     carrier_colour_mapping: dict[str, str],
     legend_kwargs=dict(),
 ) -> None:
+    """Adds a legend that maps fuel types to their patch colours to a
+    `matplotlib.figure.Figure`.
+
+    Args:
+        fig: `matplotlib.figure.Figure`
+        carrier_colour_mapping: Dictionary that maps each carrier to a colour
+        legend_kwargs (optional): Keyword arguments for
+            `matplotlib.figure.Figure.legend()`. Anything specified in this dict will
+            overwrite ISPyPSA defaults. Defaults to dict().
+    """
     legend_patches = [
         Patch(color=color, label=carrier)
         for carrier, color in carrier_colour_mapping.items()
@@ -62,6 +78,9 @@ def _add_figure_fuel_type_legend(
 def _consolidate_plot_kwargs(
     predefined_kwargs: dict, user_specified_kwargs: dict
 ) -> dict:
+    """Adds to or replaces ISPyPSA's keyword arguments for plot functions using those
+    provided by the user in the function call.
+    """
     kwargs = predefined_kwargs
     kwargs.update(user_specified_kwargs)
     return kwargs
