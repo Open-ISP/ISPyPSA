@@ -211,7 +211,7 @@ def create_results(
     create_or_clean_task_output_folder(results_location)
     network = load_results(pypsa_outputs_location)
     fig, ax = plot_map_of_energy_generation_by_carrier(
-        network, config, figure_size_in_inches=(7, 10)
+        network, config, figure_size_inches=(6.5, 8), figure_kwargs=dict(dpi=600)
     )
     fig.savefig(
         Path(results_location, "map_of_total_generation_by_carrier.png"), dpi=600
