@@ -81,7 +81,7 @@ def plot_map_of_energy_generation_by_carrier(
     )
     collection = network.plot(**pyspsa_plot_kwgs)
     plt.colorbar(collection[2], fraction=0.04, pad=0.04, label="Mean flow (MW)")
-    _add_fuel_type_legend(ax, _CARRIER_COLOUR_MAPPING)
+    _add_fuel_type_legend(fig, _CARRIER_COLOUR_MAPPING)
     return fig, ax
 
 
@@ -119,10 +119,21 @@ def _create_plot_title(config: ModelConfig) -> str:
 
 
 def _add_fuel_type_legend(
-    ax: matplotlib.axes.Axes, carrier_colour_mapping: dict[str, str]
+    fig: matplotlib.figure.Figure,
+    carrier_colour_mapping: dict[str, str],
+    legend_kwargs=dict(),
 ) -> None:
     legend_patches = [
         Patch(color=color, label=carrier)
         for carrier, color in carrier_colour_mapping.items()
     ]
-    ax.legend(handles=legend_patches, title="Fuel Type", loc="upper right")
+    legend_kwgs = dict(
+        title="Fuel Type",
+        loc="lower center",
+        fontsize=8,
+        title_fontsize=10,
+        ncol=4,
+        frameon=False,
+    )
+    legend_kwgs.update(legend_kwargs)
+    fig.legend(handles=legend_patches, **legend_kwgs)
