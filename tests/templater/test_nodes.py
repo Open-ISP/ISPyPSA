@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.templater.nodes import (
-    template_nodes,
     template_nem_region_to_single_sub_region_mapping,
+    template_nodes,
     template_sub_regions_to_nem_regions_mapping,
 )
 

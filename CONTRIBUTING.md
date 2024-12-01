@@ -43,12 +43,12 @@ If you are proposing a feature:
 Ready to contribute? Here's how to set up `ispypsa` for local development.
 
 1. Download a copy of `ispypsa` locally.
-2. Install [`rye`](https://rye.astral.sh/).
-3. Install `ispypsa` using `rye` by running `rye sync` in the project directory.
-4. Install the `pre-commit` git hook scripts that `ispypsa` uses by running the following code using `rye`:
+2. Install [`uv`](https://github.com/astral-sh/uv).
+3. Install `ispypsa` using `uv` by running `uv sync` in the project directory.
+4. Install the `pre-commit` git hook scripts that `ispypsa` uses by running the following code using `uv`:
 
       ```console
-      $ rye run pre-commit install
+      $ uv run pre-commit install
       ```
 
 5. Use `git` (or similar) to create a branch for local development and make your changes:
@@ -57,9 +57,15 @@ Ready to contribute? Here's how to set up `ispypsa` for local development.
     $ git checkout -b name-of-your-bugfix-or-feature
     ```
 
-6. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests. That is:
-    - Use the the `ruff` formatter bundled with `rye` by running `rye fmt`
-    - Run tests by running `rye test`
+6. When you're done making changes, check that your changes conform to any code formatting requirements (we use [`ruff`](https://github.com/astral-sh/ruff)) and pass any tests.
+    - `pre-commit` should run `ruff`, but if you wish to do so manually, run the following code to use `ruff` as a `uv` [tool](https://docs.astral.sh/uv/concepts/tools/):
+
+      ```bash
+      uvx ruff check --fix
+      uvx ruff format
+      ```
+
+    - Run tests by running `uv run --frozen pytest`
 
 7. Commit your changes and open a pull request.
 

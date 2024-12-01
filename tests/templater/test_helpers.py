@@ -6,7 +6,6 @@ from ispypsa.templater.helpers import (
     _where_any_substring_appears,
 )
 
-
 snakecase_test_cases = {
     # Single word cases
     "word": "word",
