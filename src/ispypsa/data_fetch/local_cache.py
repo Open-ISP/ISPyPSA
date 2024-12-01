@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from isp_workbook_parser import Parser
-from ..templater.mappings import _GENERATOR_PROPERTIES
 
+from ..templater.mappings import _GENERATOR_PROPERTIES
 
 _GENERATOR_PROPERTY_TABLES = [
     table_name

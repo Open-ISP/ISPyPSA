@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 from ispypsa.templater.flow_paths import template_flow_paths
 
 
