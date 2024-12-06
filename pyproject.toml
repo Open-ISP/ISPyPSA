@@ -17,9 +17,10 @@ dependencies = [
     "thefuzz>=0.22.1",
     "isp-trace-parser>=1.0.0",
     "pyarrow>=18.0.0",
+    "tables>=3.10.1",
 ]
 readme = "README.md"
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 
 [project.optional-dependencies]
 solvers = [
