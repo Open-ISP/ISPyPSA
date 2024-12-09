@@ -21,11 +21,24 @@ def create_snapshot_index(
         pd.DataFrame
     """
     if year_type == "fy":
-        start_date = datetime(year=start_year - 1, month=7, day=1, hour=0, minute=30)
-        end_date = datetime(year=end_year, month=7, day=1, hour=0, minute=0)
+        start_year = start_year - 1
+        end_year = end_year
+        month = 7
     else:
-        start_date = datetime(year=start_year, month=1, day=1, hour=0, minute=30)
-        end_date = datetime(year=end_year + 1, month=1, day=1, hour=0, minute=0)
+        start_year = start_year
+        end_year = end_year + 1
+        month = 1
+
+    if operational_temporal_resolution_min < 60:
+        hour = 0
+        minute = operational_temporal_resolution_min
+    else:
+        hour = operational_temporal_resolution_min // 60
+        minute = operational_temporal_resolution_min % 60
+
+    start_date = datetime(year=start_year, month=month, day=1, hour=hour, minute=minute)
+    end_date = datetime(year=end_year, month=month, day=1, hour=0, minute=0)
+
     time_index = pd.date_range(
         start=start_date,
         end=end_date,
