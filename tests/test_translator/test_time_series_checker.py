@@ -1,5 +1,5 @@
-import pytest
 import pandas as pd
+import pytest
 
 from ispypsa.translator.time_series_checker import check_time_series
 
