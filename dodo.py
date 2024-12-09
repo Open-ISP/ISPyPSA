@@ -56,7 +56,7 @@ run_folder = Path(root_folder, config.ispypsa_run_name)
 _PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
 _ISPYPSA_INPUT_TABLES_DIRECTORY = Path(run_folder, "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path(run_folder, "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path(config.traces.path_to_parsed_traces)
+_PARSED_TRACE_DIRECTORY = Path(config.temporal.path_to_parsed_traces)
 _PYPSA_OUTPUTS_DIRECTORY = Path(run_folder, "outputs")
 
 configure_logging()
@@ -144,10 +144,10 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
     pypsa_inputs["snapshot"] = create_snapshot_index(
-        start_year=config.traces.start_year,
-        end_year=config.traces.end_year,
-        operational_temporal_resolution_min=config.operational_temporal_resolution_min,
-        year_type=config.traces.year_type,
+        start_year=config.temporal.start_year,
+        end_year=config.temporal.end_year,
+        operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
+        year_type=config.temporal.year_type,
     )
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
@@ -161,9 +161,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
     reference_year_mapping = construct_reference_year_mapping(
-        start_year=config.traces.start_year,
-        end_year=config.traces.end_year,
-        reference_years=config.traces.reference_year_cycle,
+        start_year=config.temporal.start_year,
+        end_year=config.temporal.end_year,
+        reference_years=config.temporal.reference_year_cycle,
     )
     _translate_generator_timeseries(
         ispypsa_inputs_location,
@@ -171,7 +171,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         pypsa_inputs_location,
         generator_type="solar",
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
         snapshot=pypsa_inputs["snapshot"],
     )
     _translate_generator_timeseries(
@@ -180,7 +180,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         pypsa_inputs_location,
         generator_type="wind",
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
         snapshot=pypsa_inputs["snapshot"],
     )
     _translate_buses_demand_timeseries(
@@ -190,7 +190,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         scenario=config.scenario,
         regional_granularity=config.network.nodes.regional_granularity,
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
         snapshot=pypsa_inputs["snapshot"],
     )
 
