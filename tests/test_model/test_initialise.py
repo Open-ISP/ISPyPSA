@@ -1,8 +1,8 @@
 from pathlib import Path
 
+from ispypsa.model.initialise import initialise_network
 from ispypsa.translator.snapshot import create_snapshot_index
 from ispypsa.translator.time_series_checker import check_time_series
-from ispypsa.model.initialise import initialise_network
 
 
 def test_network_initialisation(tmp_path):

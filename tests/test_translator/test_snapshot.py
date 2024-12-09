@@ -1,5 +1,6 @@
-import pytest
 from datetime import datetime
+
+import pytest
 
 from ispypsa.translator.snapshot import create_snapshot_index
 
