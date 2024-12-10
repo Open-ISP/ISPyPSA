@@ -4,6 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from ispypsa.templater.helpers import (
+    _add_units_to_financial_year_columns,
+    _convert_financial_year_columns_to_float,
+)
+
 from .helpers import _snakecase_string
 from .lists import _ECAA_GENERATOR_TYPES
 
@@ -28,10 +33,15 @@ def template_generator_dynamic_properties(
     coal_prices = _template_coal_prices(parsed_workbook_path, scenario)
     gas_prices = _template_gas_prices(parsed_workbook_path, scenario)
     liquid_fuel_prices = _template_liquid_fuel_prices(parsed_workbook_path, scenario)
-    full_outage_forecasts = _template_full_outage_forecasts(parsed_workbook_path)
-    partial_outage_forecasts = _template_partial_outage_forecasts(parsed_workbook_path)
+    full_outage_forecasts = _template_existing_generators_full_outage_forecasts(
+        parsed_workbook_path
+    )
+    partial_outage_forecasts = _template_existing_generators_partial_outage_forecasts(
+        parsed_workbook_path
+    )
     seasonal_ratings = _template_seasonal_ratings(parsed_workbook_path)
     closure_years = _template_closure_years(parsed_workbook_path)
+    build_costs = _template_new_entrant_build_costs(parsed_workbook_path, scenario)
     return {
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
@@ -40,6 +50,7 @@ def template_generator_dynamic_properties(
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
         "closure_years": closure_years,
+        "build_costs": build_costs,
     }
 
 
@@ -63,7 +74,9 @@ def _template_coal_prices(
     coal_prices = pd.read_csv(
         Path(parsed_workbook_path, f"coal_prices_{snakecase_scenario}.csv")
     )
-    coal_prices.columns = _add_units_to_financial_year_columns(coal_prices.columns)
+    coal_prices.columns = _add_units_to_financial_year_columns(
+        coal_prices.columns, "$/GJ"
+    )
     coal_prices = coal_prices.drop(columns="coal_price_scenario")
     coal_prices = coal_prices.set_index("generator")
     coal_prices = _convert_financial_year_columns_to_float(coal_prices)
@@ -90,7 +103,7 @@ def _template_gas_prices(
     gas_prices = pd.read_csv(
         Path(parsed_workbook_path, f"gas_prices_{snakecase_scenario}.csv")
     )
-    cols = _add_units_to_financial_year_columns(gas_prices.columns)
+    cols = _add_units_to_financial_year_columns(gas_prices.columns, "$/GJ")
     cols[0] = "generator"
     gas_prices.columns = cols
     gas_prices = gas_prices.drop(columns="gas_price_scenario").set_index("generator")
@@ -115,7 +128,7 @@ def _template_liquid_fuel_prices(
         Path(parsed_workbook_path, "liquid_fuel_prices.csv")
     )
     liquid_fuel_prices.columns = _add_units_to_financial_year_columns(
-        liquid_fuel_prices.columns
+        liquid_fuel_prices.columns, "$/GJ"
     )
     liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price").set_index(
         "liquid_fuel_price_scenario"
@@ -126,7 +139,9 @@ def _template_liquid_fuel_prices(
     return liquid_fuel_prices_scenario
 
 
-def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.DataFrame:
+def _template_existing_generators_full_outage_forecasts(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
     """Creates a full outage forecast template for existing generators
 
     Args:
@@ -150,7 +165,7 @@ def _template_full_outage_forecasts(parsed_workbook_path: Path | str) -> pd.Data
     return full_outages_forecast
 
 
-def _template_partial_outage_forecasts(
+def _template_existing_generators_partial_outage_forecasts(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
     """Creates a partial outage forecast template for existing generators
@@ -214,24 +229,46 @@ def _template_seasonal_ratings(
     return seasonal_rating
 
 
-def _add_units_to_financial_year_columns(columns: pd.Index) -> list[str]:
-    """Adds _$/GJ to the financial year columns"""
-    cols = [
-        _snakecase_string(col + "_$/GJ")
-        if re.match(r"[0-9]{4}-[0-9]{2}", col)
-        else _snakecase_string(col)
-        for col in columns
-    ]
-    return cols
+def _template_new_entrant_build_costs(
+    parsed_workbook_path: Path | str, scenario: str
+) -> pd.DataFrame:
+    """Creates a new entrants build cost template
 
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
 
-def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
-    """Forcefully converts FY columns to float columns"""
-    cols = [
-        df[col].astype(float) if re.match(r"[0-9]{4}_[0-9]{2}", col) else df[col]
-        for col in df.columns
-    ]
-    return pd.concat(cols, axis=1)
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+            outputs from the `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant build costs
+    """
+    scenario_mapping = pd.read_csv(
+        Path(parsed_workbook_path, "build_costs_scenario_mapping.csv"), index_col=0
+    )
+    scenario_mapping = scenario_mapping.transpose().squeeze()
+    gencost_scenario_desc = re.match(
+        r"GenCost\s(.*)", scenario_mapping[scenario]
+    ).group(1)
+    build_costs_scenario = pd.read_csv(
+        Path(
+            parsed_workbook_path,
+            f"build_costs_{_snakecase_string(gencost_scenario_desc)}.csv",
+        )
+    )
+    build_costs_scenario = _convert_financial_year_columns_to_float(
+        build_costs_scenario
+    )
+    build_costs_scenario = build_costs_scenario.drop(columns=["Source"])
+    # convert data in $/kW to $/MW
+    build_costs_scenario.columns = _add_units_to_financial_year_columns(
+        build_costs_scenario.columns, "$/MW"
+    )
+    build_costs_scenario = build_costs_scenario.set_index("technology")
+    build_costs_scenario *= 1000.0
+    return build_costs_scenario
 
 
 def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
