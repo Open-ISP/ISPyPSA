@@ -18,6 +18,10 @@ _NEW_ENTRANTS_COST_TABLES = [
     "build_costs_pumped_hydro",
     "connection_costs_for_wind_and_solar",
     "connection_costs_other",
+    "connection_cost_forecast_wind_and_solar_progressive_change",
+    "connection_cost_forecast_wind_and_solar_step_change&green_energy_exports",
+    "connection_cost_forecast_non_rez_progressive_change",
+    "connection_cost_forecast_non_rez_step_change&green_energy_exports",
 ]
 
 _NETWORK_REQUIRED_TABLES = [
