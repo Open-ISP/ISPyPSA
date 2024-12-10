@@ -48,6 +48,9 @@ def template_generator_dynamic_properties(
             parsed_workbook_path, scenario
         )
     )
+    non_vre_connection_costs = _template_new_entrant_non_vre_connection_costs(
+        parsed_workbook_path
+    )
     return {
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
@@ -59,6 +62,7 @@ def template_generator_dynamic_properties(
         "build_costs": build_costs,
         "new_entrant_build_costs": build_costs,
         "new_entrant_wind_and_solar_connection_costs": wind_and_solar_connection_costs,
+        "new_entrant_non_vre_connection_costs": non_vre_connection_costs,
     }
 
 
@@ -360,6 +364,34 @@ def _template_new_entrant_wind_and_solar_connection_costs(
         wind_solar_connection_cost_forecasts.columns, "$/MW"
     )
     return wind_solar_connection_cost_forecasts
+
+
+def _template_new_entrant_non_vre_connection_costs(
+    parsed_workbook_path: Path | str,
+) -> pd.DataFrame:
+    """Creates a new entrant non-VRE connection cost template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+            outputs from the `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant non-VRE connection costs
+    """
+    connection_costs = pd.read_csv(
+        Path(parsed_workbook_path, "connection_costs_other.csv")
+    ).set_index("Region")
+    # conveert to $/MW and add units to columns
+    col_rename_map = {}
+    for col in connection_costs.columns:
+        connection_costs[col] *= 1000
+        col_rename_map[col] = _snakecase_string(col) + "_$/mw"
+    connection_costs = connection_costs.rename(columns=col_rename_map)
+    return connection_costs
 
 
 def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
