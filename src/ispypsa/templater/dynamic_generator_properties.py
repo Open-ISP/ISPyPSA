@@ -2,6 +2,7 @@ import logging
 import re
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ispypsa.templater.helpers import (
@@ -42,6 +43,11 @@ def template_generator_dynamic_properties(
     seasonal_ratings = _template_seasonal_ratings(parsed_workbook_path)
     closure_years = _template_closure_years(parsed_workbook_path)
     build_costs = _template_new_entrant_build_costs(parsed_workbook_path, scenario)
+    wind_and_solar_connection_costs = (
+        _template_new_entrant_wind_and_solar_connection_costs(
+            parsed_workbook_path, scenario
+        )
+    )
     return {
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
@@ -52,6 +58,7 @@ def template_generator_dynamic_properties(
         "closure_years": closure_years,
         "build_costs": build_costs,
         "new_entrant_build_costs": build_costs,
+        "new_entrant_wind_and_solar_connection_costs": wind_and_solar_connection_costs,
     }
 
 
@@ -275,6 +282,84 @@ def _template_new_entrant_build_costs(
     build_costs = build_costs.set_index("technology")
     build_costs *= 1000.0
     return build_costs
+
+
+def _template_new_entrant_wind_and_solar_connection_costs(
+    parsed_workbook_path: Path | str, scenario: str
+) -> pd.DataFrame:
+    """Creates a new entrant wind and solar connection cost template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        parsed_workbook_path: Path to directory with table CSVs that are the
+            outputs from the `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant wind and solar connection costs
+    """
+    scenario = _snakecase_string(scenario)
+    if scenario == "step_change" or scenario == "green_energy_exports":
+        file_scenario = "step_change&green_energy_exports"
+    else:
+        file_scenario = scenario
+    # get rez cost forecasts and concatenate non-rez cost forecasts
+    wind_solar_connection_cost_forecasts = pd.read_csv(
+        Path(
+            parsed_workbook_path,
+            f"connection_cost_forecast_wind_and_solar_{file_scenario}.csv",
+        )
+    ).set_index("REZ names")
+    wind_solar_connection_cost_forecasts = wind_solar_connection_cost_forecasts.rename(
+        columns={"REZ network voltage (kV)": "Network voltage (kV)"}
+    )
+    non_rez_connection_cost_forecasts = pd.read_csv(
+        Path(
+            parsed_workbook_path,
+            f"connection_cost_forecast_non_rez_{file_scenario}.csv",
+        )
+    ).set_index("Non-REZ name")
+    wind_solar_connection_cost_forecasts = pd.concat(
+        [wind_solar_connection_cost_forecasts, non_rez_connection_cost_forecasts],
+        axis=0,
+    )
+    # get system strength connection cost from the initial connection cost table
+    initial_wind_solar_connection_costs = pd.read_csv(
+        Path(
+            parsed_workbook_path,
+            f"connection_costs_for_wind_and_solar.csv",
+        )
+    ).set_index("REZ names")
+    system_strength_cost = (
+        initial_wind_solar_connection_costs["System Strength connection cost ($/kW)"]
+        * 1000
+    ).rename("System strength connection cost ($/MW)")
+    wind_solar_connection_cost_forecasts = pd.concat(
+        [wind_solar_connection_cost_forecasts, system_strength_cost], axis=1
+    )
+    # remove notes
+    wind_solar_connection_cost_forecasts = wind_solar_connection_cost_forecasts.replace(
+        "Note 1", np.nan
+    )
+    # calculate $/MW by dividing total cost by connection capacity in MVA
+    wind_solar_connection_cost_forecasts = _convert_financial_year_columns_to_float(
+        wind_solar_connection_cost_forecasts
+    )
+    fy_cols = [
+        col
+        for col in wind_solar_connection_cost_forecasts.columns
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+    ]
+    for col in fy_cols:
+        wind_solar_connection_cost_forecasts[col] /= (
+            wind_solar_connection_cost_forecasts["Connection capacity (MVA)"]
+        )
+    wind_solar_connection_cost_forecasts.columns = _add_units_to_financial_year_columns(
+        wind_solar_connection_cost_forecasts.columns, "$/MW"
+    )
+    return wind_solar_connection_cost_forecasts
 
 
 def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
