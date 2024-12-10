@@ -10,6 +10,20 @@ _GENERATOR_PROPERTY_TABLES = [
     for table_name in [key + "_" + gen_type for gen_type in val]
 ]
 
+_NEW_ENTRANTS_COST_TABLES = [
+    "build_costs_scenario_mapping",
+    "build_costs_current_policies",
+    "build_costs_global_nze_by_2050",
+    "build_costs_global_nze_post_2050",
+    "build_costs_pumped_hydro",
+    "connection_costs_for_wind_and_solar",
+    "connection_costs_other",
+    "connection_cost_forecast_wind_and_solar_progressive_change",
+    "connection_cost_forecast_wind_and_solar_step_change&green_energy_exports",
+    "connection_cost_forecast_non_rez_progressive_change",
+    "connection_cost_forecast_non_rez_step_change&green_energy_exports",
+]
+
 _NETWORK_REQUIRED_TABLES = [
     "sub_regional_reference_nodes",
     "regional_topology_representation",
@@ -38,6 +52,7 @@ REQUIRED_TABLES = (
     _NETWORK_REQUIRED_TABLES
     + _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES
     + _GENERATORS_REQUIRED_PROPERTY_TABLES
+    + _NEW_ENTRANTS_COST_TABLES
 )
 
 

@@ -205,3 +205,25 @@ def _where_any_substring_appears(
         for i in range(2, len(wheres)):
             boolean = np.logical_or(boolean, wheres[i])
     return boolean
+
+
+def _add_units_to_financial_year_columns(
+    columns: pd.Index, units_str: str
+) -> list[str]:
+    """Adds '_{units_str}' to the financial year columns"""
+    cols = [
+        _snakecase_string(col + f"_{units_str}")
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+        else _snakecase_string(col)
+        for col in columns
+    ]
+    return cols
+
+
+def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Forcefully converts FY columns to float columns"""
+    cols = [
+        df[col].astype(float) if re.match(r"[0-9]{4}_[0-9]{2}", col) else df[col]
+        for col in df.columns
+    ]
+    return pd.concat(cols, axis=1)
