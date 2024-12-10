@@ -5,8 +5,8 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.translator.mappings import _BUS_ATTRIBUTES
-from ispypsa.translator.time_series_checker import check_time_series
 from ispypsa.translator.temporal_filters import apply_snapshot_filter
+from ispypsa.translator.time_series_checker import check_time_series
 
 
 def _translate_nodes_to_buses(ispypsa_inputs_path: Path | str) -> pd.DataFrame:

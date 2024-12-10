@@ -1,7 +1,8 @@
-from ispypsa.config.validators import ModelConfig
+from datetime import datetime, timedelta
 
 import pandas as pd
-from datetime import datetime, timedelta
+
+from ispypsa.config.validators import ModelConfig
 
 
 def apply_snapshot_filter(time_series_data, snapshot):

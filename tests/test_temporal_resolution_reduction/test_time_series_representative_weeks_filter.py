@@ -1,8 +1,9 @@
 from datetime import datetime
+
 import pytest
 
-from ispypsa.translator.temporal_filters import filter_snapshot_for_representative_weeks
 from ispypsa.translator.snapshot import create_snapshot_index
+from ispypsa.translator.temporal_filters import filter_snapshot_for_representative_weeks
 
 
 def test_create_representative_weeks_filter_one_week_start_of_fy():
