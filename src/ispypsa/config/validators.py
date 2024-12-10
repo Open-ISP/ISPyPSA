@@ -23,6 +23,7 @@ class TemporalConfig(BaseModel):
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
+    representative_weeks: list[int] | None
 
     @field_validator("operational_temporal_resolution_min")
     @classmethod

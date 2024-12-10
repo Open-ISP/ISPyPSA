@@ -12,7 +12,10 @@ from ispypsa.config.validators import ModelConfig
 )
 @pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
-def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
+@pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
+def test_valid_config(
+    scenario, regional_granularity, nodes_rezs, year_type, representative_weeks
+):
     ModelConfig(
         **{
             "ispypsa_run_name": "test",
@@ -30,6 +33,7 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
                 "start_year": 2025,
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
+                "representative_weeks": representative_weeks,
             },
             "solver": "highs",
         }
@@ -55,6 +59,7 @@ def test_invalid_scenario():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
                 },
                 "solver": "highs",
             }
@@ -80,6 +85,7 @@ def test_invalid_node_granularity():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
                 },
                 "solver": "highs",
             }
@@ -105,6 +111,7 @@ def test_invalid_nodes_rezs():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
                 },
                 "solver": "highs",
             }
@@ -130,6 +137,7 @@ def test_not_a_directory_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
                 },
                 "solver": "highs",
             }
@@ -155,6 +163,7 @@ def test_invalid_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
                 },
                 "solver": "highs",
             }
@@ -180,6 +189,33 @@ def test_invalid_end_year():
                     "start_year": 2025,
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
+                    "representative_weeks": [0],
+                },
+                "solver": "highs",
+            }
+        )
+
+
+def test_invalid_representative_weeks():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "network": {
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    }
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2025,
+                    "reference_year_cycle": [2018],
+                    "representative_weeks": 0,
                 },
                 "solver": "highs",
             }
