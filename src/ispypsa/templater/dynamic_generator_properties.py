@@ -51,6 +51,7 @@ def template_generator_dynamic_properties(
         "seasonal_ratings": seasonal_ratings,
         "closure_years": closure_years,
         "build_costs": build_costs,
+        "new_entrant_build_costs": build_costs,
     }
 
 
@@ -258,17 +259,22 @@ def _template_new_entrant_build_costs(
             f"build_costs_{_snakecase_string(gencost_scenario_desc)}.csv",
         )
     )
-    build_costs_scenario = _convert_financial_year_columns_to_float(
-        build_costs_scenario
+    build_costs_phes = pd.read_csv(
+        Path(
+            parsed_workbook_path,
+            f"build_costs_pumped_hydro.csv",
+        )
     )
-    build_costs_scenario = build_costs_scenario.drop(columns=["Source"])
+    build_costs = pd.concat([build_costs_scenario, build_costs_phes], axis=0)
+    build_costs = _convert_financial_year_columns_to_float(build_costs)
+    build_costs = build_costs.drop(columns=["Source"])
     # convert data in $/kW to $/MW
-    build_costs_scenario.columns = _add_units_to_financial_year_columns(
-        build_costs_scenario.columns, "$/MW"
+    build_costs.columns = _add_units_to_financial_year_columns(
+        build_costs.columns, "$/MW"
     )
-    build_costs_scenario = build_costs_scenario.set_index("technology")
-    build_costs_scenario *= 1000.0
-    return build_costs_scenario
+    build_costs = build_costs.set_index("technology")
+    build_costs *= 1000.0
+    return build_costs
 
 
 def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
