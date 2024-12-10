@@ -16,12 +16,31 @@ class NetworkConfig(BaseModel):
     nodes: NodesConfig
 
 
-class TraceConfig(BaseModel):
+class TemporalConfig(BaseModel):
+    operational_temporal_resolution_min: int
     path_to_parsed_traces: str
     year_type: Literal["fy", "calendar"]
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
+
+    @field_validator("operational_temporal_resolution_min")
+    @classmethod
+    def validate_temporal_resolution_min(cls, operational_temporal_resolution_min: int):
+        # TODO properly implement temporal aggregation so this first check can be removed.
+        if operational_temporal_resolution_min != 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must equal 30 min"
+            )
+        if operational_temporal_resolution_min < 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be greater than or equal to 30 min"
+            )
+        if (operational_temporal_resolution_min % 30) != 0:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be multiple of 30 min"
+            )
+        return operational_temporal_resolution_min
 
     @field_validator("path_to_parsed_traces")
     @classmethod
@@ -59,9 +78,8 @@ class TraceConfig(BaseModel):
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
-    operational_temporal_resolution_min: int
     network: NetworkConfig
-    traces: TraceConfig
+    temporal: TemporalConfig
     solver: Literal[
         "highs",
         "cbc",
@@ -75,21 +93,3 @@ class ModelConfig(BaseModel):
         "mindopt",
         "pips",
     ]
-
-    @field_validator("operational_temporal_resolution_min")
-    @classmethod
-    def validate_temporal_resolution_min(cls, operational_temporal_resolution_min: int):
-        # TODO properly implement temporal aggregation so this first check can be removed.
-        if operational_temporal_resolution_min != 30:
-            raise ValueError(
-                "config operational_temporal_resolution_min must equal 30 min"
-            )
-        if operational_temporal_resolution_min < 30:
-            raise ValueError(
-                "config operational_temporal_resolution_min must be greater than or equal to 30 min"
-            )
-        if (operational_temporal_resolution_min % 30) != 0:
-            raise ValueError(
-                "config operational_temporal_resolution_min must be multiple of 30 min"
-            )
-        return operational_temporal_resolution_min

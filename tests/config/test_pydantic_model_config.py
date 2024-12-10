@@ -17,14 +17,14 @@ def test_valid_config(scenario, regional_granularity, nodes_rezs, year_type):
         **{
             "ispypsa_run_name": "test",
             "scenario": scenario,
-            "operational_temporal_resolution_min": 30,
             "network": {
                 "nodes": {
                     "regional_granularity": regional_granularity,
                     "rezs": nodes_rezs,
                 }
             },
-            "traces": {
+            "temporal": {
+                "operational_temporal_resolution_min": 30,
                 "path_to_parsed_traces": "tests/test_traces",
                 "year_type": year_type,
                 "start_year": 2025,
@@ -42,14 +42,14 @@ def test_invalid_scenario():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "BAU",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
@@ -67,14 +67,14 @@ def test_invalid_node_granularity():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "wastelands",
                         "rezs": "discrete_nodes",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
@@ -92,14 +92,14 @@ def test_invalid_nodes_rezs():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "attached_to_regions",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
@@ -117,14 +117,14 @@ def test_not_a_directory_parsed_traces_path():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/wrong_traces",
                     "year_type": "fy",
                     "start_year": 2025,
@@ -142,14 +142,14 @@ def test_invalid_parsed_traces_path():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "ispypsa_runs",
                     "year_type": "fy",
                     "start_year": 2025,
@@ -167,14 +167,14 @@ def test_invalid_end_year():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
-                "operational_temporal_resolution_min": 30,
                 "network": {
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
                     }
                 },
-                "traces": {
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
                     "start_year": 2025,
