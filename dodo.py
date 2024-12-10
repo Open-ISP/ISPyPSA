@@ -42,7 +42,7 @@ from ispypsa.translator.generators import (
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
 from ispypsa.translator.snapshot import create_complete_snapshot_index
-
+from ispypsa.translator.temporal_filters import filter_snapshot
 
 root_folder = Path("ispypsa_runs")
 
@@ -144,12 +144,14 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 ) -> None:
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
-    pypsa_inputs["snapshot"] = create_complete_snapshot_index(
+    snapshot = create_complete_snapshot_index(
+
         start_year=config.temporal.start_year,
         end_year=config.temporal.end_year,
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
         year_type=config.temporal.year_type,
     )
+    pypsa_inputs["snapshot"] = filter_snapshot(config=config, snapshot=snapshot)
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
     )
