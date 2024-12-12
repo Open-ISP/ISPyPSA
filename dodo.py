@@ -29,8 +29,8 @@ from ispypsa.templater.nodes import (
 from ispypsa.templater.renewable_energy_zones import (
     template_renewable_energy_zones,
 )
-from ispypsa.templater.static_generator_properties import (
-    _template_ecaa_generators_static_properties,
+from ispypsa.templater.static_ecaa_generator_properties import (
+    template_ecaa_generators_static_properties,
 )
 from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
@@ -103,7 +103,7 @@ def create_ispypsa_inputs_from_config(
     flow_path_template = template_flow_paths(
         workbook_cache_location, config.network.nodes.regional_granularity
     )
-    ecaa_generators_template = _template_ecaa_generators_static_properties(
+    ecaa_generators_template = template_ecaa_generators_static_properties(
         workbook_cache_location
     )
     dynamic_generator_property_templates = template_generator_dynamic_properties(

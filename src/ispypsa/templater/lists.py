@@ -5,7 +5,9 @@ _ECAA_GENERATOR_TYPES = [
     "additional_projects",
 ]
 
-_ALL_GENERATOR_TYPES = _ECAA_GENERATOR_TYPES + ["new_entrants"]
+_NEW_GENERATOR_TYPES = ["new_entrants"]
+
+_ALL_GENERATOR_TYPES = _ECAA_GENERATOR_TYPES + _NEW_GENERATOR_TYPES
 
 _ALL_GENERATOR_STORAGE_TYPES = _ALL_GENERATOR_TYPES + [
     "existing_committed_and_anticipated_batteries"
