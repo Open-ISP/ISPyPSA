@@ -1,13 +1,13 @@
 from pathlib import Path
 
 from ispypsa.templater.mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
-from ispypsa.templater.static_generator_properties import (
-    _template_ecaa_generators_static_properties,
+from ispypsa.templater.static_ecaa_generator_properties import (
+    template_ecaa_generators_static_properties,
 )
 
 
 def test_static_ecaa_generator_templater(workbook_table_cache_test_path: Path):
-    df = _template_ecaa_generators_static_properties(workbook_table_cache_test_path)
+    df = template_ecaa_generators_static_properties(workbook_table_cache_test_path)
     for static_property_col in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.keys():
         if (
             "new_col_name"
