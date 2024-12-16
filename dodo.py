@@ -41,7 +41,7 @@ from ispypsa.translator.generators import (
     _translate_generator_timeseries,
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
-from ispypsa.translator.snapshot import create_snapshot_index
+from ispypsa.translator.snapshot import create_complete_snapshot_index
 
 root_folder = Path("ispypsa_runs")
 
@@ -143,7 +143,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 ) -> None:
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
-    pypsa_inputs["snapshot"] = create_snapshot_index(
+    pypsa_inputs["snapshot"] = create_complete_snapshot_index(
         start_year=config.temporal.start_year,
         end_year=config.temporal.end_year,
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
