@@ -2,12 +2,12 @@ from datetime import datetime
 
 import pytest
 
-from ispypsa.translator.snapshot import create_snapshot_index
+from ispypsa.translator.snapshot import create_complete_snapshot_index
 from ispypsa.translator.temporal_filters import filter_snapshot_for_representative_weeks
 
 
 def test_create_representative_weeks_filter_one_week_start_of_fy():
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=2025,
         end_year=2025,
         operational_temporal_resolution_min=30,
@@ -28,7 +28,7 @@ def test_create_representative_weeks_filter_one_week_start_of_fy():
 
 
 def test_create_representative_weeks_filter_one_week_start_of_calendar_year():
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=2024,
         end_year=2024,
         operational_temporal_resolution_min=30,
@@ -49,7 +49,7 @@ def test_create_representative_weeks_filter_one_week_start_of_calendar_year():
 
 
 def test_create_representative_weeks_filter_two_weeks_three_year_snapshot():
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=2025,
         end_year=2027,
         operational_temporal_resolution_min=30,
@@ -70,7 +70,7 @@ def test_create_representative_weeks_filter_two_weeks_three_year_snapshot():
 
 
 def test_create_representative_weeks_filter_two_weeks_of_calendar_year_three_year_snapshot():
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=2024,
         end_year=2026,
         operational_temporal_resolution_min=30,
@@ -91,7 +91,7 @@ def test_create_representative_weeks_filter_two_weeks_of_calendar_year_three_yea
 
 
 def test_create_representative_weeks_filter_fail_with_out_of_range_week_number():
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=2024,
         end_year=2026,
         operational_temporal_resolution_min=30,
