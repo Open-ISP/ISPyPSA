@@ -144,14 +144,14 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 ) -> None:
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
-    snapshot = create_complete_snapshot_index(
+    complete_snapshot = create_complete_snapshot_index(
         start_year=config.temporal.start_year,
         end_year=config.temporal.end_year,
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
         year_type=config.temporal.year_type,
     )
     pypsa_inputs["snapshot"] = filter_snapshot(
-        config=config.temporal, snapshot=snapshot
+        config=config.temporal, complete_snapshot=complete_snapshot
     )
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity

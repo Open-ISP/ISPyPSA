@@ -5,7 +5,7 @@ import pandas as pd
 from ispypsa.config.validators import TemporalConfig
 
 
-def apply_snapshot_filter(time_series_data, snapshot):
+def time_series_filter(time_series_data, snapshot):
     """Filters a timeseries pandas DataFrame based using the datetime values in
      the snapshot index.
 
@@ -14,7 +14,7 @@ def apply_snapshot_filter(time_series_data, snapshot):
     >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='h')
     >>> time_series_data = pd.DataFrame({'Datetime': datetime_index, 'Value': range(len(datetime_index))})
     >>> snapshot = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
-    >>> apply_snapshot_filter(time_series_data, snapshot)
+    >>> time_series_filter(time_series_data, snapshot)
                   Datetime  Value
     0  2020-01-01 00:00:00      0
     12 2020-01-01 12:00:00     12
