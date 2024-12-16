@@ -51,7 +51,6 @@ def _add_ecaa_generator_to_network(
         trace_data = None
 
     if trace_data is not None:
-        trace_data["Datetime"] = trace_data["Datetime"].astype("datetime64[ns]")
         generator_definition["p_max_pu"] = trace_data.set_index("Datetime")["Value"]
 
     network.add(**generator_definition)

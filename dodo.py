@@ -41,6 +41,7 @@ from ispypsa.translator.generators import (
     _translate_generator_timeseries,
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
+from ispypsa.translator.snapshot import create_complete_snapshot_index
 
 root_folder = Path("ispypsa_runs")
 
@@ -55,7 +56,7 @@ run_folder = Path(root_folder, config.ispypsa_run_name)
 _PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
 _ISPYPSA_INPUT_TABLES_DIRECTORY = Path(run_folder, "ispypsa_inputs", "tables")
 _PYPSA_FRIENDLY_DIRECTORY = Path(run_folder, "pypsa_friendly")
-_PARSED_TRACE_DIRECTORY = Path(config.traces.path_to_parsed_traces)
+_PARSED_TRACE_DIRECTORY = Path(config.temporal.path_to_parsed_traces)
 _PYPSA_OUTPUTS_DIRECTORY = Path(run_folder, "outputs")
 
 configure_logging()
@@ -142,6 +143,12 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 ) -> None:
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
+    pypsa_inputs["snapshot"] = create_complete_snapshot_index(
+        start_year=config.temporal.start_year,
+        end_year=config.temporal.end_year,
+        operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
+        year_type=config.temporal.year_type,
+    )
     pypsa_inputs["generators"] = _translate_ecaa_generators(
         ispypsa_inputs_location, config.network.nodes.regional_granularity
     )
@@ -154,9 +161,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
     reference_year_mapping = construct_reference_year_mapping(
-        start_year=config.traces.start_year,
-        end_year=config.traces.end_year,
-        reference_years=config.traces.reference_year_cycle,
+        start_year=config.temporal.start_year,
+        end_year=config.temporal.end_year,
+        reference_years=config.temporal.reference_year_cycle,
     )
     _translate_generator_timeseries(
         ispypsa_inputs_location,
@@ -164,7 +171,8 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         pypsa_inputs_location,
         generator_type="solar",
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
+        snapshot=pypsa_inputs["snapshot"],
     )
     _translate_generator_timeseries(
         ispypsa_inputs_location,
@@ -172,7 +180,8 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         pypsa_inputs_location,
         generator_type="wind",
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
+        snapshot=pypsa_inputs["snapshot"],
     )
     _translate_buses_demand_timeseries(
         ispypsa_inputs_location,
@@ -181,7 +190,8 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         scenario=config.scenario,
         regional_granularity=config.network.nodes.regional_granularity,
         reference_year_mapping=reference_year_mapping,
-        year_type=config.traces.year_type,
+        year_type=config.temporal.year_type,
+        snapshot=pypsa_inputs["snapshot"],
     )
 
 
@@ -189,12 +199,7 @@ def create_and_run_pypsa_model(
     config: ModelConfig, pypsa_inputs_location: Path, pypsa_outputs_location: Path
 ) -> None:
     create_or_clean_task_output_folder(pypsa_outputs_location)
-    network = initialise_network(
-        config.traces.start_year,
-        config.traces.end_year,
-        config.traces.year_type,
-        config.operational_temporal_resolution_min,
-    )
+    network = initialise_network(pypsa_inputs_location)
     add_carriers_to_network(network, pypsa_inputs_location)
     add_buses_to_network(network, pypsa_inputs_location)
     add_lines_to_network(network, pypsa_inputs_location)
@@ -269,7 +274,12 @@ def task_create_pypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
         ],
-        "targets": [Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv")],
+        "targets": [
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+        ],
     }
 
 
@@ -282,6 +292,7 @@ def task_create_and_run_pypsa_model():
             )
         ],
         "file_dep": [
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
