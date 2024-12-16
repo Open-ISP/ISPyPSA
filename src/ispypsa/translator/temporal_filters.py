@@ -11,7 +11,7 @@ def apply_snapshot_filter(time_series_data, snapshot):
 
     Examples:
 
-    >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='H')
+    >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='h')
     >>> time_series_data = pd.DataFrame({'Datetime': datetime_index, 'Value': range(len(datetime_index))})
     >>> snapshot = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
     >>> apply_snapshot_filter(time_series_data, snapshot)
@@ -57,7 +57,7 @@ def filter_snapshot(config: ModelConfig, snapshot: pd.DataFrame):
     ...     year_type='calendar'
     ... ))
 
-    >>> snapshot = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='H'))
+    >>> snapshot = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='h'))
 
     >>> snapshot = filter_snapshot(config, snapshot)
 
@@ -99,7 +99,7 @@ def filter_snapshot_for_representative_weeks(
 
     Examples:
     >>> # Filter for first and last full weeks of each calendar year from 2020-2022
-    >>> df = pd.DataFrame(index=pd.date_range('2020-01-01', '2022-12-31', freq='H'))
+    >>> df = pd.DataFrame(index=pd.date_range('2020-01-01', '2022-12-31', freq='h'))
     >>> filter_snapshot_for_representative_weeks(
     ...     representative_weeks=[0],
     ...     snapshot=df,
@@ -112,7 +112,7 @@ def filter_snapshot_for_representative_weeks(
     Index: [2020-01-06 01:00:00, 2020-01-06 02:00:00, 2020-01-06 03:00:00]
 
     >>> # Filter for weeks 1, 26 of financial years 2021-2022 (July 2020 - June 2022)
-    >>> df = pd.DataFrame(index=pd.date_range('2020-07-01', '2022-06-30', freq='H'))
+    >>> df = pd.DataFrame(index=pd.date_range('2020-07-01', '2022-06-30', freq='h'))
     >>> filter_snapshot_for_representative_weeks(
     ...     representative_weeks=[1],
     ...     snapshot=df,

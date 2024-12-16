@@ -119,11 +119,7 @@ def test_snapshot_creation(
     expected_last_datetime: datetime,
     expected_length: int,
 ):
-<<<<<<< HEAD
     snapshot = create_complete_snapshot_index(
-=======
-    snapshot = create_snapshot_index(
->>>>>>> 1e391d2 (add tests for snapshot creation and adding to network)
         start_year=start_year,
         end_year=end_year,
         year_type=year_type,
