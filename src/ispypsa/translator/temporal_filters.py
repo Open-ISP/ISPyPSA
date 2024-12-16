@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from ispypsa.config.validators import TemporalConfig
+from ispypsa.translator.helpers import get_iteration_start_and_end_time
 
 
-def time_series_filter(time_series_data, snapshot):
+def time_series_filter(time_series_data: pd.DataFrame, snapshot: pd.DataFrame):
     """Filters a timeseries pandas DataFrame based using the datetime values in
      the snapshot index.
 
@@ -21,6 +22,10 @@ def time_series_filter(time_series_data, snapshot):
     24 2020-01-02 00:00:00     24
     36 2020-01-02 12:00:00     36
     48 2020-01-03 00:00:00     48
+
+    Args:
+        time_series_data: pd.DataFrame with time series column called 'Datetime'
+        snapshot: pd.DataFrame with datetime index
 
     """
     return time_series_data[time_series_data["Datetime"].isin(snapshot.index)]
@@ -137,20 +142,15 @@ def filter_snapshot_for_representative_weeks(
     Raises: ValueError if the end of week falls outside after the year end i.e.
         for all weeks 53 or greater and for some years the week 52.
     """
-    if year_type == "fy":
-        start_year = start_year - 1
-        end_year = end_year
-        month = 7
-    else:
-        start_year = start_year
-        end_year = end_year + 1
-        month = 1
+    start_year, end_year, month = get_iteration_start_and_end_time(
+        year_type, start_year, end_year
+    )
 
     snapshot = snapshot.index.to_series()
 
     filtered_snapshot = []
 
-    for year in range(start_year, end_year + 1):
+    for year in range(start_year, end_year):
         start_of_year_date_time = datetime(
             year=year, month=month, day=1, hour=0, minute=0
         )
