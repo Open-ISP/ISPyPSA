@@ -33,7 +33,9 @@ def test_valid_config(
                 "start_year": 2025,
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
-                "representative_weeks": representative_weeks,
+                "aggregation": {
+                    "representative_weeks": representative_weeks,
+                },
             },
             "solver": "highs",
         }
@@ -59,7 +61,9 @@ def test_invalid_scenario():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -85,7 +89,9 @@ def test_invalid_node_granularity():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -111,7 +117,9 @@ def test_invalid_nodes_rezs():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -137,7 +145,9 @@ def test_not_a_directory_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -163,7 +173,9 @@ def test_invalid_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -189,7 +201,9 @@ def test_invalid_end_year():
                     "start_year": 2025,
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": [0],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
                 },
                 "solver": "highs",
             }
@@ -215,7 +229,9 @@ def test_invalid_representative_weeks():
                     "start_year": 2025,
                     "end_year": 2025,
                     "reference_year_cycle": [2018],
-                    "representative_weeks": 0,
+                    "aggregation": {
+                        "representative_weeks": 0,
+                    },
                 },
                 "solver": "highs",
             }

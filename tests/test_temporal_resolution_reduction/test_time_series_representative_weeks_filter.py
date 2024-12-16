@@ -14,7 +14,7 @@ def test_create_representative_weeks_filter_one_week_start_of_fy():
         year_type="fy",
     )
     snapshot = filter_snapshot_for_representative_weeks(
-        representative_weeks=[0],
+        representative_weeks=[1],
         snapshot=snapshot,
         start_year=2025,
         end_year=2025,
@@ -35,7 +35,7 @@ def test_create_representative_weeks_filter_one_week_start_of_calendar_year():
         year_type="calendar",
     )
     snapshot = filter_snapshot_for_representative_weeks(
-        representative_weeks=[0],
+        representative_weeks=[1],
         snapshot=snapshot,
         start_year=2024,
         end_year=2024,
@@ -56,7 +56,7 @@ def test_create_representative_weeks_filter_two_weeks_three_year_snapshot():
         year_type="fy",
     )
     snapshot = filter_snapshot_for_representative_weeks(
-        representative_weeks=[0, 2],
+        representative_weeks=[1, 3],
         snapshot=snapshot,
         start_year=2025,
         end_year=2027,
@@ -77,7 +77,7 @@ def test_create_representative_weeks_filter_two_weeks_of_calendar_year_three_yea
         year_type="calendar",
     )
     snapshot = filter_snapshot_for_representative_weeks(
-        representative_weeks=[0, 2],
+        representative_weeks=[1, 3],
         snapshot=snapshot,
         start_year=2024,
         end_year=2026,
@@ -99,7 +99,7 @@ def test_create_representative_weeks_filter_fail_with_out_of_range_week_number()
     )
     with pytest.raises(ValueError):
         filter_snapshot_for_representative_weeks(
-            representative_weeks=[0, 2, 51],
+            representative_weeks=[1, 3, 52],
             snapshot=snapshot,
             start_year=2024,
             end_year=2026,

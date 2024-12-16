@@ -16,6 +16,10 @@ class NetworkConfig(BaseModel):
     nodes: NodesConfig
 
 
+class TemporalAggregationConfig(BaseModel):
+    representative_weeks: list[int] | None
+
+
 class TemporalConfig(BaseModel):
     operational_temporal_resolution_min: int
     path_to_parsed_traces: str
@@ -23,7 +27,7 @@ class TemporalConfig(BaseModel):
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
-    representative_weeks: list[int] | None
+    aggregation: TemporalAggregationConfig
 
     @field_validator("operational_temporal_resolution_min")
     @classmethod

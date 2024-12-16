@@ -32,13 +32,14 @@ temporal:
   start_year: 2025
   end_year: 2025
   reference_year_cycle: [2018]
-  # Representative weeks to use instead of full yearly temporal representation.
-  # Options:
-  #   "None": Full yearly temporal representation is used.
-  #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
-  #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[0]" the model will only use the
-  #   first full week of each modelled year.
-  representative_weeks: [0, 13, 26, 39]
+  aggregation:
+    # Representative weeks to use instead of full yearly temporal representation.
+    # Options:
+    #   "None": Full yearly temporal representation is used.
+    #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+    #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+    #   first full week of each modelled year.
+    representative_weeks: [1, 12, 25, 38]
 # External solver to use
 # Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
 #   Free, and by default, installed with ISPyPSA:
