@@ -17,6 +17,7 @@ from ispypsa.model import (
     run,
 )
 from ispypsa.results import load_results, save_results
+from ispypsa.results.plotting import plot_map_of_energy_generation_by_carrier
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
@@ -41,7 +42,6 @@ from ispypsa.translator.generators import (
     _translate_generator_timeseries,
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
-from ispypsa.results.plotting import plot_map_of_energy_generation_by_carrier
 
 root_folder = Path("ispypsa_runs")
 
