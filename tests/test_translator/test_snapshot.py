@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from ispypsa.translator.snapshot import create_snapshot_index
+from ispypsa.translator.snapshot import create_complete_snapshot_index
 
 
 @pytest.mark.parametrize(
@@ -119,7 +119,7 @@ def test_snapshot_creation(
     expected_last_datetime: datetime,
     expected_length: int,
 ):
-    snapshot = create_snapshot_index(
+    snapshot = create_complete_snapshot_index(
         start_year=start_year,
         end_year=end_year,
         year_type=year_type,

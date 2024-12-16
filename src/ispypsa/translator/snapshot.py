@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 
 
-def create_snapshot_index(
+def create_complete_snapshot_index(
     start_year: int,
     end_year: int,
     operational_temporal_resolution_min: int,
@@ -18,7 +18,7 @@ def create_snapshot_index(
         start_year: int specifying the start year
         end_year: int specifying the end year
         operational_temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
-        year_type: str specifying the year type 'fy' for financial year means that start_year and end_year refer to
+        year_type: str specifying the year type. 'fy' for financial year means that start_year and end_year refer to
             the financial year ending in the given year, and calendar means start_year and end_year refer to
             standard calendar years.
 
