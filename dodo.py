@@ -145,7 +145,6 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     create_or_clean_task_output_folder(pypsa_inputs_location)
     pypsa_inputs = {}
     snapshot = create_complete_snapshot_index(
-
         start_year=config.temporal.start_year,
         end_year=config.temporal.end_year,
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,

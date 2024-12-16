@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 from ispypsa.model.initialise import initialise_network
 from ispypsa.translator.snapshot import create_complete_snapshot_index
 from ispypsa.translator.time_series_checker import check_time_series
