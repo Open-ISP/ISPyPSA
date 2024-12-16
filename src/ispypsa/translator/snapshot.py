@@ -2,6 +2,8 @@ from datetime import datetime
 
 import pandas as pd
 
+from ispypsa.translator.helpers import get_iteration_start_and_end_time
+
 
 def create_complete_snapshot_index(
     start_year: int,
@@ -25,14 +27,9 @@ def create_complete_snapshot_index(
     Returns:
         pd.DataFrame
     """
-    if year_type == "fy":
-        start_year = start_year - 1
-        end_year = end_year
-        month = 7
-    else:
-        start_year = start_year
-        end_year = end_year + 1
-        month = 1
+    start_year, end_year, month = get_iteration_start_and_end_time(
+        year_type, start_year, end_year
+    )
 
     if operational_temporal_resolution_min < 60:
         hour = 0
