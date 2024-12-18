@@ -148,6 +148,7 @@ def _template_liquid_fuel_prices(
     liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
     liquid_fuel_prices_scenario = liquid_fuel_prices.loc[scenario, :]
     liquid_fuel_prices_scenario.index.set_names("FY", inplace=True)
+    liquid_fuel_prices_scenario.name = "fuel_price"
     return liquid_fuel_prices_scenario
 
 
