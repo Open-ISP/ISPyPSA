@@ -31,6 +31,7 @@ def template_generator_dynamic_properties(
     full_outage_forecasts = _template_full_outage_forecasts(parsed_workbook_path)
     partial_outage_forecasts = _template_partial_outage_forecasts(parsed_workbook_path)
     seasonal_ratings = _template_seasonal_ratings(parsed_workbook_path)
+    closure_years = _template_closure_years(parsed_workbook_path)
     return {
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
@@ -38,6 +39,7 @@ def template_generator_dynamic_properties(
         "full_outage_forecasts": full_outage_forecasts,
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
+        "closure_years": closure_years,
     }
 
 
@@ -200,6 +202,19 @@ def _template_partial_outage_forecasts(
         partial_outages_forecast.drop(index="All Coal Average")
     )
     return partial_outages_forecast
+
+
+def _template_closure_years(parsed_workbook_path: Path | str) -> pd.DataFrame:
+    closure_years = pd.read_csv(
+        Path(parsed_workbook_path, "expected_closure_years.csv")
+    )
+    closure_years.columns = [_snakecase_string(col) for col in closure_years.columns]
+    closure_years = closure_years.rename(columns={"generator_name": "generator"})
+    closure_years = closure_years.loc[
+        :, ["generator", "duid", "expected_closure_year_calendar_year"]
+    ]
+    closure_years = closure_years.set_index("generator")
+    return closure_years
 
 
 def _template_seasonal_ratings(
