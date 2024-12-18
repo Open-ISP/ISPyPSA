@@ -256,6 +256,7 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "full_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "seasonal_ratings.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "closure_years.csv"),
         ],
     }
 
