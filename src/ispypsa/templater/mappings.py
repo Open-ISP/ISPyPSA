@@ -146,8 +146,25 @@ corresponding data CSV and lookup information that can be used to retrieve value
 """
 
 _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
+    "summer_peak_rating_%": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Summer Peak (% of nameplate)",
+    ),
+    "summer_rating_mw": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Summer Typical (% of nameplate)",
+        new_col_name="summer_typical_rating_%",
+    ),
+    "winter_rating_mw": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Winter (% of nameplate)",
+        new_col_name="winter_rating_%",
+    ),
     "maximum_capacity_mw": dict(
-        csv=[f"maximum_capacity_{gen_type}" for gen_type in _NEW_GENERATOR_TYPES],
+        csv="maximum_capacity_new_entrants",
         csv_lookup="Generator type",
         csv_value="Total plant size (MW)",
     ),
@@ -156,20 +173,23 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         csv_lookup="Generator type",
         csv_value="Proportion of time out (%)",
     ),
-    # "minimum_load_mw": dict(
-    #     csv="coal_minimum_stable_level",
-    #     csv_lookup="Generating unit",
-    #     csv_value="Minimum Stable Level (MW)",
-    # ),
     "fom_$/kw/annum": dict(
         csv="fixed_opex_new_entrants",
         csv_lookup="Generator",
-        csv_value="Fixed OPEX ($/kW sent out/year)",
+        csv_value="Fixed OPEX ($/kW sent out/year)_NSW Low",
+        alternative_values=["Fixed OPEX ($/kW sent out/year)_TAS Medium"],
+        new_col_name="fom_$/kw/annum_base_cost",
     ),
     "vom_$/mwh_sent_out": dict(
         csv="variable_opex_new_entrants",
         csv_lookup="Generator",
-        csv_value="Variable OPEX ($/MWh sent out)",
+        csv_value="Variable OPEX ($/MWh sent out)_NSW Low",
+        new_col_name="vom_$/mwh_sent_out_base_cost",
+    ),
+    "om_locational_cost_factor_%": dict(
+        csv="locational_cost_factors",
+        csv_lookup="Cost zones",
+        csv_value="O&M costs 3",
     ),
     "heat_rate": dict(
         csv="heat_rates_new_entrants",
@@ -178,7 +198,7 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         new_col_name="heat_rate_gj/mwh",
     ),
     "mlf": dict(
-        csv=[f"marginal_loss_factors_{gen_type}" for gen_type in _NEW_GENERATOR_TYPES],
+        csv="marginal_loss_factors_new_entrants",
         csv_lookup="Generator",
         csv_value="MLF",
     ),
@@ -191,19 +211,26 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         csv="outages_new_entrants",
         csv_lookup="Fuel type",
         csv_value="Partial Outage Derating Factor (%)",
-        generator_status="New Entrant",
     ),
     "mean_time_to_repair_full_outage": dict(
         csv="outages_new_entrants",
         csv_lookup="Fuel type",
         csv_value="Mean time to repair (hrs)_Full outage",
-        generator_status="New Entrant",
     ),
     "mean_time_to_repair_partial_outage": dict(
         csv="outages_new_entrants",
         csv_lookup="Fuel type",
         csv_value="Mean time to repair (hrs)_Partial outage",
-        generator_status="New Entrant",
+    ),
+    "lifetime": dict(
+        csv="lead_time_and_project_life",
+        csv_lookup="Technology",
+        csv_value="Technical life (years) 6",
+    ),
+    "total_lead_time": dict(
+        csv="lead_time_and_project_life",
+        csv_lookup="Technology",
+        csv_value="Total lead time (years)",
     ),
 }
 """
@@ -218,6 +245,6 @@ lookup information that can be used to retrieve values.
         list in the order specified.
     `csv_value`: Column in the CSV that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
-        table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
+        table
     `new_col_name`: The name that will be used to rename the column in the summary table
 """

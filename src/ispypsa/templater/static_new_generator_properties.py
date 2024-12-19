@@ -2,7 +2,6 @@ import logging
 import re
 from pathlib import Path
 
-import ipdb  ### delete this after testing and finalising this script!
 import pandas as pd
 
 from .helpers import (
@@ -44,12 +43,6 @@ def template_new_generators_static_properties(
         drop=True
     )
     cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
-    # drop any energy storage
-    # NOTE should this inclue solar thermal (new entrants)?
-    cleaned_new_generator_summaries = cleaned_new_generator_summaries.loc[
-        ~cleaned_new_generator_summaries["technology_type"].str.contains("Battery"),
-        :,
-    ].reset_index(drop=True)
     merged_cleaned_new_generator_summaries = (
         _merge_and_set_new_generators_static_properties(
             cleaned_new_generator_summaries, parsed_workbook_path
@@ -64,7 +57,15 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     1. Converts column names to snakecase
     2. Adds "_id" to the end of region/sub-region ID columns
     3. Removes redundant outage columns
-    4. Adds partial outage derating factor column
+    4. Enforces consistent formatting of "storage" str instances
+    4. Adds the following columns with appropriate mappings:
+            - `partial_outage_derating_factor_%`
+            - `maximum_capacity_mw`
+            - `lifetime`
+            - `summer_peak_rating_%`
+            - `om_locational_cost_factor_%`
+            - `technology_specific_lcf_%`
+            - `minimum_stable_level_%`
 
     Args:
         df: Generator summary `pd.DataFrame`
@@ -91,11 +92,22 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
+    # enforces capitalisation structure for instances of str "storage" in generator col
+    df["generator"] = df["generator"].replace(
+        [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
+    )
     df = _fix_forced_outage_columns(df)
     # adds a partial derating factor column that takes partial outage rate mappings
     df["partial_outage_derating_factor_%"] = df[
         "forced_outage_rate_partial_outage_%_of_time"
     ]
+    # adds extra necessary columns taking appropriate mapping values
+    df["maximum_capacity_mw"] = df["generator"]
+    df["lifetime"] = df["generator"]
+    df["minimum_stable_level_%"] = df["generator"]
+    df["summer_peak_rating_%"] = df["summer_rating_mw"]
+    df["om_locational_cost_factor_%"] = df["fom_$/kw/annum"]
+    df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
     return df
 
 
@@ -117,11 +129,6 @@ def _merge_and_set_new_generators_static_properties(
     Returns:
         `pd.DataFrame`: Existing generator template with static properties filled in
     """
-    # adds a max capacity column that takes the existing generator name mapping
-    df["maximum_capacity_mw"] = df["generator"]
-    df["generator_build_cost_zone"] = df["generator"].str.cat(
-        df["regional_build_cost_zone"], sep=": "
-    )
     # merge in static properties using the static property mapping
     merged_static_cols = []
     for col, csv_attrs in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
@@ -135,10 +142,13 @@ def _merge_and_set_new_generators_static_properties(
             data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
         df, col = _merge_csv_data(df, col, data, csv_attrs)
         merged_static_cols.append(col)
-    df = _process_and_merge_new_gpg_min_stable_lvl(df, parsed_workbook_path)
+    df = _process_and_merge_new_gpg_min_stable_lvl(
+        df, parsed_workbook_path, "minimum_stable_level_%"
+    )
+    df = _calculate_and_merge_tech_specific_lcfs(
+        df, parsed_workbook_path, "technology_specific_lcf_%"
+    )
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
-    df = _zero_renewable_minimum_load(df, "minimum_load_mw")
-    df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
     df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
@@ -156,10 +166,13 @@ def _merge_csv_data(
     in the CSV data using the provided attributes in
     `_NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     """
-    # handle alternative table structures for locational OPEX values
-    if re.search(r"^[f,v]om_\$", col):
-        df[col] = df["generator_build_cost_zone"]
-        csv_data = _process_locational_opex_table(csv_data, csv_attrs)
+    if re.search(r"[vf]om", col):
+        # change mapping from regional cost zone to generator
+        df[col] = df["generator"]
+        # fill BOTN - Cethana row with pd.NA where currently str:
+        csv_data[csv_attrs["csv_value"]] = csv_data[csv_attrs["csv_value"]].apply(
+            lambda x: pd.NA if re.search(r"BOTN", str(x)) else float(x)
+        )
     # handle alternative lookup and value columns
     for alt_attr in ("lookup", "value"):
         if f"alternative_{alt_attr}s" in csv_attrs.keys():
@@ -181,107 +194,111 @@ def _merge_csv_data(
         not_match="existing",
         threshold=90,
     )
-    if "generator_status" in csv_attrs.keys():
-        row_filter = df["status"] == csv_attrs["generator_status"]
-        df.loc[row_filter, col] = df.loc[row_filter, col].replace(replacement_dict)
-    else:
-        df[col] = df[col].replace(replacement_dict)
+    df[col] = df[col].replace(replacement_dict)
     if "new_col_name" in csv_attrs.keys():
         df = df.rename(columns={col: csv_attrs["new_col_name"]})
         col = csv_attrs["new_col_name"]
     return df, col
 
 
-def _process_locational_opex_table(
-    opex_table_data: pd.DataFrame, csv_attrs: dict
+def _calculate_and_merge_tech_specific_lcfs(
+    df: pd.DataFrame, parsed_workbook_path: Path | str, tech_lcf_col: str
 ) -> pd.DataFrame:
+    """Calculates the technology-specific locational cost factor as a percentage
+    for each new entrant generator and merges into summary mapping table.
     """
-    Restructure workbook table for new entrant fixed and variable OPEX to work with mapping system.
-    """
-    ipdb.set_trace()
-    # sets column names to the regional build cost zone
-    opex_table_data = opex_table_data.rename(
-        columns={col: col.split("_")[-1] for col in opex_table_data.columns}
+    # loads in the three tables needed
+    breakdown_ratios = pd.read_csv(
+        Path(parsed_workbook_path, "technology_cost_breakdown_ratios.csv")
     )
-    # reshapes the dataframe to long form with columns containing generator type, regional build cost zone, and corresponding opex value.
-    opex_table_data_reformatted = opex_table_data.melt(
-        id_vars=[csv_attrs["csv_lookup"]],
-        var_name="Regional build cost zone",
-        value_name=csv_attrs["csv_value"],
+    technology_specific_lcfs = pd.read_csv(
+        Path(parsed_workbook_path, "technology_specific_lcfs.csv")
     )
-    # create a column named by the lookup_value, containing the generator:cost_region mapping
-    opex_table_data_reformatted[csv_attrs["csv_lookup"]] = opex_table_data_reformatted[
-        csv_attrs["csv_lookup"]
-    ].str.cat(opex_table_data_reformatted["Regional build cost zone"], sep=": ")
-    return opex_table_data_reformatted
+    # load all cols unless the str "O&M" is in col name
+    locational_cost_factors = pd.read_csv(
+        Path(parsed_workbook_path, "locational_cost_factors.csv"),
+        index_col=0,
+        usecols=lambda x: "O&M" not in x,
+    )
+    technology_specific_lcfs = technology_specific_lcfs.melt(
+        id_vars="Cost zones / Sub-region",
+    ).dropna(axis=0, how="any")
+    technology_specific_lcfs.columns = ["Location", "Technology", "LCF"]
+    # ensures generator names in LCF tables match those in the summary table
+    for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
+        df_to_match_gen_names["Technology"] = _fuzzy_match_names(
+            df_to_match_gen_names["Technology"],
+            df["generator"].unique(),
+            "calculating and merging in LCFs to static new entrant gen summary",
+            not_match="existing",
+            threshold=90,
+        )
+        df_to_match_gen_names.set_index("Technology", inplace=True)
+    # ensures that col names in tables to combine are the same
+    locational_cost_factors.columns = breakdown_ratios.columns
+    # loops over rows and use existing LCF for all pumped hydro gens, calculate for others
+    # values are all converted to a percentage as needed
+    for tech, row in technology_specific_lcfs.iterrows():
+        if re.search(r"^(Pump|BOTN)", tech):
+            calculated_or_given_lcf = row["LCF"] * 100
+        else:
+            calculated_or_given_lcf = breakdown_ratios.loc[tech, :].dot(
+                locational_cost_factors.loc[row["Location"], :]
+            )
+            calculated_or_given_lcf /= 100
+        df.loc[
+            ((df["generator"] == tech) & (df[tech_lcf_col] == row["Location"])),
+            tech_lcf_col,
+        ] = calculated_or_given_lcf
+    # fills rows with no LCF (some PHES REZs) with pd.NA
+    df[tech_lcf_col] = df[tech_lcf_col].apply(
+        lambda x: pd.NA if isinstance(x, str) else x
+    )
+    return df
 
 
 def _process_and_merge_new_gpg_min_stable_lvl(
-    df: pd.DataFrame, parsed_workbook_path: Path | str
+    df: pd.DataFrame, parsed_workbook_path: Path | str, min_level_col: str
 ) -> pd.DataFrame:
-    """Processes and merges in gas-fired generation minimum stable level data
+    """Processes and merges in gas-fired generation minimum stable level data (%)
 
-    Minimum stable level is given as a percentage of nameplate capacity.
+    Minimum stable level is given as a percentage of nameplate capacity, and set
+    to zero for renewable generators (wind, solar, hydro), storage, and OCGT.
     """
-    # adds a min stable level column that takes the existing generator name mapping
-    df["min_stable_level_%"] = df["generator"]
     new_gpg_min_stable_lvls = pd.read_csv(
         Path(parsed_workbook_path, "gpg_min_stable_level_new_entrants.csv")
     )
     new_gpg_min_stable_lvls = new_gpg_min_stable_lvls.set_index("Technology")
-    # manually mapps percentages to the new min stable level column
-    for gen, row in new_gpg_min_stable_lvls.iterrows():
-        df.loc[df["generator"] == gen, "min_stable_level_%"] = row[
+    # manually maps percentages to the new min stable level column
+    for tech, row in new_gpg_min_stable_lvls.iterrows():
+        df.loc[df["generator"] == tech, min_level_col] = row[
             "Min Stable Level (% of nameplate)"
         ]
+    df.loc[
+        _where_any_substring_appears(
+            df[min_level_col], ["solar", "wind", "hydro", "battery", "ocgt"]
+        ),
+        min_level_col,
+    ] = 0.0
+    # replace any remaining cells containing str (tech type) with pd.NA
+    df[min_level_col] = df[min_level_col].apply(
+        lambda x: pd.NA if isinstance(x, str) else x
+    )
     return df
 
 
 def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
     """
     Fill any empty heat rate values with the technology type, and then set
-    renewable energy (solar, wind, hydro) and battery storage heat rates to 0
+    renewable energy (solar, solar thermal,  wind, hydro) and battery storage
+    heat rates to 0.0
     """
-    # NOTE battery storage dropped before this function called - battery not
-    # actually included in this function
     df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(df[heat_rate_col], ["solar", "wind", "hydro"]),
-        heat_rate_col,
-    ] = 0.0
-    return df
-
-
-def _zero_renewable_minimum_load(
-    df: pd.DataFrame, minimum_load_col: str
-) -> pd.DataFrame:
-    """
-    Fill any empty minimum load values with the technology type, and then set values for
-    renewable energy (solar, wind, hydro) and battery storage minimum loads to 0
-    """
-    # NOTE battery storage dropped before this function called - battery not
-    # actually included in this function
-    df[minimum_load_col] = df[minimum_load_col].where(pd.notna, df["technology_type"])
-    df.loc[
-        _where_any_substring_appears(df[minimum_load_col], ["solar", "wind", "hydro"]),
-        minimum_load_col,
-    ] = 0.0
-    return df
-
-
-def _zero_ocgt_recip_minimum_load(
-    df: pd.DataFrame, minimum_load_col: str
-) -> pd.DataFrame:
-    """
-    Set values for OCGT and Reciprocating Engine minimum loads to 0
-    """
-    # NOTE "Reciprocating Engine" currently applies to "Hydrogen reciprocating
-    # engines" -> is this expected?
-    df.loc[
         _where_any_substring_appears(
-            df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
+            df[heat_rate_col], ["solar", "wind", "hydro", "battery"]
         ),
-        minimum_load_col,
+        heat_rate_col,
     ] = 0.0
     return df
 
@@ -291,20 +308,11 @@ def _zero_solar_wind_h2gt_partial_outage_derating_factor(
 ) -> pd.DataFrame:
     """
     Fill any empty partial outage derating factor values with the technology type, and
-    then set values for solar and wind to 0 (including solar thermal)
+    then set values for solar, wind and batteries to 0
     """
-    # NOTE currently this will include solar thermal and set to 0.
-    # Need to either: set derating factor for ST before this point or exclude?
     df[po_derating_col] = df[po_derating_col].where(pd.notna, df["technology_type"])
     df.loc[
-        _where_any_substring_appears(
-            df[po_derating_col], ["solar", "wind", "hydrogen-based gas turbine"]
-        ),
+        _where_any_substring_appears(df[po_derating_col], ["solar", "wind", "battery"]),
         po_derating_col,
     ] = 0.0
     return df
-
-
-template_new_generators_static_properties(
-    Path("ispypsa_runs") / Path("workbook_table_cache")
-)
