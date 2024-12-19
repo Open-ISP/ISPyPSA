@@ -32,6 +32,10 @@ _GENERATORS_REQUIRED_PROPERTY_TABLES = [
     "expected_closure_years",
     "coal_minimum_stable_level",
     "liquid_fuel_prices",
+    "locational_cost_factors",
+    "technology_cost_breakdown_ratios",
+    "lead_time_and_project_life",
+    "technology_specific_lcfs",
 ] + _GENERATOR_PROPERTY_TABLES
 
 REQUIRED_TABLES = (
