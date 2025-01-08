@@ -1032,8 +1032,8 @@ dev = [
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
     { name = "isp-trace-parser", specifier = ">=1.0.0" },
-    { name = "isp-workbook-parser", specifier = ">=2.4.1" },
-    { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
+    { name = "isp-workbook-parser", specifier = ">=2.4.0" },
+    { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.2" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pypsa", specifier = ">=0.31.1" },
