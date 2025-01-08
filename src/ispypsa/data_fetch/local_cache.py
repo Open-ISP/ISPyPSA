@@ -31,6 +31,7 @@ _NETWORK_REQUIRED_TABLES = [
     "renewable_energy_zones",
     "flow_path_transfer_capability",
     "interconnector_transfer_capability",
+    "initial_build_limits",
 ]
 
 _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES = [
@@ -60,15 +61,23 @@ REQUIRED_TABLES = (
 )
 
 
-def build_local_cache(cache_path: Path | str, workbook_path: Path | str) -> None:
+def build_local_cache(
+    cache_path: Path | str, workbook_path: Path | str, iasr_workbook_version: str
+) -> None:
     """Uses `isp-workbook-parser` to build a local cache of parsed workbook CSVs
 
     Args:
         cache_path: Path that should be created for the local cache
         workbook_path: Path to an ISP Assumptions Workbook that is supported by
             `isp-workbook-parser`
+        iasr_workbook_version: str specifying the version of the work being used.
     """
     workbook = Parser(Path(workbook_path))
+    if workbook.workbook_version != iasr_workbook_version:
+        raise ValueError(
+            "The IASR workbook provided does not match the version "
+            "specified in the config."
+        )
     tables_to_get = REQUIRED_TABLES
     workbook.save_tables(cache_path, tables=tables_to_get)
     return None

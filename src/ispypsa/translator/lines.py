@@ -18,4 +18,6 @@ def translate_flow_paths_to_lines(ispypsa_inputs_path: Path | str) -> pd.DataFra
     lines = lines.loc[:, _LINE_ATTRIBUTES.keys()]
     lines = lines.rename(columns=_LINE_ATTRIBUTES)
     lines = lines.set_index("name", drop=True)
+    lines["s_nom_extendable"] = False
+    lines["capital_cost"] = 0.0
     return lines

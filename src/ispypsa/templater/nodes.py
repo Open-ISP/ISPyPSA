@@ -11,7 +11,7 @@ from .helpers import (
     _snakecase_string,
 )
 from .mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
-from .renewable_energy_zones import template_renewable_energy_zones
+from .renewable_energy_zones import template_renewable_energy_zones_locations
 
 
 def template_nodes(
@@ -222,7 +222,7 @@ def _template_regional_node_table(
 
 
 def _make_rezs_nodes(parsed_workbook_path: Path | str) -> pd.DataFrame:
-    rezs = template_renewable_energy_zones(
+    rezs = template_renewable_energy_zones_locations(
         parsed_workbook_path, location_mapping_only=False
     )
     rezs["type"] = "rez"

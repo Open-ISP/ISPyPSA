@@ -49,3 +49,15 @@ def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> Non
     buses["name"].apply(
         lambda x: _add_bus_to_network(x, network, path_to_demand_traces)
     )
+
+
+def add_buses_for_custom_constraints(network: pypsa.Network) -> None:
+    """Adds a bus called bus_for_custom_constraint_gens for generators being used to model constraint violation to
+    the network.
+
+    Args:
+        network: The `pypsa.Network` object
+
+    Returns: None
+    """
+    network.add(class_name="Bus", name="bus_for_custom_constraint_gens")
