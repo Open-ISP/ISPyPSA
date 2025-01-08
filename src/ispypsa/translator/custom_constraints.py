@@ -76,10 +76,6 @@ def _translate_custom_constraints_generators(
 
     # The generator size is only used for additional transmission capacity so it
     # initial size is 0.0.
-    custom_constraints_additional_variables["p_nom"] = 0.0
-
-    custom_constraints_additional_variables["bus"] = "bus_for_custom_constraint_gens"
-
     custom_constraints_additional_variables["capital_cost"] = (
         custom_constraints_additional_variables[
             "capital_cost"
@@ -108,8 +104,7 @@ def _translate_custom_constraint_rhs(ispypsa_inputs_path: Path | str):
 
 def _translate_custom_constraint_lhs(ispypsa_inputs_path: Path | str):
     """Combines all tables specifying the lhs values of custom constraints into a single
-    pd.Dataframe. The term_type column is also converted to two columns specifying
-    the pypsa component and attribute types.
+    pd.Dataframe.
 
     Args:
         ispypsa_inputs_path: Path specifying where the files are located.
@@ -131,5 +126,4 @@ def _translate_custom_constraint_lhs(ispypsa_inputs_path: Path | str):
     custom_constraint_lhs_values = custom_constraint_lhs_values.drop(
         columns="term_type"
     )
-
     return custom_constraint_lhs_values
