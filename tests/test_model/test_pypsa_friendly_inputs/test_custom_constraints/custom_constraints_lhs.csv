@@ -1,0 +1,5 @@
+,constraint_name,component_type,variable_name,coefficient
+0,con_one,line_flow,line_one,1.0
+1,con_one,generator_output,Bayswater,1.0
+2,con_one,generator_capacity,con_one-EXPANSION,-1.0
+,,
