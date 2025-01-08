@@ -5,7 +5,7 @@ import pypsa
 
 
 def _add_bus_to_network(
-    bus_name: str, network: pypsa.Network, path_to_demand_traces: Path
+    bus_definition: dict, network: pypsa.Network, path_to_demand_traces: Path
 ) -> None:
     """
     Adds a Bus to the network and if a demand trace for the Bus exists, also adds the
@@ -19,8 +19,9 @@ def _add_bus_to_network(
 
     Returns: None
     """
-    network.add(class_name="Bus", name=bus_name)
-
+    bus_definition["class_name"] = "Bus"
+    network.add(**bus_definition)
+    bus_name = bus_definition["name"]
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
@@ -46,6 +47,7 @@ def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> Non
     """
     buses = pd.read_csv(path_pypsa_inputs / Path("buses.csv"))
     path_to_demand_traces = path_pypsa_inputs / Path("demand_traces")
-    buses["name"].apply(
-        lambda x: _add_bus_to_network(x, network, path_to_demand_traces)
+    buses.apply(
+        lambda row: _add_bus_to_network(row.to_dict(), network, path_to_demand_traces),
+        axis=1,
     )
