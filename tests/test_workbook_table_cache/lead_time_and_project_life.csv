@@ -1,0 +1,20 @@
+Technology,"Lead time for development (years)1, 2",Lead time (years),Construction time (years),Total lead time (years),Economic life (years) 5,Technical life (years) 6
+OCGT (small GT),2,0.75,1.25,4,25,40
+OCGT (large GT),2,1.0,1.1153846153846154,4,25,40
+CCGT,2,1.0,1.5,5,25,40
+CCGT with CCS,3,1.0,1.5,6,25,40
+Biomass,3,1.75,1.25,6,30,50
+Large scale Solar PV,0,1.0,0.5,2,30,30
+Solar Thermal (15hrs Storage),2,1.75,1.75,6,25,40
+Battery storage (1hr storage),0,1.0,0.8461538461538461,2,20,20
+Battery storage (2hrs storage),0,1.2,1.0,2,20,20
+Battery storage (4hrs storage),0,1.4,1.1538461538461537,3,20,20
+Battery Storage (8hrs storage),0,1.6,1.3076923076923077,3,20,20
+Wind,0,1.0,1.0,2,25,30
+Wind - offshore (fixed),4,2.0,3.0,9,25,30
+Wind - offshore (floating),4,2.0,3.0,9,25,30
+Pumped Hydro (8hrs storage),2,0.0,4.0,6,40,50
+Pumped Hydro (24hrs storage),2,0.0,4.0,6,40,50
+Pumped Hydro (48hrs storage),2,0.0,4.0,6,40,50
+BOTN - Cethana,2,0.0,4.0,6,40,50
+Hydrogen reciprocating engines,2,1.0,1.0,4,25,40
