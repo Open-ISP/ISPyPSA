@@ -97,14 +97,16 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
         [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
     )
     df = _fix_forced_outage_columns(df)
-    # adds a partial derating factor column that takes partial outage rate mappings
+
+    # adds extra necessary columns taking appropriate mapping values
+    # NOTE: this could be done more efficiently in future if needed, potentially
+    # adding a `new_mapping` field to relevant table map dicts?
     df["partial_outage_derating_factor_%"] = df[
         "forced_outage_rate_partial_outage_%_of_time"
     ]
-    # adds extra necessary columns taking appropriate mapping values
     df["maximum_capacity_mw"] = df["generator"]
     df["lifetime"] = df["generator"]
-    df["minimum_stable_level_%"] = df["generator"]
+    df["minimum_stable_level_%"] = df["technology_type"]
     df["summer_peak_rating_%"] = df["summer_rating_mw"]
     df["om_locational_cost_factor_%"] = df["fom_$/kw/annum"]
     df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
@@ -149,7 +151,7 @@ def _merge_and_set_new_generators_static_properties(
         df, parsed_workbook_path, "technology_specific_lcf_%"
     )
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
-    df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
+    df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
     # replace remaining string values in static property columns
@@ -214,7 +216,7 @@ def _calculate_and_merge_tech_specific_lcfs(
     technology_specific_lcfs = pd.read_csv(
         Path(parsed_workbook_path, "technology_specific_lcfs.csv")
     )
-    # load all cols unless the str "O&M" is in col name
+    # loads all cols unless the str "O&M" is in col name
     locational_cost_factors = pd.read_csv(
         Path(parsed_workbook_path, "locational_cost_factors.csv"),
         index_col=0,
@@ -236,7 +238,7 @@ def _calculate_and_merge_tech_specific_lcfs(
         df_to_match_gen_names.set_index("Technology", inplace=True)
     # ensures that col names in tables to combine are the same
     locational_cost_factors.columns = breakdown_ratios.columns
-    # loops over rows and use existing LCF for all pumped hydro gens, calculate for others
+    # loops over rows and use existing LCF for all pumped hydro gens, calculates for others
     # values are all converted to a percentage as needed
     for tech, row in technology_specific_lcfs.iterrows():
         if re.search(r"^(Pump|BOTN)", tech):
@@ -264,6 +266,9 @@ def _process_and_merge_new_gpg_min_stable_lvl(
 
     Minimum stable level is given as a percentage of nameplate capacity, and set
     to zero for renewable generators (wind, solar, hydro), storage, and OCGT.
+
+    NOTE: v6 IASR workbook does not specify a minimum stable level for hydrogen
+    reciprocating engines.
     """
     new_gpg_min_stable_lvls = pd.read_csv(
         Path(parsed_workbook_path, "gpg_min_stable_level_new_entrants.csv")
@@ -271,12 +276,13 @@ def _process_and_merge_new_gpg_min_stable_lvl(
     new_gpg_min_stable_lvls = new_gpg_min_stable_lvls.set_index("Technology")
     # manually maps percentages to the new min stable level column
     for tech, row in new_gpg_min_stable_lvls.iterrows():
-        df.loc[df["generator"] == tech, min_level_col] = row[
+        df.loc[df["technology_type"] == tech, min_level_col] = row[
             "Min Stable Level (% of nameplate)"
         ]
+    # fills renewable generators, storage and OCGT with 0.0
     df.loc[
         _where_any_substring_appears(
-            df[min_level_col], ["solar", "wind", "hydro", "battery", "ocgt"]
+            df[min_level_col], ["solar", "wind", "pumped hydro", "battery", "ocgt"]
         ),
         min_level_col,
     ] = 0.0
@@ -290,20 +296,21 @@ def _process_and_merge_new_gpg_min_stable_lvl(
 def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
     """
     Fill any empty heat rate values with the technology type, and then set
-    renewable energy (solar, solar thermal,  wind, hydro) and battery storage
-    heat rates to 0.0
+    renewable energy (solar, solar thermal, wind, hydro) and battery storage
+    heat rates to 0.0. Ensure "pumped hydro" used (not just "hydro") to avoid
+    including hydrogen reciprocating engines.
     """
     df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
     df.loc[
         _where_any_substring_appears(
-            df[heat_rate_col], ["solar", "wind", "hydro", "battery"]
+            df[heat_rate_col], ["solar", "wind", "pumped hydro", "battery"]
         ),
         heat_rate_col,
     ] = 0.0
     return df
 
 
-def _zero_solar_wind_h2gt_partial_outage_derating_factor(
+def _zero_solar_wind_battery_partial_outage_derating_factor(
     df: pd.DataFrame, po_derating_col: str
 ) -> pd.DataFrame:
     """
