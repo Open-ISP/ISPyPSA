@@ -173,19 +173,6 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         csv_lookup="Generator type",
         csv_value="Proportion of time out (%)",
     ),
-    "fom_$/kw/annum": dict(
-        csv="fixed_opex_new_entrants",
-        csv_lookup="Generator",
-        csv_value="Fixed OPEX ($/kW sent out/year)_NSW Low",
-        alternative_values=["Fixed OPEX ($/kW sent out/year)_TAS Medium"],
-        new_col_name="fom_$/kw/annum_base_cost",
-    ),
-    "vom_$/mwh_sent_out": dict(
-        csv="variable_opex_new_entrants",
-        csv_lookup="Generator",
-        csv_value="Variable OPEX ($/MWh sent out)_NSW Low",
-        new_col_name="vom_$/mwh_sent_out_base_cost",
-    ),
     "om_locational_cost_factor_%": dict(
         csv="locational_cost_factors",
         csv_lookup="Cost zones",
