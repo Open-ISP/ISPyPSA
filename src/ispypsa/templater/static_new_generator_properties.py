@@ -7,6 +7,7 @@ import pandas as pd
 
 from .helpers import (
     _fuzzy_match_names,
+    _one_to_one_priority_based_fuzzy_matching,
     _snakecase_string,
     _where_any_substring_appears,
 )
@@ -306,10 +307,11 @@ def _calculate_and_merge_tech_specific_lcfs(
         index_col=0,
         usecols=lambda x: "O&M" not in x,
     )
+    # reshape technology_specific_lcfs and name columns manually:
     technology_specific_lcfs = technology_specific_lcfs.melt(
-        id_vars="Cost zones / Sub-region",
+        id_vars="Cost zones / Sub-region", value_name="LCF", var_name="Technology"
     ).dropna(axis=0, how="any")
-    technology_specific_lcfs.columns = ["Location", "Technology", "LCF"]
+    technology_specific_lcfs.rename(columns={"Cost zones / Sub-region": "Location"})
     # ensures generator names in LCF tables match those in the summary table
     for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
         df_to_match_gen_names["Technology"] = _fuzzy_match_names(
@@ -320,8 +322,14 @@ def _calculate_and_merge_tech_specific_lcfs(
             threshold=90,
         )
         df_to_match_gen_names.set_index("Technology", inplace=True)
-    # ensures that col names in tables to combine are the same
-    locational_cost_factors.columns = breakdown_ratios.columns
+    # use fuzzy matching to ensure that col names in tables to combine match up:
+    fuzzy_column_renaming = _one_to_one_priority_based_fuzzy_matching(
+        set(locational_cost_factors.columns.to_list()),
+        set(breakdown_ratios.columns.to_list()),
+        not_match="existing",
+        threshold=90,
+    )
+    locational_cost_factors.rename(columns=fuzzy_column_renaming, inplace=True)
     # loops over rows and use existing LCF for all pumped hydro gens, calculates for others
     # values are all converted to a percentage as needed
     for tech, row in technology_specific_lcfs.iterrows():
