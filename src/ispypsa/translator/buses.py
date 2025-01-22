@@ -5,6 +5,8 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.translator.mappings import _BUS_ATTRIBUTES
+from ispypsa.translator.temporal_filters import time_series_filter
+from ispypsa.translator.time_series_checker import check_time_series
 
 
 def _translate_nodes_to_buses(ispypsa_inputs_path: Path | str) -> pd.DataFrame:
@@ -34,6 +36,7 @@ def _translate_buses_demand_timeseries(
     regional_granularity: str,
     reference_year_mapping: dict[int:int],
     year_type: Literal["fy", "calendar"],
+    snapshot: pd.DataFrame,
 ) -> None:
     """Gets trace data for operational demand by constructing a timeseries from the
     start to end year using the reference year cycle provided.
@@ -51,6 +54,7 @@ def _translate_buses_demand_timeseries(
         year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial year with start_year and
             end_year specifiying the financial year to return data for, using year ending nomenclature (2016 ->
             FY2015/2016). If 'calendar', then filtering is by calendar year.
+        snapshot: pd.DataFrame containing the expected time series values.
 
     Returns:
         None
@@ -106,6 +110,15 @@ def _translate_buses_demand_timeseries(
                 node_traces.append(trace)
         node_traces = pd.concat(node_traces)
         node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
+        # datetime in nanoseconds required by PyPSA
+        node_trace["Datetime"] = node_trace["Datetime"].astype("datetime64[ns]")
+        node_trace = time_series_filter(node_trace, snapshot)
+        check_time_series(
+            node_trace["Datetime"],
+            pd.Series(snapshot.index),
+            "demand data",
+            demand_node,
+        )
         node_trace.to_parquet(
             Path(output_trace_path, f"{demand_node}.parquet"), index=False
         )
