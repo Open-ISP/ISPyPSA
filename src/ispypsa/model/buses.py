@@ -24,8 +24,6 @@ def _add_bus_to_network(
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
-        # datetime in nanoseconds required by PyPSA
-        demand["Datetime"] = demand["Datetime"].astype("datetime64[ns]")
         demand = demand.set_index("Datetime")
         network.add(
             class_name="Load",

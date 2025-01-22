@@ -9,7 +9,6 @@ ispypsa_run_name: development
 #   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
 #   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
-operational_temporal_resolution_min: 30
 network:
   nodes:
     # The regional granularity of the nodes in the modelled network
@@ -24,7 +23,8 @@ network:
     #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
     #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
     rezs: discrete_nodes
-traces:
+temporal:
+  operational_temporal_resolution_min: 30
   # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
   # from the environment variable "PATH_TO_PARSED_TRACES"
   path_to_parsed_traces: ENV
@@ -32,6 +32,14 @@ traces:
   start_year: 2025
   end_year: 2025
   reference_year_cycle: [2018]
+  aggregation:
+    # Representative weeks to use instead of full yearly temporal representation.
+    # Options:
+    #   "None": Full yearly temporal representation is used.
+    #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+    #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+    #   first full week of each modelled year.
+    representative_weeks: [1, 12, 25, 38]
 # External solver to use
 # Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
 #   Free, and by default, installed with ISPyPSA:

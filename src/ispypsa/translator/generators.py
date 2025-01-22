@@ -5,6 +5,8 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
+from ispypsa.translator.temporal_filters import time_series_filter
+from ispypsa.translator.time_series_checker import check_time_series
 
 
 def _translate_ecaa_generators(
@@ -67,6 +69,7 @@ def _translate_generator_timeseries(
     generator_type: Literal["solar", "wind"],
     reference_year_mapping: dict[int:int],
     year_type: Literal["fy", "calendar"],
+    snapshot: pd.DataFrame,
 ) -> None:
     """Gets trace data for generators by constructing a timeseries from the start to end year using the reference year
     cycle provided. Trace data is then saved as a parquet file to .
@@ -80,6 +83,7 @@ def _translate_generator_timeseries(
         year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial year with start_year and
             end_year specifiying the financial year to return data for, using year ending nomenclature (2016 ->
             FY2015/2016). If 'calendar', then filtering is by calendar year.
+        snapshot: pd.DataFrame containing the expected time series values.
 
     Returns:
         None
@@ -111,5 +115,11 @@ def _translate_generator_timeseries(
             project=gen,
             directory=trace_data_path,
             year_type=year_type,
+        )
+        # datetime in nanoseconds required by PyPSA
+        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
+        trace = time_series_filter(trace, snapshot)
+        check_time_series(
+            trace["Datetime"], snapshot.index.to_series(), "generator trace data", gen
         )
         trace.to_parquet(Path(output_trace_path, f"{gen}.parquet"), index=False)
