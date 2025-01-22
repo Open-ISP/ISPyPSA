@@ -63,12 +63,13 @@ def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
     assert set(df["status"]) == set(["New Entrant"])
 
     # checks that values that should be always set to zero are zero:
-    where_solar, where_wind, where_hydro, where_battery, where_ocgt = (
+    where_solar, where_wind, where_hydro, where_battery, where_ocgt, where_h2 = (
         df["technology_type"].str.contains("solar", case=False),
         df["technology_type"].str.contains("wind", case=False),
         df["technology_type"].str.contains("pumped hydro", case=False),
         df["technology_type"].str.contains("battery", case=False),
         df["technology_type"].str.contains("ocgt", case=False),
+        df["technology_type"].str.contains("hydrogen", case=False),
     )
     zero_tests = {
         "minimum_stable_level_%": (
@@ -77,6 +78,7 @@ def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
             where_hydro,
             where_battery,
             where_ocgt,
+            where_h2,
         ),
         "heat_rate_gj/mwh": (where_solar, where_wind, where_hydro, where_battery),
         "partial_outage_derating_factor_%": (where_solar, where_wind, where_battery),

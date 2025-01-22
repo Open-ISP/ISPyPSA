@@ -311,7 +311,9 @@ def _calculate_and_merge_tech_specific_lcfs(
     technology_specific_lcfs = technology_specific_lcfs.melt(
         id_vars="Cost zones / Sub-region", value_name="LCF", var_name="Technology"
     ).dropna(axis=0, how="any")
-    technology_specific_lcfs.rename(columns={"Cost zones / Sub-region": "Location"})
+    technology_specific_lcfs.rename(
+        columns={"Cost zones / Sub-region": "Location"}, inplace=True
+    )
     # ensures generator names in LCF tables match those in the summary table
     for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
         df_to_match_gen_names["Technology"] = _fuzzy_match_names(
@@ -357,7 +359,8 @@ def _process_and_merge_new_gpg_min_stable_lvl(
     """Processes and merges in gas-fired generation minimum stable level data (%)
 
     Minimum stable level is given as a percentage of nameplate capacity, and set
-    to zero for renewable generators (wind, solar, hydro), storage, and OCGT.
+    to zero for renewable generators (wind, solar, hydro), storage, OCGT, and
+    hydrogen reciprocating engines.
 
     NOTE: v6 IASR workbook does not specify a minimum stable level for hydrogen
     reciprocating engines.
@@ -371,10 +374,11 @@ def _process_and_merge_new_gpg_min_stable_lvl(
         df.loc[df["technology_type"] == tech, min_level_col] = row[
             "Min Stable Level (% of nameplate)"
         ]
-    # fills renewable generators, storage and OCGT with 0.0
+    # fills renewable generators, storage, hydrogen reciprocating engines and OCGT with 0.0
     df.loc[
         _where_any_substring_appears(
-            df[min_level_col], ["solar", "wind", "pumped hydro", "battery", "ocgt"]
+            df[min_level_col],
+            ["solar", "wind", "pumped hydro", "battery", "ocgt", "hydrogen"],
         ),
         min_level_col,
     ] = 0.0
@@ -415,8 +419,3 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
         po_derating_col,
     ] = 0.0
     return df
-
-
-root_folder = Path("ispypsa_runs")
-_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
-output = template_new_generators_static_properties(_PARSED_WORKBOOK_CACHE)
