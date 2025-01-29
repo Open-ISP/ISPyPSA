@@ -28,7 +28,9 @@ def test_custom_constraints():
     )
 
     time_index = pd.DataFrame(index=time_index)
-    pypsa_inputs_location = Path("test_pypsa_friendly_inputs/test_custom_constraints")
+    pypsa_inputs_location = Path(
+        "tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints"
+    )
     time_index.to_csv(pypsa_inputs_location / Path("snapshot.csv"))
 
     demand_data = time_index.copy()

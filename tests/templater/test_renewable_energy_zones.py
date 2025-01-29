@@ -46,7 +46,7 @@ def test_renewable_energy_zone_build_limits(workbook_table_cache_test_path: Path
         build_limits.solar_pv_plus_solar_thermal_limits_mw_solar.values
     ).equals(pd.Series([1100.0, 0.0, 3400.0, 6900.0, 6900.0, 6900.0]))
     assert pd.Series(
-        build_limits["rez_resource_limit_violation_penalty_factor_$/mw"].values
+        build_limits["rez_solar_resource_limit_violation_penalty_factor_$/mw"].values
     ).equals(pd.Series([288711.0, 288711.0, np.nan, np.nan, np.nan, np.nan]))
     assert pd.Series(
         build_limits.rez_transmission_network_limit_peak_demand.values
