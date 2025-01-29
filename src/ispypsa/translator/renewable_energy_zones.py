@@ -44,13 +44,10 @@ def translate_renewable_energy_zone_build_limits_to_flow_paths(
     # infeasibility
     lines["s_nom"] = lines["s_nom"].fillna(rez_to_sub_region_transmission_default_limit)
 
-    if expansion_on:
-        lines["s_nom_extendable"] = True
-        lines["capital_cost"] = lines["capital_cost"].apply(
-            lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
-        )
-    else:
-        lines["s_nom_extendable"] = False
-        lines["capital_cost"] = 0.0
+    lines["capital_cost"] = lines["capital_cost"].apply(
+        lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
+    )
+
+    lines["s_nom_extendable"] = expansion_on
 
     return lines
