@@ -27,11 +27,11 @@ _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "indicative_transmission_expansion_cost_$/mw": "capital_cost",
     "constraint_id": "constraint_name",
     "summer_typical": "rhs",
-    "term_type": "component_type",
+    "term_type": "term_type",
     "coefficient": "coefficient",
 }
 
-_CUSTOM_CONSTRAINT_ADDITIONAL_LINES = [
+_CUSTOM_CONSTRAINT_EXPANSION_COSTS = [
     "rez_group_constraints_expansion_costs",
     "rez_transmission_limit_constraints_expansion_costs",
 ]
@@ -45,3 +45,19 @@ _CUSTOM_CONSTRAINT_LHS_FILES = [
     "rez_group_constraints_lhs",
     "rez_transmission_limit_constraints_lhs",
 ]
+
+_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {
+    "line_flow": "Line",
+    "generator_capacity": "Generator",
+    "generator_output": "Generator",
+    "load_consumption": "Load",
+    "storage_output": "Storage",
+}
+
+_CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE = {
+    "line_flow": "s",
+    "generator_capacity": "p_nom",
+    "generator_output": "p",
+    "load_consumption": "p",
+    "storage_output": "p",
+}

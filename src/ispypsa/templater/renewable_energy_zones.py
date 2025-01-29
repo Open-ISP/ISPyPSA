@@ -115,7 +115,7 @@ def template_rez_build_limits(
     rez_build_limits = rez_build_limits.rename(
         columns={
             "indicative_transmission_expansion_cost_$m/mw": "indicative_transmission_expansion_cost_$/mw",
-            "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_resource_limit_violation_penalty_factor_$/mw",
+            "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_solar_resource_limit_violation_penalty_factor_$/mw",
         }
     )
     rez_build_limits = rez_build_limits.loc[
@@ -128,7 +128,7 @@ def template_rez_build_limits(
             "wind_generation_total_limits_mw_offshore_floating",
             "wind_generation_total_limits_mw_offshore_fixed",
             "solar_pv_plus_solar_thermal_limits_mw_solar",
-            "rez_resource_limit_violation_penalty_factor_$/mw",
+            "rez_solar_resource_limit_violation_penalty_factor_$/mw",
             "rez_transmission_network_limit_peak_demand",
             "rez_transmission_network_limit_summer_typical",
             "rez_transmission_network_limit_winter_reference",

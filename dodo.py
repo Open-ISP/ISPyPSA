@@ -101,7 +101,7 @@ def build_parsed_workbook_cache(config: ModelConfig, cache_location: Path) -> No
             "*.xlsx"
         )
     ).pop()
-    build_local_cache(cache_location, workbook_path)
+    build_local_cache(cache_location, workbook_path, version)
 
 
 def create_ispypsa_inputs_from_config(

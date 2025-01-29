@@ -26,6 +26,5 @@ S1-TBMO,line_flow,SESA-CSA,0.3
 S1-TBMO,line_flow,S1-SESA,1
 S1-TBMO,generator_output,Tailem Bend Solar Farm,1
 S1-TBMO,generator_output,Tailem Bend Solar Farm - stage 2,1
-S1-TBMO,battery_output,Tailem Bend Battery Project,1
+S1-TBMO,storage_output,Tailem Bend Battery Project,1
 S1-TBMO,generator_capacity,S1-TBMO-EXPANSION,-1
-,
