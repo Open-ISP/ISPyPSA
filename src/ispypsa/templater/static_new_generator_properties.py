@@ -402,13 +402,3 @@ def _add_technology_rez_subregion_column(
     df[new_col_name] = df["generator"] + " " + df[new_col_name]
 
     return df
-
-
-root_folder = Path("ispypsa_runs")
-_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
-test = template_new_generators_static_properties(
-    parsed_workbook_path=_PARSED_WORKBOOK_CACHE
-)
-test.to_csv(
-    "/Users/elliekallmier/Documents/WORK/openisp_project/ispypsa_repos/test_templater.csv"
-)
