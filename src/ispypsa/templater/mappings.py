@@ -173,10 +173,15 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         csv_lookup="Generator type",
         csv_value="Proportion of time out (%)",
     ),
-    "om_locational_cost_factor_%": dict(
-        csv="locational_cost_factors",
-        csv_lookup="Cost zones",
-        csv_value="O&M costs 3",
+    "fom_$/kw/annum": dict(
+        csv="fixed_opex_new_entrants",
+        csv_lookup="Generator",
+        csv_col_prefix="Fixed OPEX ($/kW sent out/year)",
+    ),
+    "vom_$/mwh_sent_out": dict(
+        csv="variable_opex_new_entrants",
+        csv_lookup="Generator",
+        csv_col_prefix="Variable OPEX ($/MWh sent out)",
     ),
     "heat_rate": dict(
         csv="heat_rates_new_entrants",
@@ -234,4 +239,7 @@ lookup information that can be used to retrieve values.
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table
     `new_col_name`: The name that will be used to rename the column in the summary table
+    `csv_col_prefix`: The string that is present at the start of each column name
+        in the table as a result of row merging in isp-workbook-parser, to be used
+        for opex mapping to rename columns in the table.
 """
