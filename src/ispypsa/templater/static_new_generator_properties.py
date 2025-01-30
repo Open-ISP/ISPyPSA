@@ -65,7 +65,6 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
             - `maximum_capacity_mw`
             - `lifetime`
             - `summer_peak_rating_%`
-            - `om_locational_cost_factor_%`
             - `technology_specific_lcf_%`
             - `minimum_stable_level_%`
 
@@ -110,7 +109,6 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df["lifetime"] = df["generator"]
     df["minimum_stable_level_%"] = df["technology_type"]
     df["summer_peak_rating_%"] = df["summer_rating_mw"]
-    df["om_locational_cost_factor_%"] = df["fom_$/kw/annum"]
     df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
     return df
 
@@ -136,24 +134,25 @@ def _merge_and_set_new_generators_static_properties(
     # merge in static properties using the static property mapping
     merged_static_cols = []
     for col, csv_attrs in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
-        if type(csv_attrs["csv"]) is list:
-            data = [
-                pd.read_csv(Path(parsed_workbook_path, csv + ".csv"))
-                for csv in csv_attrs["csv"]
-            ]
-            data = pd.concat(data, axis=0)
-        else:
+        # if col is an opex column, use separate function to handle merging in:
+        if re.search("^[fv]om_", col):
             data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
-        df, col = _merge_csv_data(df, col, data, csv_attrs)
+            df, col = _process_and_merge_opex(df, data, col, csv_attrs)
+        else:
+            if type(csv_attrs["csv"]) is list:
+                data = [
+                    pd.read_csv(Path(parsed_workbook_path, csv + ".csv"))
+                    for csv in csv_attrs["csv"]
+                ]
+                data = pd.concat(data, axis=0)
+            else:
+                data = pd.read_csv(
+                    Path(parsed_workbook_path, csv_attrs["csv"] + ".csv")
+                )
+            df, col = _merge_csv_data(df, col, data, csv_attrs)
         merged_static_cols.append(col)
     df = _process_and_merge_new_gpg_min_stable_lvl(
         df, parsed_workbook_path, "minimum_stable_level_%"
-    )
-    df = _process_and_merge_fixed_opex_base_values(
-        df, parsed_workbook_path, "fom_$/kw/annum_base_cost"
-    )
-    df = _process_and_merge_variable_opex_base_values(
-        df, parsed_workbook_path, "vom_$/mwh_sent_out_base_cost"
     )
     df = _calculate_and_merge_tech_specific_lcfs(
         df, parsed_workbook_path, "technology_specific_lcf_%"
@@ -162,11 +161,7 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
-    # add the new OPEX columns to merged_static_cols:
-    merged_static_cols += [
-        "fom_$/kw/annum_base_cost",
-        "vom_$/mwh_sent_out_base_cost",
-    ]
+    df = _add_technology_rez_subregion_column(df, "technology_location_id")
     # replace remaining string values in static property columns
     df = df.infer_objects()
     for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
@@ -209,83 +204,53 @@ def _merge_csv_data(
     return df, col
 
 
-def _process_and_merge_fixed_opex_base_values(
-    df: pd.DataFrame, parsed_workbook_path: Path | str, new_fom_col_name: str
-) -> pd.DataFrame:
-    """Processes and merges in fixed OPEX base values for new entrant
-    generators.
+def _process_and_merge_opex(
+    df: pd.DataFrame,
+    csv_data: pd.DataFrame,
+    col_name: str,
+    csv_attrs: dict,
+) -> tuple[pd.DataFrame, str]:
+    """Processes and merges in fixed or variable OPEX values for new entrant generators.
 
-    In v6.0 of the IASR workbook the base values for fixed OPEX are defined in the
-    column "NSW Low". BOTN - Cethana takes the same value as all other PHES in the
-    "NSW Low" column.
+    In v6.0 of the IASR workbook the base values for all OPEX are found in
+    the column "NSW Low" or the relevant table, all other values are calculated
+    from this base value multiplied by the O&M locational cost factor. This function
+    merges in the post-LCF calculated values provided in the IASR workbook.
     """
-    # change the mapping for OPEX columns from cost region to generator
-    # and update the column name to better reflect that it is a BASE COST:
-    df.rename(
+    # update the mapping in this column to include generator name and the
+    # cost region initially given
+    df[col_name] = df["generator"] + " " + df[col_name]
+    # renames columns by removing the specified csv_col_prefix (the string present
+    # at the start of all variable col names due to row merging from isp-workbook-parser)
+    csv_data = csv_data.rename(
         columns={
-            "fom_$/kw/annum": new_fom_col_name,
-        },
-        inplace=True,
+            col: col.replace(f"{csv_attrs['csv_col_prefix']}_", "")
+            for col in csv_data.columns
+        }
     )
-    df[new_fom_col_name] = df["generator"]
-    fixed_opex_table = pd.read_csv(
-        Path(parsed_workbook_path, "fixed_opex_new_entrants.csv"),
-        usecols=["Generator", "Fixed OPEX ($/kW sent out/year)_NSW Low"],
-        index_col="Generator",
+    opex_table = csv_data.melt(
+        id_vars=[csv_attrs["csv_lookup"]],
+        var_name="Cost region",
+        value_name="OPEX value",
     )
-    # Manually the value from Pumped Hydro (24hrs storage) to BOTN - Cethana
-    fixed_opex_table.loc["BOTN - Cethana"] = fixed_opex_table.loc[
-        "Pumped Hydro (24hrs storage)"
-    ]
-    fom_replacement_dict = fixed_opex_table.squeeze().to_dict()
-    # use fuzzy matching in case of slight differences in generator names:=
-    where_str = df[new_fom_col_name].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, new_fom_col_name] = _fuzzy_match_names(
-        df.loc[where_str, new_fom_col_name],
-        fom_replacement_dict.keys(),
-        f"merging in the new entrant generator static property {new_fom_col_name}",
-        not_match="existing",
-        threshold=90,
+    # add column with same generator + cost region mapping as df[col_name]:
+    opex_table["Mapping"] = (
+        opex_table[csv_attrs["csv_lookup"]] + " " + opex_table["Cost region"]
     )
-    df[new_fom_col_name] = df[new_fom_col_name].replace(fom_replacement_dict)
-    return df
-
-
-def _process_and_merge_variable_opex_base_values(
-    df: pd.DataFrame, parsed_workbook_path: Path | str, new_vom_col_name: str
-) -> pd.DataFrame:
-    """Processes and merges in variable OPEX base values for new entrant generators.
-
-    In v6.0 of the IASR workbook the base values for variable OPEX are found in
-    the column "NSW Low".
-    """
-    # change the mapping for OPEX columns from cost region to generator
-    # and update the column name to better reflect that it is a BASE COST:
-    df.rename(
-        columns={
-            "vom_$/mwh_sent_out": "vom_$/mwh_sent_out_base_cost",
-        },
-        inplace=True,
+    opex_replacement_dict = (
+        opex_table[["Mapping", "OPEX value"]].set_index("Mapping").squeeze().to_dict()
     )
-    df[new_vom_col_name] = df["generator"]
-    # read in the necessary table:
-    variable_opex_table = pd.read_csv(
-        Path(parsed_workbook_path, "variable_opex_new_entrants.csv"),
-        usecols=["Generator", "Variable OPEX ($/MWh sent out)_NSW Low"],
-        index_col="Generator",
-    )
-    vom_replacement_dict = variable_opex_table.squeeze().to_dict()
     # use fuzzy matching in case of slight differences in generator names:
-    where_str = df[new_vom_col_name].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, new_vom_col_name] = _fuzzy_match_names(
-        df.loc[where_str, new_vom_col_name],
-        vom_replacement_dict.keys(),
-        f"merging in the new entrant generator static property {new_vom_col_name}",
+    where_str = df[col_name].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, col_name] = _fuzzy_match_names(
+        df.loc[where_str, col_name],
+        opex_replacement_dict.keys(),
+        f"merging in the new entrant generator static property {col_name}",
         not_match="existing",
         threshold=90,
     )
-    df[new_vom_col_name] = df[new_vom_col_name].replace(vom_replacement_dict)
-    return df
+    df[col_name] = df[col_name].replace(opex_replacement_dict)
+    return df, col_name
 
 
 def _calculate_and_merge_tech_specific_lcfs(
@@ -419,3 +384,31 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
         po_derating_col,
     ] = 0.0
     return df
+
+
+def _add_technology_rez_subregion_column(
+    df: pd.DataFrame, new_col_name: str
+) -> pd.DataFrame:
+    """Adds an extra column holding the technology type and either REZ or ISP
+    subregion ID."""
+    # adds new column filled with REZ zone to start
+    df[new_col_name] = df["rez_location"]
+    # fills rows that don't have a REZ value with ISP subregion
+    df[new_col_name] = df[new_col_name].where(pd.notna, df["sub_region_id"])
+
+    # adds together the generator name and REZ/subregion separated by a space.
+    # NOTE: this currently uses full generator names and full REZ names
+    # directly from the summary table to ensure each row has a unique value.
+    df[new_col_name] = df["generator"] + " " + df[new_col_name]
+
+    return df
+
+
+root_folder = Path("ispypsa_runs")
+_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
+test = template_new_generators_static_properties(
+    parsed_workbook_path=_PARSED_WORKBOOK_CACHE
+)
+test.to_csv(
+    "/Users/elliekallmier/Documents/WORK/openisp_project/ispypsa_repos/test_templater.csv"
+)
