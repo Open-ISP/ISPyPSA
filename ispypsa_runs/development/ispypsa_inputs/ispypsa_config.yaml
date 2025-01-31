@@ -13,6 +13,9 @@ scenario: Step Change
 # costs, as a fraction, i.e. 0.07 is 7%.
 wacc: 0.07
 network:
+  # Does the model consider the expansion of sub-region to sub-region transmission
+  # capacity
+  transmission_expansion: True
   # Does the model consider the expansion of renewable energy zone transmission
   # capacity
   rez_transmission_expansion: True

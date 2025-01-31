@@ -198,6 +198,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     )
     lines_interregional_or_subregional = translate_flow_paths_to_lines(
         ispypsa_inputs_location,
+        config.network.transmission_expansion,
+        config.wacc,
+        config.network.annuitisation_lifetime,
     )
     lines_rez_to_region_or_subregion = (
         translate_renewable_energy_zone_build_limits_to_flow_paths(
@@ -319,6 +322,7 @@ def task_create_ispypsa_inputs():
                 "mapping_nem_region_to_single_sub_region.csv",
             ),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "transmission_expansion_costs.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "new_entrant_generators.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "coal_prices.csv"),
