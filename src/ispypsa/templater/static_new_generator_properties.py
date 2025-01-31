@@ -50,7 +50,7 @@ def template_new_generators_static_properties(
             cleaned_new_generator_summaries, parsed_workbook_path
         )
     )
-    return merged_cleaned_new_generator_summaries.set_index("generator")
+    return merged_cleaned_new_generator_summaries.set_index("technology_location_id")
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:

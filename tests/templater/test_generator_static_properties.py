@@ -64,9 +64,7 @@ def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
 
     # checks that all entries in "technology_location_id" col are strings
     assert all(
-        df["technology_location_id"].apply(
-            lambda x: True if isinstance(x, str) else False
-        )
+        df.index.to_series().apply(lambda x: True if isinstance(x, str) else False)
     )
 
     # checks that values that should be always set to zero are zero:
