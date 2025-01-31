@@ -5,7 +5,7 @@ from ispypsa.templater.flow_paths import template_flow_paths
 
 def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
     flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "nem_regions"
+        workbook_table_cache_test_path, "6.0", "nem_regions"
     )
     assert flow_paths_template.index.name == "flow_path_name"
     assert all(
@@ -37,7 +37,7 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
 
 def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path):
     flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "sub_regions"
+        workbook_table_cache_test_path, "6.0", "sub_regions"
     )
     assert flow_paths_template.index.name == "flow_path_name"
     assert all(
@@ -65,10 +65,11 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         ]
     )
     assert len(flow_paths_template) == 14
+    assert len(flow_paths_template.columns) == 5
 
 
 def test_flow_paths_templater_single_region(workbook_table_cache_test_path: Path):
     flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "single_region"
+        workbook_table_cache_test_path, "6.0", "single_region"
     )
     assert flow_paths_template.empty

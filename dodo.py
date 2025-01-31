@@ -124,7 +124,9 @@ def create_ispypsa_inputs_from_config(
         template_nem_region_to_single_sub_region_mapping(workbook_cache_location)
     )
     flow_path_template = template_flow_paths(
-        workbook_cache_location, config.network.nodes.regional_granularity
+        workbook_cache_location,
+        config.iasr_workbook_version,
+        config.network.nodes.regional_granularity,
     )
     ecaa_generators_template = template_ecaa_generators_static_properties(
         workbook_cache_location
@@ -322,7 +324,6 @@ def task_create_ispypsa_inputs():
                 "mapping_nem_region_to_single_sub_region.csv",
             ),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "transmission_expansion_costs.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "new_entrant_generators.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "coal_prices.csv"),
