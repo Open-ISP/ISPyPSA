@@ -11,6 +11,7 @@ _LINE_ATTRIBUTES = {
     "node_from": "bus0",
     "node_to": "bus1",
     "forward_direction_mw_summer_typical": "s_nom",
+    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
     # TODO: implement reverse direction limit
     # "reverse_direction_mw_summer_typical": ""
 }

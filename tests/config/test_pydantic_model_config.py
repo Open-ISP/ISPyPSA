@@ -22,6 +22,7 @@ def test_valid_config(
             "scenario": scenario,
             "wacc": 0.07,
             "network": {
+                "transmission_expansion": True,
                 "rez_transmission_expansion": True,
                 "annuitisation_lifetime": 30,
                 "nodes": {
@@ -55,6 +56,7 @@ def test_invalid_scenario():
                 "scenario": "BAU",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -88,6 +90,7 @@ def test_invalid_node_granularity():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -121,6 +124,7 @@ def test_invalid_nodes_rezs():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -154,6 +158,7 @@ def test_not_a_directory_parsed_traces_path():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -187,6 +192,7 @@ def test_invalid_parsed_traces_path():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -220,6 +226,7 @@ def test_invalid_end_year():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -253,6 +260,7 @@ def test_invalid_representative_weeks():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -286,6 +294,7 @@ def test_invalid_wacc():
                 "scenario": "Step Change",
                 "wacc": "7%",
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -319,8 +328,43 @@ def test_invalid_annuitisation_lifetime():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": "years",
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_transmission_expansion():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": "help",
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
@@ -352,6 +396,7 @@ def test_invalid_rez_transmission_expansion():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": "help",
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -385,6 +430,7 @@ def test_invalid_rez_to_sub_region_transmission_default_limit():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
@@ -418,6 +464,7 @@ def test_invalid_iasr_workbook_version():
                 "scenario": "Step Change",
                 "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
                     "rez_transmission_expansion": True,
                     "annuitisation_lifetime": 30,
                     "nodes": {
