@@ -129,9 +129,11 @@ def template_rez_build_limits(
             "wind_generation_total_limits_mw_offshore_fixed",
             "solar_pv_plus_solar_thermal_limits_mw_solar",
             "rez_solar_resource_limit_violation_penalty_factor_$/mw",
-            "rez_transmission_network_limit_peak_demand",
+            # Remove while not being used.
+            # "rez_transmission_network_limit_peak_demand",
             "rez_transmission_network_limit_summer_typical",
-            "rez_transmission_network_limit_winter_reference",
+            # Remove while not being used.
+            # "rez_transmission_network_limit_winter_reference",
             "indicative_transmission_expansion_cost_$/mw",
         ],
     ]
