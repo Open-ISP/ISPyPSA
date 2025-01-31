@@ -18,6 +18,10 @@ def template_manually_extracted_tables(iasr_workbook_version: str):
         / Path("manually_extracted_template_tables")
         / Path(iasr_workbook_version)
     )
-
+    files_not_to_move = ["transmission_expansion_costs.csv"]
     csv_files = path_to_tables.glob("*.csv")
-    return {file.name: pd.read_csv(file) for file in csv_files}
+    df_files = {}
+    for file in csv_files:
+        if file.name not in files_not_to_move:
+            df_files[file.name] = pd.read_csv(file)
+    return df_files
