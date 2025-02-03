@@ -10,73 +10,19 @@ from .helpers import (
 from .mappings import _HVDC_FLOW_PATHS
 
 
-def template_flow_paths(
-    parsed_workbook_path: Path | str,
-    iasr_workbook_version: str,
-    regional_granularity: str = "sub_regions",
-) -> pd.DataFrame:
-    """Creates a flow path template that describes the flow paths (i.e. lines) to be
-    modelled
-
-    The function behaviour depends on the `regional_granularity` specified in the model
-    configuration.
-
-    Args:
-        parsed_workbook_path: Path to directory with table CSVs that are the
-            outputs from the `isp-workbook-parser`.
-        iasr_workbook_version: str specifying which version of the workbook is being
-            used to create the template.
-        regional_granularity: Regional granularity of the nodes obtained from the model
-            configuration. Defaults to "sub_regions".
-
-    Returns:
-        `pd.DataFrame`: ISPyPSA flow path template
-    """
-    logging.info(
-        f"Creating a flow paths template with {regional_granularity} granularity"
-    )
-    if regional_granularity == "sub_regions":
-        template = _template_sub_regional_flow_paths(parsed_workbook_path)
-        template = _add_transmission_expansion_costs(template, iasr_workbook_version)
-        # Only keep forward_direction_mw_summer_typical limit col as that all that's
-        # being used for now.
-        cols = [
-            "flow_path_name",
-            "node_from",
-            "node_to",
-            "carrier",
-            "forward_direction_mw_summer_typical",
-            "indicative_transmission_expansion_cost_$/mw",
-        ]
-        template = template.loc[:, cols]
-
-    elif regional_granularity == "nem_regions":
-        template = _template_regional_interconnectors(parsed_workbook_path)
-    elif regional_granularity == "single_region":
-        template = pd.DataFrame()
-
-    if not template.empty:
-        template = template.set_index("flow_path_name")
-
-    return template
-
 
 def _template_sub_regional_flow_paths(
-    parsed_workbook_path: Path | str,
+    flow_path_capabilities: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Processes the 'Flow path transfer capability' table into an ISPyPSA template format
+    """Processes the 'Flow path transfer capability' table into an ISPyPSA template format.
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        flow_path_capabilities: pd.DataFrame IASR table specifying the flow path
+            transfer capabilities between subregions
 
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional flow path template
     """
-
-    flow_path_capabilities = pd.read_csv(
-        Path(parsed_workbook_path, "flow_path_transfer_capability.csv")
-    )
     from_to_carrier = _get_flow_path_name_from_to_carrier(
         flow_path_capabilities.iloc[:, 0], regional_granularity="sub_regions"
     )
@@ -113,7 +59,8 @@ def _add_transmission_expansion_costs(
 def _template_regional_interconnectors(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
-    """Processes the 'Interconnector transfer capability' table into an ISPyPSA template format
+    """Processes the IASR table 'Interconnector transfer capability' into an
+    ISPyPSA template format
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
