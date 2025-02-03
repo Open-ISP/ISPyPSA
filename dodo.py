@@ -5,6 +5,7 @@ from shutil import rmtree
 import pandas as pd
 from isp_trace_parser import construct_reference_year_mapping
 
+from ispypsa import create_template, read_csvs, write_csvs
 from ispypsa.config import load_config
 from ispypsa.config.validators import ModelConfig
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
@@ -21,26 +22,7 @@ from ispypsa.model import (
     run,
     save_results,
 )
-from ispypsa.templater.dynamic_generator_properties import (
-    template_generator_dynamic_properties,
-)
-from ispypsa.templater.flow_paths import template_flow_paths
-from ispypsa.templater.manual_tables import template_manually_extracted_tables
-from ispypsa.templater.nodes import (
-    template_nem_region_to_single_sub_region_mapping,
-    template_nodes,
-    template_sub_regions_to_nem_regions_mapping,
-)
-from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zones_locations,
-    template_rez_build_limits,
-)
-from ispypsa.templater.static_ecaa_generator_properties import (
-    template_ecaa_generators_static_properties,
-)
-from ispypsa.templater.static_new_generator_properties import (
-    template_new_generators_static_properties,
-)
+
 from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
@@ -107,72 +89,9 @@ def build_parsed_workbook_cache(config: ModelConfig, cache_location: Path) -> No
 def create_ispypsa_inputs_from_config(
     config: ModelConfig, workbook_cache_location: Path, template_location: Path
 ) -> None:
-    create_or_clean_task_output_folder(template_location)
-    node_template = template_nodes(
-        workbook_cache_location, config.network.nodes.regional_granularity
-    )
-    renewable_energy_zone_location_mapping = template_renewable_energy_zones_locations(
-        workbook_cache_location, location_mapping_only=True
-    )
-    renewable_energy_zone_build_limits = template_rez_build_limits(
-        workbook_cache_location, config.network.rez_transmission_expansion
-    )
-    sub_regions_to_nem_regions_mapping = template_sub_regions_to_nem_regions_mapping(
-        workbook_cache_location
-    )
-    nem_region_to_single_sub_region_mapping = (
-        template_nem_region_to_single_sub_region_mapping(workbook_cache_location)
-    )
-    flow_path_template = template_flow_paths(
-        workbook_cache_location,
-        config.iasr_workbook_version,
-        config.network.nodes.regional_granularity,
-    )
-    ecaa_generators_template = template_ecaa_generators_static_properties(
-        workbook_cache_location
-    )
-    new_entrant_generators_template = template_new_generators_static_properties(
-        workbook_cache_location
-    )
-    dynamic_generator_property_templates = template_generator_dynamic_properties(
-        workbook_cache_location, config.scenario
-    )
-    manually_extracted_tables = template_manually_extracted_tables(
-        config.iasr_workbook_version
-    )
-    if node_template is not None:
-        node_template.to_csv(Path(template_location, "nodes.csv"))
-    if renewable_energy_zone_location_mapping is not None:
-        renewable_energy_zone_location_mapping.to_csv(
-            Path(template_location, "mapping_renewable_energy_zone_locations.csv")
-        )
-    if renewable_energy_zone_build_limits is not None:
-        renewable_energy_zone_build_limits.to_csv(
-            Path(template_location, "renewable_energy_zone_build_limits.csv")
-        )
-    if sub_regions_to_nem_regions_mapping is not None:
-        sub_regions_to_nem_regions_mapping.to_csv(
-            Path(template_location, "mapping_sub_regions_to_nem_regions.csv")
-        )
-    if nem_region_to_single_sub_region_mapping is not None:
-        nem_region_to_single_sub_region_mapping.to_csv(
-            Path(template_location, "mapping_nem_region_to_single_sub_region.csv")
-        )
-    if flow_path_template is not None:
-        flow_path_template.to_csv(Path(template_location, "flow_paths.csv"))
-    if ecaa_generators_template is not None:
-        ecaa_generators_template.to_csv(Path(template_location, "ecaa_generators.csv"))
-    if new_entrant_generators_template is not None:
-        new_entrant_generators_template.to_csv(
-            Path(template_location, "new_entrant_generators.csv")
-        )
-    if dynamic_generator_property_templates is not None:
-        for gen_property in dynamic_generator_property_templates.keys():
-            dynamic_generator_property_templates[gen_property].to_csv(
-                Path(template_location, f"{gen_property}.csv")
-            )
-    for name, table in manually_extracted_tables.items():
-        table.to_csv(Path(template_location, name))
+    iasr_tables = read_csvs(workbook_cache_location)
+    template = create_template(config.scenario, config.region_granulairty, iasr_tables)
+    write_csvs(template, template_location)
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
