@@ -1,0 +1,20 @@
+Generator type,Proportion of time out (%),Equivalent average days per year on planned outage
+OCGT (small GT),0.821917808219178,3.0
+OCGT (large GT),1.36986301369863,5.0
+CCGT,3.5068493150684934,12.8
+CCGT with CCS,3.5068493150684934,12.8
+Biomass,6.2465753424657535,22.8
+Large scale Solar PV,0.0,0.0
+Solar Thermal (15hrs storage),1.9178082191780823,7.0
+Battery storage (1hr storage),0.0,0.0
+Battery storage (2hrs storage),0.0,0.0
+Battery storage (4hrs storage),0.0,0.0
+Battery Storage (8hrs storage),0.0,0.0
+Wind,0.0,0.0
+Wind - offshore (fixed),0.0,0.0
+Wind - offshore (floating),0.0,0.0
+Pumped Hydro (8hrs storage),0.273972602739726,1.0
+Pumped Hydro (24hrs storage),0.273972602739726,1.0
+Pumped Hydro (48hrs storage),0.273972602739726,1.0
+BOTN - Cethana,0.273972602739726,1.0
+Hydrogen reciprocating engines,0.7397260273972603,2.7
