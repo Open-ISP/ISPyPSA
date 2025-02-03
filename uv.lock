@@ -974,7 +974,7 @@ wheels = [
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.0.3"
+version = "2.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openpyxl" },
@@ -983,9 +983,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/6e/038f5af27880b745c051ba91db34e15cb736d6aa7bbb5cb6720f890f4db7/isp_workbook_parser-2.0.3.tar.gz", hash = "sha256:124009211c8dbc5eb5581e82d7a4b23ba6ba5c14ae618ce0d21dea1955cdb82e", size = 42681 }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/b3/c82c654fdfa843b00e08609492204d68435a125138e8294ebaf51d5ef245/isp_workbook_parser-2.4.1.tar.gz", hash = "sha256:61d6577d90ff804ef662368d77a1c1978ab7456aae863f71478c55f20f1621d6", size = 52394 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/b4/2460fe11101b231bd1d8ea6880ae770cdfb62c318979625a7774c53fcd01/isp_workbook_parser-2.0.3-py3-none-any.whl", hash = "sha256:ef4e2e9d5299f56a57f798e00d62f6952bfbbf2ff45722e2bfd8a949b16bb635", size = 57321 },
+    { url = "https://files.pythonhosted.org/packages/8e/0a/ce602e2f1a45dc45bcb266c43fcf9901eaeeb182f24cb15e3ff2774b0f0f/isp_workbook_parser-2.4.1-py3-none-any.whl", hash = "sha256:65731de03f29af97ead30a903d0fa3e45a5e9862358c82ea21e6ed807ea444df", size = 84820 },
 ]
 
 [[package]]
@@ -1032,8 +1032,8 @@ dev = [
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
     { name = "isp-trace-parser", specifier = ">=1.0.0" },
-    { name = "isp-workbook-parser", specifier = ">=2.0.3" },
-    { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.2" },
+    { name = "isp-workbook-parser", specifier = ">=2.4.1" },
+    { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pypsa", specifier = ">=0.31.1" },
@@ -1250,7 +1250,7 @@ wheels = [
 
 [[package]]
 name = "linopy"
-version = "0.4.2"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bottleneck" },
@@ -1264,9 +1264,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "xarray" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/54/3343e078d73ed2b57b3377f6cfcbbf785aade1434499bc36d6ef5b739f0f/linopy-0.4.2.tar.gz", hash = "sha256:31b97e65ba93f04bf40e4307d6b4c7b685ca5ac85b60f16fc5b2aae30e4d5c76", size = 1194870 }
+sdist = { url = "https://files.pythonhosted.org/packages/80/9f/14c4c8fc5c9bc21f723a85b274fc19a32c4439f8b253751a40c334cb4c04/linopy-0.4.4.tar.gz", hash = "sha256:9909cc63e8e849a7116f76f2818f7f07924e74c266c73a5d035ff478b3ba6801", size = 1195781 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/d3/7b3a7ce2a83ac40c9363958f39ec1d46b58ddde5a9ff37ae529b3210ec42/linopy-0.4.2-py3-none-any.whl", hash = "sha256:4d3bbd5619b86ac0bf915426465557f385b3ee4d67f39dfc8947c7f16698fe53", size = 89780 },
+    { url = "https://files.pythonhosted.org/packages/6e/e4/b6d414103df2815504cb5c3d8acea6a480e5043154fff27d58a228a8dcdc/linopy-0.4.4-py3-none-any.whl", hash = "sha256:9f1a37a2d373b6e812e4b2150dfabff6acc0e9ae335606e6654e8b0a6a68b91e", size = 90217 },
 ]
 
 [[package]]

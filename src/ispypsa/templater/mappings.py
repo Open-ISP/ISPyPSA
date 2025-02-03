@@ -6,6 +6,7 @@ from .lists import (
     _CONDENSED_GENERATOR_TYPES,
     _ECAA_GENERATOR_TYPES,
     _ISP_SCENARIOS,
+    _NEW_GENERATOR_TYPES,
 )
 
 _NEM_REGION_IDS = pd.Series(
@@ -48,7 +49,7 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
 _GENERATOR_PROPERTIES = {
     "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,
     "seasonal_ratings": _ALL_GENERATOR_STORAGE_TYPES,
-    "maintenance": ["existing_generators"],
+    "maintenance": ["existing_generators", "new_entrants"],
     "fixed_opex": _CONDENSED_GENERATOR_TYPES,
     "variable_opex": _CONDENSED_GENERATOR_TYPES,
     "marginal_loss_factors": _ALL_GENERATOR_STORAGE_TYPES,
@@ -142,4 +143,103 @@ corresponding data CSV and lookup information that can be used to retrieve value
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
     `new_col_name`: The name that will be used to rename the column in the summary table
+"""
+
+_NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
+    "summer_peak_rating_%": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Summer Peak (% of nameplate)",
+    ),
+    "summer_rating_mw": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Summer Typical (% of nameplate)",
+        new_col_name="summer_typical_rating_%",
+    ),
+    "winter_rating_mw": dict(
+        csv="seasonal_ratings_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Winter (% of nameplate)",
+        new_col_name="winter_rating_%",
+    ),
+    "maximum_capacity_mw": dict(
+        csv="maximum_capacity_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Total plant size (MW)",
+    ),
+    "maintenance_duration_%": dict(
+        csv="maintenance_new_entrants",
+        csv_lookup="Generator type",
+        csv_value="Proportion of time out (%)",
+    ),
+    "fom_$/kw/annum": dict(
+        csv="fixed_opex_new_entrants",
+        csv_lookup="Generator",
+        csv_col_prefix="Fixed OPEX ($/kW sent out/year)",
+    ),
+    "vom_$/mwh_sent_out": dict(
+        csv="variable_opex_new_entrants",
+        csv_lookup="Generator",
+        csv_col_prefix="Variable OPEX ($/MWh sent out)",
+    ),
+    "heat_rate": dict(
+        csv="heat_rates_new_entrants",
+        csv_lookup="Technology",
+        csv_value="Heat rate (GJ/MWh)",
+        new_col_name="heat_rate_gj/mwh",
+    ),
+    "mlf": dict(
+        csv="marginal_loss_factors_new_entrants",
+        csv_lookup="Generator",
+        csv_value="MLF",
+    ),
+    "auxiliary_load_%": dict(
+        csv="auxiliary_load_new_entrants",
+        csv_lookup="Generator",
+        csv_value="Auxiliary load (% of nameplate capacity)",
+    ),
+    "partial_outage_derating_factor_%": dict(
+        csv="outages_new_entrants",
+        csv_lookup="Fuel type",
+        csv_value="Partial Outage Derating Factor (%)",
+    ),
+    "mean_time_to_repair_full_outage": dict(
+        csv="outages_new_entrants",
+        csv_lookup="Fuel type",
+        csv_value="Mean time to repair (hrs)_Full outage",
+    ),
+    "mean_time_to_repair_partial_outage": dict(
+        csv="outages_new_entrants",
+        csv_lookup="Fuel type",
+        csv_value="Mean time to repair (hrs)_Partial outage",
+    ),
+    "lifetime": dict(
+        csv="lead_time_and_project_life",
+        csv_lookup="Technology",
+        csv_value="Technical life (years) 6",
+    ),
+    "total_lead_time": dict(
+        csv="lead_time_and_project_life",
+        csv_lookup="Technology",
+        csv_value="Total lead time (years)",
+    ),
+}
+"""
+New entrant generators summary table columns mapped to corresponding data CSV and
+lookup information that can be used to retrieve values.
+
+    `csv`: A single CSV file name (excluding file extension) or a list of CSV file names
+    `csv_lookup`: Column in the CSV that acts as a key for merging into the summary
+    `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
+        alternative to  "Generator" in the additional projects table. If a lookup value
+        is NA in the `csv_lookup` column, it will be replaced by a lookup value from this
+        list in the order specified.
+    `csv_value`: Column in the CSV that corresponds to the data to be merged in
+    `alternative_values`: As for `alternative_lookups`, but for the data values in the
+        table
+    `new_col_name`: The name that will be used to rename the column in the summary table
+    `csv_col_prefix`: The string that is present at the start of each column name
+        in the table as a result of row merging in isp-workbook-parser, to be used
+        for opex mapping to rename columns in the table.
 """

@@ -1,0 +1,20 @@
+Generator,Auxiliary load (% of nameplate capacity)
+OCGT (small GT),1.7000000000000002
+OCGT (large GT),1.0999999999999999
+CCGT,2.5
+CCGT with CCS,9.2
+Biomass,7.3
+Large scale Solar PV,0.017458191994355995
+Solar Thermal (15hrs storage),10.0
+Battery storage (1hr storage),0.0
+Battery storage (2hrs storage),0.0
+Battery storage (4hrs storage),0.0
+Battery Storage (8hrs storage),0.0
+Wind,0.06975869288182919
+Wind - offshore (fixed),0.06975869288182919
+Wind - offshore (floating),0.06975869288182919
+Pumped Hydro (8hrs storage),0.5
+Pumped Hydro (24hrs storage),0.5
+Pumped Hydro (48hrs storage),0.5
+BOTN - Cethana,0.5
+Hydrogen reciprocating engines,4.0

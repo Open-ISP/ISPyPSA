@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "pandas>=2.2.2",
     "pypsa>=0.31.1",
-    "isp-workbook-parser>=2.0.3",
+    "isp-workbook-parser>=2.4.1",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
@@ -24,7 +24,7 @@ requires-python = ">= 3.10"
 
 [project.optional-dependencies]
 solvers = [
-    "linopy>=0.4.2",
+    "linopy>=0.4.4",
 ]
 
 [build-system]
