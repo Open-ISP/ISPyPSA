@@ -78,7 +78,6 @@ def add_custom_constraints(network: pypsa.Network, path_pypsa_inputs: Path):
         # variables that couldn't be found are logged in get_variables so this doesn't
         # result in 'silent failure'.
         retrieved_vars = ~variables.isna()
-        print(retrieved_vars)
         variables = variables.loc[retrieved_vars]
         coefficients = constraint_lhs.loc[retrieved_vars, "coefficient"]
 
