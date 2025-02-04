@@ -26,6 +26,8 @@ from ispypsa.templater.static_new_generator_properties import (
 def create_template(
     scenario: str, regional_granularity: str, iasr_tables: dict[str : pd.DataFrame]
 ) -> pd.DataFrame:
+    """"""
+
     template = {}
 
     if regional_granularity == "sub_regions":
