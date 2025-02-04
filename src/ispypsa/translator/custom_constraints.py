@@ -77,9 +77,9 @@ def _translate_custom_constraints_generators(
     # The generator size is only used for additional transmission capacity so it
     # initial size is 0.0.
     custom_constraints_additional_variables["capital_cost"] = (
-        custom_constraints_additional_variables[
-            "capital_cost"
-        ].apply(lambda x: annuitised_investment_costs(x, wacc, asset_lifetime))
+        custom_constraints_additional_variables["capital_cost"].apply(
+            lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
+        )
     )
 
     custom_constraints_additional_variables["p_nom_extendable"] = expansion_on
