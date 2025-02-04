@@ -46,7 +46,6 @@ def test_renewable_energy_zone_build_limits(workbook_table_cache_test_path: Path
         build_limits.solar_pv_plus_solar_thermal_limits_mw_solar.values
     ).equals(pd.Series([1100.0, 0.0, 3400.0, 6900.0, 6900.0, 6900.0]))
     assert pd.Series(
-<<<<<<< HEAD
         build_limits["rez_solar_resource_limit_violation_penalty_factor_$/mw"].values
     ).equals(pd.Series([288711.0, 288711.0, np.nan, np.nan, np.nan, np.nan]))
     # Remove while not being used.
@@ -60,19 +59,6 @@ def test_renewable_energy_zone_build_limits(workbook_table_cache_test_path: Path
     # assert pd.Series(
     #     build_limits.rez_transmission_network_limit_winter_reference.values
     # ).equals(pd.Series([np.nan, 700.0, 3000.0, 2000.0, np.nan, 0.0]))
-=======
-        build_limits["rez_resource_limit_violation_penalty_factor_$/mw"].values
-    ).equals(pd.Series([288711.0, 288711.0, np.nan, np.nan, np.nan, np.nan]))
-    assert pd.Series(
-        build_limits.rez_transmission_network_limit_peak_demand.values
-    ).equals(pd.Series([750.0, 700.0, np.nan, np.nan, np.nan, 0.0]))
-    assert pd.Series(
-        build_limits.rez_transmission_network_limit_summer_typical.values
-    ).equals(pd.Series([750.0, np.nan, 1000.0, np.nan, np.nan, 0.0]))
-    assert pd.Series(
-        build_limits.rez_transmission_network_limit_winter_reference.values
-    ).equals(pd.Series([np.nan, 700.0, 3000.0, 2000.0, np.nan, 0.0]))
->>>>>>> 536cbbd (rez transmission limts implemented with lines and custom constraints)
     assert pd.Series(
         build_limits["indicative_transmission_expansion_cost_$/mw"].values
     ).equals(pd.Series([1420000.0, 430000.0, 700000.0, np.nan, np.nan, 1000000.0]))
