@@ -14,6 +14,10 @@ class NodesConfig(BaseModel):
 
 class NetworkConfig(BaseModel):
     nodes: NodesConfig
+    annuitisation_lifetime: int
+    transmission_expansion: bool
+    rez_transmission_expansion: bool
+    rez_to_sub_region_transmission_default_limit: float
 
 
 class TemporalAggregationConfig(BaseModel):
@@ -83,8 +87,10 @@ class TemporalConfig(BaseModel):
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
+    wacc: float
     network: NetworkConfig
     temporal: TemporalConfig
+    iasr_workbook_version: str
     solver: Literal[
         "highs",
         "cbc",
