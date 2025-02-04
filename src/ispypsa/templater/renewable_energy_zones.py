@@ -11,6 +11,10 @@ def new_function_to_test_code_cove(a):
     return a * 2
 
 
+def new_function_to_test_code_cove_try_again(a):
+    return a * 2
+
+
 def template_renewable_energy_zones_locations(
     parsed_workbook_path: Path | str, location_mapping_only: bool = True
 ) -> pd.DataFrame:
