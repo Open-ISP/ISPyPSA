@@ -7,6 +7,10 @@ import pandas as pd
 from .helpers import _snakecase_string
 
 
+def new_function_to_test_code_cove(a):
+    return a * 2
+
+
 def template_renewable_energy_zones_locations(
     parsed_workbook_path: Path | str, location_mapping_only: bool = True
 ) -> pd.DataFrame:
