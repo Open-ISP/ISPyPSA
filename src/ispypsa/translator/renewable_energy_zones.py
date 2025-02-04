@@ -48,6 +48,9 @@ def translate_renewable_energy_zone_build_limits_to_flow_paths(
         lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
     )
 
-    lines["s_nom_extendable"] = expansion_on
+    # not extendable by default
+    lines["s_nom_extendable"] = False
+    # If a non-nan capital_cost is given then set to extendable
+    lines.loc[~lines["capital_cost"].isna(), "s_nom_extendable"] = expansion_on
 
     return lines
