@@ -22,7 +22,6 @@ from ispypsa.model import (
     run,
     save_results,
 )
-
 from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,

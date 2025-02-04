@@ -106,7 +106,7 @@ def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
     return regions[
         [
             "nem_region",
-            "isp_sub_region_id" "regional_reference_node",
+            "isp_sub_region_idregional_reference_node",
             "regional_reference_node_voltage_kv",
         ]
     ]
