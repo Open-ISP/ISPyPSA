@@ -10,7 +10,6 @@ from .helpers import (
 from .mappings import _HVDC_FLOW_PATHS
 
 
-
 def _template_sub_regional_flow_paths(
     flow_path_capabilities: pd.DataFrame,
 ) -> pd.DataFrame:
