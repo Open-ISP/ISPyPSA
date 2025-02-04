@@ -20,11 +20,16 @@ def test_valid_config(
         **{
             "ispypsa_run_name": "test",
             "scenario": scenario,
+            "wacc": 0.07,
             "network": {
+                "transmission_expansion": True,
+                "rez_transmission_expansion": True,
+                "annuitisation_lifetime": 30,
                 "nodes": {
                     "regional_granularity": regional_granularity,
                     "rezs": nodes_rezs,
-                }
+                },
+                "rez_to_sub_region_transmission_default_limit": 1e6,
             },
             "temporal": {
                 "operational_temporal_resolution_min": 30,
@@ -38,6 +43,7 @@ def test_valid_config(
                 },
             },
             "solver": "highs",
+            "iasr_workbook_version": "6.0",
         }
     )
 
@@ -48,11 +54,16 @@ def test_invalid_scenario():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "BAU",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -66,6 +77,7 @@ def test_invalid_scenario():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -76,11 +88,16 @@ def test_invalid_node_granularity():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "wastelands",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -94,6 +111,7 @@ def test_invalid_node_granularity():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -104,11 +122,16 @@ def test_invalid_nodes_rezs():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "attached_to_regions",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -122,6 +145,7 @@ def test_invalid_nodes_rezs():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -132,11 +156,16 @@ def test_not_a_directory_parsed_traces_path():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -150,6 +179,7 @@ def test_not_a_directory_parsed_traces_path():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -160,11 +190,16 @@ def test_invalid_parsed_traces_path():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -178,6 +213,7 @@ def test_invalid_parsed_traces_path():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -188,11 +224,16 @@ def test_invalid_end_year():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -206,6 +247,7 @@ def test_invalid_end_year():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
             }
         )
 
@@ -216,11 +258,16 @@ def test_invalid_representative_weeks():
             **{
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
+                "wacc": 0.07,
                 "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
                     "nodes": {
                         "regional_granularity": "sub_regions",
                         "rezs": "discrete_nodes",
-                    }
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
                     "operational_temporal_resolution_min": 30,
@@ -234,5 +281,210 @@ def test_invalid_representative_weeks():
                     },
                 },
                 "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_wacc():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": "7%",
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_annuitisation_lifetime():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": "years",
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_transmission_expansion():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": "help",
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_rez_transmission_expansion():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": "help",
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_rez_to_sub_region_transmission_default_limit():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": "help",
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_iasr_workbook_version():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": 6.0,
             }
         )

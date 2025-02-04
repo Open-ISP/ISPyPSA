@@ -78,3 +78,25 @@ def add_ecaa_generators_to_network(
         ),
         axis=1,
     )
+
+
+def add_custom_constraint_generators_to_network(
+    network: pypsa.Network, path_pypsa_inputs: Path
+) -> None:
+    """Adds the Generators defined in `custom_constraint_generators.csv` in the `path_pypsa_inputs` directory to the
+    `pypsa.Network` object. These are generators that connect to a dummy bus, not part of the rest of the network,
+    the generators are used to model custom constraint investment by referencing the p_nom of the generators in the
+    custom constraints.
+
+    Args:
+        network: The `pypsa.Network` object
+        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
+            PyPSA inputs
+
+    Returns: None
+    """
+    generators = pd.read_csv(
+        path_pypsa_inputs / Path("custom_constraints_generators.csv")
+    )
+    generators["class_name"] = "Generator"
+    generators.apply(lambda row: network.add(**row.to_dict()), axis=1)

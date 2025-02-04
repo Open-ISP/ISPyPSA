@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from shutil import rmtree
 
+import pandas as pd
 from isp_trace_parser import construct_reference_year_mapping
 
 from ispypsa.config import load_config
@@ -9,8 +10,11 @@ from ispypsa.config.validators import ModelConfig
 from ispypsa.data_fetch.local_cache import REQUIRED_TABLES, build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.model import (
+    add_buses_for_custom_constraints,
     add_buses_to_network,
     add_carriers_to_network,
+    add_custom_constraint_generators_to_network,
+    add_custom_constraints,
     add_ecaa_generators_to_network,
     add_lines_to_network,
     initialise_network,
@@ -21,13 +25,15 @@ from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
 from ispypsa.templater.flow_paths import template_flow_paths
+from ispypsa.templater.manual_tables import template_manually_extracted_tables
 from ispypsa.templater.nodes import (
     template_nem_region_to_single_sub_region_mapping,
     template_nodes,
     template_sub_regions_to_nem_regions_mapping,
 )
 from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zones,
+    template_renewable_energy_zones_locations,
+    template_rez_build_limits,
 )
 from ispypsa.templater.static_ecaa_generator_properties import (
     template_ecaa_generators_static_properties,
@@ -39,11 +45,19 @@ from ispypsa.translator.buses import (
     _translate_buses_demand_timeseries,
     _translate_nodes_to_buses,
 )
+from ispypsa.translator.custom_constraints import (
+    _translate_custom_constraint_lhs,
+    _translate_custom_constraint_rhs,
+    _translate_custom_constraints_generators,
+)
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_generator_timeseries,
 )
 from ispypsa.translator.lines import translate_flow_paths_to_lines
+from ispypsa.translator.renewable_energy_zones import (
+    translate_renewable_energy_zone_build_limits_to_flow_paths,
+)
 from ispypsa.translator.snapshot import create_complete_snapshot_index
 from ispypsa.translator.temporal_filters import filter_snapshot
 
@@ -78,15 +92,16 @@ def create_or_clean_task_output_folder(output_folder: Path) -> None:
                 item.unlink()
 
 
-def build_parsed_workbook_cache(cache_location: Path) -> None:
+def build_parsed_workbook_cache(config: ModelConfig, cache_location: Path) -> None:
     if not cache_location.exists():
         cache_location.mkdir(parents=True)
+    version = config.iasr_workbook_version
     workbook_path = list(
-        Path(Path.cwd().parent, "isp-workbook-parser", "workbooks", "6.0").glob(
+        Path(Path.cwd().parent, "isp-workbook-parser", "workbooks", version).glob(
             "*.xlsx"
         )
     ).pop()
-    build_local_cache(cache_location, workbook_path)
+    build_local_cache(cache_location, workbook_path, version)
 
 
 def create_ispypsa_inputs_from_config(
@@ -96,8 +111,11 @@ def create_ispypsa_inputs_from_config(
     node_template = template_nodes(
         workbook_cache_location, config.network.nodes.regional_granularity
     )
-    renewable_energy_zone_location_mapping = template_renewable_energy_zones(
+    renewable_energy_zone_location_mapping = template_renewable_energy_zones_locations(
         workbook_cache_location, location_mapping_only=True
+    )
+    renewable_energy_zone_build_limits = template_rez_build_limits(
+        workbook_cache_location, config.network.rez_transmission_expansion
     )
     sub_regions_to_nem_regions_mapping = template_sub_regions_to_nem_regions_mapping(
         workbook_cache_location
@@ -106,7 +124,9 @@ def create_ispypsa_inputs_from_config(
         template_nem_region_to_single_sub_region_mapping(workbook_cache_location)
     )
     flow_path_template = template_flow_paths(
-        workbook_cache_location, config.network.nodes.regional_granularity
+        workbook_cache_location,
+        config.iasr_workbook_version,
+        config.network.nodes.regional_granularity,
     )
     ecaa_generators_template = template_ecaa_generators_static_properties(
         workbook_cache_location
@@ -117,11 +137,18 @@ def create_ispypsa_inputs_from_config(
     dynamic_generator_property_templates = template_generator_dynamic_properties(
         workbook_cache_location, config.scenario
     )
+    manually_extracted_tables = template_manually_extracted_tables(
+        config.iasr_workbook_version
+    )
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
     if renewable_energy_zone_location_mapping is not None:
         renewable_energy_zone_location_mapping.to_csv(
             Path(template_location, "mapping_renewable_energy_zone_locations.csv")
+        )
+    if renewable_energy_zone_build_limits is not None:
+        renewable_energy_zone_build_limits.to_csv(
+            Path(template_location, "renewable_energy_zone_build_limits.csv")
         )
     if sub_regions_to_nem_regions_mapping is not None:
         sub_regions_to_nem_regions_mapping.to_csv(
@@ -144,6 +171,8 @@ def create_ispypsa_inputs_from_config(
             dynamic_generator_property_templates[gen_property].to_csv(
                 Path(template_location, f"{gen_property}.csv")
             )
+    for name, table in manually_extracted_tables.items():
+        table.to_csv(Path(template_location, name))
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
@@ -169,8 +198,37 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     pypsa_inputs["buses"] = _translate_nodes_to_buses(
         ispypsa_inputs_location,
     )
-    pypsa_inputs["lines"] = translate_flow_paths_to_lines(
+    lines_interregional_or_subregional = translate_flow_paths_to_lines(
         ispypsa_inputs_location,
+        config.network.transmission_expansion,
+        config.wacc,
+        config.network.annuitisation_lifetime,
+    )
+    lines_rez_to_region_or_subregion = (
+        translate_renewable_energy_zone_build_limits_to_flow_paths(
+            ispypsa_inputs_location,
+            config.network.rez_transmission_expansion,
+            config.wacc,
+            config.network.annuitisation_lifetime,
+            config.network.rez_to_sub_region_transmission_default_limit,
+        )
+    )
+    pypsa_inputs["lines"] = pd.concat(
+        [lines_interregional_or_subregional, lines_rez_to_region_or_subregion]
+    )
+    pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
+        ispypsa_inputs_location
+    )
+    pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
+        ispypsa_inputs_location
+    )
+    pypsa_inputs["custom_constraints_generators"] = (
+        _translate_custom_constraints_generators(
+            ispypsa_inputs_location,
+            config.network.rez_transmission_expansion,
+            config.wacc,
+            config.network.annuitisation_lifetime,
+        )
     )
     for name, table in pypsa_inputs.items():
         table.to_csv(Path(pypsa_inputs_location, f"{name}.csv"))
@@ -212,19 +270,22 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
 def create_and_run_pypsa_model(
     config: ModelConfig, pypsa_inputs_location: Path, pypsa_outputs_location: Path
 ) -> None:
-    create_or_clean_task_output_folder(pypsa_outputs_location)
     network = initialise_network(pypsa_inputs_location)
     add_carriers_to_network(network, pypsa_inputs_location)
     add_buses_to_network(network, pypsa_inputs_location)
+    add_buses_for_custom_constraints(network)
     add_lines_to_network(network, pypsa_inputs_location)
+    add_custom_constraint_generators_to_network(network, pypsa_inputs_location)
     add_ecaa_generators_to_network(network, pypsa_inputs_location)
+    network.optimize.create_model()
+    add_custom_constraints(network, pypsa_inputs_location)
     run(network, solver_name=config.solver)
     save_results(network, pypsa_outputs_location)
 
 
 def task_cache_required_tables():
     return {
-        "actions": [(build_parsed_workbook_cache, [_PARSED_WORKBOOK_CACHE])],
+        "actions": [(build_parsed_workbook_cache, [config, _PARSED_WORKBOOK_CACHE])],
         "targets": [
             Path(_PARSED_WORKBOOK_CACHE, table + ".csv") for table in REQUIRED_TABLES
         ],
@@ -252,6 +313,10 @@ def task_create_ispypsa_inputs():
             ),
             Path(
                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "renewable_energy_zone_build_limits.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
                 "mapping_sub_regions_to_nem_regions.csv",
             ),
             Path(
@@ -268,6 +333,24 @@ def task_create_ispypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "partial_outage_forecasts.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "seasonal_ratings.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "closure_years.csv"),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_group_constraints_expansion_costs.csv",
+            ),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_lhs.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_rhs.csv"),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_expansion_costs.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_lhs.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_rhs.csv",
+            ),
         ],
     }
 
@@ -289,12 +372,33 @@ def task_create_pypsa_inputs():
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "nodes.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_group_constraints_expansion_costs.csv",
+            ),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_lhs.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_rhs.csv"),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_expansion_costs.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_lhs.csv",
+            ),
+            Path(
+                _ISPYPSA_INPUT_TABLES_DIRECTORY,
+                "rez_transmission_limit_constraints_rhs.csv",
+            ),
         ],
         "targets": [
             Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
         ],
     }
 
@@ -312,6 +416,9 @@ def task_create_and_run_pypsa_model():
             Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
+            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
         ],
         "targets": [Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5")],
     }

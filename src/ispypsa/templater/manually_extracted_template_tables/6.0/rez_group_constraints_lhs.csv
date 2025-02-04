@@ -1,0 +1,43 @@
+﻿constraint_id,term_type,term_id,coefficient
+NQ2,line_flow,CQ-NQ,-1
+NQ2,line_flow,Q4-CQ,1
+NQ2,line_flow,Q5-CQ,1
+NQ2,generator_capacity,NQ2-EXPANSION,-1
+SQ1,line_flow,SQ-CQ,-0.5
+SQ1,line_flow,Q7-SQ,1
+SQ1,generator_capacity,SQ1-EXPANSION,-1
+SWV1,line_flow,Heywood,-1
+SWV1,line_flow,V4-VIC,1
+SWV1,line_flow,V8-VIC,1
+SWV1,generator_capacity,SW1-EXPANSION,-1
+MN1,line_flow,S3-CSA,1
+MN1,line_flow,S4-CSA,0.5
+MN1,line_flow,S5-CSA,1
+MN1,line_flow,S6-CSA,1
+MN1,line_flow,S7-CSA,1
+MN1,line_flow,S8-CSA,1
+MN1,line_flow,S9-CSA,1
+MN1,load_consumption,CSA Export Electrolyser,-1
+MN1,generator_capacity,MN1-EXPANSION,-1
+MN1 North,line_flow,S3-CSA,1
+MN1 North,line_flow,S4-CSA,-0.5
+MN1 North,line_flow,S5-CSA,-1
+MN1 North,line_flow,S6-CSA,-1
+MN1 North,line_flow,S7-CSA,-1
+MN1 North,line_flow,S8-CSA,-1
+MN1 North,line_flow,S9-CSA,-1
+MN1 North,load_consumption,CSA Export Electrolyser,1
+MN1 North,generator_capacity,MN1 North-EXPANSION,-1
+NSA1,line_flow,S5-CSA,0.5
+NSA1,line_flow,S8-CSA,1
+NSA1,line_flow,S9-CSA,1
+NSA1,load_consumption,CSA Export Electrolyser,-1
+NSA1,generator_capacity,NSA1-EXPANSION,-1
+NSA1 North,line_flow,S5-CSA,-0.05
+NSA1 North,line_flow,S8-CSA,-1
+NSA1 North,line_flow,S9-CSA,-1
+NSA1 North,load_consumption,CSA Export Electrolyser,1
+NSA1 North,generator_capacity,NSA1-EXPANSION,-1
+NET1,line_flow,T1-TAS,1
+NET1,line_flow,T4-TAS,1
+NET1,generator_capacity,NTE1-EXPANSION,-1

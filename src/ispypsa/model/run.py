@@ -10,4 +10,4 @@ def run(network: pypsa.Network, solver_name="highs", solver_options={}) -> None:
             https://pypsa.readthedocs.io/en/latest/getting-started/installation.html
         solver_options: Options to pass to the solver.
     """
-    network.optimize(solver_name=solver_name, solver_options=solver_options)
+    network.optimize.solve_model(solver_name=solver_name, solver_options=solver_options)

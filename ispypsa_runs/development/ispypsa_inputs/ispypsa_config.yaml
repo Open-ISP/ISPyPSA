@@ -9,7 +9,18 @@ ispypsa_run_name: development
 #   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
 #   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
+# Weighted average cost of capital for annuitisation of generation and transmission
+# costs, as a fraction, i.e. 0.07 is 7%.
+wacc: 0.07
 network:
+  # Does the model consider the expansion of sub-region to sub-region transmission
+  # capacity
+  transmission_expansion: True
+  # Does the model consider the expansion of renewable energy zone transmission
+  # capacity
+  rez_transmission_expansion: True
+  # Years to annuitise transmission project capital costs over.
+  annuitisation_lifetime: 30
   nodes:
     # The regional granularity of the nodes in the modelled network
     # Options:
@@ -23,6 +34,9 @@ network:
     #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
     #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
     rezs: discrete_nodes
+  # Line capacity limit for rez to node connections that have their limit's modelled
+  # through custom constraint (MW).
+  rez_to_sub_region_transmission_default_limit: 1e5
 temporal:
   operational_temporal_resolution_min: 30
   # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
@@ -57,3 +71,5 @@ temporal:
 #     "mindopt"
 #     "pips"
 solver: highs
+# The version of IASR workbook that the template inputs are generated from.
+iasr_workbook_version: "6.0"

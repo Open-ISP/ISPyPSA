@@ -44,6 +44,7 @@ def _translate_ecaa_generators(
 
     marginal_costs = {
         "Black Coal": 50.0,
+        "Brown Coal": 30.0,
         "Gas": 300.0,
         "Liquid Fuel": 400.0,
         "Water": 300.0,
