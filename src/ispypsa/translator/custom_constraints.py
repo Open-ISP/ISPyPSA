@@ -81,9 +81,9 @@ def _translate_custom_constraints_generators(
     custom_constraints_additional_variables["bus"] = "bus_for_custom_constraint_gens"
 
     custom_constraints_additional_variables["capital_cost"] = (
-        custom_constraints_additional_variables[
-            "capital_cost"
-        ].apply(lambda x: annuitised_investment_costs(x, wacc, asset_lifetime))
+        custom_constraints_additional_variables["capital_cost"].apply(
+            lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
+        )
     )
 
     custom_constraints_additional_variables["p_nom_extendable"] = expansion_on
