@@ -48,6 +48,7 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
         year_type=config.temporal.year_type,
     )
+
     pypsa_inputs["snapshots"] = _filter_snapshots(
         config=config.temporal, snapshots=snapshots
     )

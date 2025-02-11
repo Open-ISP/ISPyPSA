@@ -117,7 +117,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         generator_types=["solar", "wind"],
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
-        snapshot=pypsa_tables["snapshots"],
+        snapshots=pypsa_tables["snapshots"],
     )
     create_pypsa_friendly_bus_demand_timeseries(
         ispypsa_tables["sub_regions"],
