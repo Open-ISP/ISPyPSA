@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from ispypsa import read_csvs
+from ispypsa.data_fetch import read_csvs
 from ispypsa.templater.dynamic_generator_properties import (
-    template_generator_dynamic_properties,
+    _template_generator_dynamic_properties,
 )
 from ispypsa.templater.lists import _ISP_SCENARIOS
 
@@ -10,7 +10,7 @@ from ispypsa.templater.lists import _ISP_SCENARIOS
 def test_generator_dynamic_properties_templater(workbook_table_cache_test_path: Path):
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     for scenario in _ISP_SCENARIOS:
-        mapped_dfs = template_generator_dynamic_properties(iasr_tables, scenario)
+        mapped_dfs = _template_generator_dynamic_properties(iasr_tables, scenario)
         for key, df in [
             item for item in mapped_dfs.items() if item[0] != "liquid_fuel_prices"
         ]:

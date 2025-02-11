@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.translator.helpers import annuitised_investment_costs
+from ispypsa.translator.helpers import _annuitised_investment_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
     _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
@@ -75,7 +75,7 @@ def _translate_custom_constraints_generators(
     # initial size is 0.0.
     custom_constraint_generators["capital_cost"] = custom_constraint_generators[
         "capital_cost"
-    ].apply(lambda x: annuitised_investment_costs(x, wacc, asset_lifetime))
+    ].apply(lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime))
 
     # not extendable by default
     custom_constraint_generators["p_nom_extendable"] = False

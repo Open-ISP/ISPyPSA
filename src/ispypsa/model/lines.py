@@ -4,7 +4,7 @@ import pandas as pd
 import pypsa
 
 
-def add_lines_to_network(network: pypsa.Network, lines: pd.DataFrame) -> None:
+def _add_lines_to_network(network: pypsa.Network, lines: pd.DataFrame) -> None:
     """Adds the Lines defined in `lines.csv` in the `path_pypsa_inputs` directory to the
     `pypsa.Network` object.
 

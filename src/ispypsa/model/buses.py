@@ -33,7 +33,7 @@ def _add_bus_to_network(
         )
 
 
-def add_buses_to_network(
+def _add_buses_to_network(
     network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
 ) -> None:
     """Adds buses and demand traces to the `pypsa.Network`.
@@ -52,7 +52,7 @@ def add_buses_to_network(
     )
 
 
-def add_buses_for_custom_constraints(network: pypsa.Network) -> None:
+def _add_buses_for_custom_constraints(network: pypsa.Network) -> None:
     """Adds a bus called bus_for_custom_constraint_gens for generators being used to model constraint violation to
     the network.
 

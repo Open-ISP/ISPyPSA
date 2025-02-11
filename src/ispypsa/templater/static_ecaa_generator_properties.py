@@ -17,7 +17,7 @@ _OBSOLETE_COLUMNS = [
 ]
 
 
-def template_ecaa_generators_static_properties(
+def _template_ecaa_generators_static_properties(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the existing, commited, anticipated and additional (ECAA) generators

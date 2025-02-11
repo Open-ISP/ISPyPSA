@@ -14,7 +14,7 @@ from .helpers import (
 )
 
 
-def get_reference_node_locations(reference_nodes):
+def _get_reference_node_locations(reference_nodes):
     # request and merge in substation coordinates for reference nodes
     substation_coordinates = _request_transmission_substation_coordinates()
     if not substation_coordinates.empty:
@@ -85,7 +85,7 @@ def _template_sub_regions(
                 "sub_region_reference_node_voltage_kv",
             ]
         ]
-        sub_regions = get_reference_node_locations(sub_regions)
+        sub_regions = _get_reference_node_locations(sub_regions)
     return sub_regions
 
 
@@ -121,7 +121,7 @@ def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
             "regional_reference_node_voltage_kv",
         ]
     ]
-    regions = get_reference_node_locations(regions)
+    regions = _get_reference_node_locations(regions)
     return regions
 
 

@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.translator.helpers import annuitised_investment_costs
+from ispypsa.translator.helpers import _annuitised_investment_costs
 from ispypsa.translator.mappings import _LINE_ATTRIBUTES
 
 
-def translate_flow_paths_to_lines(
+def _translate_flow_paths_to_lines(
     flow_paths: pd.DataFrame,
     expansion_on: bool,
     wacc: float,
@@ -32,7 +32,7 @@ def translate_flow_paths_to_lines(
     lines = lines.set_index("name", drop=True)
 
     lines["capital_cost"] = lines["capital_cost"].apply(
-        lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
+        lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime)
     )
 
     # not extendable by default

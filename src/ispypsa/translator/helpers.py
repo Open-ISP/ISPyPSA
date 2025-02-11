@@ -1,4 +1,4 @@
-def get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
+def _get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
     """Get the model start year, end year, and start/end month for iteration, which depend on
     financial vs calendar year.
     """
@@ -13,7 +13,7 @@ def get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: 
     return start_year, end_year, month
 
 
-def annuitised_investment_costs(
+def _annuitised_investment_costs(
     capital_cost: float, wacc: float, asset_lifetime: int
 ) -> float:
     """Calculate the cost of capital cost spread over the asset lifetime.

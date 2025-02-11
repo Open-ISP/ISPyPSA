@@ -4,7 +4,7 @@ import pandas as pd
 import pypsa
 
 
-def add_carriers_to_network(network: pypsa.Network, generators: pd.DataFrame) -> None:
+def _add_carriers_to_network(network: pypsa.Network, generators: pd.DataFrame) -> None:
     """Adds the Carriers in the generators table, and the AC and DC Carriers to the
     `pypsa.Network`.
 

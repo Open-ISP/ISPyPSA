@@ -20,7 +20,7 @@ def _get_trace_data(generator_name: str, path_to_traces: Path):
     return trace_data
 
 
-def _add_generators_to_network(
+def _add_generator_to_network(
     generator_definition: dict,
     network: pypsa.Network,
     path_to_solar_traces: Path,
@@ -56,7 +56,7 @@ def _add_generators_to_network(
     network.add(**generator_definition)
 
 
-def add_generators_to_network(
+def _add_generators_to_network(
     network: pypsa.Network,
     generators: pd.DataFrame,
     path_to_timeseries_data: Path,
@@ -74,14 +74,14 @@ def add_generators_to_network(
     path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
     path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
     generators.apply(
-        lambda row: _add_generators_to_network(
+        lambda row: _add_generator_to_network(
             row.to_dict(), network, path_to_solar_traces, path_to_wind_traces
         ),
         axis=1,
     )
 
 
-def add_custom_constraint_generators_to_network(
+def _add_custom_constraint_generators_to_network(
     network: pypsa.Network, generators: pd.DataFrame
 ) -> None:
     """Adds the Generators defined in `custom_constraint_generators.csv` in the `path_pypsa_inputs` directory to the

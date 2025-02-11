@@ -2,7 +2,7 @@ import pandas as pd
 import pypsa
 
 
-def initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
+def _initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
     """Creates a `pypsa.Network object` with snapshots defined.
 
     Args:

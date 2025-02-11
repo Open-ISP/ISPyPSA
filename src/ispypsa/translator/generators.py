@@ -5,8 +5,8 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
-from ispypsa.translator.temporal_filters import time_series_filter
-from ispypsa.translator.time_series_checker import check_time_series
+from ispypsa.translator.temporal_filters import _time_series_filter
+from ispypsa.translator.time_series_checker import _check_time_series
 
 
 def _translate_ecaa_generators(
@@ -129,8 +129,8 @@ def create_pypsa_friendly_existing_generator_timeseries(
         )
         # datetime in nanoseconds required by PyPSA
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-        trace = time_series_filter(trace, snapshot)
-        check_time_series(
+        trace = _time_series_filter(trace, snapshot)
+        _check_time_series(
             trace["Datetime"], snapshot.index.to_series(), "generator trace data", gen
         )
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)

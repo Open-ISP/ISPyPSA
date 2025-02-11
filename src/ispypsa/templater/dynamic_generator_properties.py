@@ -14,7 +14,7 @@ from .helpers import _snakecase_string
 from .lists import _ECAA_GENERATOR_TYPES
 
 
-def template_generator_dynamic_properties(
+def _template_generator_dynamic_properties(
     iasr_tables: dict[str : pd.DataFrame], scenario: str
 ) -> dict[str, pd.DataFrame]:
     """Creates ISPyPSA templates for dynamic generator properties (i.e. those that vary

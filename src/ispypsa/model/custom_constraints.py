@@ -6,7 +6,7 @@ import pandas as pd
 import pypsa
 
 
-def get_variables(
+def _get_variables(
     model: linopy.Model, component_name: str, component_type: str, attribute_type: str
 ):
     """Retrieves variable objects from a linopy model based on a component name and
@@ -46,7 +46,7 @@ def get_variables(
     return var
 
 
-def add_custom_constraints(
+def _add_custom_constraints(
     network: pypsa.Network,
     custom_constraints_rhs: pd.DataFrame,
     custom_constraints_lhs: pd.DataFrame,
@@ -79,14 +79,14 @@ def add_custom_constraints(
         # Retrieve the variable objects needed on the constraint lhs from the linopy
         # model used by the pypsa.Network
         variables = constraint_lhs.apply(
-            lambda row: get_variables(
+            lambda row: _get_variables(
                 network.model, row["variable_name"], row["component"], row["attribute"]
             ),
             axis=1,
         )
 
         # Some variables may not be present in the modeled so these a filtered out.
-        # variables that couldn't be found are logged in get_variables so this doesn't
+        # variables that couldn't be found are logged in _get_variables so this doesn't
         # result in 'silent failure'.
         retrieved_vars = ~variables.isna()
         variables = variables.loc[retrieved_vars]

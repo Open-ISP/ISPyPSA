@@ -2,10 +2,10 @@ from datetime import datetime
 
 import pandas as pd
 
-from ispypsa.translator.helpers import get_iteration_start_and_end_time
+from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 
 
-def create_complete_snapshots_index(
+def _create_complete_snapshots_index(
     start_year: int,
     end_year: int,
     operational_temporal_resolution_min: int,
@@ -27,7 +27,7 @@ def create_complete_snapshots_index(
     Returns:
         pd.DataFrame
     """
-    start_year, end_year, month = get_iteration_start_and_end_time(
+    start_year, end_year, month = _get_iteration_start_and_end_time(
         year_type, start_year, end_year
     )
 

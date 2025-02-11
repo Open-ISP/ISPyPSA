@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa import load_manually_extracted_tables
+from ispypsa.templater import load_manually_extracted_tables
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
     _template_sub_regional_flow_paths,

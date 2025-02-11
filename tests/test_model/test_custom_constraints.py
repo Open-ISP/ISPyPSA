@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa import build_pypsa_network, read_csvs
+from ispypsa.data_fetch import read_csvs
+from ispypsa.model import build_pypsa_network
 
 
 def test_custom_constraints():
