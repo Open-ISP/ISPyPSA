@@ -24,14 +24,16 @@ def _translate_ecaa_generators(
         `pd.DataFrame`: `PyPSA` style generator attributes in tabular format.
     """
 
-    if regional_granularity == "sub_regions":
-        _GENERATOR_ATTRIBUTES["sub_region_id"] = "bus"
-    elif regional_granularity == "nem_regions":
-        _GENERATOR_ATTRIBUTES["region_id"] = "bus"
+    gen_attributes = _GENERATOR_ATTRIBUTES.copy()
 
-    ecaa_generators_pypsa_format = ecaa_generators.loc[:, _GENERATOR_ATTRIBUTES.keys()]
+    if regional_granularity == "sub_regions":
+        gen_attributes["sub_region_id"] = "bus"
+    elif regional_granularity == "nem_regions":
+        gen_attributes["region_id"] = "bus"
+
+    ecaa_generators_pypsa_format = ecaa_generators.loc[:, gen_attributes.keys()]
     ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.rename(
-        columns=_GENERATOR_ATTRIBUTES
+        columns=gen_attributes
     )
 
     if regional_granularity == "single_region":
@@ -52,9 +54,6 @@ def _translate_ecaa_generators(
         "carrier"
     ].map(marginal_costs)
 
-    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.set_index(
-        "name", drop=True
-    )
     return ecaa_generators_pypsa_format
 
 
@@ -65,7 +64,7 @@ def create_pypsa_friendly_existing_generator_timeseries(
     generator_types: List[Literal["solar", "wind"]],
     reference_year_mapping: dict[int:int],
     year_type: Literal["fy", "calendar"],
-    snapshot: pd.DataFrame,
+    snapshots: pd.DataFrame,
 ) -> None:
     """Gets trace data for generators by constructing a timeseries from the start to end
     year using the reference year cycle provided. Trace data is then saved as a parquet
@@ -85,7 +84,7 @@ def create_pypsa_friendly_existing_generator_timeseries(
             year with start_year and end_year specifiying the financial year to return
             data for, using year ending nomenclature (2016 ->FY2015/2016). If
             'calendar', then filtering is by calendar year.
-        snapshot: pd.DataFrame containing the expected time series values.
+        snapshots: pd.DataFrame containing the expected time series values.
 
     Returns:
         None
@@ -129,8 +128,8 @@ def create_pypsa_friendly_existing_generator_timeseries(
         )
         # datetime in nanoseconds required by PyPSA
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-        trace = _time_series_filter(trace, snapshot)
+        trace = _time_series_filter(trace, snapshots)
         _check_time_series(
-            trace["Datetime"], snapshot.index.to_series(), "generator trace data", gen
+            trace["Datetime"], snapshots.index.to_series(), "generator trace data", gen
         )
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)
