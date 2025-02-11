@@ -80,7 +80,7 @@ def test_translate_ecaa_generators_single_region():
 
 
 def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
-    parsed_trace_path = Path(os.environ.get("PATH_TO_PARSED_TRACES"))
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
 
     ecaa_ispypsa = pd.DataFrame(
         {
