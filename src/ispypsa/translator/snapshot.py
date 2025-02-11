@@ -5,7 +5,7 @@ import pandas as pd
 from ispypsa.translator.helpers import get_iteration_start_and_end_time
 
 
-def create_complete_snapshot_index(
+def create_complete_snapshots_index(
     start_year: int,
     end_year: int,
     operational_temporal_resolution_min: int,
@@ -45,6 +45,7 @@ def create_complete_snapshot_index(
         start=start_date,
         end=end_date,
         freq=str(operational_temporal_resolution_min) + "min",
+        name="snapshots",
     )
     time_index = pd.DataFrame(index=time_index)
     return time_index

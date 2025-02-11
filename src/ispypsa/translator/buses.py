@@ -28,8 +28,65 @@ def _translate_nodes_to_buses(ispypsa_inputs_path: Path | str) -> pd.DataFrame:
     return buses
 
 
-def _translate_buses_demand_timeseries(
-    ispypsa_inputs_path: Path | str,
+def _translate_isp_sub_regions_to_buses(isp_sub_regions: pd.DataFrame) -> pd.DataFrame:
+    """Process ISP sub region data into the PyPSA format for buses.
+
+    Args:
+        isp_sub_regions: `ISPyPSA` formatted pd.DataFrame detailing ISP sub regions.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = isp_sub_regions.loc[:, ["isp_sub_region_id"]]
+    buses = buses.rename(columns={"isp_sub_region_id": "name"})
+    buses = buses.set_index("name", drop=True)
+    return buses
+
+
+def _translate_nem_regions_to_buses(nem_regions: pd.DataFrame) -> pd.DataFrame:
+    """Process NEM region data into the PyPSA format for buses.
+
+    Args:
+        nem_regions: `ISPyPSA` formatted pd.DataFrame detailing NEM regions.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = nem_regions.loc[:, ["nem_region_id"]]
+    buses = buses.rename(columns={"nem_region_id": "name"})
+    buses = buses.set_index("name", drop=True)
+    return buses
+
+
+def _create_single_region_bus() -> pd.DataFrame:
+    """Create table specifying the name of single region in the PyPSA format.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = pd.DataFrame({"name": "NEM"})
+    buses = buses.set_index("name", drop=True)
+    return buses
+
+
+def _translate_rezs_to_buses(renewable_energy_zones: pd.DataFrame) -> pd.DataFrame:
+    """Process ISP Renewable Energy Zone location data into the PyPSA format for buses.
+
+    Args:
+        nem_regions: `ISPyPSA` formatted pd.DataFrame detailing Renewable Energy Zone
+            locations.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = renewable_energy_zones.loc[:, ["rez_id"]]
+    buses = buses.rename(columns={"rez_id": "name"})
+    buses = buses.set_index("name", drop=True)
+    return buses
+
+
+def create_pypsa_friendly_bus_demand_timeseries(
+    isp_sub_regions: pd.DataFrame,
     trace_data_path: Path | str,
     pypsa_inputs_path: Path | str,
     scenario: str,
@@ -44,16 +101,21 @@ def _translate_buses_demand_timeseries(
     Trace data is then saved as a parquet file to `pypsa_inputs_path`.
 
     Args:
-        ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
-        trace_data_path: Path to directory containing trace data parsed by isp-trace-parser
-        pypsa_inputs_path: Path to director where input translated to pypsa format will be saved
+        isp_sub_regions: isp_sub_regions: `ISPyPSA` formatted pd.DataFrame detailing ISP
+            sub regions.
+        trace_data_path: Path to directory containing trace data parsed by
+            isp-trace-parser
+        pypsa_inputs_path: Path to director where input translated to pypsa format will
+            be saved
         scenario: str, ISP scenario to use demand traces from
         regional_granularity: Regional granularity of the nodes obtained from the model
             configuration. Defaults to "sub_regions".
-        reference_year_mapping: dict[int: int], mapping model years to trace data reference years
-        year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial year with start_year and
-            end_year specifiying the financial year to return data for, using year ending nomenclature (2016 ->
-            FY2015/2016). If 'calendar', then filtering is by calendar year.
+        reference_year_mapping: dict[int: int], mapping model years to trace data
+            reference years
+        year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial
+            year with start_year and end_year specifiying the financial year to return
+            data for, using year ending nomenclature (2016 ->FY2015/2016). If
+            'calendar', then filtering is by calendar year.
         snapshot: pd.DataFrame containing the expected time series values.
 
     Returns:
@@ -64,50 +126,33 @@ def _translate_buses_demand_timeseries(
     if not output_trace_path.exists():
         output_trace_path.mkdir(parents=True)
 
-    all_nodes = pd.read_csv(ispypsa_inputs_path / Path("nodes.csv"))
     # remove "s" unless single_region for for type filtering
-    if regional_granularity != "single_region":
-        demand_node_type = regional_granularity[:-1]
-    else:
-        demand_node_type = regional_granularity
-    demand_nodes = all_nodes.loc[all_nodes["type"] == demand_node_type]
-    for demand_node in demand_nodes["node_id"]:
+    if regional_granularity == "single_region":
+        isp_sub_regions["demand_nodes"] = "NEM"
+    elif regional_granularity == "nem_regions":
+        isp_sub_regions["demand_nodes"] = isp_sub_regions["nem_region_id"]
+    elif regional_granularity == "sub_regions":
+        isp_sub_regions["demand_nodes"] = isp_sub_regions["isp_sub_region_id"]
+
+    demand_nodes = list(isp_sub_regions["demand_nodes"].unique())
+
+    for demand_node in demand_nodes:
+        mask = isp_sub_regions["demand_nodes"] == demand_node
+        sub_regions_to_aggregate = list(isp_sub_regions.loc[mask, "isp_sub_region_id"])
+
         node_traces = []
-        if regional_granularity == "sub_regions":
+        for sub_regions in sub_regions_to_aggregate:
             trace = get_data.demand_multiple_reference_years(
                 reference_years=reference_year_mapping,
                 directory=trace_data_path,
-                subregion=demand_node,
+                subregion=sub_regions,
                 scenario=scenario,
                 year_type=year_type,
                 demand_type="OPSO_MODELLING",
                 poe="POE50",
             )
             node_traces.append(trace)
-        else:
-            sub_regions_to_nem_regions = pd.read_csv(
-                ispypsa_inputs_path / Path("mapping_sub_regions_to_nem_regions.csv")
-            )
-            if regional_granularity == "nem_regions":
-                sub_regions_in_demand_node = sub_regions_to_nem_regions.loc[
-                    sub_regions_to_nem_regions["nem_region_id"] == demand_node,
-                    "isp_sub_region_id",
-                ]
-            elif regional_granularity == "single_region":
-                sub_regions_in_demand_node = sub_regions_to_nem_regions.loc[
-                    :, "isp_sub_region_id"
-                ]
-            for sub_region in sub_regions_in_demand_node:
-                trace = get_data.demand_multiple_reference_years(
-                    reference_years=reference_year_mapping,
-                    directory=trace_data_path,
-                    subregion=sub_region,
-                    scenario=scenario,
-                    year_type=year_type,
-                    demand_type="OPSO_MODELLING",
-                    poe="POE50",
-                )
-                node_traces.append(trace)
+
         node_traces = pd.concat(node_traces)
         node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
         # datetime in nanoseconds required by PyPSA

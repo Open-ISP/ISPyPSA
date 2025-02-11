@@ -1,11 +1,21 @@
 from pathlib import Path
 
-from ispypsa.templater.flow_paths import template_flow_paths
+import pandas as pd
+
+from ispypsa import load_manually_extracted_tables
+from ispypsa.templater.flow_paths import (
+    _template_regional_interconnectors,
+    _template_sub_regional_flow_paths,
+)
 
 
 def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
-    flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "6.0", "nem_regions"
+    filepath = workbook_table_cache_test_path / Path(
+        "interconnector_transfer_capability.csv"
+    )
+    interconnector_capabilities = pd.read_csv(filepath)
+    flow_paths_template = _template_regional_interconnectors(
+        interconnector_capabilities
     )
     assert flow_paths_template.index.name == "flow_path_name"
     assert all(
@@ -36,8 +46,13 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
 
 
 def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path):
-    flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "6.0", "sub_regions"
+    filepath = workbook_table_cache_test_path / Path(
+        "flow_path_transfer_capability.csv"
+    )
+    flow_path_transfer_capability = pd.read_csv(filepath)
+    manual_tables = load_manually_extracted_tables("6.0")
+    flow_paths_template = _template_sub_regional_flow_paths(
+        flow_path_transfer_capability, manual_tables["transmission_expansion_costs"]
     )
     assert flow_paths_template.index.name == "flow_path_name"
     assert all(
@@ -66,10 +81,3 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
     )
     assert len(flow_paths_template) == 14
     assert len(flow_paths_template.columns) == 5
-
-
-def test_flow_paths_templater_single_region(workbook_table_cache_test_path: Path):
-    flow_paths_template = template_flow_paths(
-        workbook_table_cache_test_path, "6.0", "single_region"
-    )
-    assert flow_paths_template.empty

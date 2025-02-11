@@ -46,20 +46,31 @@ def get_variables(
     return var
 
 
-def add_custom_constraints(network: pypsa.Network, path_pypsa_inputs: Path):
+def add_custom_constraints(
+    network: pypsa.Network,
+    custom_constraints_rhs: pd.DataFrame,
+    custom_constraints_lhs: pd.DataFrame,
+):
     """Adds constrains defined in `custom_constraints_lhs.csv` and
     `custom_constraints_rhs.csv` in the `path_to_pypsa_inputs` directory
     to the `pypsa.Network`.
 
     Args:
         network: The `pypsa.Network` object
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
+        custom_constraints_rhs: `pd.DataFrame` specifying custom constraint RHS values,
+            has two columns 'constraint_name' and 'rhs'.
+        custom_constraints_lhs: `pd.DataFrame` specifying custom constraint LHS values.
+            The DataFrame has five columns 'constraint_name', 'variable_name',
+            'component', 'attribute', and 'coefficient'. The 'component' specifies
+            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Line',
+            etc. The 'variable_name' specifies the name of the `PyPSA` component, and
+            the 'attribute' specifies the attribute of the component that the variable
+            belongs to i.e. 'p_nom', 's_nom', etc.
 
     Returns: None
     """
-    lhs = pd.read_csv(path_pypsa_inputs / Path("custom_constraints_lhs.csv"))
-    rhs = pd.read_csv(path_pypsa_inputs / Path("custom_constraints_rhs.csv"))
+    lhs = custom_constraints_lhs
+    rhs = custom_constraints_rhs
 
     for index, row in rhs.iterrows():
         constraint_name = row["constraint_name"]

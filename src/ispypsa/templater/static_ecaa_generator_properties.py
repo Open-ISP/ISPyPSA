@@ -105,7 +105,7 @@ def _merge_and_set_ecaa_generators_static_properties(
     "Existing generator summary" template, and renames columns if this is specified
     in the mapping.
 
-    Uses `ispypsa.templater.mappings._ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    Uses `ispypsa.test_templater.mappings._ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     as the mapping.
 
     Args:

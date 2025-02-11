@@ -33,19 +33,20 @@ def _add_bus_to_network(
         )
 
 
-def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> None:
-    """Adds Buses from `buses.csv` in the `path_to_pypsa_inputs` directory to
-    the `pypsa.Network`.
+def add_buses_to_network(
+    network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
+) -> None:
+    """Adds buses and demand traces to the `pypsa.Network`.
 
     Args:
         network: The `pypsa.Network` object
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
+        buses: `pd.DataFrame` with `PyPSA` style `Bus` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
 
     Returns: None
     """
-    buses = pd.read_csv(path_pypsa_inputs / Path("buses.csv"))
-    path_to_demand_traces = path_pypsa_inputs / Path("demand_traces")
+    path_to_demand_traces = path_to_timeseries_data / Path("demand_traces")
     buses["name"].apply(
         lambda x: _add_bus_to_network(x, network, path_to_demand_traces)
     )

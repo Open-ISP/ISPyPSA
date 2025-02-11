@@ -6,12 +6,12 @@ import requests
 import xmltodict
 from thefuzz import process
 
+from ispypsa.templater.mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
+
 from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
 )
-from .mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
-from .renewable_energy_zones import template_renewable_energy_zones_locations
 
 
 def get_reference_node_locations(reference_nodes):
@@ -45,12 +45,17 @@ def get_reference_node_locations(reference_nodes):
     return reference_nodes
 
 
-def _template_sub_regions(sub_regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
+def _template_sub_regions(
+    sub_regional_reference_nodes: pd.DataFrame, mapping_only: bool = False
+) -> pd.DataFrame:
     """Processes the 'Sub-regional network representation' table into an ISPyPSA template format
 
     Args:
         sub_regional_reference_nodes: pd.DataFrame specifying the NEM subregional
             reference nodes.
+        mapping_only: boolean, when doing single region or region modelling this input
+            is set to True so unnecessary information such sub_region_reference_node
+            are latitude and longitude are not returned.
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional node template
 
@@ -63,19 +68,25 @@ def _template_sub_regions(sub_regional_reference_nodes: pd.DataFrame) -> pd.Data
         [
             sub_region_name_and_id,
             split_node_voltage,
+            sub_regional_df["NEM Region"].rename("nem_region"),
         ],
         axis=1,
     )
     sub_regions = sub_regions.set_index("isp_sub_region_id")
     sub_regions = _match_region_name_and_id(sub_regions)
-    return sub_regions[
-        [
-            "isp_sub_region_id",
-            "nem_region_id",
-            "sub_region_reference_node",
-            "sub_region_reference_node_voltage_kv",
+
+    if mapping_only:
+        sub_regions = sub_regions[["nem_region_id"]]
+    else:
+        sub_regions = sub_regions[
+            [
+                "nem_region_id",
+                "sub_region_reference_node",
+                "sub_region_reference_node_voltage_kv",
+            ]
         ]
-    ]
+        sub_regions = get_reference_node_locations(sub_regions)
+    return sub_regions
 
 
 def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
@@ -103,22 +114,15 @@ def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
     )
     regions = _match_region_name_and_id(regions)
     regions = regions.set_index("nem_region_id")
-    return regions[
+    regions = regions[
         [
-            "nem_region",
-            "isp_sub_region_idregional_reference_node",
+            "isp_sub_region_id",
+            "regional_reference_node",
             "regional_reference_node_voltage_kv",
         ]
     ]
-
-
-def _make_rezs_nodes(parsed_workbook_path: Path | str) -> pd.DataFrame:
-    rezs = template_renewable_energy_zones_locations(
-        parsed_workbook_path, location_mapping_only=False
-    )
-    rezs["type"] = "rez"
-    rezs = rezs[["name", "type"]]
-    return rezs
+    regions = get_reference_node_locations(regions)
+    return regions
 
 
 def _split_out_sub_region_name_and_id(data: pd.DataFrame):

@@ -44,24 +44,20 @@ def template_renewable_energy_zones(
 
 
 def template_rez_build_limits(
-    parsed_workbook_path: Path | str,
-    expansion_on: bool,
+    rez_build_limits: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create a template for renewable energy zones that contains data on resource and
     transmission limits and transmission expansion costs.
 
     Args:
-        parsed_workbook_path: Path to directory with table CSVs that are the
-            outputs from the `isp-workbook-parser`.
-        expansion_on: bool indicating if transmission line expansion is considered.
+        rez_build_limits: pd.DataFrame IASR table specifying the renewable energy
+            zone build limits
 
     Returns:
-        `pd.DataFrame`: REZ table resource and transmission limits table
+        `pd.DataFrame`: `ISPyPSA` formatted REZ table resource and transmission limits
+            table
     """
     logging.info("Creating a rez_build_limits template")
-    rez_build_limits = pd.read_csv(
-        Path(parsed_workbook_path, "initial_build_limits.csv")
-    )
     rez_build_limits.columns = [
         _snakecase_string(col) for col in rez_build_limits.columns
     ]
@@ -129,10 +125,7 @@ def template_rez_build_limits(
             "indicative_transmission_expansion_cost_$/mw",
         ],
     ]
-    if not expansion_on:
-        rez_build_limits = rez_build_limits.drop(
-            columns=["indicative_transmission_expansion_cost_$/mw"]
-        )
+
     rez_build_limits = rez_build_limits.set_index("rez_id", drop=True)
     return rez_build_limits
 

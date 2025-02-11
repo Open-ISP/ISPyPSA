@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 
 from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zones_locations,
+    template_renewable_energy_zones,
     template_rez_build_limits,
 )
 
 
 def test_renewable_energy_zones_locations(workbook_table_cache_test_path: Path):
-    node_template = template_renewable_energy_zones_locations(
-        workbook_table_cache_test_path
-    )
+    filepath = workbook_table_cache_test_path / Path("renewable_energy_zones.csv")
+    sub_regional_reference_nodes = pd.read_csv(filepath)
+    node_template = template_renewable_energy_zones(sub_regional_reference_nodes)
     assert node_template.index.name == "rez_id"
     assert set(node_template.index) == set(("Q1", "Q2"))
     assert set(node_template.isp_sub_region_id) == set(("NQ", "NQ"))
@@ -20,9 +20,9 @@ def test_renewable_energy_zones_locations(workbook_table_cache_test_path: Path):
 
 
 def test_renewable_energy_zone_build_limits(workbook_table_cache_test_path: Path):
-    build_limits = template_rez_build_limits(
-        workbook_table_cache_test_path, expansion_on=True
-    )
+    filepath = workbook_table_cache_test_path / Path("initial_build_limits.csv")
+    build_limits = pd.read_csv(filepath)
+    build_limits = template_rez_build_limits(build_limits)
     assert build_limits.index.name == "rez_id"
     assert pd.Series(build_limits.index.values).equals(
         pd.Series(["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"])

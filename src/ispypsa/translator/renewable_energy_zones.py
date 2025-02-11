@@ -7,7 +7,7 @@ from ispypsa.translator.mappings import _REZ_LINE_ATTRIBUTES
 
 
 def translate_renewable_energy_zone_build_limits_to_flow_paths(
-    ispypsa_inputs_path: Path | str,
+    renewable_energy_zone_build_limits: pd.DataFrame,
     expansion_on: bool,
     wacc: float,
     asset_lifetime: int,
@@ -17,8 +17,8 @@ def translate_renewable_energy_zone_build_limits_to_flow_paths(
     inputs.
 
     Args:
-        ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
-        expansion_on: bool indicating if transmission line expansion is considered.
+        renewable_energy_zone_build_limits: `ISPyPSA` formatted pd.DataFrame detailing
+            Renewable Energy Zone transmission limits.
         wacc: float, as fraction, indicating the weighted average coast of capital for
             transmission line investment, for the purposes of annuitising capital
             costs.
@@ -31,10 +31,7 @@ def translate_renewable_energy_zone_build_limits_to_flow_paths(
     Returns:
         `pd.DataFrame`: PyPSA style line attributes in tabular format.
     """
-    lines = pd.read_csv(
-        ispypsa_inputs_path / Path("renewable_energy_zone_build_limits.csv")
-    )
-    lines = lines.loc[:, _REZ_LINE_ATTRIBUTES.keys()]
+    lines = renewable_energy_zone_build_limits.loc[:, _REZ_LINE_ATTRIBUTES.keys()]
     lines = lines.rename(columns=_REZ_LINE_ATTRIBUTES)
     lines["name"] = lines["bus0"] + "-" + lines["bus1"]
     lines = lines.set_index("name", drop=True)
