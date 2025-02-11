@@ -81,3 +81,9 @@ def build_local_cache(
     tables_to_get = REQUIRED_TABLES
     workbook.save_tables(cache_path, tables=tables_to_get)
     return None
+
+
+def list_cache_files(cache_path):
+    files = REQUIRED_TABLES
+    files = [cache_path / Path(file + ".csv") for file in files]
+    return files

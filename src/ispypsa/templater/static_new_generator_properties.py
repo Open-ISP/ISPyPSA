@@ -118,7 +118,7 @@ def _merge_and_set_new_generators_static_properties(
     "New entrants summary" template, and renames columns if this is specified
     in the mapping.
 
-    Uses `ispypsa.templater.mappings._NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    Uses `ispypsa.test_templater.mappings._NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     as the mapping.
 
     Args:
@@ -260,14 +260,14 @@ def _calculate_and_merge_tech_specific_lcfs(
     """
     # loads in the three tables needed
     breakdown_ratios = iasr_tables["technology_cost_breakdown_ratios"]
-    technology_specific_lcfs = iasr_tables["technology_cost_breakdown_ratios"]
+    technology_specific_lcfs = iasr_tables["technology_specific_lcfs"]
     # loads all cols unless the str "O&M" is in col name
     locational_cost_factors = iasr_tables["locational_cost_factors"]
     locational_cost_factors = locational_cost_factors.set_index(
-        locational_cost_factors.columnp[0]
+        locational_cost_factors.columns[0]
     )
     cols = [col for col in locational_cost_factors.columns if "O&M" not in col]
-    locational_cost_factors = locational_cost_factors[:, [cols]]
+    locational_cost_factors = locational_cost_factors.loc[:, cols]
 
     # reshape technology_specific_lcfs and name columns manually:
     technology_specific_lcfs = technology_specific_lcfs.melt(

@@ -6,9 +6,9 @@ from ispypsa.config.validators import TemporalConfig
 from ispypsa.translator.helpers import get_iteration_start_and_end_time
 
 
-def time_series_filter(time_series_data: pd.DataFrame, snapshot: pd.DataFrame):
+def time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
     """Filters a timeseries pandas DataFrame based using the datetime values in
-     the snapshot index.
+     the snapshots index.
 
     Examples:
 
@@ -25,17 +25,17 @@ def time_series_filter(time_series_data: pd.DataFrame, snapshot: pd.DataFrame):
 
     Args:
         time_series_data: pd.DataFrame with time series column called 'Datetime'
-        snapshot: pd.DataFrame with datetime index
+        snapshots: pd.DataFrame with datetime index
 
     """
-    return time_series_data[time_series_data["Datetime"].isin(snapshot.index)]
+    return time_series_data[time_series_data["Datetime"].isin(snapshots.index)]
 
 
-def filter_snapshot(config: TemporalConfig, snapshot: pd.DataFrame):
-    """Appy filter to the snapshot based on the model config.
+def filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
+    """Appy filter to the snapshots based on the model config.
 
     - If config.representative_weeks is not None then filter the
-      snapshot based on the supplied list of representative weeks.
+      snapshots based on the supplied list of representative weeks.
 
     Examples:
 
@@ -63,34 +63,34 @@ def filter_snapshot(config: TemporalConfig, snapshot: pd.DataFrame):
     ...     )
     ... )
 
-    >>> snapshot = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='h'))
+    >>> snapshots = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='h'))
 
-    >>> snapshot = filter_snapshot(config, snapshot)
+    >>> snapshots = filter_snapshots(config, snapshots)
 
-    >>> snapshot.index[0]
+    >>> snapshots.index[0]
     Timestamp('2024-01-01 01:00:00')
 
-    >>> snapshot.index[-1]
+    >>> snapshots.index[-1]
     Timestamp('2024-01-08 00:00:00')
 
     Args:
          config: TemporalConfig defining snapshot filtering.
-         snapshot: pd.DataFrame with datetime index containing the snapshot
+         snapshots: pd.DataFrame with datetime index containing the snapshot
     """
     if config.aggregation.representative_weeks is not None:
-        snapshot = filter_snapshot_for_representative_weeks(
+        snapshots = filter_snapshots_for_representative_weeks(
             representative_weeks=config.aggregation.representative_weeks,
-            snapshot=snapshot,
+            snapshots=snapshots,
             start_year=config.start_year,
             end_year=config.end_year,
             year_type=config.year_type,
         )
-    return snapshot
+    return snapshots
 
 
-def filter_snapshot_for_representative_weeks(
+def filter_snapshots_for_representative_weeks(
     representative_weeks: list[int],
-    snapshot: pd.DataFrame,
+    snapshots: pd.DataFrame,
     start_year: int,
     end_year: int,
     year_type: str,
@@ -106,9 +106,9 @@ def filter_snapshot_for_representative_weeks(
     Examples:
     >>> # Filter for first and last full weeks of each calendar year from 2020-2022
     >>> df = pd.DataFrame(index=pd.date_range('2020-01-01', '2022-12-31', freq='h'))
-    >>> filter_snapshot_for_representative_weeks(
+    >>> filter_snapshots_for_representative_weeks(
     ...     representative_weeks=[1],
-    ...     snapshot=df,
+    ...     snapshots=df,
     ...     start_year=2020,
     ...     end_year=2022,
     ...     year_type='calendar'
@@ -119,9 +119,9 @@ def filter_snapshot_for_representative_weeks(
 
     >>> # Filter for weeks 1, 26 of financial years 2021-2022 (July 2020 - June 2022)
     >>> df = pd.DataFrame(index=pd.date_range('2020-07-01', '2022-06-30', freq='h'))
-    >>> filter_snapshot_for_representative_weeks(
+    >>> filter_snapshots_for_representative_weeks(
     ...     representative_weeks=[2],
-    ...     snapshot=df,
+    ...     snapshots=df,
     ...     start_year=2021,
     ...     end_year=2022,
     ...     year_type='fy'
@@ -134,7 +134,7 @@ def filter_snapshot_for_representative_weeks(
         representative_weeks: list[int] of full weeks to filter for. The
             week 1 refers to the first full week (Monday-Sunday) falling
             with in the year.
-        snapshot: pd.DataFrame with datetime index containing the snapshot
+        snapshots: pd.DataFrame with datetime index containing the snapshot
         start_year: int defining the start year of the snapshot (inclusive)
         end_year: int defining the end year of the snapshot (inclusive)
         year_type: str defining year the 'fy' for financial year or 'calendar'
@@ -146,9 +146,9 @@ def filter_snapshot_for_representative_weeks(
         year_type, start_year, end_year
     )
 
-    snapshot = snapshot.index.to_series()
+    snapshots = snapshots.index.to_series()
 
-    filtered_snapshot = []
+    filtered_snapshots = []
 
     for year in range(start_year, end_year):
         start_of_year_date_time = datetime(
@@ -169,14 +169,14 @@ def filter_snapshot_for_representative_weeks(
                     " Adjust config to use a smaller week_number for representative_weeks."
                 )
 
-            filtered_snapshot.append(
-                snapshot[
-                    (snapshot > nth_week_start) & (snapshot <= nth_week_end)
+            filtered_snapshots.append(
+                snapshots[
+                    (snapshots > nth_week_start) & (snapshots <= nth_week_end)
                 ].copy()
             )
 
-    filtered_snapshot = pd.concat(filtered_snapshot)
+    filtered_snapshots = pd.concat(filtered_snapshots)
 
-    filtered_snapshot = pd.DataFrame(index=filtered_snapshot)
+    filtered_snapshots = pd.DataFrame(index=filtered_snapshots)
 
-    return filtered_snapshot
+    return filtered_snapshots

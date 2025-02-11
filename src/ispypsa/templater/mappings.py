@@ -178,12 +178,12 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "fom_$/kw/annum": dict(
         table="fixed_opex_new_entrants",
         table_lookup="Generator",
-        csv_col_prefix="Fixed OPEX ($/kW sent out/year)",
+        table_col_prefix="Fixed OPEX ($/kW sent out/year)",
     ),
     "vom_$/mwh_sent_out": dict(
         table="variable_opex_new_entrants",
         table_lookup="Generator",
-        csv_col_prefix="Variable OPEX ($/MWh sent out)",
+        table_col_prefix="Variable OPEX ($/MWh sent out)",
     ),
     "heat_rate": dict(
         table="heat_rates_new_entrants",

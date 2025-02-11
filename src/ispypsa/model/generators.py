@@ -20,7 +20,7 @@ def _get_trace_data(generator_name: str, path_to_traces: Path):
     return trace_data
 
 
-def _add_ecaa_generator_to_network(
+def _add_generators_to_network(
     generator_definition: dict,
     network: pypsa.Network,
     path_to_solar_traces: Path,
@@ -56,24 +56,25 @@ def _add_ecaa_generator_to_network(
     network.add(**generator_definition)
 
 
-def add_ecaa_generators_to_network(
-    network: pypsa.Network, path_pypsa_inputs: Path
+def add_generators_to_network(
+    network: pypsa.Network,
+    generators: pd.DataFrame,
+    path_to_timeseries_data: Path,
 ) -> None:
     """Adds the generators in `ecaa_generators.csv` table (located in the
     `path_pypsa_inputs` directory) to the `pypsa.Network`.
 
     Args:
         network: The `pypsa.Network` object
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
-
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
     Returns: None
     """
-    ecaa_generators = pd.read_csv(path_pypsa_inputs / Path("generators.csv"))
-    path_to_solar_traces = path_pypsa_inputs / Path("solar_traces")
-    path_to_wind_traces = path_pypsa_inputs / Path("wind_traces")
-    ecaa_generators.apply(
-        lambda row: _add_ecaa_generator_to_network(
+    path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
+    path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
+    generators.apply(
+        lambda row: _add_generators_to_network(
             row.to_dict(), network, path_to_solar_traces, path_to_wind_traces
         ),
         axis=1,
@@ -81,7 +82,7 @@ def add_ecaa_generators_to_network(
 
 
 def add_custom_constraint_generators_to_network(
-    network: pypsa.Network, path_pypsa_inputs: Path
+    network: pypsa.Network, generators: pd.DataFrame
 ) -> None:
     """Adds the Generators defined in `custom_constraint_generators.csv` in the `path_pypsa_inputs` directory to the
     `pypsa.Network` object. These are generators that connect to a dummy bus, not part of the rest of the network,
@@ -90,13 +91,9 @@ def add_custom_constraint_generators_to_network(
 
     Args:
         network: The `pypsa.Network` object
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
 
     Returns: None
     """
-    generators = pd.read_csv(
-        path_pypsa_inputs / Path("custom_constraints_generators.csv")
-    )
     generators["class_name"] = "Generator"
     generators.apply(lambda row: network.add(**row.to_dict()), axis=1)

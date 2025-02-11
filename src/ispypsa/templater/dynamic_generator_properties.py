@@ -51,7 +51,7 @@ def template_generator_dynamic_properties(
     )
 
     seasonal_ratings = [
-        iasr_tables[f"seasonal_ratings_{gen_type}.csv"]
+        iasr_tables[f"seasonal_ratings_{gen_type}"]
         for gen_type in _ECAA_GENERATOR_TYPES
     ]
     seasonal_ratings = _template_seasonal_ratings(seasonal_ratings)
