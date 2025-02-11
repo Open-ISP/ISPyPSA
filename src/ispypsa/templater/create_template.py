@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.templater.dynamic_generator_properties import (
-    template_generator_dynamic_properties,
+    _template_generator_dynamic_properties,
 )
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
@@ -14,14 +14,14 @@ from ispypsa.templater.nodes import (
     _template_sub_regions,
 )
 from ispypsa.templater.renewable_energy_zones import (
-    template_renewable_energy_zones,
-    template_rez_build_limits,
+    _template_renewable_energy_zones,
+    _template_rez_build_limits,
 )
 from ispypsa.templater.static_ecaa_generator_properties import (
-    template_ecaa_generators_static_properties,
+    _template_ecaa_generators_static_properties,
 )
 from ispypsa.templater.static_new_generator_properties import (
-    template_new_generators_static_properties,
+    _template_new_generators_static_properties,
 )
 
 _BASE_TEMPLATE_OUTPUTS = [
@@ -88,23 +88,23 @@ def create_ispypsa_inputs_template(
             iasr_tables["sub_regional_reference_nodes"], mapping_only=True
         )
 
-    template["renewable_energy_zones"] = template_renewable_energy_zones(
+    template["renewable_energy_zones"] = _template_renewable_energy_zones(
         iasr_tables["renewable_energy_zones"]
     )
 
-    template["renewable_energy_zone_build_limits"] = template_rez_build_limits(
+    template["renewable_energy_zone_build_limits"] = _template_rez_build_limits(
         iasr_tables["initial_build_limits"]
     )
 
-    template["ecaa_generators"] = template_ecaa_generators_static_properties(
+    template["ecaa_generators"] = _template_ecaa_generators_static_properties(
         iasr_tables
     )
 
-    template["new_entrant_generators"] = template_new_generators_static_properties(
+    template["new_entrant_generators"] = _template_new_generators_static_properties(
         iasr_tables
     )
 
-    dynamic_generator_property_templates = template_generator_dynamic_properties(
+    dynamic_generator_property_templates = _template_generator_dynamic_properties(
         iasr_tables, scenario
     )
 

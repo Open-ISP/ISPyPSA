@@ -1,21 +1,21 @@
 from pathlib import Path
 
-from ispypsa import read_csvs
+from ispypsa.data_fetch import read_csvs
 from ispypsa.templater.mappings import (
     _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
     _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
 )
 from ispypsa.templater.static_ecaa_generator_properties import (
-    template_ecaa_generators_static_properties,
+    _template_ecaa_generators_static_properties,
 )
 from ispypsa.templater.static_new_generator_properties import (
-    template_new_generators_static_properties,
+    _template_new_generators_static_properties,
 )
 
 
 def test_static_ecaa_generator_templater(workbook_table_cache_test_path: Path):
     iasr_tables = read_csvs(workbook_table_cache_test_path)
-    df = template_ecaa_generators_static_properties(iasr_tables)
+    df = _template_ecaa_generators_static_properties(iasr_tables)
     for static_property_col in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.keys():
         if (
             "new_col_name"
@@ -45,7 +45,7 @@ def test_static_ecaa_generator_templater(workbook_table_cache_test_path: Path):
 
 def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
     iasr_tables = read_csvs(workbook_table_cache_test_path)
-    df = template_new_generators_static_properties(iasr_tables)
+    df = _template_new_generators_static_properties(iasr_tables)
     for static_property_col in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.keys():
         # checks few updated column names first
         if (

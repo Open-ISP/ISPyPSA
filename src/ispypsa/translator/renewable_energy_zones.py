@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.translator.helpers import annuitised_investment_costs
+from ispypsa.translator.helpers import _annuitised_investment_costs
 from ispypsa.translator.mappings import _REZ_LINE_ATTRIBUTES
 
 
-def translate_renewable_energy_zone_build_limits_to_flow_paths(
+def _translate_renewable_energy_zone_build_limits_to_flow_paths(
     renewable_energy_zone_build_limits: pd.DataFrame,
     expansion_on: bool,
     wacc: float,
@@ -42,7 +42,7 @@ def translate_renewable_energy_zone_build_limits_to_flow_paths(
     lines["s_nom"] = lines["s_nom"].fillna(rez_to_sub_region_transmission_default_limit)
 
     lines["capital_cost"] = lines["capital_cost"].apply(
-        lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
+        lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime)
     )
 
     # not extendable by default

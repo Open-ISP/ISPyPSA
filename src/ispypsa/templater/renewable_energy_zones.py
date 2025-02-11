@@ -7,7 +7,7 @@ import pandas as pd
 from .helpers import _snakecase_string
 
 
-def template_renewable_energy_zones(
+def _template_renewable_energy_zones(
     renewable_energy_zones: pd.DataFrame,
 ) -> pd.DataFrame:
     """Reformats renewable energy location data in the ISPySA format.
@@ -43,7 +43,7 @@ def template_renewable_energy_zones(
     return renewable_energy_zones
 
 
-def template_rez_build_limits(
+def _template_rez_build_limits(
     rez_build_limits: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create a template for renewable energy zones that contains data on resource and
@@ -81,10 +81,10 @@ def template_rez_build_limits(
     ]
     for col in cols_where_zero_goes_to_nan:
         rez_build_limits.loc[rez_build_limits[col] == 0.0, col] = np.nan
-    rez_build_limits = combine_transmission_expansion_cost_to_one_column(
+    rez_build_limits = _combine_transmission_expansion_cost_to_one_column(
         rez_build_limits
     )
-    rez_build_limits = process_transmission_limit(rez_build_limits)
+    rez_build_limits = _process_transmission_limit(rez_build_limits)
     cols_where_nan_goes_to_zero = [
         "wind_generation_total_limits_mw_high",
         "wind_generation_total_limits_mw_medium",
@@ -94,10 +94,10 @@ def template_rez_build_limits(
     ]
     for col in cols_where_nan_goes_to_zero:
         rez_build_limits[col] = rez_build_limits[col].fillna(0.0)
-    rez_build_limits = convert_cost_units(
+    rez_build_limits = _convert_cost_units(
         rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
     )
-    rez_build_limits = convert_cost_units(
+    rez_build_limits = _convert_cost_units(
         rez_build_limits, "indicative_transmission_expansion_cost_$m/mw"
     )
     rez_build_limits = rez_build_limits.rename(
@@ -130,7 +130,7 @@ def template_rez_build_limits(
     return rez_build_limits
 
 
-def process_transmission_limit(data):
+def _process_transmission_limit(data):
     """Replace 0.0 MW Transmission limits with nan if there is not a cost given for
     expansion.
     """
@@ -147,7 +147,7 @@ def process_transmission_limit(data):
     return data
 
 
-def combine_transmission_expansion_cost_to_one_column(data):
+def _combine_transmission_expansion_cost_to_one_column(data):
     """The model can only utilise a single transmission expansion cost. If the tranche
     1 column is nan then this function adopts the tranche 2 cost if it is not
     nan. The process is repeated with tranche 3 if the cost is still nan.
@@ -167,7 +167,7 @@ def combine_transmission_expansion_cost_to_one_column(data):
     return data
 
 
-def convert_cost_units(data, column):
+def _convert_cost_units(data, column):
     """Convert cost from millions of dollars per MW to $/MW"""
     data[column] = data[column] * 1e6
     return data

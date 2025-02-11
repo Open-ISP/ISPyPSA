@@ -19,7 +19,7 @@ _OBSOLETE_COLUMNS = [
 ]
 
 
-def template_new_generators_static_properties(
+def _template_new_generators_static_properties(
     iasr_tables: dict[pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the new entrant generators summary tables into an ISPyPSA

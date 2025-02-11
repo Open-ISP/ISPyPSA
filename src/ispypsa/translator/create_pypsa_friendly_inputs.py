@@ -16,17 +16,17 @@ from ispypsa.translator.custom_constraints import (
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
 )
-from ispypsa.translator.lines import translate_flow_paths_to_lines
+from ispypsa.translator.lines import _translate_flow_paths_to_lines
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
     _CUSTOM_CONSTRAINT_LHS_TABLES,
     _CUSTOM_CONSTRAINT_RHS_TABLES,
 )
 from ispypsa.translator.renewable_energy_zones import (
-    translate_renewable_energy_zone_build_limits_to_flow_paths,
+    _translate_renewable_energy_zone_build_limits_to_flow_paths,
 )
-from ispypsa.translator.snapshot import create_complete_snapshots_index
-from ispypsa.translator.temporal_filters import filter_snapshots
+from ispypsa.translator.snapshot import _create_complete_snapshots_index
+from ispypsa.translator.temporal_filters import _filter_snapshots
 
 _BASE_TRANSLATOR_OUPUTS = [
     "snapshots",
@@ -42,13 +42,13 @@ _BASE_TRANSLATOR_OUPUTS = [
 def create_pypsa_friendly_inputs(config, ispypsa_tables):
     pypsa_inputs = {}
 
-    snapshots = create_complete_snapshots_index(
+    snapshots = _create_complete_snapshots_index(
         start_year=config.temporal.start_year,
         end_year=config.temporal.end_year,
         operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
         year_type=config.temporal.year_type,
     )
-    pypsa_inputs["snapshots"] = filter_snapshots(
+    pypsa_inputs["snapshots"] = _filter_snapshots(
         config=config.temporal, snapshots=snapshots
     )
 
@@ -69,7 +69,7 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
     if config.network.nodes.rezs == "discrete_nodes":
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
         lines.append(
-            translate_renewable_energy_zone_build_limits_to_flow_paths(
+            _translate_renewable_energy_zone_build_limits_to_flow_paths(
                 ispypsa_tables["renewable_energy_zone_build_limits"],
                 config.network.rez_transmission_expansion,
                 config.wacc,
@@ -79,7 +79,7 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
         )
 
     lines.append(
-        translate_flow_paths_to_lines(
+        _translate_flow_paths_to_lines(
             ispypsa_tables["flow_paths"],
             config.network.transmission_expansion,
             config.wacc,

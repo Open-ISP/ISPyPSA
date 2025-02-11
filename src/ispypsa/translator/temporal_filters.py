@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from ispypsa.config.validators import TemporalConfig
-from ispypsa.translator.helpers import get_iteration_start_and_end_time
+from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 
 
-def time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
+def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
     """Filters a timeseries pandas DataFrame based using the datetime values in
      the snapshots index.
 
@@ -15,7 +15,7 @@ def time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
     >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='h')
     >>> time_series_data = pd.DataFrame({'Datetime': datetime_index, 'Value': range(len(datetime_index))})
     >>> snapshot = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
-    >>> time_series_filter(time_series_data, snapshot)
+    >>> _time_series_filter(time_series_data, snapshot)
                   Datetime  Value
     0  2020-01-01 00:00:00      0
     12 2020-01-01 12:00:00     12
@@ -31,7 +31,7 @@ def time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
     return time_series_data[time_series_data["Datetime"].isin(snapshots.index)]
 
 
-def filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
+def _filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
     """Appy filter to the snapshots based on the model config.
 
     - If config.representative_weeks is not None then filter the
@@ -65,7 +65,7 @@ def filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
 
     >>> snapshots = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='h'))
 
-    >>> snapshots = filter_snapshots(config, snapshots)
+    >>> snapshots = _filter_snapshots(config, snapshots)
 
     >>> snapshots.index[0]
     Timestamp('2024-01-01 01:00:00')
@@ -78,7 +78,7 @@ def filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
          snapshots: pd.DataFrame with datetime index containing the snapshot
     """
     if config.aggregation.representative_weeks is not None:
-        snapshots = filter_snapshots_for_representative_weeks(
+        snapshots = _filter_snapshots_for_representative_weeks(
             representative_weeks=config.aggregation.representative_weeks,
             snapshots=snapshots,
             start_year=config.start_year,
@@ -88,7 +88,7 @@ def filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
     return snapshots
 
 
-def filter_snapshots_for_representative_weeks(
+def _filter_snapshots_for_representative_weeks(
     representative_weeks: list[int],
     snapshots: pd.DataFrame,
     start_year: int,
@@ -106,7 +106,7 @@ def filter_snapshots_for_representative_weeks(
     Examples:
     >>> # Filter for first and last full weeks of each calendar year from 2020-2022
     >>> df = pd.DataFrame(index=pd.date_range('2020-01-01', '2022-12-31', freq='h'))
-    >>> filter_snapshots_for_representative_weeks(
+    >>> _filter_snapshots_for_representative_weeks(
     ...     representative_weeks=[1],
     ...     snapshots=df,
     ...     start_year=2020,
@@ -119,7 +119,7 @@ def filter_snapshots_for_representative_weeks(
 
     >>> # Filter for weeks 1, 26 of financial years 2021-2022 (July 2020 - June 2022)
     >>> df = pd.DataFrame(index=pd.date_range('2020-07-01', '2022-06-30', freq='h'))
-    >>> filter_snapshots_for_representative_weeks(
+    >>> _filter_snapshots_for_representative_weeks(
     ...     representative_weeks=[2],
     ...     snapshots=df,
     ...     start_year=2021,
@@ -142,7 +142,7 @@ def filter_snapshots_for_representative_weeks(
     Raises: ValueError if the end of week falls outside after the year end i.e.
         for all weeks 53 or greater and for some years the week 52.
     """
-    start_year, end_year, month = get_iteration_start_and_end_time(
+    start_year, end_year, month = _get_iteration_start_and_end_time(
         year_type, start_year, end_year
     )
 
