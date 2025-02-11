@@ -54,7 +54,7 @@ def _template_ecaa_generators_static_properties(
             cleaned_ecaa_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_ecaa_generator_summaries.set_index("generator")
+    return merged_cleaned_ecaa_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:

@@ -7,42 +7,6 @@ import pandas as pd
 from .helpers import _snakecase_string
 
 
-def _template_renewable_energy_zones(
-    renewable_energy_zones: pd.DataFrame,
-) -> pd.DataFrame:
-    """Reformats renewable energy location data in the ISPySA format.
-
-    Args:
-        renewable_energy_zones: pd.DataFrame iasr workbook table specifying rez
-            locations
-
-    Returns:
-        `pd.DataFrame`: ISPyPSA region and zone mapping table
-    """
-    logging.info("Creating a renewable_energy_zone_locations template")
-    renewable_energy_zones.columns = [
-        _snakecase_string(col_name) for col_name in renewable_energy_zones.columns
-    ]
-    renewable_energy_zones = renewable_energy_zones.rename(
-        columns={
-            "nem_region": "nem_region_id",
-            "isp_sub_region": "isp_sub_region_id",
-            "id": "rez_id",
-        }
-    )
-    renewable_energy_zones = renewable_energy_zones.loc[
-        :,
-        [
-            "name",
-            "nem_region_id",
-            "isp_sub_region_id",
-            "rez_id",
-        ],
-    ]
-    renewable_energy_zones = renewable_energy_zones.set_index("rez_id", drop=True)
-    return renewable_energy_zones
-
-
 def _template_rez_build_limits(
     rez_build_limits: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -125,8 +89,6 @@ def _template_rez_build_limits(
             "indicative_transmission_expansion_cost_$/mw",
         ],
     ]
-
-    rez_build_limits = rez_build_limits.set_index("rez_id", drop=True)
     return rez_build_limits
 
 

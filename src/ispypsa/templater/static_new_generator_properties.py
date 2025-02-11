@@ -48,7 +48,7 @@ def _template_new_generators_static_properties(
             cleaned_new_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_new_generator_summaries.set_index("technology_location_id")
+    return merged_cleaned_new_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:

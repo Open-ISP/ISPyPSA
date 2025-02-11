@@ -17,7 +17,6 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
     flow_paths_template = _template_regional_interconnectors(
         interconnector_capabilities
     )
-    assert flow_paths_template.index.name == "flow_path_name"
     assert all(
         [
             True
@@ -39,10 +38,11 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.index
+            if name in flow_paths_template.flow_path_name
         ]
     )
     assert len(flow_paths_template) == 6
+    assert len(flow_paths_template.columns) == 5
 
 
 def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path):
@@ -54,7 +54,6 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
     flow_paths_template = _template_sub_regional_flow_paths(
         flow_path_transfer_capability, manual_tables["transmission_expansion_costs"]
     )
-    assert flow_paths_template.index.name == "flow_path_name"
     assert all(
         [
             True
@@ -76,8 +75,8 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.index
+            if name in flow_paths_template.flow_path_name
         ]
     )
     assert len(flow_paths_template) == 14
-    assert len(flow_paths_template.columns) == 5
+    assert len(flow_paths_template.columns) == 6

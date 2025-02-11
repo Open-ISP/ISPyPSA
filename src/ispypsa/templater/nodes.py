@@ -72,14 +72,14 @@ def _template_sub_regions(
         ],
         axis=1,
     )
-    sub_regions = sub_regions.set_index("isp_sub_region_id")
     sub_regions = _match_region_name_and_id(sub_regions)
 
     if mapping_only:
-        sub_regions = sub_regions[["nem_region_id"]]
+        sub_regions = sub_regions[["isp_sub_region_id", "nem_region_id"]]
     else:
         sub_regions = sub_regions[
             [
+                "isp_sub_region_id",
                 "nem_region_id",
                 "sub_region_reference_node",
                 "sub_region_reference_node_voltage_kv",
@@ -113,9 +113,10 @@ def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
     regions = _match_region_name_and_id(regions)
-    regions = regions.set_index("nem_region_id")
+
     regions = regions[
         [
+            "nem_region_id",
             "isp_sub_region_id",
             "regional_reference_node",
             "regional_reference_node_voltage_kv",
