@@ -70,7 +70,7 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
         lines.append(
             _translate_renewable_energy_zone_build_limits_to_flow_paths(
-                ispypsa_tables["renewable_energy_zone_build_limits"],
+                ispypsa_tables["renewable_energy_zones"],
                 config.network.rez_transmission_expansion,
                 config.wacc,
                 config.network.annuitisation_lifetime,

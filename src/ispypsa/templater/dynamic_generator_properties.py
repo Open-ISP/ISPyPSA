@@ -97,7 +97,6 @@ def _template_coal_prices(coal_prices: pd.DataFrame) -> pd.DataFrame:
         coal_prices.columns, "$/GJ"
     )
     coal_prices = coal_prices.drop(columns="coal_price_scenario")
-    coal_prices = coal_prices.set_index("generator")
     coal_prices = _convert_financial_year_columns_to_float(coal_prices)
     return coal_prices
 
@@ -115,7 +114,7 @@ def _template_gas_prices(gas_prices: pd.DataFrame) -> pd.DataFrame:
     cols = _add_units_to_financial_year_columns(gas_prices.columns, "$/GJ")
     cols[0] = "generator"
     gas_prices.columns = cols
-    gas_prices = gas_prices.drop(columns="gas_price_scenario").set_index("generator")
+    gas_prices = gas_prices.drop(columns="gas_price_scenario")
     gas_prices = _convert_financial_year_columns_to_float(gas_prices)
     return gas_prices
 
@@ -210,7 +209,6 @@ def _template_closure_years(closure_years: pd.DataFrame) -> pd.DataFrame:
     closure_years = closure_years.loc[
         :, ["generator", "duid", "expected_closure_year_calendar_year"]
     ]
-    closure_years = closure_years.set_index("generator")
     return closure_years
 
 
@@ -232,7 +230,6 @@ def _template_seasonal_ratings(
         _snakecase_string(col) for col in seasonal_rating.columns
     ]
     seasonal_rating = _convert_seasonal_columns_to_float(seasonal_rating)
-    seasonal_rating = seasonal_rating.set_index("generator")
     return seasonal_rating
 
 
@@ -354,7 +351,7 @@ def _template_new_entrant_wind_and_solar_connection_costs(
     wind_solar_connection_cost_forecasts.columns = _add_units_to_financial_year_columns(
         wind_solar_connection_cost_forecasts.columns, "$/MW"
     )
-    return wind_solar_connection_cost_forecasts
+    return wind_solar_connection_cost_forecasts.reset_index()
 
 
 def _template_new_entrant_non_vre_connection_costs(
@@ -376,7 +373,7 @@ def _template_new_entrant_non_vre_connection_costs(
         connection_costs[col] *= 1000
         col_rename_map[col] = _snakecase_string(col) + "_$/mw"
     connection_costs = connection_costs.rename(columns=col_rename_map)
-    return connection_costs
+    return connection_costs.reset_index()
 
 
 def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:

@@ -9,25 +9,6 @@ from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
 
 
-def _translate_nodes_to_buses(ispypsa_inputs_path: Path | str) -> pd.DataFrame:
-    """Process network node data into a format aligned with PyPSA inputs.
-
-    Args:
-        ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
-
-    Returns:
-        `pd.DataFrame`: PyPSA style generator attributes in tabular format.
-    """
-    nodes = pd.read_csv(ispypsa_inputs_path / Path("nodes.csv"))
-
-    buses = nodes.loc[:, _BUS_ATTRIBUTES.keys()]
-    buses = buses.rename(columns=_BUS_ATTRIBUTES)
-
-    buses = buses.set_index("name", drop=True)
-
-    return buses
-
-
 def _translate_isp_sub_regions_to_buses(isp_sub_regions: pd.DataFrame) -> pd.DataFrame:
     """Process ISP sub region data into the PyPSA format for buses.
 
@@ -64,7 +45,7 @@ def _create_single_region_bus() -> pd.DataFrame:
     Returns:
         `pd.DataFrame`: PyPSA style bus attributes in tabular format.
     """
-    buses = pd.DataFrame({"name": "NEM"})
+    buses = pd.DataFrame({"name": ["NEM"]})
     buses = buses.set_index("name", drop=True)
     return buses
 

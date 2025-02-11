@@ -14,7 +14,6 @@ from ispypsa.templater.nodes import (
     _template_sub_regions,
 )
 from ispypsa.templater.renewable_energy_zones import (
-    _template_renewable_energy_zones,
     _template_rez_build_limits,
 )
 from ispypsa.templater.static_ecaa_generator_properties import (
@@ -28,7 +27,6 @@ _BASE_TEMPLATE_OUTPUTS = [
     "sub_regions",
     "nem_regions",
     "renewable_energy_zones",
-    "renewable_energy_zone_build_limits",
     "flow_paths",
     "ecaa_generators",
     "new_entrant_generators",
@@ -88,11 +86,7 @@ def create_ispypsa_inputs_template(
             iasr_tables["sub_regional_reference_nodes"], mapping_only=True
         )
 
-    template["renewable_energy_zones"] = _template_renewable_energy_zones(
-        iasr_tables["renewable_energy_zones"]
-    )
-
-    template["renewable_energy_zone_build_limits"] = _template_rez_build_limits(
+    template["renewable_energy_zones"] = _template_rez_build_limits(
         iasr_tables["initial_build_limits"]
     )
 

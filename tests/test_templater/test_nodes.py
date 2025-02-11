@@ -10,8 +10,7 @@ def test_node_templater_nem_regions(workbook_table_cache_test_path: Path):
     filepath = workbook_table_cache_test_path / Path("regional_reference_nodes.csv")
     regional_reference_nodes = pd.read_csv(filepath)
     regional_template = _template_regions(regional_reference_nodes)
-    assert regional_template.index.name == "nem_region_id"
-    assert set(regional_template.index) == set(("QLD", "VIC"))
+    assert set(regional_template.nem_region_id) == set(("QLD", "VIC"))
     assert set(regional_template.isp_sub_region_id) == set(("SQ", "VIC"))
     assert set(regional_template.regional_reference_node) == set(
         ("Prominent Hill", "Barcaldine")
@@ -19,15 +18,14 @@ def test_node_templater_nem_regions(workbook_table_cache_test_path: Path):
     assert set(regional_template.regional_reference_node_voltage_kv) == set((132,))
     assert not regional_template.substation_longitude.empty
     assert not regional_template.substation_latitude.empty
-    assert len(regional_template.columns) == 5
+    assert len(regional_template.columns) == 6
 
 
 def test_templater_sub_regions(workbook_table_cache_test_path: Path):
     filepath = workbook_table_cache_test_path / Path("sub_regional_reference_nodes.csv")
     sub_regional_reference_nodes = pd.read_csv(filepath)
     sub_regions_template = _template_sub_regions(sub_regional_reference_nodes)
-    assert sub_regions_template.index.name == "isp_sub_region_id"
-    assert set(sub_regions_template.index) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
     assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
     assert set(sub_regions_template.sub_region_reference_node) == set(
         ("Prominent Hill", "Barcaldine")
@@ -35,7 +33,7 @@ def test_templater_sub_regions(workbook_table_cache_test_path: Path):
     assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
     assert not sub_regions_template.substation_longitude.empty
     assert not sub_regions_template.substation_latitude.empty
-    assert len(sub_regions_template.columns) == 5
+    assert len(sub_regions_template.columns) == 6
 
 
 def test_templater_sub_regions_mapping_only(workbook_table_cache_test_path: Path):
@@ -44,10 +42,9 @@ def test_templater_sub_regions_mapping_only(workbook_table_cache_test_path: Path
     sub_regions_template = _template_sub_regions(
         sub_regional_reference_nodes, mapping_only=True
     )
-    assert sub_regions_template.index.name == "isp_sub_region_id"
-    assert set(sub_regions_template.index) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
     assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
-    assert len(sub_regions_template.columns) == 1
+    assert len(sub_regions_template.columns) == 2
 
 
 def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker):
@@ -59,14 +56,13 @@ def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker)
     filepath = workbook_table_cache_test_path / Path("sub_regional_reference_nodes.csv")
     sub_regional_reference_nodes = pd.read_csv(filepath)
     sub_regions_template = _template_sub_regions(sub_regional_reference_nodes)
-    assert sub_regions_template.index.name == "isp_sub_region_id"
-    assert set(sub_regions_template.index) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
     assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
     assert set(sub_regions_template.sub_region_reference_node) == set(
         ("Prominent Hill", "Barcaldine")
     )
     assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
-    assert len(sub_regions_template.columns) == 3
+    assert len(sub_regions_template.columns) == 4
 
 
 def test_substation_coordinate_http_error(

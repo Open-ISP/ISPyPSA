@@ -32,8 +32,8 @@ def _template_sub_regional_flow_paths(
     sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
     # Only keep forward_direction_mw_summer_typical limit col as that all that's
     # being used for now.
-    sub_regional_capabilities = sub_regional_capabilities.set_index("flow_path_name")
     cols = [
+        "flow_path_name",
         "node_from",
         "node_to",
         "carrier",
@@ -41,16 +41,11 @@ def _template_sub_regional_flow_paths(
     ]
     sub_regional_capabilities = sub_regional_capabilities.loc[:, cols]
 
-    transmission_expansion_costs = transmission_expansion_costs.set_index(
-        "flow_path_name"
-    )
-
     sub_regional_capabilities = pd.merge(
         sub_regional_capabilities,
         transmission_expansion_costs,
         how="left",
-        left_index=True,
-        right_index=True,
+        on="flow_path_name",
     )
 
     return sub_regional_capabilities
@@ -74,7 +69,16 @@ def _template_regional_interconnectors(
     )
     capability_columns = _clean_capability_column_names(interconnector_capabilities)
     regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
-    regional_capabilities = regional_capabilities.set_index("flow_path_name")
+    # Only keep forward_direction_mw_summer_typical limit col as that all that's
+    # being used for now.
+    cols = [
+        "flow_path_name",
+        "node_from",
+        "node_to",
+        "carrier",
+        "forward_direction_mw_summer_typical",
+    ]
+    regional_capabilities = regional_capabilities.loc[:, cols]
     return regional_capabilities
 
 
