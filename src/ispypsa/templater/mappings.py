@@ -243,3 +243,44 @@ lookup information that can be used to retrieve values.
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
+
+_TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP = {
+    "template_renewable_share_targets": [
+        {"csv": "vic_renewable_target_trajectory", "region_id": "VIC"},
+        {"csv": "qld_renewable_target_trajectory", "region_id": "QLD"},
+    ],
+    "template_powering_australia_plan": [
+        {"csv": "powering_australia_plan_trajectory", "region_id": "NEM"},
+    ],
+    "template_technology_capacity_targets": [
+        {
+            "csv": "capacity_investment_scheme_renewable_trajectory",
+            "region_id": "NEM",
+            "technology_type": "renewable",
+        },
+        {
+            "csv": "capacity_investment_scheme_storage_trajectory",
+            "region_id": "NEM",
+            "technology_type": "storage",
+        },
+        {
+            "csv": "nsw_roadmap_storage_trajectory",
+            "region_id": "NSW",
+            "technology_type": "storage",
+        },
+        {
+            "csv": "vic_storage_target_trajectory",
+            "region_id": "VIC",
+            "technology_type": "storage",
+        },
+        {
+            "csv": "vic_offshore_wind_target_trajectory",
+            "region_id": "VIC",
+            "technology_type": "offshore_wind",
+        },
+    ],
+    "template_renewable_generation_targets": [
+        {"csv": "nsw_roadmap_renewable_trajectory", "region_id": "NSW"},
+        {"csv": "tas_renewable_target_trajectory", "region_id": "TAS"},
+    ],
+}

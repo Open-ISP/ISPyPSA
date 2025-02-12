@@ -24,6 +24,12 @@ from ispypsa.model import (
 from ispypsa.templater.dynamic_generator_properties import (
     template_generator_dynamic_properties,
 )
+from ispypsa.templater.energy_policy_targets import (
+    template_powering_australia_plan,
+    template_renewable_generation_targets,
+    template_renewable_share_targets,
+    template_technology_capacity_targets,
+)
 from ispypsa.templater.flow_paths import template_flow_paths
 from ispypsa.templater.manual_tables import template_manually_extracted_tables
 from ispypsa.templater.nodes import (
@@ -140,6 +146,19 @@ def create_ispypsa_inputs_from_config(
     manually_extracted_tables = template_manually_extracted_tables(
         config.iasr_workbook_version
     )
+    renewable_share_targets_template = template_renewable_share_targets(
+        workbook_cache_location
+    )
+    powering_australia_plan_template = template_powering_australia_plan(
+        workbook_cache_location
+    )
+    technology_capacity_targets_template = template_technology_capacity_targets(
+        workbook_cache_location
+    )
+    renewable_generation_targets_template = template_renewable_generation_targets(
+        workbook_cache_location
+    )
+
     if node_template is not None:
         node_template.to_csv(Path(template_location, "nodes.csv"))
     if renewable_energy_zone_location_mapping is not None:
@@ -173,6 +192,22 @@ def create_ispypsa_inputs_from_config(
             )
     for name, table in manually_extracted_tables.items():
         table.to_csv(Path(template_location, name))
+    if renewable_share_targets_template is not None:
+        renewable_share_targets_template.to_csv(
+            Path(template_location, "renewable_share_targets.csv")
+        )
+    if powering_australia_plan_template is not None:
+        powering_australia_plan_template.to_csv(
+            Path(template_location, "powering_australia_plan.csv")
+        )
+    if technology_capacity_targets_template is not None:
+        technology_capacity_targets_template.to_csv(
+            Path(template_location, "technology_capacity_targets.csv")
+        )
+    if renewable_generation_targets_template is not None:
+        renewable_generation_targets_template.to_csv(
+            Path(template_location, "renewable_generation_targets.csv")
+        )
 
 
 def create_pypsa_inputs_from_config_and_ispypsa_inputs(
