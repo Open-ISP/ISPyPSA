@@ -11,25 +11,6 @@ def template_renewable_share_targets(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
-    Currently reads parsed trajectories for QRET and VRET targets.
-
-    Uses region_map to extract region_id from filename
-
-    Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
-
-    Returns:
-        `pd.DataFrame`: Template containing renewable share targets with columns for
-            financial year, region_id and percentage values in decimal form
-    """
-    logging.info("Creating template for renewable share targets")
-
-
-def template_renewable_share_targets(
-    parsed_workbook_path: Path | str,
-) -> pd.DataFrame:
-    """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
     Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
 
     Args:
