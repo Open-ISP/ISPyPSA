@@ -6,39 +6,6 @@ import pandas as pd
 
 from .mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 
-def _template_energy_policy_targets(
-    iasr_tables: dict[str : pd.DataFrame], scenario: str
-) -> dict[str, pd.DataFrame]:
-    """Creates ISPyPSA templates for energy policy targets including NEM-wide and state-level policies. 
-
-    Args:
-        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
-            `isp-workbook-parser`.
-        scenario: Scenario obtained from the model configuration
-
-    Returns:
-        `dict[pd.DataFrame]`: Templates for renewable share targets, powering australia share targets (by scenario) 
-            renewable generation targets, and technology capacity targets
-    """
-    logging.info("Creating templates for energy policy targets")
-
-    # Create templates for energy policy targets
-    renewable_share_targets = template_renewable_share_targets(iasr_tables)
-
-    power_aus_plan = iasr_tables["powering_australia_plan_trajectory"]
-    power_aus_plan = template_powering_australia_plan(power_aus_plan, scenario)
-
-    renewable_generation_targets = template_renewable_generation_targets(iasr_tables)
-
-    technology_capacity_targets = template_technology_capacity_targets(iasr_tables)
-
-    return {
-        "renewable_share_targets": renewable_share_targets,
-        "powering_australia_plan": power_aus_plan,
-        "renewable_generation_targets": renewable_generation_targets,
-        "technology_capacity_targets": technology_capacity_targets,
-    }
-
 
 def template_renewable_share_targets(
     iasr_tables: dict[str : pd.DataFrame],
