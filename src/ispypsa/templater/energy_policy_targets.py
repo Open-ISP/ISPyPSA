@@ -6,21 +6,53 @@ import pandas as pd
 
 from .mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 
-
-def template_renewable_share_targets(
-    parsed_workbook_path: Path | str,
-) -> pd.DataFrame:
-    """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
-    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their
-        corresponding regions.
+def _template_energy_policy_targets(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> dict[str, pd.DataFrame]:
+    """Creates ISPyPSA templates for energy policy targets including NEM-wide and state-level policies. 
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `dict[pd.DataFrame]`: Templates for renewable share targets, powering australia share targets (by scenario) 
+            renewable generation targets, and technology capacity targets
+    """
+    logging.info("Creating templates for energy policy targets")
+
+    # Create templates for energy policy targets
+    renewable_share_targets = template_renewable_share_targets(iasr_tables)
+
+    power_aus_plan = iasr_tables["powering_australia_plan_trajectory"]
+    power_aus_plan = template_powering_australia_plan(power_aus_plan, scenario)
+
+    renewable_generation_targets = template_renewable_generation_targets(iasr_tables)
+
+    technology_capacity_targets = template_technology_capacity_targets(iasr_tables)
+
+    return {
+        "renewable_share_targets": renewable_share_targets,
+        "powering_australia_plan": power_aus_plan,
+        "renewable_generation_targets": renewable_generation_targets,
+        "technology_capacity_targets": technology_capacity_targets,
+    }
+
+
+def template_renewable_share_targets(
+    iasr_tables: dict[str : pd.DataFrame],
+) -> pd.DataFrame:
+    """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: Template containing renewable share targets with columns for
-            financial year, region_id, policy_id, and percentage values in decimal form
+            financial year, region_id and percentage values in decimal form
     """
     logging.info("Creating template for renewable share targets")
     state_renewable_share_targets = []
@@ -31,9 +63,8 @@ def template_renewable_share_targets(
     ]
 
     for target in target_files:
-        file_path = Path(parsed_workbook_path, f"{target['csv']}.csv")
+        df = iasr_tables[target["csv"]]
 
-        df = pd.read_csv(file_path)
         df = df.melt(id_vars=df.columns[0], var_name="FY", value_name="pct")
         df = df[df[df.columns[0]].str.contains("share", case=False)]
         df["region_id"] = target["region_id"]
@@ -55,64 +86,56 @@ def template_renewable_share_targets(
 
 
 def template_powering_australia_plan(
-    parsed_workbook_path: Path | str,
-    scenario: str,
+    power_aus_plan: Path | str, scenario: str
 ) -> pd.DataFrame:
-    """Creates ISPyPSA template for the Powering Australia Plan renewable share
-    trajectories for selected scenarios.
+    """Creates ISPyPSA template for the Powering Australia Plan renewable share trajectories for different scenarios.
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        powering_aus: pd.DataFrame table from IASR workbook specifying Powering Australia Plan renewable share targets. 
         scenario: Scenario obtained from the model configuration
 
     Returns:
-        `pd.DataFrame`: Template containing Powering Australia Plan targets
-            with columns for financial year, policy_id and percentage values in
-            decimal form for the selected scenario
+        `pd.DataFrame`: Template containing Powering Australia Plan targets with columns for
+            financial year, scenario and percentage values in decimal form
     """
     logging.info("Creating template for Powering Australia Plan")
 
-    # Should only be one file for this template
-    target_file = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
-        "template_powering_australia_plan"
-    ][0]
+    # Remove rows containing "Notes" in the first column
+    power_aus_plan = power_aus_plan[~power_aus_plan.iloc[:, 0].str.contains("Notes", case=False, na=False)]
 
-    file_path = Path(parsed_workbook_path, f"{target_file['csv']}.csv")
+    # Filter for rows where the first column matches the specified scenario
+    power_aus_plan = power_aus_plan[power_aus_plan.iloc[:, 0].eq(scenario)]
 
-    power_aus_plan = pd.read_csv(file_path, header=0)
-    # filter for only row where index is the scenario
-    power_aus_plan = power_aus_plan[power_aus_plan.iloc[:, 0].str.contains(scenario)]
-    power_aus_plan = power_aus_plan.iloc[:, 1:]
+    # Drop the first column (scenario name) to keep only year values
+    power_aus_plan = power_aus_plan.iloc[:, 1:].reset_index(drop=True)
 
     # Melt the dataframe, excluding the first column from id_vars
-    power_aus_plan = power_aus_plan.melt(
-        id_vars=[], var_name="FY", value_name="pct"
-    ).dropna(subset=["pct"])
+    power_aus_plan = power_aus_plan.melt(var_name="FY", value_name="pct").dropna(subset=["pct"])
 
     # Convert percentage to decimal if needed
     power_aus_plan["pct"] = power_aus_plan["pct"].astype(float)
 
     power_aus_plan["FY"] = power_aus_plan["FY"].str.replace("-", "_")
 
+    # append new column which is the policy_id
+    power_aus_plan["policy_id"] = "power_aus"
     return power_aus_plan
 
 
+
 def template_technology_capacity_targets(
-    parsed_workbook_path: Path | str,
+    iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
-    """Creates ISPyPSA templates for technology capacity targets including
-    CIS renewable target and storage and offshore wind trajectories.
-    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
+    """Creates ISPyPSA templates for technology capacity targets including CIS renewable target and storage and
+    offshore wind trajectories. Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
     files and their corresponding regions.
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are
-            the output of parsing an ISP Inputs and Assumptions workbook
-            using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
     Returns:
-        `pd.DataFrame`: Template containing technology capacity trajectories
-            with columns for financial year, region_id and capacity in MW
+        `pd.DataFrame`: Template containing technology capacity trajectories with columns for
+            financial year, region_id and capacity in MW
     """
     logging.info("Creating template for technology capacity targets")
 
@@ -122,12 +145,7 @@ def template_technology_capacity_targets(
     ]
 
     for target in target_files:
-        file_path = Path(parsed_workbook_path, f"{target['csv']}.csv")
-        if not file_path.exists():
-            continue
-
-        df = pd.read_csv(file_path)
-
+        df = iasr_tables[target["csv"]]
         # Extract technology type from the row containing "target (MW)"
         target_row_mask = df.iloc[:, 0].str.contains("target", case=False) & df.iloc[
             :, 0
@@ -160,21 +178,19 @@ def template_technology_capacity_targets(
 
 
 def template_renewable_generation_targets(
-    parsed_workbook_path: Path | str,
+    iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable generation targets.
     Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: Template containing renewable capacity trajectories with columns for
             financial year, region_id and capacity in MW (converted from GWh)
 
-    Raises:
-        ValueError: If no GWh values are found in the input CSVs
     """
     logging.info("Creating template for renewable generation trajectories")
 
@@ -184,12 +200,7 @@ def template_renewable_generation_targets(
     ]
 
     for target in target_files:
-        file_path = Path(parsed_workbook_path, f"{target['csv']}.csv")
-        if not file_path.exists():
-            continue
-
-        df = pd.read_csv(file_path)
-
+        df = iasr_tables[target["csv"]]
         # Check for GWh in row indices
         if not df.iloc[:, 0].str.contains("GWh", case=False).any():
             raise ValueError(f"No GWh values found in {target['csv']}.csv")
