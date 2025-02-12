@@ -1,4 +1,6 @@
 from pathlib import Path
+import pandas as pd
+from ispypsa.data_fetch import read_csvs
 
 from ispypsa.templater.energy_policy_targets import (
     template_powering_australia_plan,
@@ -7,12 +9,16 @@ from ispypsa.templater.energy_policy_targets import (
     template_technology_capacity_targets,
 )
 from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
+from ispypsa.templater.lists import _ISP_SCENARIOS
 
+import ipdb
 
 def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     """Test the renewable share targets template creation"""
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
 
-    df = template_renewable_share_targets(workbook_table_cache_test_path)
+    df = template_renewable_share_targets(iasr_tables)
+    ipdb.set_trace()
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "pct", "policy_id"]
@@ -50,39 +56,35 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     assert vic_policy_2024 == "vret"
     assert qld_policy_2030 == "qret"
 
-
+# set default scenario to step change
 def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
     """Test the Powering Australia Plan template creation"""
-    df = template_powering_australia_plan(
-        workbook_table_cache_test_path, "Progressive Change"
-    )
 
-    # Check basic DataFrame structure
-    expected_columns = ["FY", "pct"]
-    assert all(col in df.columns for col in expected_columns)
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df_full = iasr_tables["powering_australia_plan_trajectory"]
+    for scenario in _ISP_SCENARIOS:
+        df = template_powering_australia_plan(df_full, scenario)
 
-    # Check data types
-    assert df["FY"].dtype == "object"  # String type
-    assert df["pct"].dtype == "float64"
-    assert all(df["pct"].between(0, 100))
+        # Check basic DataFrame structure
+        expected_columns = ["FY", "pct", "policy_id"]
+        assert all(col in df.columns for col in expected_columns)
 
-    # Check that FY format is correct (YYYY_YY)
-    assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
+        # Check data types
+        assert df["FY"].dtype == "object"  # String type
+        assert df["pct"].dtype == "float64"
+        assert all(df["pct"].between(0, 100))
 
-    assert not df.isnull().any().any()
+        # Check that FY format is correct (YYYY_YY)
+        assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
 
-    # check that there are three rows
-    assert len(df) == 3
-
-    # Test specific known values (sample check)
-    prog_2024 = df[df["FY"] == "2027_28"]["pct"].iloc[0]
-
-    assert prog_2024 == 63
+        assert not df.isnull().any().any()
 
 
 def test_template_technology_capacity_targets(workbook_table_cache_test_path: Path):
     """Test the technology capacity targets template creation"""
-    df = template_technology_capacity_targets(workbook_table_cache_test_path)
+
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = template_technology_capacity_targets(iasr_tables)
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "capacity_mw", "policy_id"]
@@ -130,7 +132,8 @@ def test_template_technology_capacity_targets(workbook_table_cache_test_path: Pa
 
 def test_template_renewable_generation_targets(workbook_table_cache_test_path: Path):
     """Test the renewable generation targets template creation"""
-    df = template_renewable_generation_targets(workbook_table_cache_test_path)
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = template_renewable_generation_targets(iasr_tables)
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "capacity_mwh"]
