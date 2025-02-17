@@ -63,8 +63,8 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
     if config.network.nodes.regional_granularity == "sub_regions":
         buses.append(_translate_isp_sub_regions_to_buses(ispypsa_tables["sub_regions"]))
     elif config.network.nodes.regional_granularity == "nem_regions":
-        buses.append(_translate_nem_regions_to_buses(ispypsa_tables["regions"]))
-    elif config.regional_granularity == "single_region":
+        buses.append(_translate_nem_regions_to_buses(ispypsa_tables["nem_regions"]))
+    elif config.network.nodes.regional_granularity == "single_region":
         buses.append(_create_single_region_bus())
 
     if config.network.nodes.rezs == "discrete_nodes":
@@ -79,17 +79,22 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
             )
         )
 
-    lines.append(
-        _translate_flow_paths_to_lines(
-            ispypsa_tables["flow_paths"],
-            config.network.transmission_expansion,
-            config.wacc,
-            config.network.annuitisation_lifetime,
+    if config.network.nodes.regional_granularity != "single_region":
+        lines.append(
+            _translate_flow_paths_to_lines(
+                ispypsa_tables["flow_paths"],
+                config.network.transmission_expansion,
+                config.wacc,
+                config.network.annuitisation_lifetime,
+            )
         )
-    )
 
     pypsa_inputs["buses"] = pd.concat(buses)
-    pypsa_inputs["lines"] = pd.concat(lines)
+
+    if len(lines) > 0:
+        pypsa_inputs["lines"] = pd.concat(lines)
+    else:
+        pypsa_inputs["lines"] = pd.DataFrame()
 
     custom_constraint_lhs_tables = [
         ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_LHS_TABLES
@@ -118,7 +123,8 @@ def create_pypsa_friendly_inputs(config, ispypsa_tables):
     return pypsa_inputs
 
 
-def list_translator_output_files(output_path):
+def list_translator_output_files(output_path=None):
     files = _BASE_TRANSLATOR_OUPUTS
-    files = [output_path / Path(file + ".csv") for file in files]
+    if output_path is not None:
+        files = [output_path / Path(file + ".csv") for file in files]
     return files
