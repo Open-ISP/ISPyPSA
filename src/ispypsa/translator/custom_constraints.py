@@ -2,33 +2,28 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.translator.helpers import annuitised_investment_costs
+from ispypsa.translator.helpers import _annuitised_investment_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
     _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
-    _CUSTOM_CONSTRAINT_LHS_FILES,
-    _CUSTOM_CONSTRAINT_RHS_FILES,
+    _CUSTOM_CONSTRAINT_LHS_TABLES,
+    _CUSTOM_CONSTRAINT_RHS_TABLES,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
 )
 
 
-def _combine_custom_constraints_tables(
-    ispypsa_inputs_path: Path | str, files: list[str]
-):
+def _combine_custom_constraints_tables(custom_constraint_tables: list[pd.DataFrame]):
     """Combines a set of custom constraint data tables into a single data table,
     renaming the columns so that they are consistent.
 
     Args:
-        ispypsa_inputs_path: Path specifying where the files are located.
-        files: list[str] specifying the names of the files to read and combine into
-            a single dataframe.
-
+        custom_constraint_tables: list of pd.DataFrames specifying custom constraint
+            details
     Returns: pd.DataFrame
     """
     combined_data = []
-    for file in files:
-        table = pd.read_csv(ispypsa_inputs_path / Path(file + ".csv"))
+    for table in custom_constraint_tables:
         table = table.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
         cols_to_keep = [
             col
@@ -42,11 +37,11 @@ def _combine_custom_constraints_tables(
 
 
 def _translate_custom_constraints_generators(
-    ispypsa_inputs_path: Path | str,
+    custom_constraint_generators: list[pd.DataFrame],
     expansion_on: bool,
     wacc: float,
     asset_lifetime: int,
-):
+) -> pd.DataFrame:
     """Combines all tables specifying the expansion costs of custom constraint
     rhs values into a single pd.Dataframe formatting the data so the rhs
     can be represented by PyPSA generator components. PyPSA can then invest in
@@ -54,7 +49,8 @@ def _translate_custom_constraints_generators(
     to represent additional transmission capacity.
 
     Args:
-        ispypsa_inputs_path: Path specifying where the files are located.
+        custom_constraint_generators: list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraint generator expansion costs.
         expansion_on: bool indicating if transmission line expansion is considered.
         wacc: float, as fraction, indicating the weighted average coast of capital for
             transmission line investment, for the purposes of annuitising capital
@@ -64,55 +60,63 @@ def _translate_custom_constraints_generators(
 
     Returns: pd.DataFrame
     """
-    custom_constraints_additional_variables = _combine_custom_constraints_tables(
-        ispypsa_inputs_path, _CUSTOM_CONSTRAINT_EXPANSION_COSTS
+    custom_constraint_generators = _combine_custom_constraints_tables(
+        custom_constraint_generators
     )
 
-    custom_constraints_additional_variables = (
-        custom_constraints_additional_variables.rename(
-            columns={"variable_name": "name"}
-        )
+    custom_constraint_generators = custom_constraint_generators.rename(
+        columns={"variable_name": "name"}
     )
 
-    # The generator size is only used for additional transmission capacity so it
+    custom_constraint_generators["bus"] = "bus_for_custom_constraint_gens"
+    custom_constraint_generators["p_nom"] = 0.0
+
+    # The generator size is only used for additional transmission capacity, so it
     # initial size is 0.0.
-    custom_constraints_additional_variables["capital_cost"] = (
-        custom_constraints_additional_variables["capital_cost"].apply(
-            lambda x: annuitised_investment_costs(x, wacc, asset_lifetime)
-        )
-    )
+    custom_constraint_generators["capital_cost"] = custom_constraint_generators[
+        "capital_cost"
+    ].apply(lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime))
 
-    custom_constraints_additional_variables["p_nom_extendable"] = expansion_on
+    # not extendable by default
+    custom_constraint_generators["p_nom_extendable"] = False
+    mask = ~custom_constraint_generators["capital_cost"].isna()
+    custom_constraint_generators.loc[mask, "p_nom_extendable"] = expansion_on
 
-    return custom_constraints_additional_variables
+    return custom_constraint_generators
 
 
-def _translate_custom_constraint_rhs(ispypsa_inputs_path: Path | str):
+def _translate_custom_constraint_rhs(
+    custom_constraint_rhs_tables: list[pd.DataFrame],
+) -> pd.DataFrame:
     """Combines all tables specifying the rhs values of custom constraints into a single
     pd.Dataframe.
 
     Args:
-        ispypsa_inputs_path: Path specifying where the files are located.
+        custom_constraint_rhs_tables:  list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraints rhs values.
 
     Returns: pd.DataFrame
     """
     custom_constraint_rhs_values = _combine_custom_constraints_tables(
-        ispypsa_inputs_path, _CUSTOM_CONSTRAINT_RHS_FILES
+        custom_constraint_rhs_tables
     )
     return custom_constraint_rhs_values
 
 
-def _translate_custom_constraint_lhs(ispypsa_inputs_path: Path | str):
+def _translate_custom_constraint_lhs(
+    custom_constraint_lhs_tables: list[pd.DataFrame],
+) -> pd.DataFrame:
     """Combines all tables specifying the lhs values of custom constraints into a single
     pd.Dataframe.
 
     Args:
-        ispypsa_inputs_path: Path specifying where the files are located.
+        custom_constraint_lhs_tables: list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraints lhs values.
 
     Returns: pd.DataFrame
     """
     custom_constraint_lhs_values = _combine_custom_constraints_tables(
-        ispypsa_inputs_path, _CUSTOM_CONSTRAINT_LHS_FILES
+        custom_constraint_lhs_tables
     )
 
     custom_constraint_lhs_values["component"] = custom_constraint_lhs_values[
