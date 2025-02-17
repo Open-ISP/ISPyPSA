@@ -12,6 +12,5 @@ def test_network_initialisation(tmp_path):
         operational_temporal_resolution_min=30,
         year_type="fy",
     )
-    snapshots = snapshots.reset_index()
     network = _initialise_network(snapshots)
     _check_time_series(network.snapshots, snapshots["snapshots"], "", "")

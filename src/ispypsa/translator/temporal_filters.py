@@ -28,7 +28,7 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
         snapshots: pd.DataFrame with datetime index
 
     """
-    return time_series_data[time_series_data["Datetime"].isin(snapshots.index)]
+    return time_series_data[time_series_data["Datetime"].isin(snapshots["snapshots"])]
 
 
 def _filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
@@ -146,7 +146,7 @@ def _filter_snapshots_for_representative_weeks(
         year_type, start_year, end_year
     )
 
-    snapshots = snapshots.index.to_series()
+    snapshots = snapshots["snapshots"]
 
     filtered_snapshots = []
 
@@ -177,6 +177,6 @@ def _filter_snapshots_for_representative_weeks(
 
     filtered_snapshots = pd.concat(filtered_snapshots)
 
-    filtered_snapshots = pd.DataFrame(index=filtered_snapshots)
+    filtered_snapshots = pd.DataFrame({"snapshots": filtered_snapshots})
 
     return filtered_snapshots

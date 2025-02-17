@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ispypsa.config import ModelConfig
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
@@ -39,7 +40,40 @@ _BASE_TRANSLATOR_OUPUTS = [
 ]
 
 
-def create_pypsa_friendly_inputs(config, ispypsa_tables):
+def create_pypsa_friendly_inputs(
+    config: ModelConfig, ispypsa_tables: dict[str : pd.DataFrame]
+) -> dict[str : pd.DataFrame]:
+    """Creates a set of tables for defining a `PyPSA` network from a set `ISPyPSA` tables.
+
+    Examples:
+
+    # Perform requried imports.
+    >>> from pathlib import Path
+    >>> from ispypsa.config import load_config
+    >>> from ispypsa.data_fetch import read_csvs, write_csvs
+    >>> from ispypsa.translator import create_pypsa_friendly_inputs
+
+    # Load ISPyPSA model config file and input tables.
+    >>> config = load_config(Path("ispypsa_config.yaml"))
+    >>> ispypsa_input_tables = read_csvs(Path("ispypsa_inputs_directory"))
+
+    # Make the PyPSA friendly inputs!
+    >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(
+    ... config=config,
+    ... ispypsa_tables=ispypsa_input_tables
+    ... )
+
+    # Write the resulting dataframes to CSVs.
+    >>> write_csvs(pypsa_friendly_inputs)
+
+    Args:
+        config: `ISPyPSA` `ispypsa.config.ModelConfig` object (add link to config docs).
+        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
+            (add link to ispypsa input tables docs).
+
+    Returns: dictionary of dataframes in the `PyPSA` friendly format. (add link to
+        pypsa friendly format table docs)
+    """
     pypsa_inputs = {}
 
     snapshots = _create_complete_snapshots_index(

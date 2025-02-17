@@ -34,7 +34,6 @@ def _translate_renewable_energy_zone_build_limits_to_flow_paths(
     lines = renewable_energy_zone_build_limits.loc[:, _REZ_LINE_ATTRIBUTES.keys()]
     lines = lines.rename(columns=_REZ_LINE_ATTRIBUTES)
     lines["name"] = lines["bus0"] + "-" + lines["bus1"]
-    lines = lines.set_index("name", drop=True)
 
     # Lines without an explicit limit because their limits are modelled through
     # custom constraints are given a very large capacity because using inf causes

@@ -14,9 +14,39 @@ from ispypsa.model.lines import _add_lines_to_network
 
 
 def build_pypsa_network(
-    pypsa_friendly_tables: pd.DataFrame,
+    pypsa_friendly_tables: dict[str : pd.DataFrame],
     path_to_pypsa_friendly_timeseries_data: Path,
 ):
+    """Creates a `pypsa.Network` based on set of pypsa friendly input tables.
+
+    Examples:
+
+    # Peform required imports.
+    >>> from pathlib import Path
+    >>> from ispypsa.data_fetch import read_csvs, write_csvs
+    >>> from ispypsa.model import build_pypsa_network
+
+    # Read in PyPSA friendly tables from CSV.
+    >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))
+
+    >>> pypsa_friendly_inputs = build_pypsa_network(
+    ... pypsa_friendly_tables=pypsa_input_tables,
+    ... path_to_pypsa_friendly_timeseries_data=Path("pypsa_friendly_timeseries_data")
+    ... )
+
+    # Then the model can be run in PyPSA
+    >>> network.optimize.solve_model(solver_name="highs")
+
+    # And the results saved to disk.
+    >>> network.export_to_hdf5(Path("model_results.hdf5"))
+
+    Args:
+        pypsa_friendly_tables: dictionary of dataframes in the `PyPSA` friendly format.
+            (add link to pypsa friendly format table docs)
+        path_to_pypsa_friendly_timeseries_data: `Path` to `PyPSA` friendly time series
+            data (add link to timeseries data docs.
+
+    """
     network = _initialise_network(pypsa_friendly_tables["snapshots"])
 
     _add_carriers_to_network(network, pypsa_friendly_tables["generators"])
