@@ -41,7 +41,7 @@ temporal:
   operational_temporal_resolution_min: 30
   # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
   # from the environment variable "PATH_TO_PARSED_TRACES"
-  path_to_parsed_traces: ENV
+  path_to_parsed_traces: NOT_SET_FOR_TESTING
   year_type: fy
   start_year: 2025
   end_year: 2025
