@@ -36,10 +36,7 @@ def template_renewable_share_targets(
         df = df.melt(id_vars=df.columns[0], var_name="FY", value_name="pct")
         df = df[df[df.columns[0]].str.contains("share", case=False)]
         df["region_id"] = target["region_id"]
-
-        # Convert percentage to decimal if needed
         df["pct"] = df["pct"].astype(float)
-        df.loc[df["pct"] > 1, "pct"] = df["pct"] / 100
 
         state_renewable_share_targets.append(df[["FY", "region_id", "pct"]])
 
@@ -95,7 +92,6 @@ def template_powering_australia_plan(
 
     # Convert percentage to decimal if needed
     power_aus_plan["pct"] = power_aus_plan["pct"].astype(float)
-    power_aus_plan.loc[power_aus_plan["pct"] > 1, "pct"] = power_aus_plan["pct"] / 100
 
     power_aus_plan["FY"] = power_aus_plan["FY"].str.replace("-", "_")
 
