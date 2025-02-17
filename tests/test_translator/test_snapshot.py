@@ -125,6 +125,6 @@ def test_snapshot_creation(
         year_type=year_type,
         operational_temporal_resolution_min=operational_temporal_resolution_min,
     )
-    assert snapshot.index[0] == expected_first_datetime
-    assert snapshot.index[-1] == expected_last_datetime
+    assert snapshot["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshot["snapshots"].iloc[-1] == expected_last_datetime
     assert len(snapshot) == expected_length

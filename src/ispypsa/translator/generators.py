@@ -130,6 +130,6 @@ def create_pypsa_friendly_existing_generator_timeseries(
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
         trace = _time_series_filter(trace, snapshots)
         _check_time_series(
-            trace["Datetime"], snapshots.index.to_series(), "generator trace data", gen
+            trace["Datetime"], snapshots["snapshots"], "generator trace data", gen
         )
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)

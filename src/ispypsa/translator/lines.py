@@ -29,7 +29,6 @@ def _translate_flow_paths_to_lines(
     """
     lines = flow_paths.loc[:, _LINE_ATTRIBUTES.keys()]
     lines = lines.rename(columns=_LINE_ATTRIBUTES)
-    lines = lines.set_index("name", drop=True)
 
     lines["capital_cost"] = lines["capital_cost"].apply(
         lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime)

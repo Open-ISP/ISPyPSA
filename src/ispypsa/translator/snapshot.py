@@ -47,5 +47,4 @@ def _create_complete_snapshots_index(
         freq=str(operational_temporal_resolution_min) + "min",
         name="snapshots",
     )
-    time_index = pd.DataFrame(index=time_index)
-    return time_index
+    return pd.DataFrame(time_index).reset_index(drop=False)

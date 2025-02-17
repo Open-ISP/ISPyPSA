@@ -137,7 +137,7 @@ def create_pypsa_friendly_bus_demand_timeseries(
         node_trace = _time_series_filter(node_trace, snapshot)
         _check_time_series(
             node_trace["Datetime"],
-            pd.Series(snapshot.index),
+            snapshot["snapshots"],
             "demand data",
             demand_node,
         )
