@@ -75,7 +75,9 @@ def create_ispypsa_inputs_template(
             iasr_tables["sub_regional_reference_nodes"], mapping_only=True
         )
 
-        template["regions"] = _template_regions(iasr_tables["regional_reference_nodes"])
+        template["nem_regions"] = _template_regions(
+            iasr_tables["regional_reference_nodes"]
+        )
 
         template["flow_paths"] = _template_regional_interconnectors(
             iasr_tables["interconnector_transfer_capability"]
@@ -107,9 +109,12 @@ def create_ispypsa_inputs_template(
     return template
 
 
-def list_templater_output_files(regional_granularity, output_path):
-    files = _BASE_TEMPLATE_OUTPUTS
+def list_templater_output_files(regional_granularity, output_path=None):
+    files = _BASE_TEMPLATE_OUTPUTS.copy()
     if regional_granularity in ["sub_regions", "single_region"]:
         files.remove("nem_regions")
-    files = [output_path / Path(file + ".csv") for file in files]
+    if regional_granularity == "single_region":
+        files.remove("flow_paths")
+    if output_path is not None:
+        files = [output_path / Path(file + ".csv") for file in files]
     return files

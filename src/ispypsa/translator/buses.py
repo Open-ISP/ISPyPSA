@@ -20,7 +20,6 @@ def _translate_isp_sub_regions_to_buses(isp_sub_regions: pd.DataFrame) -> pd.Dat
     """
     buses = isp_sub_regions.loc[:, ["isp_sub_region_id"]]
     buses = buses.rename(columns={"isp_sub_region_id": "name"})
-    buses = buses.set_index("name", drop=True)
     return buses
 
 
@@ -35,7 +34,6 @@ def _translate_nem_regions_to_buses(nem_regions: pd.DataFrame) -> pd.DataFrame:
     """
     buses = nem_regions.loc[:, ["nem_region_id"]]
     buses = buses.rename(columns={"nem_region_id": "name"})
-    buses = buses.set_index("name", drop=True)
     return buses
 
 
@@ -46,7 +44,6 @@ def _create_single_region_bus() -> pd.DataFrame:
         `pd.DataFrame`: PyPSA style bus attributes in tabular format.
     """
     buses = pd.DataFrame({"name": ["NEM"]})
-    buses = buses.set_index("name", drop=True)
     return buses
 
 
@@ -62,7 +59,6 @@ def _translate_rezs_to_buses(renewable_energy_zones: pd.DataFrame) -> pd.DataFra
     """
     buses = renewable_energy_zones.loc[:, ["rez_id"]]
     buses = buses.rename(columns={"rez_id": "name"})
-    buses = buses.set_index("name", drop=True)
     return buses
 
 
