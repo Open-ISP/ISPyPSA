@@ -18,15 +18,13 @@ def read_csvs(directory: Path | str) -> dict[str : pd.DataFrame]:
 
 
 def write_csvs(data_dict: dict[str : pd.DataFrame], directory: Path | str):
-    """Read all the CSVs in a directory into a dictionary with filenames (without csv
-    extension) as keys.
+    """Write all pd.DataFrames in a dictionary with filenames as keys (without csv extension)
+    to CSVs.
 
     Args:
-        data_dict: Dictionary of pd.DatatFrames to write to csv files.
+        data_dict: Dictionary of pd.DataFrames to write to csv files.
         directory: Path to directory to save CSVs to.
 
-    Returns:
-        `pd.DataFrame`: Cleaned generator summary DataFrame
     """
     for file_name, data in data_dict.items():
         save_path = Path(directory) / Path(f"{file_name}.csv")
