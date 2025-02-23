@@ -118,7 +118,7 @@ def _merge_and_set_new_generators_static_properties(
     "New entrants summary" template, and renames columns if this is specified
     in the mapping.
 
-    Uses `ispypsa.test_templater.mappings._NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    Uses `ispypsa.templater.mappings._NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     as the mapping.
 
     Args:
