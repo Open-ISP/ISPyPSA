@@ -5,7 +5,7 @@ from isp_trace_parser import construct_reference_year_mapping
 from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network
+from ispypsa.model import build_pypsa_network, save_results
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     load_manually_extracted_tables,
@@ -90,6 +90,4 @@ network = build_pypsa_network(
 network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
-network.export_to_hdf5(
-    pypsa_outputs_directory / Path(f"{config.ispypsa_run_name}.hdf5")
-)
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
