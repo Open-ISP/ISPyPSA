@@ -19,7 +19,7 @@ def _translate_renewable_energy_zone_build_limits_to_flow_paths(
     Args:
         renewable_energy_zone_build_limits: `ISPyPSA` formatted pd.DataFrame detailing
             Renewable Energy Zone transmission limits.
-        wacc: float, as fraction, indicating the weighted average coast of capital for
+        wacc: float, as fraction, indicating the weighted average cost of capital for
             transmission line investment, for the purposes of annuitising capital
             costs.
         asset_lifetime: int specifying the nominal asset lifetime in years or the
