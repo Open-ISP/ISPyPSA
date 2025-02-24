@@ -11,10 +11,7 @@ def test_generator_dynamic_properties_templater(workbook_table_cache_test_path: 
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     for scenario in _ISP_SCENARIOS:
         mapped_dfs = _template_generator_dynamic_properties(iasr_tables, scenario)
-        for key, df in [
-            item
-            for item in mapped_dfs.items()  # if item[0] != "liquid_fuel_prices"
-        ]:
+        for key, df in mapped_dfs.items():
             if "price" in key:
                 if key == "liquid_fuel_prices":
                     assert all("$/gj" in col for col in df.columns[:])
