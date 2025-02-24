@@ -61,8 +61,7 @@ def _add_generators_to_network(
     generators: pd.DataFrame,
     path_to_timeseries_data: Path,
 ) -> None:
-    """Adds the generators in `ecaa_generators.csv` table (located in the
-    `path_pypsa_inputs` directory) to the `pypsa.Network`.
+    """Adds the generators in a pypsa-friendly `pd.DataFrame` to the `pypsa.Network`.
 
     Args:
         network: The `pypsa.Network` object

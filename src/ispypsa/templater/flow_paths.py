@@ -139,7 +139,7 @@ def _determine_flow_path_name(
 ) -> str:
     """
     Constructs flow path name
-        - If the carrier is `DC`, looks for the name in `ispypsa.test_templater.helpers._HVDC_FLOW_PATHS`
+        - If the carrier is `DC`, looks for the name in `ispypsa.templater.mappings._HVDC_FLOW_PATHS`
         - Else if there is a descriptor, uses a regular expression to extract the name
         - Else constructs a name using typical NEM naming conventing based on `regional_granularity`
             - First letter of `node_from`, first of `node_to` followed by "I" (interconnector)
