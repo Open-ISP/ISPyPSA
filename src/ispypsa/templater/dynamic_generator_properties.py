@@ -142,9 +142,8 @@ def _template_liquid_fuel_prices(
         "liquid_fuel_price_scenario"
     )
     liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
-    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[scenario, :]
-    liquid_fuel_prices_scenario.index.set_names("FY", inplace=True)
-    liquid_fuel_prices_scenario.name = "fuel_price"
+    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[[scenario], :]
+    liquid_fuel_prices_scenario.reset_index(drop=True)
     return liquid_fuel_prices_scenario
 
 
@@ -168,6 +167,7 @@ def _template_existing_generators_full_outage_forecasts(
     full_outages_forecast = _convert_financial_year_columns_to_float(
         full_outages_forecast.drop(index="All Coal Average")
     )
+    full_outages_forecast = full_outages_forecast.reset_index()
     return full_outages_forecast
 
 
@@ -191,6 +191,7 @@ def _template_existing_generators_partial_outage_forecasts(
     partial_outages_forecast = _convert_financial_year_columns_to_float(
         partial_outages_forecast.drop(index="All Coal Average")
     )
+    partial_outages_forecast = partial_outages_forecast.reset_index()
     return partial_outages_forecast
 
 
