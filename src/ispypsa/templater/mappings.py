@@ -67,79 +67,81 @@ _GENERATOR_PROPERTIES = {
 
 _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
-        csv=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
-        csv_lookup="Generator",
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
+        table_lookup="Generator",
         alternative_lookups=["Project"],
-        csv_value="Installed capacity (MW)",
+        table_value="Installed capacity (MW)",
     ),
     "maintenance_duration_%": dict(
-        csv="maintenance_existing_generators",
-        csv_lookup="Generator type",
-        csv_value="Proportion of time out (%)",
+        table="maintenance_existing_generators",
+        table_lookup="Generator type",
+        table_value="Proportion of time out (%)",
     ),
     "minimum_load_mw": dict(
-        csv="coal_minimum_stable_level",
-        csv_lookup="Generating unit",
-        csv_value="Minimum Stable Level (MW)",
+        table="coal_minimum_stable_level",
+        table_lookup="Generating unit",
+        table_value="Minimum Stable Level (MW)",
     ),
     "fom_$/kw/annum": dict(
-        csv="fixed_opex_existing_committed_anticipated_additional_generators",
-        csv_lookup="Generator",
-        csv_value="Fixed OPEX ($/kW/year)",
+        table="fixed_opex_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Fixed OPEX ($/kW/year)",
     ),
     "vom_$/mwh_sent_out": dict(
-        csv="variable_opex_existing_committed_anticipated_additional_generators",
-        csv_lookup="Generator",
-        csv_value="Variable OPEX ($/MWh sent out)",
+        table="variable_opex_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Variable OPEX ($/MWh sent out)",
     ),
     "heat_rate": dict(
-        csv="heat_rates_existing_committed_anticipated_additional_generators",
-        csv_lookup="Generator",
-        csv_value="Heat rate (GJ/MWh)",
+        table="heat_rates_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Heat rate (GJ/MWh)",
         new_col_name="heat_rate_gj/mwh",
     ),
     "mlf": dict(
-        csv=[f"marginal_loss_factors_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
-        csv_lookup="Generator",
+        table=[
+            f"marginal_loss_factors_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES
+        ],
+        table_lookup="Generator",
         alternative_lookups=["Project"],
-        csv_value="MLF",
+        table_value="MLF",
         alternative_values=["MLF - Generation"],
     ),
     "auxiliary_load_%": dict(
-        csv="auxiliary_load_existing_committed_anticipated_additional_generators",
-        csv_lookup="Fuel/Technology type",
-        csv_value="Auxiliary load (% of nameplate capacity)",
+        table="auxiliary_load_existing_committed_anticipated_additional_generators",
+        table_lookup="Fuel/Technology type",
+        table_value="Auxiliary load (% of nameplate capacity)",
     ),
     "partial_outage_derating_factor_%": dict(
-        csv="outages_2023-2024_existing_generators",
-        csv_lookup="Fuel type",
-        csv_value="Partial Outage Derating Factor (%)",
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Partial Outage Derating Factor (%)",
         generator_status="Existing",
     ),
     "mean_time_to_repair_full_outage": dict(
-        csv="outages_2023-2024_existing_generators",
-        csv_lookup="Fuel type",
-        csv_value="Mean time to repair (hrs)_Full outage",
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Full outage",
         generator_status="Existing",
     ),
     "mean_time_to_repair_partial_outage": dict(
-        csv="outages_2023-2024_existing_generators",
-        csv_lookup="Fuel type",
-        csv_value="Mean time to repair (hrs)_Partial outage",
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Partial outage",
         generator_status="Existing",
     ),
 }
 """
 Existing, committed, anticipated and additional summary table columns mapped to
-corresponding data CSV and lookup information that can be used to retrieve values.
+corresponding IASR tables and lookup information that can be used to retrieve values.
 
-    `csv`: A single CSV file name (excluding file extension) or a list of CSV file names
-    `csv_lookup`: Column in the CSV that acts as a key for merging into the summary
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
     `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
         alternative to  "Generator" in the additional projects table. If a lookup value
-        is NA in the `csv_lookup` column, it will be replaced by a lookup value from this
-        list in the order specified.
-    `csv_value`: Column in the CSV that corresponds to the data to be merged in
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
     `new_col_name`: The name that will be used to rename the column in the summary table
@@ -147,99 +149,99 @@ corresponding data CSV and lookup information that can be used to retrieve value
 
 _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "summer_peak_rating_%": dict(
-        csv="seasonal_ratings_new_entrants",
-        csv_lookup="Generator type",
-        csv_value="Summer Peak (% of nameplate)",
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Summer Peak (% of nameplate)",
     ),
     "summer_rating_mw": dict(
-        csv="seasonal_ratings_new_entrants",
-        csv_lookup="Generator type",
-        csv_value="Summer Typical (% of nameplate)",
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Summer Typical (% of nameplate)",
         new_col_name="summer_typical_rating_%",
     ),
     "winter_rating_mw": dict(
-        csv="seasonal_ratings_new_entrants",
-        csv_lookup="Generator type",
-        csv_value="Winter (% of nameplate)",
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Winter (% of nameplate)",
         new_col_name="winter_rating_%",
     ),
     "maximum_capacity_mw": dict(
-        csv="maximum_capacity_new_entrants",
-        csv_lookup="Generator type",
-        csv_value="Total plant size (MW)",
+        table="maximum_capacity_new_entrants",
+        table_lookup="Generator type",
+        table_value="Total plant size (MW)",
     ),
     "maintenance_duration_%": dict(
-        csv="maintenance_new_entrants",
-        csv_lookup="Generator type",
-        csv_value="Proportion of time out (%)",
+        table="maintenance_new_entrants",
+        table_lookup="Generator type",
+        table_value="Proportion of time out (%)",
     ),
     "fom_$/kw/annum": dict(
-        csv="fixed_opex_new_entrants",
-        csv_lookup="Generator",
-        csv_col_prefix="Fixed OPEX ($/kW sent out/year)",
+        table="fixed_opex_new_entrants",
+        table_lookup="Generator",
+        table_col_prefix="Fixed OPEX ($/kW sent out/year)",
     ),
     "vom_$/mwh_sent_out": dict(
-        csv="variable_opex_new_entrants",
-        csv_lookup="Generator",
-        csv_col_prefix="Variable OPEX ($/MWh sent out)",
+        table="variable_opex_new_entrants",
+        table_lookup="Generator",
+        table_col_prefix="Variable OPEX ($/MWh sent out)",
     ),
     "heat_rate": dict(
-        csv="heat_rates_new_entrants",
-        csv_lookup="Technology",
-        csv_value="Heat rate (GJ/MWh)",
+        table="heat_rates_new_entrants",
+        table_lookup="Technology",
+        table_value="Heat rate (GJ/MWh)",
         new_col_name="heat_rate_gj/mwh",
     ),
     "mlf": dict(
-        csv="marginal_loss_factors_new_entrants",
-        csv_lookup="Generator",
-        csv_value="MLF",
+        table="marginal_loss_factors_new_entrants",
+        table_lookup="Generator",
+        table_value="MLF",
     ),
     "auxiliary_load_%": dict(
-        csv="auxiliary_load_new_entrants",
-        csv_lookup="Generator",
-        csv_value="Auxiliary load (% of nameplate capacity)",
+        table="auxiliary_load_new_entrants",
+        table_lookup="Generator",
+        table_value="Auxiliary load (% of nameplate capacity)",
     ),
     "partial_outage_derating_factor_%": dict(
-        csv="outages_new_entrants",
-        csv_lookup="Fuel type",
-        csv_value="Partial Outage Derating Factor (%)",
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Partial Outage Derating Factor (%)",
     ),
     "mean_time_to_repair_full_outage": dict(
-        csv="outages_new_entrants",
-        csv_lookup="Fuel type",
-        csv_value="Mean time to repair (hrs)_Full outage",
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Full outage",
     ),
     "mean_time_to_repair_partial_outage": dict(
-        csv="outages_new_entrants",
-        csv_lookup="Fuel type",
-        csv_value="Mean time to repair (hrs)_Partial outage",
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Partial outage",
     ),
     "lifetime": dict(
-        csv="lead_time_and_project_life",
-        csv_lookup="Technology",
-        csv_value="Technical life (years) 6",
+        table="lead_time_and_project_life",
+        table_lookup="Technology",
+        table_value="Technical life (years) 6",
     ),
     "total_lead_time": dict(
-        csv="lead_time_and_project_life",
-        csv_lookup="Technology",
-        csv_value="Total lead time (years)",
+        table="lead_time_and_project_life",
+        table_lookup="Technology",
+        table_value="Total lead time (years)",
     ),
 }
 """
-New entrant generators summary table columns mapped to corresponding data CSV and
+New entrant generators summary table columns mapped to corresponding IASR table and
 lookup information that can be used to retrieve values.
 
-    `csv`: A single CSV file name (excluding file extension) or a list of CSV file names
-    `csv_lookup`: Column in the CSV that acts as a key for merging into the summary
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
     `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
         alternative to  "Generator" in the additional projects table. If a lookup value
-        is NA in the `csv_lookup` column, it will be replaced by a lookup value from this
-        list in the order specified.
-    `csv_value`: Column in the CSV that corresponds to the data to be merged in
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table
     `new_col_name`: The name that will be used to rename the column in the summary table
-    `csv_col_prefix`: The string that is present at the start of each column name
+    `table_col_prefix`: The string that is present at the start of each column name
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """

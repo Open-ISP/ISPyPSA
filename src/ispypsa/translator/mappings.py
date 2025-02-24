@@ -4,7 +4,7 @@ _GENERATOR_ATTRIBUTES = {
     "fuel_type": "carrier",
 }
 
-_BUS_ATTRIBUTES = {"node_id": "name"}
+_BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
 _LINE_ATTRIBUTES = {
     "flow_path_name": "name",
@@ -37,12 +37,12 @@ _CUSTOM_CONSTRAINT_EXPANSION_COSTS = [
     "rez_transmission_limit_constraints_expansion_costs",
 ]
 
-_CUSTOM_CONSTRAINT_RHS_FILES = [
+_CUSTOM_CONSTRAINT_RHS_TABLES = [
     "rez_group_constraints_rhs",
     "rez_transmission_limit_constraints_rhs",
 ]
 
-_CUSTOM_CONSTRAINT_LHS_FILES = [
+_CUSTOM_CONSTRAINT_LHS_TABLES = [
     "rez_group_constraints_lhs",
     "rez_transmission_limit_constraints_lhs",
 ]
