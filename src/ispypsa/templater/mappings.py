@@ -133,15 +133,15 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
 }
 """
 Existing, committed, anticipated and additional summary table columns mapped to
-corresponding data CSV and lookup information that can be used to retrieve values.
+corresponding IASR tables and lookup information that can be used to retrieve values.
 
-    `csv`: A single CSV file name (excluding file extension) or a list of CSV file names
-    `csv_lookup`: Column in the CSV that acts as a key for merging into the summary
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
     `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
         alternative to  "Generator" in the additional projects table. If a lookup value
-        is NA in the `csv_lookup` column, it will be replaced by a lookup value from this
-        list in the order specified.
-    `csv_value`: Column in the CSV that corresponds to the data to be merged in
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
     `new_col_name`: The name that will be used to rename the column in the summary table
@@ -228,20 +228,20 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     ),
 }
 """
-New entrant generators summary table columns mapped to corresponding data CSV and
+New entrant generators summary table columns mapped to corresponding IASR table and
 lookup information that can be used to retrieve values.
 
-    `csv`: A single CSV file name (excluding file extension) or a list of CSV file names
-    `csv_lookup`: Column in the CSV that acts as a key for merging into the summary
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
     `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
         alternative to  "Generator" in the additional projects table. If a lookup value
-        is NA in the `csv_lookup` column, it will be replaced by a lookup value from this
-        list in the order specified.
-    `csv_value`: Column in the CSV that corresponds to the data to be merged in
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
         table
     `new_col_name`: The name that will be used to rename the column in the summary table
-    `csv_col_prefix`: The string that is present at the start of each column name
+    `table_col_prefix`: The string that is present at the start of each column name
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
