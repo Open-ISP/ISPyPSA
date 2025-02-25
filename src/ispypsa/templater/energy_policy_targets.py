@@ -11,7 +11,8 @@ def template_renewable_share_targets(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
-    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their
+        corresponding regions.
 
     Args:
         iasr_tables: Dict of tables from the IASR workbook that have been parsed using
@@ -19,7 +20,7 @@ def template_renewable_share_targets(
 
     Returns:
         `pd.DataFrame`: Template containing renewable share targets with columns for
-            financial year, region_id and percentage values in decimal form
+            financial year, region_id, policy_id, and percentage values in decimal form
     """
     logging.info("Creating template for renewable share targets")
     state_renewable_share_targets = []
@@ -55,15 +56,17 @@ def template_renewable_share_targets(
 def template_powering_australia_plan(
     power_aus_plan: Path | str, scenario: str
 ) -> pd.DataFrame:
-    """Creates ISPyPSA template for the Powering Australia Plan renewable share trajectories for different scenarios.
+    """Creates ISPyPSA template for the Powering Australia Plan renewable share
+    trajectories for selected scenarios.
 
     Args:
         powering_aus: pd.DataFrame table from IASR workbook specifying Powering Australia Plan renewable share targets. 
         scenario: Scenario obtained from the model configuration
 
     Returns:
-        `pd.DataFrame`: Template containing Powering Australia Plan targets with columns for
-            financial year, scenario and percentage values in decimal form
+        `pd.DataFrame`: Template containing Powering Australia Plan targets
+            with columns for financial year, policy_id and percentage values in
+            decimal form for the selected scenario
     """
     logging.info("Creating template for Powering Australia Plan")
 
@@ -93,16 +96,17 @@ def template_powering_australia_plan(
 def template_technology_capacity_targets(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
-    """Creates ISPyPSA templates for technology capacity targets including CIS renewable target and storage and
-    offshore wind trajectories. Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
+    """Creates ISPyPSA templates for technology capacity targets including
+    CIS renewable target and storage and offshore wind trajectories.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
     files and their corresponding regions.
 
     Args:
         iasr_tables: Dict of tables from the IASR workbook that have been parsed using
             `isp-workbook-parser`.
     Returns:
-        `pd.DataFrame`: Template containing technology capacity trajectories with columns for
-            financial year, region_id and capacity in MW
+        `pd.DataFrame`: Template containing technology capacity trajectories
+            with columns for financial year, region_id and capacity in MW
     """
     logging.info("Creating template for technology capacity targets")
 
