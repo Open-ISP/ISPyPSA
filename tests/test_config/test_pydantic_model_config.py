@@ -38,6 +38,7 @@ def test_valid_config(
                 "start_year": 2025,
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
+                "investment_periods": [2018],
                 "aggregation": {
                     "representative_weeks": representative_weeks,
                 },
@@ -72,6 +73,7 @@ def test_invalid_scenario():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -106,6 +108,7 @@ def test_invalid_node_granularity():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -140,6 +143,7 @@ def test_invalid_nodes_rezs():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -174,6 +178,7 @@ def test_not_a_directory_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -208,6 +213,7 @@ def test_invalid_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -242,6 +248,7 @@ def test_invalid_end_year():
                     "start_year": 2025,
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -276,6 +283,7 @@ def test_invalid_representative_weeks():
                     "start_year": 2025,
                     "end_year": 2025,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": 0,
                     },
@@ -310,6 +318,7 @@ def test_invalid_wacc():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -344,6 +353,7 @@ def test_invalid_annuitisation_lifetime():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -378,6 +388,7 @@ def test_invalid_transmission_expansion():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -412,6 +423,7 @@ def test_invalid_rez_transmission_expansion():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -446,6 +458,7 @@ def test_invalid_rez_to_sub_region_transmission_default_limit():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -480,6 +493,7 @@ def test_invalid_iasr_workbook_version():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
+                    "investment_periods": [2018],
                     "aggregation": {
                         "representative_weeks": [0],
                     },

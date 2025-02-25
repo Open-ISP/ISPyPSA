@@ -77,7 +77,7 @@ create_pypsa_friendly_bus_demand_timeseries(
     regional_granularity=config.network.nodes.regional_granularity,
     reference_year_mapping=reference_year_mapping,
     year_type=config.temporal.year_type,
-    snapshot=pypsa_friendly_input_tables["snapshots"],
+    snapshots=pypsa_friendly_input_tables["snapshots"],
 )
 
 # Build a PyPSA network object.

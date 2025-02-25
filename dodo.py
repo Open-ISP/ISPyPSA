@@ -127,7 +127,7 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         regional_granularity=config.network.nodes.regional_granularity,
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
-        snapshot=pypsa_tables["snapshots"],
+        snapshots=pypsa_tables["snapshots"],
     )
 
 
