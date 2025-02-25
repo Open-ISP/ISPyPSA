@@ -48,3 +48,61 @@ def _create_complete_snapshots_index(
         name="snapshots",
     )
     return pd.DataFrame(time_index).reset_index(drop=False)
+
+
+def _add_investment_periods(
+    snapshots: pd.DataFrame,
+    investment_periods: list[int],
+    year_type: str,
+) -> pd.DataFrame:
+    """Add a column to the snapshots pd.DataFrame specifying the investment period that
+    each model time interval belongs too.
+
+    Args:
+        snapshots: pd.DataFrame with "snapshots" column specifying the time intervals
+            of the model as datetime objects.
+        investment_periods: list of ints specifying the investment period. Each int
+            specifies the year an investment period begins and each period lasts until
+            the next one starts.
+        year_type: str which should be "fy" or "calendar". If "fy" then investment
+            period ints are interpreted as specifying financial years (according to the
+            calendar year the financial year ends in).
+
+
+    Returns: pd.DataFrame with column "investment_periods" and "snapshots".
+    """
+    snapshots = snapshots.copy()
+    snapshots["calendar_year"] = snapshots["snapshots"].dt.year
+    snapshots["effective_year"] = snapshots["calendar_year"].astype("int64")
+
+    if year_type == "fy":
+        mask = snapshots["snapshots"].dt.month >= 7
+        snapshots.loc[mask, "effective_year"] = (
+            snapshots.loc[mask, "effective_year"] + 1
+        )
+
+    inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
+    inv_periods_df["investment_periods"] = inv_periods_df["investment_periods"]
+    inv_periods_df = inv_periods_df.sort_values("investment_periods")
+
+    result = pd.merge_asof(
+        snapshots,
+        inv_periods_df,
+        left_on="effective_year",
+        right_on="investment_periods",
+    )
+
+    # Check if any timestamps couldn't be mapped to an investment period
+    unmapped = result["investment_periods"].isna()
+    if unmapped.any():
+        # Get the earliest unmapped timestamp for the error message
+        earliest_unmapped = result.loc[unmapped, "snapshots"].min()
+        # Get the earliest investment period
+        earliest_period = min(investment_periods)
+        raise ValueError(
+            f"Investment periods not compatible with modelling time window."
+            f"Earliest unmapped timestamp: {earliest_unmapped}. "
+            f"Earliest investment period: {earliest_period}."
+        )
+
+    return result.loc[:, ["investment_periods", "snapshots"]]

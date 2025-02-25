@@ -51,7 +51,8 @@ def _add_generator_to_network(
         trace_data = None
 
     if trace_data is not None:
-        generator_definition["p_max_pu"] = trace_data.set_index("Datetime")["Value"]
+        trace_data = trace_data.set_index(["investment_periods", "snapshots"])
+        generator_definition["p_max_pu"] = trace_data["p_max_pu"]
 
     network.add(**generator_definition)
 

@@ -7,7 +7,10 @@ from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     create_pypsa_friendly_existing_generator_timeseries,
 )
-from ispypsa.translator.snapshot import _create_complete_snapshots_index
+from ispypsa.translator.snapshot import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
 
 
 def test_translate_ecaa_generators_sub_regions():
@@ -96,6 +99,8 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
         year_type="fy",
     )
 
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
     create_pypsa_friendly_existing_generator_timeseries(
         ecaa_ispypsa,
         parsed_trace_path,
@@ -117,6 +122,13 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     expected_trace = pd.concat([pd.read_parquet(file) for file in files])
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[
+        :, ["investment_periods", "snapshots", "p_max_pu"]
+    ]
     expected_trace = expected_trace.reset_index(drop=True)
 
     got_trace = pd.read_parquet(
@@ -136,6 +148,13 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     expected_trace = pd.concat([pd.read_parquet(file) for file in files])
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[
+        :, ["investment_periods", "snapshots", "p_max_pu"]
+    ]
     expected_trace = expected_trace.reset_index(drop=True)
 
     got_trace = pd.read_parquet(

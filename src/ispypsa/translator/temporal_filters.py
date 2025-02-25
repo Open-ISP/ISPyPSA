@@ -13,10 +13,10 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
     Examples:
 
     >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='h')
-    >>> time_series_data = pd.DataFrame({'Datetime': datetime_index, 'Value': range(len(datetime_index))})
-    >>> snapshot = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
-    >>> _time_series_filter(time_series_data, snapshot)
-                  Datetime  Value
+    >>> time_series_data = pd.DataFrame({'snapshots': datetime_index, 'p_set': range(len(datetime_index))})
+    >>> snapshots = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
+    >>> _time_series_filter(time_series_data, snapshots)
+                  snapshots  p_set
     0  2020-01-01 00:00:00      0
     12 2020-01-01 12:00:00     12
     24 2020-01-02 00:00:00     24
@@ -28,7 +28,7 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
         snapshots: pd.DataFrame with datetime index
 
     """
-    return time_series_data[time_series_data["Datetime"].isin(snapshots["snapshots"])]
+    return time_series_data[time_series_data["snapshots"].isin(snapshots["snapshots"])]
 
 
 def _filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
