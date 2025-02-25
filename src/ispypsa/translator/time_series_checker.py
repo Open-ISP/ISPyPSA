@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def check_time_series(
+def _check_time_series(
     time_series: pd.Series,
     expected_time_series: pd.Series,
     process_name: str,

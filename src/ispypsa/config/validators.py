@@ -31,6 +31,7 @@ class TemporalConfig(BaseModel):
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
+    investment_periods: list[int]
     aggregation: TemporalAggregationConfig
 
     @field_validator("operational_temporal_resolution_min")
@@ -54,6 +55,9 @@ class TemporalConfig(BaseModel):
     @field_validator("path_to_parsed_traces")
     @classmethod
     def validate_path_to_parsed_traces(cls, path_to_parsed_traces: str):
+        if path_to_parsed_traces == "NOT_SET_FOR_TESTING":
+            return path_to_parsed_traces
+
         if path_to_parsed_traces == "ENV":
             path_to_parsed_traces = os.environ.get("PATH_TO_PARSED_TRACES")
             if path_to_parsed_traces is None:
@@ -82,6 +86,21 @@ class TemporalConfig(BaseModel):
                 "config end_year must be greater than or equal to start_year"
             )
         return end_year
+
+    @field_validator("investment_periods")
+    @classmethod
+    def validate_investment_periods(cls, investment_periods: float, info):
+        if min(investment_periods) > info.data.get("start_year"):
+            raise ValueError(
+                "config first investment period must be less than or equal to start_year"
+            )
+        if len(investment_periods) != len(set(investment_periods)):
+            raise ValueError("config all years in investment_periods must be unique")
+        if sorted(investment_periods) != investment_periods:
+            raise ValueError(
+                "config investment_periods must be provided in sequential order"
+            )
+        return investment_periods
 
 
 class ModelConfig(BaseModel):

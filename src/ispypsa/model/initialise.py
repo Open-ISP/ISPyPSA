@@ -1,22 +1,23 @@
-from pathlib import Path
-
 import pandas as pd
 import pypsa
 
 
-def initialise_network(path_pypsa_inputs: Path) -> pypsa.Network:
+def _initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
     """Creates a `pypsa.Network object` with snapshots defined.
 
     Args:
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
+        snapshots: `pd.DataFrame` specifying the date times (`str`), in column labeled,
+         'snapshots', to be used in the `pypsa.Network` snapshots.
 
     Returns:
         `pypsa.Network` object
     """
-    time_index = pd.read_csv(
-        path_pypsa_inputs / Path("snapshot.csv"), index_col=0
-    ).index
-    time_index = pd.to_datetime(time_index)
-    network = pypsa.Network(snapshots=time_index)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], snapshots["snapshots"]]
+    )
+    network = pypsa.Network(
+        snapshots=snapshots_as_indexes,
+        investment_periods=snapshots["investment_periods"].unique(),
+    )
     return network

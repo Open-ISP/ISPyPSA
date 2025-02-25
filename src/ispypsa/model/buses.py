@@ -24,34 +24,35 @@ def _add_bus_to_network(
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
-        demand = demand.set_index("Datetime")
+        demand = demand.set_index(["investment_periods", "snapshots"])
         network.add(
             class_name="Load",
             name=f"load_{bus_name}",
             bus=bus_name,
-            p_set=demand["Value"],
+            p_set=demand["p_set"],
         )
 
 
-def add_buses_to_network(network: pypsa.Network, path_pypsa_inputs: Path) -> None:
-    """Adds Buses from `buses.csv` in the `path_to_pypsa_inputs` directory to
-    the `pypsa.Network`.
+def _add_buses_to_network(
+    network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
+) -> None:
+    """Adds buses and demand traces to the `pypsa.Network`.
 
     Args:
         network: The `pypsa.Network` object
-        path_pypsa_inputs: `pathlib.Path` that points to the directory containing
-            PyPSA inputs
+        buses: `pd.DataFrame` with `PyPSA` style `Bus` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
 
     Returns: None
     """
-    buses = pd.read_csv(path_pypsa_inputs / Path("buses.csv"))
-    path_to_demand_traces = path_pypsa_inputs / Path("demand_traces")
+    path_to_demand_traces = path_to_timeseries_data / Path("demand_traces")
     buses["name"].apply(
         lambda x: _add_bus_to_network(x, network, path_to_demand_traces)
     )
 
 
-def add_buses_for_custom_constraints(network: pypsa.Network) -> None:
+def _add_bus_for_custom_constraints(network: pypsa.Network) -> None:
     """Adds a bus called bus_for_custom_constraint_gens for generators being used to model constraint violation to
     the network.
 
