@@ -1,8 +1,12 @@
 from pathlib import Path
 
+import pandas as pd
+
 from ispypsa.model.initialise import _initialise_network
-from ispypsa.translator.snapshot import _create_complete_snapshots_index
-from ispypsa.translator.time_series_checker import _check_time_series
+from ispypsa.translator.snapshot import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
 
 
 def test_network_initialisation(tmp_path):
@@ -12,5 +16,13 @@ def test_network_initialisation(tmp_path):
         operational_temporal_resolution_min=30,
         year_type="fy",
     )
+    snapshots = _add_investment_periods(snapshots, [2020], "fy")
     network = _initialise_network(snapshots)
-    _check_time_series(network.snapshots, snapshots["snapshots"], "", "")
+    snapshots = snapshots.rename(
+        columns={"investment_periods": "period", "snapshots": "timestep"}
+    )
+    pd.testing.assert_index_equal(
+        network.snapshots,
+        pd.MultiIndex.from_arrays([snapshots["period"], snapshots["timestep"]]),
+    )
+    assert network.investment_periods == [2020]

@@ -12,6 +12,12 @@ def _initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
     Returns:
         `pypsa.Network` object
     """
-    snapshots = pd.to_datetime(snapshots["snapshots"])
-    network = pypsa.Network(snapshots=snapshots)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], snapshots["snapshots"]]
+    )
+    network = pypsa.Network(
+        snapshots=snapshots_as_indexes,
+        investment_periods=snapshots["investment_periods"].unique(),
+    )
     return network

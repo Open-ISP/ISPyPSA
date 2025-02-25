@@ -31,6 +31,7 @@ class TemporalConfig(BaseModel):
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
+    investment_periods: list[int]
     aggregation: TemporalAggregationConfig
 
     @field_validator("operational_temporal_resolution_min")

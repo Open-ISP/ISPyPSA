@@ -46,6 +46,9 @@ temporal:
   start_year: 2025
   end_year: 2025
   reference_year_cycle: [2018]
+  # List of investment period start years. An investment period runs until the next the
+  # periods begins.
+  investment_periods: [2025]
   aggregation:
     # Representative weeks to use instead of full yearly temporal representation.
     # Options:

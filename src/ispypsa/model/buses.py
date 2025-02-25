@@ -24,12 +24,12 @@ def _add_bus_to_network(
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
-        demand = demand.set_index("Datetime")
+        demand = demand.set_index(["investment_periods", "snapshots"])
         network.add(
             class_name="Load",
             name=f"load_{bus_name}",
             bus=bus_name,
-            p_set=demand["Value"],
+            p_set=demand["p_set"],
         )
 
 
