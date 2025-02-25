@@ -87,6 +87,21 @@ class TemporalConfig(BaseModel):
             )
         return end_year
 
+    @field_validator("investment_periods")
+    @classmethod
+    def validate_investment_periods(cls, investment_periods: float, info):
+        if min(investment_periods) > info.data.get("start_year"):
+            raise ValueError(
+                "config first investment period must be less than or equal to start_year"
+            )
+        if len(investment_periods) != len(set(investment_periods)):
+            raise ValueError("config all years in investment_periods must be unique")
+        if sorted(investment_periods) != investment_periods:
+            raise ValueError(
+                "config investment_periods must be provided in sequential order"
+            )
+        return investment_periods
+
 
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
