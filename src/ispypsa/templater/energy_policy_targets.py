@@ -11,7 +11,8 @@ def template_renewable_share_targets(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
-    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their
+        corresponding regions.
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
@@ -19,7 +20,7 @@ def template_renewable_share_targets(
 
     Returns:
         `pd.DataFrame`: Template containing renewable share targets with columns for
-            financial year, region_id and percentage values in decimal form
+            financial year, region_id, policy_id, and percentage values in decimal form
     """
     logging.info("Creating template for renewable share targets")
     state_renewable_share_targets = []
@@ -36,12 +37,12 @@ def template_renewable_share_targets(
         df = df.melt(id_vars=df.columns[0], var_name="FY", value_name="pct")
         df = df[df[df.columns[0]].str.contains("share", case=False)]
         df["region_id"] = target["region_id"]
+        df["policy_id"] = target["policy_id"]
         df["pct"] = df["pct"].astype(float)
 
-        state_renewable_share_targets.append(df[["FY", "region_id", "pct"]])
-
-    if not state_renewable_share_targets:
-        return pd.DataFrame(columns=["FY", "region_id", "pct"])
+        state_renewable_share_targets.append(
+            df[["FY", "region_id", "policy_id", "pct"]]
+        )
 
     merged_state_renewable_share_targets = pd.concat(
         state_renewable_share_targets, ignore_index=True
@@ -55,16 +56,20 @@ def template_renewable_share_targets(
 
 def template_powering_australia_plan(
     parsed_workbook_path: Path | str,
+    scenario: str,
 ) -> pd.DataFrame:
-    """Creates ISPyPSA template for the Powering Australia Plan renewable share trajectories for different scenarios.
+    """Creates ISPyPSA template for the Powering Australia Plan renewable share
+    trajectories for selected scenarios.
 
     Args:
         parsed_workbook_path: Path to directory containing CSVs that are the output
             of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        scenario: Scenario obtained from the model configuration
 
     Returns:
-        `pd.DataFrame`: Template containing Powering Australia Plan targets with columns for
-            financial year, scenario and percentage values in decimal form
+        `pd.DataFrame`: Template containing Powering Australia Plan targets
+            with columns for financial year, policy_id and percentage values in
+            decimal form for the selected scenario
     """
     logging.info("Creating template for Powering Australia Plan")
 
@@ -75,20 +80,15 @@ def template_powering_australia_plan(
 
     file_path = Path(parsed_workbook_path, f"{target_file['csv']}.csv")
 
-    power_aus_plan = pd.read_csv(file_path)
+    power_aus_plan = pd.read_csv(file_path, header=0)
+    # filter for only row where index is the scenario
+    power_aus_plan = power_aus_plan[power_aus_plan.iloc[:, 0].str.contains(scenario)]
+    power_aus_plan = power_aus_plan.iloc[:, 1:]
 
-    # Remove Notes row prior to melting
-    power_aus_plan = power_aus_plan[
-        ~power_aus_plan.iloc[:, 0].str.contains("Notes", case=False)
-    ]
-
-    # Melt the dataframe
+    # Melt the dataframe, excluding the first column from id_vars
     power_aus_plan = power_aus_plan.melt(
-        id_vars=power_aus_plan.columns[0], var_name="FY", value_name="pct"
+        id_vars=[], var_name="FY", value_name="pct"
     ).dropna(subset=["pct"])
-    power_aus_plan = power_aus_plan.rename(
-        columns={power_aus_plan.columns[0]: "scenario"}
-    )
 
     # Convert percentage to decimal if needed
     power_aus_plan["pct"] = power_aus_plan["pct"].astype(float)
@@ -101,16 +101,18 @@ def template_powering_australia_plan(
 def template_technology_capacity_targets(
     parsed_workbook_path: Path | str,
 ) -> pd.DataFrame:
-    """Creates ISPyPSA templates for technology capacity targets including CIS renewable target and storage and
-    offshore wind trajectories. Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
+    """Creates ISPyPSA templates for technology capacity targets including
+    CIS renewable target and storage and offshore wind trajectories.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
     files and their corresponding regions.
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        parsed_workbook_path: Path to directory containing CSVs that are
+            the output of parsing an ISP Inputs and Assumptions workbook
+            using `isp-workbook-parser`
     Returns:
-        `pd.DataFrame`: Template containing technology capacity trajectories with columns for
-            financial year, region_id and capacity in MW
+        `pd.DataFrame`: Template containing technology capacity trajectories
+            with columns for financial year, region_id and capacity in MW
     """
     logging.info("Creating template for technology capacity targets")
 
@@ -132,7 +134,6 @@ def template_technology_capacity_targets(
         ].str.contains("MW", case=False)
 
         target_row_idx = df.index[target_row_mask][0]
-        technology = target["technology_type"]
         # Create a new dataframe with just FY and capacity
         values_df = pd.DataFrame(
             {"FY": df.columns[1:], "capacity_mw": df.iloc[target_row_idx, 1:]}
@@ -140,7 +141,7 @@ def template_technology_capacity_targets(
 
         values_df["capacity_mw"] = values_df["capacity_mw"].astype(float)
         values_df["region_id"] = target["region_id"]
-        values_df["technology"] = technology
+        values_df["policy_id"] = target["policy_id"]
 
         technology_capacity_targets.append(values_df)
 
@@ -152,7 +153,7 @@ def template_technology_capacity_targets(
     ].str.replace("-", "_")
 
     merged_technology_capacity_targets = merged_technology_capacity_targets.sort_values(
-        ["technology", "region_id", "FY"]
+        ["region_id", "policy_id", "FY"]
     ).reset_index(drop=True)
 
     return merged_technology_capacity_targets
@@ -205,13 +206,10 @@ def template_renewable_generation_targets(
             renewable_gen_target["capacity_gwh"].astype(float) * 1000
         )
         renewable_gen_target["region_id"] = target["region_id"]
-
+        renewable_gen_target["policy_id"] = target["policy_id"]
         renewable_generation_targets.append(
-            renewable_gen_target[["FY", "region_id", "capacity_mwh"]]
+            renewable_gen_target[["FY", "region_id", "policy_id", "capacity_mwh"]]
         )
-
-    if not renewable_generation_targets:
-        return pd.DataFrame(columns=["FY", "region_id", "capacity_mwh"])
 
     # Combine all dataframes
     merged_renewable_generation_targets = pd.concat(

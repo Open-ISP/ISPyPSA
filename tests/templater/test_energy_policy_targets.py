@@ -15,12 +15,13 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     df = template_renewable_share_targets(workbook_table_cache_test_path)
 
     # Check basic DataFrame structure
-    expected_columns = ["FY", "region_id", "pct"]
+    expected_columns = ["FY", "region_id", "pct", "policy_id"]
     assert all(col in df.columns for col in expected_columns)
 
     # Check data types
     assert df["FY"].dtype == "object"  # String type
     assert df["region_id"].dtype == "object"  # String type
+    assert df["policy_id"].dtype == "object"  # String type
     assert df["pct"].dtype == "float64"
     assert all(df["pct"].between(0, 100))
 
@@ -38,18 +39,30 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     assert vic_2024 == 40
     assert qld_2030 == 60
 
+    # test specific known values (sample check)
+    vic_policy_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")][
+        "policy_id"
+    ].iloc[0]
+    qld_policy_2030 = df[(df["region_id"] == "QLD") & (df["FY"] == "2030_31")][
+        "policy_id"
+    ].iloc[0]
+
+    assert vic_policy_2024 == "vret"
+    assert qld_policy_2030 == "qret"
+
 
 def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
     """Test the Powering Australia Plan template creation"""
-    df = template_powering_australia_plan(workbook_table_cache_test_path)
+    df = template_powering_australia_plan(
+        workbook_table_cache_test_path, "Progressive Change"
+    )
 
     # Check basic DataFrame structure
-    expected_columns = ["FY", "scenario", "pct"]
+    expected_columns = ["FY", "pct"]
     assert all(col in df.columns for col in expected_columns)
 
     # Check data types
     assert df["FY"].dtype == "object"  # String type
-    assert df["scenario"].dtype == "object"  # String type
     assert df["pct"].dtype == "float64"
     assert all(df["pct"].between(0, 100))
 
@@ -58,18 +71,13 @@ def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
 
     assert not df.isnull().any().any()
 
+    # check that there are three rows
+    assert len(df) == 3
+
     # Test specific known values (sample check)
-    prog_2024 = df[(df["scenario"] == "Progressive Change") & (df["FY"] == "2027_28")][
-        "pct"
-    ].iloc[0]
-    step_2030 = df[(df["scenario"] == "Step Change") & (df["FY"] == "2029_30")][
-        "pct"
-    ].iloc[0]
+    prog_2024 = df[df["FY"] == "2027_28"]["pct"].iloc[0]
 
     assert prog_2024 == 63
-    assert step_2030 == 82
-
-    assert not df["scenario"].str.contains("Notes", case=False).any()
 
 
 def test_template_technology_capacity_targets(workbook_table_cache_test_path: Path):
@@ -77,14 +85,14 @@ def test_template_technology_capacity_targets(workbook_table_cache_test_path: Pa
     df = template_technology_capacity_targets(workbook_table_cache_test_path)
 
     # Check basic DataFrame structure
-    expected_columns = ["FY", "region_id", "capacity_mw", "technology"]
+    expected_columns = ["FY", "region_id", "capacity_mw", "policy_id"]
     assert all(col in df.columns for col in expected_columns)
 
     # Check data types
     assert df["FY"].dtype == "object"  # String type
     assert df["region_id"].dtype == "object"  # String type
     assert df["capacity_mw"].dtype == "float64"
-    assert df["technology"].dtype == "object"  # String type
+    assert df["policy_id"].dtype == "object"  # String type
 
     # Check that capacity values are non-negative
     assert all(df["capacity_mw"] >= 0)
@@ -96,27 +104,27 @@ def test_template_technology_capacity_targets(workbook_table_cache_test_path: Pa
     target_files = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
         "template_technology_capacity_targets"
     ]
-    expected_technologies = {target["technology_type"] for target in target_files}
-    assert set(df["technology"]) == expected_technologies
+    expected_policy_ids = {target["policy_id"] for target in target_files}
+    assert set(df["policy_id"]) == expected_policy_ids
 
     # Test specific known values (sample check)
     vic_storage_2024 = df[
         (df["region_id"] == "VIC")
-        & (df["technology"] == "storage")
+        & (df["policy_id"] == "vic_storage")
         & (df["FY"] == "2028_29")
     ]["capacity_mw"].iloc[0]
-    nsw_wind_2030 = df[
-        (df["region_id"] == "NSW")
-        & (df["technology"] == "storage")
-        & (df["FY"] == "2023_24")
+    nem_generator_2030 = df[
+        (df["region_id"] == "NEM")
+        & (df["policy_id"] == "cis_generator")
+        & (df["FY"] == "2026_27")
     ]["capacity_mw"].iloc[0]
 
     assert vic_storage_2024 == 1950.0
-    assert nsw_wind_2030 == 0.0
+    assert nem_generator_2030 == 4000.0
 
     # Check sorting
     assert df.equals(
-        df.sort_values(["technology", "region_id", "FY"]).reset_index(drop=True)
+        df.sort_values(["region_id", "policy_id", "FY"]).reset_index(drop=True)
     )
 
 
@@ -132,6 +140,7 @@ def test_template_renewable_generation_targets(workbook_table_cache_test_path: P
     assert df["FY"].dtype == "object"  # String type
     assert df["region_id"].dtype == "object"  # String type
     assert df["capacity_mwh"].dtype == "float64"
+    assert df["policy_id"].dtype == "object"  # String type
 
     # Check that capacity values are non-negative
     assert all(df["capacity_mwh"] >= 0)
@@ -149,10 +158,6 @@ def test_template_renewable_generation_targets(workbook_table_cache_test_path: P
 
     assert nsw_2024 == 12898000.0
     assert qld_2033 == 17850000.0
-
-    empty_df = template_renewable_generation_targets(Path("non_existent_path"))
-    assert list(empty_df.columns) == expected_columns
-    assert len(empty_df) == 0
 
     # Verify no "Notes" rows in output
     assert not df["FY"].str.contains("Notes", case=False).any()
