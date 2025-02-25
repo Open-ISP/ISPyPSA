@@ -502,3 +502,108 @@ def test_invalid_iasr_workbook_version():
                 "iasr_workbook_version": 6.0,
             }
         )
+
+
+def test_invalid_first_investment_period_after_start_year():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2026],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_investment_periods_not_unique():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2025, 2025],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_investment_periods_not_sorted():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2026, 2025],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
