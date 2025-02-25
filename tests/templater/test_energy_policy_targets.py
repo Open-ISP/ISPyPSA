@@ -22,11 +22,13 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "pct", "policy_id"]
+    expected_columns = ["FY", "region_id", "pct", "policy_id"]
     assert all(col in df.columns for col in expected_columns)
 
     # Check data types
     assert df["FY"].dtype == "object"  # String type
     assert df["region_id"].dtype == "object"  # String type
+    assert df["policy_id"].dtype == "object"  # String type
     assert df["policy_id"].dtype == "object"  # String type
     assert df["pct"].dtype == "float64"
     assert all(df["pct"].between(0, 100))
@@ -57,6 +59,18 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     assert qld_policy_2030 == "qret"
 
 # set default scenario to step change
+    # test specific known values (sample check)
+    vic_policy_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")][
+        "policy_id"
+    ].iloc[0]
+    qld_policy_2030 = df[(df["region_id"] == "QLD") & (df["FY"] == "2030_31")][
+        "policy_id"
+    ].iloc[0]
+
+    assert vic_policy_2024 == "vret"
+    assert qld_policy_2030 == "qret"
+
+
 def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
     """Test the Powering Australia Plan template creation"""
 
