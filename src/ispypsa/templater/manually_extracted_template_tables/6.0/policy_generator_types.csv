@@ -1,0 +1,47 @@
+﻿policy_id,generator
+cis_generator,Large scale Solar PV
+cis_generator,Wind
+cis_storage,Concentrated Solar Thermal
+cis_storage,Pumped Hydro
+cis_storage,Hydrogen reciprocating engines
+cis_storage,Battery Storage (1hr storage)
+cis_storage,Battery Storage (2hrs storage)
+cis_storage,Battery Storage (4hrs storage)
+cis_storage,Battery Storage (8hrs storage)
+cis_generator,Large scale Solar PV
+cis_generator,Wind
+nsw_generator,Large scale Solar PV
+nsw_generator,Wind
+nsw_generator,Concentrated Solar Thermal
+nsw_generator,Biomass
+nsw_storage,Battery Storage (8hrs storage)
+nsw_storage,Pumped Hydro (8hrs storage)
+nsw_storage,Pumped Hydro (24hrs storage)
+nsw_storage,Pumped Hydro (48hrs storage)
+vic_storage,Battery Storage (1hr storage)
+vic_storage,Battery Storage (2hrs storage)
+vic_storage,Battery Storage (4hrs storage)
+vic_storage,Battery Storage (8hrs storage)
+vic_storage,Pumped Hydro (8hrs storage)
+vic_storage,Pumped Hydro (24hrs storage)
+vic_storage,Pumped Hydro (48hrs storage)
+vic_offshore_wind,Wind - offshore (fixed)
+vic_offshore_wind,Wind - offshore (floating)
+qret,Hydro
+qret,Large scale Solar PV
+qret,Wind
+qret,Biomass
+qret,Concentrated Solar Thermal
+vret,Hydro
+vret,Large scale Solar PV
+vret,Wind
+vret,Biomass
+vret,Concentrated Solar Thermal
+tret,Hydro
+tret,Large scale Solar PV
+tret,Concentrated Solar Thermal
+tret,Wind
+power_aus,Hydro
+power_aus,Large scale Solar PV
+power_aus,Concentrated Solar Thermal
+power_aus,Wind
