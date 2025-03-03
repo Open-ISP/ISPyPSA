@@ -7,69 +7,21 @@ import pandas as pd
 from .helpers import _snakecase_string
 
 
-def template_renewable_energy_zones_locations(
-    parsed_workbook_path: Path | str, location_mapping_only: bool = True
-) -> pd.DataFrame:
-    """Creates a mapping table that specifies which regions and sub regions renewable
-       energy zones belong to.
-
-    Args:
-        parsed_workbook_path: Path to directory with table CSVs that are the
-            outputs from the `isp-workbook-parser`.
-        location_mapping_only: Whether to create a location mapping template that only
-            contains columns that map REZ IDs to sub-regions and regions.
-            Defaults to True.
-
-    Returns:
-        `pd.DataFrame`: ISPyPSA region and zone mapping table
-    """
-    logging.info("Creating a renewable_energy_zone_locations template")
-    renewable_energy_zones = pd.read_csv(
-        Path(parsed_workbook_path, "renewable_energy_zones.csv")
-    )
-    renewable_energy_zones.columns = [
-        _snakecase_string(col_name) for col_name in renewable_energy_zones.columns
-    ]
-    renewable_energy_zones = renewable_energy_zones.rename(
-        columns={
-            "nem_region": "nem_region_id",
-            "isp_sub_region": "isp_sub_region_id",
-            "id": "rez_id",
-        }
-    )
-    if location_mapping_only:
-        renewable_energy_zones = renewable_energy_zones.loc[
-            :,
-            [
-                "name",
-                "nem_region_id",
-                "isp_sub_region_id",
-                "rez_id",
-            ],
-        ]
-    renewable_energy_zones = renewable_energy_zones.set_index("rez_id", drop=True)
-    return renewable_energy_zones
-
-
-def template_rez_build_limits(
-    parsed_workbook_path: Path | str,
-    expansion_on: bool,
+def _template_rez_build_limits(
+    rez_build_limits: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create a template for renewable energy zones that contains data on resource and
     transmission limits and transmission expansion costs.
 
     Args:
-        parsed_workbook_path: Path to directory with table CSVs that are the
-            outputs from the `isp-workbook-parser`.
-        expansion_on: bool indicating if transmission line expansion is considered.
+        rez_build_limits: pd.DataFrame IASR table specifying the renewable energy
+            zone build limits
 
     Returns:
-        `pd.DataFrame`: REZ table resource and transmission limits table
+        `pd.DataFrame`: `ISPyPSA` formatted REZ table resource and transmission limits
+            table
     """
     logging.info("Creating a rez_build_limits template")
-    rez_build_limits = pd.read_csv(
-        Path(parsed_workbook_path, "initial_build_limits.csv")
-    )
     rez_build_limits.columns = [
         _snakecase_string(col) for col in rez_build_limits.columns
     ]
@@ -93,10 +45,10 @@ def template_rez_build_limits(
     ]
     for col in cols_where_zero_goes_to_nan:
         rez_build_limits.loc[rez_build_limits[col] == 0.0, col] = np.nan
-    rez_build_limits = combine_transmission_expansion_cost_to_one_column(
+    rez_build_limits = _combine_transmission_expansion_cost_to_one_column(
         rez_build_limits
     )
-    rez_build_limits = process_transmission_limit(rez_build_limits)
+    rez_build_limits = _process_transmission_limit(rez_build_limits)
     cols_where_nan_goes_to_zero = [
         "wind_generation_total_limits_mw_high",
         "wind_generation_total_limits_mw_medium",
@@ -106,10 +58,10 @@ def template_rez_build_limits(
     ]
     for col in cols_where_nan_goes_to_zero:
         rez_build_limits[col] = rez_build_limits[col].fillna(0.0)
-    rez_build_limits = convert_cost_units(
+    rez_build_limits = _convert_cost_units(
         rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
     )
-    rez_build_limits = convert_cost_units(
+    rez_build_limits = _convert_cost_units(
         rez_build_limits, "indicative_transmission_expansion_cost_$m/mw"
     )
     rez_build_limits = rez_build_limits.rename(
@@ -137,15 +89,10 @@ def template_rez_build_limits(
             "indicative_transmission_expansion_cost_$/mw",
         ],
     ]
-    if not expansion_on:
-        rez_build_limits = rez_build_limits.drop(
-            columns=["indicative_transmission_expansion_cost_$/mw"]
-        )
-    rez_build_limits = rez_build_limits.set_index("rez_id", drop=True)
     return rez_build_limits
 
 
-def process_transmission_limit(data):
+def _process_transmission_limit(data):
     """Replace 0.0 MW Transmission limits with nan if there is not a cost given for
     expansion.
     """
@@ -162,7 +109,7 @@ def process_transmission_limit(data):
     return data
 
 
-def combine_transmission_expansion_cost_to_one_column(data):
+def _combine_transmission_expansion_cost_to_one_column(data):
     """The model can only utilise a single transmission expansion cost. If the tranche
     1 column is nan then this function adopts the tranche 2 cost if it is not
     nan. The process is repeated with tranche 3 if the cost is still nan.
@@ -182,7 +129,7 @@ def combine_transmission_expansion_cost_to_one_column(data):
     return data
 
 
-def convert_cost_units(data, column):
+def _convert_cost_units(data, column):
     """Convert cost from millions of dollars per MW to $/MW"""
     data[column] = data[column] * 1e6
     return data

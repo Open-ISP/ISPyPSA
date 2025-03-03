@@ -54,6 +54,9 @@ class TemporalConfig(BaseModel):
     @field_validator("path_to_parsed_traces")
     @classmethod
     def validate_path_to_parsed_traces(cls, path_to_parsed_traces: str):
+        if path_to_parsed_traces == "NOT_SET_FOR_TESTING":
+            return path_to_parsed_traces
+
         if path_to_parsed_traces == "ENV":
             path_to_parsed_traces = os.environ.get("PATH_TO_PARSED_TRACES")
             if path_to_parsed_traces is None:
