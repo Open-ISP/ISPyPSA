@@ -88,6 +88,53 @@ def _create_unserved_energy_generators(
     return generators
 
 
+def _translate_new_entrant_generators(
+    ispypsa_inputs_path: Path | str, regional_granularity: str = "sub_regions"
+) -> pd.DataFrame:
+    """Process data on new entrant thermal and variable renewable generators
+    into a format aligned with PyPSA inputs.
+
+    Args:
+        ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
+
+    Returns:
+        `pd.DataFrame`: PyPSA style generator attributes in tabular format.
+    """
+    new_entrant_generators_template = pd.read_csv(
+        ispypsa_inputs_path / Path("new_entrant_generators.csv")
+    )
+
+    if regional_granularity == "sub_regions":
+        _GENERATOR_ATTRIBUTES["sub_region_id"] = "bus"
+    elif regional_granularity == "nem_regions":
+        _GENERATOR_ATTRIBUTES["region_id"] = "bus"
+
+    new_entrant_generators_pypsa_format = new_entrant_generators_template.loc[
+        # TODO: this will need to be updated as "generator" column IS NOT A NAME
+        # in this table!! Need to add a new column here to hold unique names??
+        :, _GENERATOR_ATTRIBUTES.keys()
+    ]
+    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format.rename(
+        columns=_GENERATOR_ATTRIBUTES
+    )
+
+    if regional_granularity == "single_region":
+        new_entrant_generators_pypsa_format["bus"] = "NEM"
+
+    marginal_costs = {}
+
+    new_entrant_generators_pypsa_format["marginal_cost"] = (
+        new_entrant_generators_pypsa_format["carrier"].map(marginal_costs)
+    )
+
+    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format.set_index(
+        "name", drop=True
+    )
+    return new_entrant_generators_pypsa_format
+
+
 def create_pypsa_friendly_existing_generator_timeseries(
     ecaa_generators: pd.DataFrame,
     trace_data_path: Path | str,
@@ -167,3 +214,66 @@ def create_pypsa_friendly_existing_generator_timeseries(
         trace = pd.merge(trace, snapshots, on="snapshots")
         trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)
+
+
+def _translate_new_entrant_generator_timeseries(
+    ispypsa_inputs_path: Path | str,
+    trace_data_path: Path | str,
+    pypsa_inputs_path: Path | str,
+    generator_type: Literal["solar", "wind"],
+    reference_year_mapping: dict[int:int],
+    year_type: Literal["fy", "calendar"],
+    snapshot: pd.DataFrame,
+) -> None:
+    """Gets trace data for generators by constructing a timeseries from the start to end year using the reference year
+    cycle provided. Trace data is then saved as a parquet file to
+
+    Args:
+        ispypsa_inputs_path: Path to directory containing modelling input template CSVs.
+        trace_data_path: Path to directory containing trace data parsed by isp-trace-parser
+        pypsa_inputs_path: Path to director where input translated to pypsa format will be saved
+        reference_year_mapping: dict[int: int], mapping model years to trace data reference years
+        generator_type: Literal['solar', 'wind'], which type of generator to translate trace data for.
+        year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial year with start_year and
+            end_year specifiying the financial year to return data for, using year ending nomenclature (2016 ->
+            FY2015/2016). If 'calendar', then filtering is by calendar year.
+        snapshot: pd.DataFrame containing the expected time series values.
+
+    Returns:
+        None
+    """
+    new_entrant_generators_template = pd.read_csv(
+        ispypsa_inputs_path / Path("new_entrant_generators.csv")
+    )
+
+    trace_data_path = trace_data_path / Path(generator_type)
+
+    output_trace_path = Path(pypsa_inputs_path, f"{generator_type}_traces")
+
+    if not output_trace_path.exists():
+        output_trace_path.mkdir(parents=True)
+
+    generators = new_entrant_generators_template[
+        new_entrant_generators_template["fuel_type"] == generator_type.capitalize()
+    ].copy()
+    generators = list(generators["generator"])
+
+    query_functions = {
+        "solar": get_data.solar_area_multiple_reference_years,
+        "wind": get_data.wind_area_multiple_reference_years,
+    }
+
+    for gen in generators:
+        trace = query_functions[generator_type](
+            reference_years=reference_year_mapping,
+            area=gen,
+            directory=trace_data_path,
+            year_type=year_type,
+        )
+        # datetime in nanoseconds required by PyPSA
+        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
+        trace = _time_series_filter(trace, snapshot)
+        _check_time_series(
+            trace["Datetime"], snapshot.index.to_series(), "generator trace data", gen
+        )
+        trace.to_parquet(Path(output_trace_path, f"{gen}.parquet"), index=False)

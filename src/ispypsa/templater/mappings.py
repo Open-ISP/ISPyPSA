@@ -495,3 +495,9 @@ _REZ_CONFIG = {
     },
     "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
 }
+
+_WIND_RESOURCE_QUALITIES = {
+    "Wind": ["WH", "WM"],
+    "Wind - offshore (fixed)": "WFX",
+    "Wind - offshore (floating)": "WFL",
+}
