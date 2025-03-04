@@ -318,3 +318,9 @@ _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP = {
         },
     ],
 }
+
+_WIND_RESOURCE_QUALITIES = {
+    "Wind": ["WH", "WM"],
+    "Wind - offshore (fixed)": "WFX",
+    "Wind - offshore (floating)": "WFL",
+}

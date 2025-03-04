@@ -2,7 +2,6 @@ import logging
 import re
 from pathlib import Path
 
-import ipdb
 import pandas as pd
 
 from .helpers import (
@@ -12,7 +11,7 @@ from .helpers import (
     _where_any_substring_appears,
 )
 from .lists import _NEW_GENERATOR_TYPES
-from .mappings import _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .mappings import _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP, _WIND_RESOURCE_QUALITIES
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -158,6 +157,7 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
+    df = _add_wind_resource_quality(df)
     df = _add_technology_rez_subregion_column(df, "technology_location_id")
     # replace remaining string values in static property columns
     df = df.infer_objects()
@@ -380,6 +380,27 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
     return df
 
 
+def _add_wind_resource_quality(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Adds an extra column containing the ISP wind resource quality code and where needed
+    duplicates wind generator rows so each resource quality is represented."""
+
+    import ipdb
+
+    ipdb.set_trace()
+
+    df["wind_resource_quality"] = df["generator"]
+    df["wind_resource_quality"] = df["wind_resource_quality"].map(
+        _WIND_RESOURCE_QUALITIES
+    )
+
+    # check the effect on index here? Confirm that this does what I want.
+    df = df.explode("wind_resource_quality")
+
+    return df
+
+
 def _add_technology_rez_subregion_column(
     df: pd.DataFrame, new_col_name: str
 ) -> pd.DataFrame:
@@ -396,3 +417,10 @@ def _add_technology_rez_subregion_column(
     df[new_col_name] = df["generator"] + " " + df[new_col_name]
 
     return df
+
+
+root_folder = Path("ispypsa_runs")
+_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
+
+
+test = template_new_generators_static_properties(_PARSED_WORKBOOK_CACHE)
