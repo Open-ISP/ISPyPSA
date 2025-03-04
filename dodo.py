@@ -150,7 +150,7 @@ def create_ispypsa_inputs_from_config(
         workbook_cache_location
     )
     powering_australia_plan_template = template_powering_australia_plan(
-        workbook_cache_location
+        workbook_cache_location, config.scenario
     )
     technology_capacity_targets_template = template_technology_capacity_targets(
         workbook_cache_location
@@ -386,74 +386,78 @@ def task_create_ispypsa_inputs():
                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
                 "rez_transmission_limit_constraints_rhs.csv",
             ),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "renewable_share_targets.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "powering_australia_plan.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "technology_capacity_targets.csv"),
+            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "renewable_generation_targets.csv"),
         ],
     }
 
 
-def task_create_pypsa_inputs():
-    return {
-        "actions": [
-            (
-                create_pypsa_inputs_from_config_and_ispypsa_inputs,
-                [
-                    config,
-                    _ISPYPSA_INPUT_TABLES_DIRECTORY,
-                    _PARSED_TRACE_DIRECTORY,
-                    _PYPSA_FRIENDLY_DIRECTORY,
-                ],
-            )
-        ],
-        "file_dep": [
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "nodes.csv"),
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
-            Path(
-                _ISPYPSA_INPUT_TABLES_DIRECTORY,
-                "rez_group_constraints_expansion_costs.csv",
-            ),
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_lhs.csv"),
-            Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_rhs.csv"),
-            Path(
-                _ISPYPSA_INPUT_TABLES_DIRECTORY,
-                "rez_transmission_limit_constraints_expansion_costs.csv",
-            ),
-            Path(
-                _ISPYPSA_INPUT_TABLES_DIRECTORY,
-                "rez_transmission_limit_constraints_lhs.csv",
-            ),
-            Path(
-                _ISPYPSA_INPUT_TABLES_DIRECTORY,
-                "rez_transmission_limit_constraints_rhs.csv",
-            ),
-        ],
-        "targets": [
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
-        ],
-    }
+# def task_create_pypsa_inputs():
+#     return {
+#         "actions": [
+#             (
+#                 create_pypsa_inputs_from_config_and_ispypsa_inputs,
+#                 [
+#                     config,
+#                     _ISPYPSA_INPUT_TABLES_DIRECTORY,
+#                     _PARSED_TRACE_DIRECTORY,
+#                     _PYPSA_FRIENDLY_DIRECTORY,
+#                 ],
+#             )
+#         ],
+#         "file_dep": [
+#             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "nodes.csv"),
+#             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "flow_paths.csv"),
+#             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "ecaa_generators.csv"),
+#             Path(
+#                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
+#                 "rez_group_constraints_expansion_costs.csv",
+#             ),
+#             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_lhs.csv"),
+#             Path(_ISPYPSA_INPUT_TABLES_DIRECTORY, "rez_group_constraints_rhs.csv"),
+#             Path(
+#                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
+#                 "rez_transmission_limit_constraints_expansion_costs.csv",
+#             ),
+#             Path(
+#                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
+#                 "rez_transmission_limit_constraints_lhs.csv",
+#             ),
+#             Path(
+#                 _ISPYPSA_INPUT_TABLES_DIRECTORY,
+#                 "rez_transmission_limit_constraints_rhs.csv",
+#             ),
+#         ],
+#         "targets": [
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
+#         ],
+#     }
 
 
-def task_create_and_run_pypsa_model():
-    return {
-        "actions": [
-            (
-                create_and_run_pypsa_model,
-                [config, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
-            )
-        ],
-        "file_dep": [
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
-            Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
-        ],
-        "targets": [Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5")],
-    }
+# def task_create_and_run_pypsa_model():
+#     return {
+#         "actions": [
+#             (
+#                 create_and_run_pypsa_model,
+#                 [config, _PYPSA_FRIENDLY_DIRECTORY, _PYPSA_OUTPUTS_DIRECTORY],
+#             )
+#         ],
+#         "file_dep": [
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "snapshot.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "buses.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "lines.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "generators.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_lhs.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_rhs.csv"),
+#             Path(_PYPSA_FRIENDLY_DIRECTORY, "custom_constraints_generators.csv"),
+#         ],
+#         "targets": [Path(_PYPSA_OUTPUTS_DIRECTORY, "network.hdf5")],
+#     }
