@@ -5,6 +5,9 @@ import pandas as pd
 from ispypsa.templater.dynamic_generator_properties import (
     _template_generator_dynamic_properties,
 )
+from ispypsa.templater.energy_policy_targets import (
+    _template_energy_policy_targets,
+)
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
     _template_sub_regional_flow_paths,
@@ -147,6 +150,10 @@ def create_ispypsa_inputs_template(
     )
 
     template.update(dynamic_generator_property_templates)
+
+    energy_policy_targets = _template_energy_policy_targets(iasr_tables, scenario)
+
+    template.update(energy_policy_targets)
 
     return template
 

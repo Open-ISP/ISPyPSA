@@ -53,11 +53,25 @@ _GENERATORS_REQUIRED_PROPERTY_TABLES = [
     "technology_specific_lcfs",
 ] + _GENERATOR_PROPERTY_TABLES
 
+_POLICY_REQUIRED_TABLES = [
+    "vic_renewable_target_trajectory",
+    "qld_renewable_target_trajectory",
+    "powering_australia_plan_trajectory",
+    "capacity_investment_scheme_renewable_trajectory",
+    "capacity_investment_scheme_storage_trajectory",
+    "nsw_roadmap_storage_trajectory",
+    "vic_storage_target_trajectory",
+    "vic_offshore_wind_target_trajectory",
+    "nsw_roadmap_renewable_trajectory",
+    "tas_renewable_target_trajectory",
+]
+
 REQUIRED_TABLES = (
     _NETWORK_REQUIRED_TABLES
     + _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES
     + _GENERATORS_REQUIRED_PROPERTY_TABLES
     + _NEW_ENTRANTS_COST_TABLES
+    + _POLICY_REQUIRED_TABLES
 )
 
 
