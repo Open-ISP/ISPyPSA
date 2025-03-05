@@ -60,7 +60,7 @@ def template_powering_australia_plan(
     trajectories for selected scenarios.
 
     Args:
-        powering_aus: pd.DataFrame table from IASR workbook specifying Powering Australia Plan renewable share targets. 
+        powering_aus: pd.DataFrame table from IASR workbook specifying Powering Australia Plan renewable share targets.
         scenario: Scenario obtained from the model configuration
 
     Returns:
@@ -71,7 +71,9 @@ def template_powering_australia_plan(
     logging.info("Creating template for Powering Australia Plan")
 
     # Remove rows containing "Notes" in the first column
-    power_aus_plan = power_aus_plan[~power_aus_plan.iloc[:, 0].str.contains("Notes", case=False, na=False)]
+    power_aus_plan = power_aus_plan[
+        ~power_aus_plan.iloc[:, 0].str.contains("Notes", case=False, na=False)
+    ]
 
     # Filter for rows where the first column matches the specified scenario
     power_aus_plan = power_aus_plan[power_aus_plan.iloc[:, 0].eq(scenario)]
@@ -80,7 +82,9 @@ def template_powering_australia_plan(
     power_aus_plan = power_aus_plan.iloc[:, 1:].reset_index(drop=True)
 
     # Melt the dataframe, excluding the first column from id_vars
-    power_aus_plan = power_aus_plan.melt(var_name="FY", value_name="pct").dropna(subset=["pct"])
+    power_aus_plan = power_aus_plan.melt(var_name="FY", value_name="pct").dropna(
+        subset=["pct"]
+    )
 
     # Convert percentage to decimal if needed
     power_aus_plan["pct"] = power_aus_plan["pct"].astype(float)
@@ -90,7 +94,6 @@ def template_powering_australia_plan(
     # append new column which is the policy_id
     power_aus_plan["policy_id"] = "power_aus"
     return power_aus_plan
-
 
 
 def template_technology_capacity_targets(
