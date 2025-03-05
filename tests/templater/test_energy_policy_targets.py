@@ -1,17 +1,18 @@
 from pathlib import Path
-import pandas as pd
-from ispypsa.data_fetch import read_csvs
 
+import ipdb
+import pandas as pd
+
+from ispypsa.data_fetch import read_csvs
 from ispypsa.templater.energy_policy_targets import (
     template_powering_australia_plan,
     template_renewable_generation_targets,
     template_renewable_share_targets,
     template_technology_capacity_targets,
 )
-from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 from ispypsa.templater.lists import _ISP_SCENARIOS
+from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 
-import ipdb
 
 def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     """Test the renewable share targets template creation"""
@@ -47,18 +48,6 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     assert vic_2024 == 40
     assert qld_2030 == 60
 
-    # test specific known values (sample check)
-    vic_policy_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")][
-        "policy_id"
-    ].iloc[0]
-    qld_policy_2030 = df[(df["region_id"] == "QLD") & (df["FY"] == "2030_31")][
-        "policy_id"
-    ].iloc[0]
-
-    assert vic_policy_2024 == "vret"
-    assert qld_policy_2030 == "qret"
-
-# set default scenario to step change
     # test specific known values (sample check)
     vic_policy_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")][
         "policy_id"
