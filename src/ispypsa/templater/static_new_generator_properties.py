@@ -19,15 +19,15 @@ _OBSOLETE_COLUMNS = [
 ]
 
 
-def template_new_generators_static_properties(
-    parsed_workbook_path: Path | str,
+def _template_new_generators_static_properties(
+    iasr_tables: dict[pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the new entrant generators summary tables into an ISPyPSA
     template format
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: ISPyPSA new entrant generators template
@@ -36,9 +36,7 @@ def template_new_generators_static_properties(
 
     new_generator_summaries = []
     for gen_type in _NEW_GENERATOR_TYPES:
-        df = pd.read_csv(
-            Path(parsed_workbook_path, _snakecase_string(gen_type) + "_summary.csv")
-        )
+        df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
         df.columns = ["Generator", *df.columns[1:]]
         new_generator_summaries.append(df)
     new_generator_summaries = pd.concat(new_generator_summaries, axis=0).reset_index(
@@ -47,10 +45,10 @@ def template_new_generators_static_properties(
     cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
     merged_cleaned_new_generator_summaries = (
         _merge_and_set_new_generators_static_properties(
-            cleaned_new_generator_summaries, parsed_workbook_path
+            cleaned_new_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_new_generator_summaries.set_index("technology_location_id")
+    return merged_cleaned_new_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -114,7 +112,7 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _merge_and_set_new_generators_static_properties(
-    df: pd.DataFrame, parsed_workbook_path: Path | str
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "New entrants summary" template, and renames columns if this is specified
@@ -125,37 +123,36 @@ def _merge_and_set_new_generators_static_properties(
 
     Args:
         df: Existing generator summary DataFrame
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: Existing generator template with static properties filled in
     """
     # merge in static properties using the static property mapping
     merged_static_cols = []
-    for col, csv_attrs in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
+    for col, table_attrs in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
         # if col is an opex column, use separate function to handle merging in:
         if re.search("^[fv]om_", col):
-            data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
-            df, col = _process_and_merge_opex(df, data, col, csv_attrs)
+            data = iasr_tables[table_attrs["table"]]
+            df, col = _process_and_merge_opex(df, data, col, table_attrs)
         else:
-            if type(csv_attrs["csv"]) is list:
+            if type(table_attrs["table"]) is list:
                 data = [
-                    pd.read_csv(Path(parsed_workbook_path, csv + ".csv"))
-                    for csv in csv_attrs["csv"]
+                    iasr_tables[table_attrs["table"]] for table in table_attrs["table"]
                 ]
                 data = pd.concat(data, axis=0)
             else:
-                data = pd.read_csv(
-                    Path(parsed_workbook_path, csv_attrs["csv"] + ".csv")
-                )
-            df, col = _merge_csv_data(df, col, data, csv_attrs)
+                data = iasr_tables[table_attrs["table"]]
+            df, col = _merge_table_data(df, col, data, table_attrs)
         merged_static_cols.append(col)
+
+    gpg_min_stable_level_new_entrants = iasr_tables["gpg_min_stable_level_new_entrants"]
     df = _process_and_merge_new_gpg_min_stable_lvl(
-        df, parsed_workbook_path, "minimum_stable_level_%"
+        df, gpg_min_stable_level_new_entrants, "minimum_stable_level_%"
     )
     df = _calculate_and_merge_tech_specific_lcfs(
-        df, parsed_workbook_path, "technology_specific_lcf_%"
+        df, iasr_tables, "technology_specific_lcf_%"
     )
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
@@ -169,22 +166,24 @@ def _merge_and_set_new_generators_static_properties(
     return df
 
 
-def _merge_csv_data(
-    df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
+def _merge_table_data(
+    df: pd.DataFrame, col: str, table_data: pd.DataFrame, table_attrs: dict
 ) -> tuple[pd.DataFrame, str]:
     """Replace values in the provided column of the summary mapping with those
-    in the CSV data using the provided attributes in
+    in the table data using the provided attributes in
     `_NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     """
     # handle alternative lookup and value columns
     for alt_attr in ("lookup", "value"):
-        if f"alternative_{alt_attr}s" in csv_attrs.keys():
-            csv_col = csv_attrs[f"csv_{alt_attr}"]
-            for alt_col in csv_attrs[f"alternative_{alt_attr}s"]:
-                csv_data[csv_col] = csv_data[csv_col].where(pd.notna, csv_data[alt_col])
+        if f"alternative_{alt_attr}s" in table_attrs.keys():
+            table_col = table_attrs[f"table_{alt_attr}"]
+            for alt_col in table_attrs[f"alternative_{alt_attr}s"]:
+                table_data[table_col] = table_data[table_col].where(
+                    pd.notna, table_data[alt_col]
+                )
     replacement_dict = (
-        csv_data.loc[:, [csv_attrs["csv_lookup"], csv_attrs["csv_value"]]]
-        .set_index(csv_attrs["csv_lookup"])
+        table_data.loc[:, [table_attrs["table_lookup"], table_attrs["table_value"]]]
+        .set_index(table_attrs["table_lookup"])
         .squeeze()
         .to_dict()
     )
@@ -198,17 +197,17 @@ def _merge_csv_data(
         threshold=90,
     )
     df[col] = df[col].replace(replacement_dict)
-    if "new_col_name" in csv_attrs.keys():
-        df = df.rename(columns={col: csv_attrs["new_col_name"]})
-        col = csv_attrs["new_col_name"]
+    if "new_col_name" in table_attrs.keys():
+        df = df.rename(columns={col: table_attrs["new_col_name"]})
+        col = table_attrs["new_col_name"]
     return df, col
 
 
 def _process_and_merge_opex(
     df: pd.DataFrame,
-    csv_data: pd.DataFrame,
+    table_data: pd.DataFrame,
     col_name: str,
-    csv_attrs: dict,
+    table_attrs: dict,
 ) -> tuple[pd.DataFrame, str]:
     """Processes and merges in fixed or variable OPEX values for new entrant generators.
 
@@ -220,22 +219,22 @@ def _process_and_merge_opex(
     # update the mapping in this column to include generator name and the
     # cost region initially given
     df[col_name] = df["generator"] + " " + df[col_name]
-    # renames columns by removing the specified csv_col_prefix (the string present
+    # renames columns by removing the specified table_col_prefix (the string present
     # at the start of all variable col names due to row merging from isp-workbook-parser)
-    csv_data = csv_data.rename(
+    table_data = table_data.rename(
         columns={
-            col: col.replace(f"{csv_attrs['csv_col_prefix']}_", "")
-            for col in csv_data.columns
+            col: col.replace(f"{table_attrs['table_col_prefix']}_", "")
+            for col in table_data.columns
         }
     )
-    opex_table = csv_data.melt(
-        id_vars=[csv_attrs["csv_lookup"]],
+    opex_table = table_data.melt(
+        id_vars=[table_attrs["table_lookup"]],
         var_name="Cost region",
         value_name="OPEX value",
     )
     # add column with same generator + cost region mapping as df[col_name]:
     opex_table["Mapping"] = (
-        opex_table[csv_attrs["csv_lookup"]] + " " + opex_table["Cost region"]
+        opex_table[table_attrs["table_lookup"]] + " " + opex_table["Cost region"]
     )
     opex_replacement_dict = (
         opex_table[["Mapping", "OPEX value"]].set_index("Mapping").squeeze().to_dict()
@@ -254,24 +253,22 @@ def _process_and_merge_opex(
 
 
 def _calculate_and_merge_tech_specific_lcfs(
-    df: pd.DataFrame, parsed_workbook_path: Path | str, tech_lcf_col: str
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], tech_lcf_col: str
 ) -> pd.DataFrame:
     """Calculates the technology-specific locational cost factor as a percentage
     for each new entrant generator and merges into summary mapping table.
     """
     # loads in the three tables needed
-    breakdown_ratios = pd.read_csv(
-        Path(parsed_workbook_path, "technology_cost_breakdown_ratios.csv")
-    )
-    technology_specific_lcfs = pd.read_csv(
-        Path(parsed_workbook_path, "technology_specific_lcfs.csv")
-    )
+    breakdown_ratios = iasr_tables["technology_cost_breakdown_ratios"]
+    technology_specific_lcfs = iasr_tables["technology_specific_lcfs"]
     # loads all cols unless the str "O&M" is in col name
-    locational_cost_factors = pd.read_csv(
-        Path(parsed_workbook_path, "locational_cost_factors.csv"),
-        index_col=0,
-        usecols=lambda x: "O&M" not in x,
+    locational_cost_factors = iasr_tables["locational_cost_factors"]
+    locational_cost_factors = locational_cost_factors.set_index(
+        locational_cost_factors.columns[0]
     )
+    cols = [col for col in locational_cost_factors.columns if "O&M" not in col]
+    locational_cost_factors = locational_cost_factors.loc[:, cols]
+
     # reshape technology_specific_lcfs and name columns manually:
     technology_specific_lcfs = technology_specific_lcfs.melt(
         id_vars="Cost zones / Sub-region", value_name="LCF", var_name="Technology"
@@ -319,7 +316,7 @@ def _calculate_and_merge_tech_specific_lcfs(
 
 
 def _process_and_merge_new_gpg_min_stable_lvl(
-    df: pd.DataFrame, parsed_workbook_path: Path | str, min_level_col: str
+    df: pd.DataFrame, new_gpg_min_stable_lvls: pd.DataFrame, min_level_col: str
 ) -> pd.DataFrame:
     """Processes and merges in gas-fired generation minimum stable level data (%)
 
@@ -330,9 +327,6 @@ def _process_and_merge_new_gpg_min_stable_lvl(
     NOTE: v6 IASR workbook does not specify a minimum stable level for hydrogen
     reciprocating engines.
     """
-    new_gpg_min_stable_lvls = pd.read_csv(
-        Path(parsed_workbook_path, "gpg_min_stable_level_new_entrants.csv")
-    )
     new_gpg_min_stable_lvls = new_gpg_min_stable_lvls.set_index("Technology")
     # manually maps percentages to the new min stable level column
     for tech, row in new_gpg_min_stable_lvls.iterrows():
