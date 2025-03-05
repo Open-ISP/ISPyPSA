@@ -17,15 +17,15 @@ _OBSOLETE_COLUMNS = [
 ]
 
 
-def template_ecaa_generators_static_properties(
-    parsed_workbook_path: Path | str,
+def _template_ecaa_generators_static_properties(
+    iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the existing, commited, anticipated and additional (ECAA) generators
     summary tables into an ISPyPSA template format
 
     Args:
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: ISPyPSA ECAA generators template
@@ -35,9 +35,7 @@ def template_ecaa_generators_static_properties(
     )
     ecaa_generator_summaries = []
     for gen_type in _ECAA_GENERATOR_TYPES:
-        df = pd.read_csv(
-            Path(parsed_workbook_path, _snakecase_string(gen_type) + "_summary.csv")
-        )
+        df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
         df.columns = ["Generator", *df.columns[1:]]
         ecaa_generator_summaries.append(df)
     ecaa_generator_summaries = pd.concat(ecaa_generator_summaries, axis=0).reset_index(
@@ -53,10 +51,10 @@ def template_ecaa_generators_static_properties(
     ].reset_index(drop=True)
     merged_cleaned_ecaa_generator_summaries = (
         _merge_and_set_ecaa_generators_static_properties(
-            cleaned_ecaa_generator_summaries, parsed_workbook_path
+            cleaned_ecaa_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_ecaa_generator_summaries.set_index("generator")
+    return merged_cleaned_ecaa_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -101,7 +99,7 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _merge_and_set_ecaa_generators_static_properties(
-    df: pd.DataFrame, parsed_workbook_path: Path | str
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "Existing generator summary" template, and renames columns if this is specified
@@ -112,8 +110,8 @@ def _merge_and_set_ecaa_generators_static_properties(
 
     Args:
         df: Existing generator summary DataFrame
-        parsed_workbook_path: Path to directory containing CSVs that are the output
-            of parsing an ISP Inputs and Assumptions workbook using `isp-workbook-parser`
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
 
     Returns:
         `pd.DataFrame`: Existing generator template with static properties filled in
@@ -122,18 +120,17 @@ def _merge_and_set_ecaa_generators_static_properties(
     df["maximum_capacity_mw"] = df["generator"]
     # merge in static properties using the static property mapping
     merged_static_cols = []
-    for col, csv_attrs in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
-        if type(csv_attrs["csv"]) is list:
-            data = [
-                pd.read_csv(Path(parsed_workbook_path, csv + ".csv"))
-                for csv in csv_attrs["csv"]
-            ]
+    for col, table_attrs in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
+        if type(table_attrs["table"]) is list:
+            data = [iasr_tables[table] for table in table_attrs["table"]]
             data = pd.concat(data, axis=0)
         else:
-            data = pd.read_csv(Path(parsed_workbook_path, csv_attrs["csv"] + ".csv"))
-        df, col = _merge_csv_data(df, col, data, csv_attrs)
+            data = iasr_tables[table_attrs["table"]]
+        df, col = _merge_table_data(df, col, data, table_attrs)
         merged_static_cols.append(col)
-    df = _process_and_merge_existing_gpg_min_load(df, parsed_workbook_path)
+    df = _process_and_merge_existing_gpg_min_load(
+        df, iasr_tables["gpg_min_stable_level_existing_generators"]
+    )
     df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
     df = _zero_renewable_minimum_load(df, "minimum_load_mw")
     df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
@@ -150,22 +147,24 @@ def _merge_and_set_ecaa_generators_static_properties(
     return df
 
 
-def _merge_csv_data(
-    df: pd.DataFrame, col: str, csv_data: pd.DataFrame, csv_attrs: dict
+def _merge_table_data(
+    df: pd.DataFrame, col: str, table_data: pd.DataFrame, table_attrs: dict
 ) -> tuple[pd.DataFrame, str]:
     """Replace values in the provided column of the summary mapping with those
-    in the CSV data using the provided attributes in
+    in the corresponding table using the provided attributes in
     `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
     """
     # handle alternative lookup and value columns
     for alt_attr in ("lookup", "value"):
-        if f"alternative_{alt_attr}s" in csv_attrs.keys():
-            csv_col = csv_attrs[f"csv_{alt_attr}"]
-            for alt_col in csv_attrs[f"alternative_{alt_attr}s"]:
-                csv_data[csv_col] = csv_data[csv_col].where(pd.notna, csv_data[alt_col])
+        if f"alternative_{alt_attr}s" in table_attrs.keys():
+            table_col = table_attrs[f"table_{alt_attr}"]
+            for alt_col in table_attrs[f"alternative_{alt_attr}s"]:
+                table_data[table_col] = table_data[table_col].where(
+                    pd.notna, table_data[alt_col]
+                )
     replacement_dict = (
-        csv_data.loc[:, [csv_attrs["csv_lookup"], csv_attrs["csv_value"]]]
-        .set_index(csv_attrs["csv_lookup"])
+        table_data.loc[:, [table_attrs["table_lookup"], table_attrs["table_value"]]]
+        .set_index(table_attrs["table_lookup"])
         .squeeze()
         .to_dict()
     )
@@ -181,14 +180,14 @@ def _merge_csv_data(
         not_match="existing",
         threshold=90,
     )
-    if "generator_status" in csv_attrs.keys():
-        row_filter = df["status"] == csv_attrs["generator_status"]
+    if "generator_status" in table_attrs.keys():
+        row_filter = df["status"] == table_attrs["generator_status"]
         df.loc[row_filter, col] = df.loc[row_filter, col].replace(replacement_dict)
     else:
         df[col] = df[col].replace(replacement_dict)
-    if "new_col_name" in csv_attrs.keys():
-        df = df.rename(columns={col: csv_attrs["new_col_name"]})
-        col = csv_attrs["new_col_name"]
+    if "new_col_name" in table_attrs.keys():
+        df = df.rename(columns={col: table_attrs["new_col_name"]})
+        col = table_attrs["new_col_name"]
     return df, col
 
 
@@ -265,15 +264,12 @@ def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
 
 
 def _process_and_merge_existing_gpg_min_load(
-    df: pd.DataFrame, parsed_workbook_path: Path | str
+    df: pd.DataFrame, existing_gpg_min_loads
 ) -> pd.DataFrame:
     """Processes and merges in gas-fired generation minimum load data
 
     Only retains first Gas Turbine min load if there are multiple turbines (OPINIONATED).
     """
-    existing_gpg_min_loads = pd.read_csv(
-        Path(parsed_workbook_path, "gpg_min_stable_level_existing_generators.csv")
-    )
     to_merge = []
     for station in existing_gpg_min_loads["Generator Station"].drop_duplicates():
         station_rows = existing_gpg_min_loads[
