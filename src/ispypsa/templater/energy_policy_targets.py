@@ -24,14 +24,14 @@ def _template_energy_policy_targets(
     logging.info("Creating templates for energy policy targets")
 
     # Create templates for energy policy targets
-    renewable_share_targets = template_renewable_share_targets(iasr_tables)
+    renewable_share_targets = _template_renewable_share_targets(iasr_tables)
 
     power_aus_plan = iasr_tables["powering_australia_plan_trajectory"]
-    power_aus_plan = template_powering_australia_plan(power_aus_plan, scenario)
+    power_aus_plan = _template_powering_australia_plan(power_aus_plan, scenario)
 
-    renewable_generation_targets = template_renewable_generation_targets(iasr_tables)
+    renewable_generation_targets = _template_renewable_generation_targets(iasr_tables)
 
-    technology_capacity_targets = template_technology_capacity_targets(iasr_tables)
+    technology_capacity_targets = _template_technology_capacity_targets(iasr_tables)
 
     return {
         "renewable_share_targets": renewable_share_targets,
@@ -41,7 +41,7 @@ def _template_energy_policy_targets(
     }
 
 
-def template_renewable_share_targets(
+def _template_renewable_share_targets(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
@@ -87,7 +87,7 @@ def template_renewable_share_targets(
     return merged_state_renewable_share_targets
 
 
-def template_powering_australia_plan(
+def _template_powering_australia_plan(
     power_aus_plan: Path | str, scenario: str
 ) -> pd.DataFrame:
     """Creates ISPyPSA template for the Powering Australia Plan renewable share
@@ -130,7 +130,7 @@ def template_powering_australia_plan(
     return power_aus_plan
 
 
-def template_technology_capacity_targets(
+def _template_technology_capacity_targets(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for technology capacity targets including
@@ -185,7 +185,7 @@ def template_technology_capacity_targets(
     return merged_technology_capacity_targets
 
 
-def template_renewable_generation_targets(
+def _template_renewable_generation_targets(
     iasr_tables: dict[str : pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable generation targets.
