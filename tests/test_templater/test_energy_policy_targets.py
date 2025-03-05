@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import ipdb
 import pandas as pd
 
 from ispypsa.data_fetch import read_csvs
@@ -16,20 +15,18 @@ from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 
 def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
     """Test the renewable share targets template creation"""
+
     iasr_tables = read_csvs(workbook_table_cache_test_path)
 
     df = template_renewable_share_targets(iasr_tables)
-    ipdb.set_trace()
 
     # Check basic DataFrame structure
-    expected_columns = ["FY", "region_id", "pct", "policy_id"]
     expected_columns = ["FY", "region_id", "pct", "policy_id"]
     assert all(col in df.columns for col in expected_columns)
 
     # Check data types
     assert df["FY"].dtype == "object"  # String type
     assert df["region_id"].dtype == "object"  # String type
-    assert df["policy_id"].dtype == "object"  # String type
     assert df["policy_id"].dtype == "object"  # String type
     assert df["pct"].dtype == "float64"
     assert all(df["pct"].between(0, 100))
@@ -167,3 +164,7 @@ def test_template_renewable_generation_targets(workbook_table_cache_test_path: P
 
     # Verify no "Notes" rows in output
     assert not df["FY"].str.contains("Notes", case=False).any()
+
+
+workbook_table_cache_test_path = Path("tests/test_workbook_table_cache")
+test_template_renewable_share_targets(workbook_table_cache_test_path)
