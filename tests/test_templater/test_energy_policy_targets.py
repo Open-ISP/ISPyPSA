@@ -4,10 +4,10 @@ import pandas as pd
 
 from ispypsa.data_fetch import read_csvs
 from ispypsa.templater.energy_policy_targets import (
-    template_powering_australia_plan,
-    template_renewable_generation_targets,
-    template_renewable_share_targets,
-    template_technology_capacity_targets,
+    _template_powering_australia_plan,
+    _template_renewable_generation_targets,
+    _template_renewable_share_targets,
+    _template_technology_capacity_targets,
 )
 from ispypsa.templater.lists import _ISP_SCENARIOS
 from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
@@ -18,7 +18,7 @@ def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
 
     iasr_tables = read_csvs(workbook_table_cache_test_path)
 
-    df = template_renewable_share_targets(iasr_tables)
+    df = _template_renewable_share_targets(iasr_tables)
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "pct", "policy_id"]
@@ -63,7 +63,7 @@ def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     df_full = iasr_tables["powering_australia_plan_trajectory"]
     for scenario in _ISP_SCENARIOS:
-        df = template_powering_australia_plan(df_full, scenario)
+        df = _template_powering_australia_plan(df_full, scenario)
 
         # Check basic DataFrame structure
         expected_columns = ["FY", "pct", "policy_id"]
@@ -84,7 +84,7 @@ def test_template_technology_capacity_targets(workbook_table_cache_test_path: Pa
     """Test the technology capacity targets template creation"""
 
     iasr_tables = read_csvs(workbook_table_cache_test_path)
-    df = template_technology_capacity_targets(iasr_tables)
+    df = _template_technology_capacity_targets(iasr_tables)
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "capacity_mw", "policy_id"]
@@ -133,7 +133,7 @@ def test_template_technology_capacity_targets(workbook_table_cache_test_path: Pa
 def test_template_renewable_generation_targets(workbook_table_cache_test_path: Path):
     """Test the renewable generation targets template creation"""
     iasr_tables = read_csvs(workbook_table_cache_test_path)
-    df = template_renewable_generation_targets(iasr_tables)
+    df = _template_renewable_generation_targets(iasr_tables)
 
     # Check basic DataFrame structure
     expected_columns = ["FY", "region_id", "capacity_mwh"]
@@ -164,7 +164,3 @@ def test_template_renewable_generation_targets(workbook_table_cache_test_path: P
 
     # Verify no "Notes" rows in output
     assert not df["FY"].str.contains("Notes", case=False).any()
-
-
-workbook_table_cache_test_path = Path("tests/test_workbook_table_cache")
-test_template_renewable_share_targets(workbook_table_cache_test_path)
