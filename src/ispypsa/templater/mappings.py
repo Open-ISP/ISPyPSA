@@ -245,3 +245,76 @@ lookup information that can be used to retrieve values.
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
+
+
+"""
+ _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to
+ lists of dictionaries containing the CSV file name, region_id and policy_id for each
+ parsed table.
+     `csv`: A single CSV file name (excluding file extension)
+     `region_id`: region corresponding to that parsed table, to be inputted
+         into templated table
+     `policy_id`: policy corresponding to that parsed table, to be inputted
+         into templated table links with the manually_extracted_table
+         `policy_generator_types`
+ """
+_TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP = {
+    "template_renewable_share_targets": [
+        {
+            "csv": "vic_renewable_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vret",
+        },
+        {
+            "csv": "qld_renewable_target_trajectory",
+            "region_id": "QLD",
+            "policy_id": "qret",
+        },
+    ],
+    "template_powering_australia_plan": [
+        {
+            "csv": "powering_australia_plan_trajectory",
+            "region_id": "NEM",
+            "policy_id": "power_aus",
+        },
+    ],
+    "template_technology_capacity_targets": [
+        {
+            "csv": "capacity_investment_scheme_renewable_trajectory",
+            "region_id": "NEM",
+            "policy_id": "cis_generator",
+        },
+        {
+            "csv": "capacity_investment_scheme_storage_trajectory",
+            "region_id": "NEM",
+            "policy_id": "cis_storage",
+        },
+        {
+            "csv": "nsw_roadmap_storage_trajectory",
+            "region_id": "NSW",
+            "policy_id": "nsw_eir_sto",
+        },
+        {
+            "csv": "vic_storage_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vic_storage",
+        },
+        {
+            "csv": "vic_offshore_wind_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vic_offshore_wind",
+        },
+    ],
+    "template_renewable_generation_targets": [
+        {
+            "csv": "nsw_roadmap_renewable_trajectory",
+            "region_id": "NSW",
+            "policy_id": "nsw_eir_gen",
+        },
+        {
+            "csv": "tas_renewable_target_trajectory",
+            "region_id": "TAS",
+            "policy_id": "tret",
+        },
+    ],
+}
