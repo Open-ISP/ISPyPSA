@@ -7,7 +7,7 @@ from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     create_pypsa_friendly_existing_generator_timeseries,
 )
-from ispypsa.translator.snapshot import (
+from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
 )

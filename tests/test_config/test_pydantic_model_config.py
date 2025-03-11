@@ -21,6 +21,7 @@ def test_valid_config(
             "ispypsa_run_name": "test",
             "scenario": scenario,
             "wacc": 0.07,
+            "discount_rate": 0.05,
             "network": {
                 "transmission_expansion": True,
                 "rez_transmission_expansion": True,
@@ -38,7 +39,7 @@ def test_valid_config(
                 "start_year": 2025,
                 "end_year": 2026,
                 "reference_year_cycle": [2018],
-                "investment_periods": [2018],
+                "investment_periods": [2025],
                 "aggregation": {
                     "representative_weeks": representative_weeks,
                 },
@@ -56,6 +57,7 @@ def test_invalid_scenario():
                 "ispypsa_run_name": "test",
                 "scenario": "BAU",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -73,7 +75,7 @@ def test_invalid_scenario():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -91,6 +93,7 @@ def test_invalid_node_granularity():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -108,7 +111,7 @@ def test_invalid_node_granularity():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -126,6 +129,7 @@ def test_invalid_nodes_rezs():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -143,7 +147,7 @@ def test_invalid_nodes_rezs():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -161,6 +165,7 @@ def test_not_a_directory_parsed_traces_path():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -178,7 +183,7 @@ def test_not_a_directory_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -196,6 +201,7 @@ def test_invalid_parsed_traces_path():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -213,7 +219,7 @@ def test_invalid_parsed_traces_path():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -231,6 +237,7 @@ def test_invalid_end_year():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -248,7 +255,7 @@ def test_invalid_end_year():
                     "start_year": 2025,
                     "end_year": 2024,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -266,6 +273,7 @@ def test_invalid_representative_weeks():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -283,7 +291,7 @@ def test_invalid_representative_weeks():
                     "start_year": 2025,
                     "end_year": 2025,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": 0,
                     },
@@ -301,6 +309,7 @@ def test_invalid_wacc():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": "7%",
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -318,7 +327,43 @@ def test_invalid_wacc():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_discount_rate():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "discount_rate": "5%",
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e6,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -336,6 +381,7 @@ def test_invalid_annuitisation_lifetime():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -353,7 +399,7 @@ def test_invalid_annuitisation_lifetime():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -371,6 +417,7 @@ def test_invalid_transmission_expansion():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": "help",
                     "rez_transmission_expansion": True,
@@ -388,7 +435,7 @@ def test_invalid_transmission_expansion():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -406,6 +453,7 @@ def test_invalid_rez_transmission_expansion():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": "help",
@@ -423,7 +471,7 @@ def test_invalid_rez_transmission_expansion():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -441,6 +489,7 @@ def test_invalid_rez_to_sub_region_transmission_default_limit():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -458,7 +507,7 @@ def test_invalid_rez_to_sub_region_transmission_default_limit():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -476,6 +525,7 @@ def test_invalid_iasr_workbook_version():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -493,7 +543,7 @@ def test_invalid_iasr_workbook_version():
                     "start_year": 2025,
                     "end_year": 2026,
                     "reference_year_cycle": [2018],
-                    "investment_periods": [2018],
+                    "investment_periods": [2025],
                     "aggregation": {
                         "representative_weeks": [0],
                     },
@@ -511,6 +561,7 @@ def test_invalid_first_investment_period_after_start_year():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -539,6 +590,42 @@ def test_invalid_first_investment_period_after_start_year():
         )
 
 
+def test_invalid_first_investment_period_before_start_year():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "discount_rate": 0.05,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "operational_temporal_resolution_min": 30,
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "start_year": 2025,
+                    "end_year": 2026,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2024],
+                    "aggregation": {
+                        "representative_weeks": [0],
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
 def test_invalid_investment_periods_not_unique():
     with pytest.raises(ValidationError):
         ModelConfig(
@@ -546,6 +633,7 @@ def test_invalid_investment_periods_not_unique():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,
@@ -581,6 +669,7 @@ def test_invalid_investment_periods_not_sorted():
                 "ispypsa_run_name": "test",
                 "scenario": "Step Change",
                 "wacc": 0.07,
+                "discount_rate": 0.05,
                 "network": {
                     "transmission_expansion": True,
                     "rez_transmission_expansion": True,

@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from ispypsa.translator.snapshot import (
+from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
 )

@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.model.initialise import _initialise_network
-from ispypsa.translator.snapshot import (
+from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
 )
