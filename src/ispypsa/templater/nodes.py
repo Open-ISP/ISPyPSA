@@ -197,13 +197,9 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
             data = xmltodict.parse(r.content)
             features = data["wfs:FeatureCollection"]["wfs:member"]
             for feature in features:
-                substation = feature[
-                    "Foundation_Electricity_Infrastructure:Transmission_Substations"
-                ]
-                name = substation.get("Foundation_Electricity_Infrastructure:NAME")
-                coordinates = substation["Foundation_Electricity_Infrastructure:SHAPE"][
-                    "gml:Point"
-                ]["gml:pos"]
+                substation = feature["esri:Transmission_Substations"]
+                name = substation.get("esri:NAME")
+                coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
                 lat, long = coordinates.split(" ")
                 substation_coordinates[name] = {
                     "substation_latitude": lat,

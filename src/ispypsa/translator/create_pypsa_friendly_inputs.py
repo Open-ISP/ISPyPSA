@@ -26,11 +26,16 @@ from ispypsa.translator.mappings import (
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_flow_paths,
 )
-from ispypsa.translator.snapshot import _create_complete_snapshots_index
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+    _create_investment_period_weightings,
+)
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
 _BASE_TRANSLATOR_OUPUTS = [
     "snapshots",
+    "investment_period_weights",
     "buses",
     "lines",
     "generators",
@@ -83,8 +88,16 @@ def create_pypsa_friendly_inputs(
         year_type=config.temporal.year_type,
     )
 
-    pypsa_inputs["snapshots"] = _filter_snapshots(
-        config=config.temporal, snapshots=snapshots
+    snapshots = _filter_snapshots(config=config.temporal, snapshots=snapshots)
+
+    pypsa_inputs["snapshots"] = _add_investment_periods(
+        snapshots, config.temporal.investment_periods, config.temporal.year_type
+    )
+
+    pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
+        config.temporal.investment_periods,
+        config.temporal.end_year,
+        config.discount_rate,
     )
 
     pypsa_inputs["generators"] = _translate_ecaa_generators(

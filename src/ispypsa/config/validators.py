@@ -31,6 +31,7 @@ class TemporalConfig(BaseModel):
     start_year: int
     end_year: int
     reference_year_cycle: list[int]
+    investment_periods: list[int]
     aggregation: TemporalAggregationConfig
 
     @field_validator("operational_temporal_resolution_min")
@@ -86,11 +87,27 @@ class TemporalConfig(BaseModel):
             )
         return end_year
 
+    @field_validator("investment_periods")
+    @classmethod
+    def validate_investment_periods(cls, investment_periods: float, info):
+        if min(investment_periods) != info.data.get("start_year"):
+            raise ValueError(
+                "config first investment period must be equal to start_year"
+            )
+        if len(investment_periods) != len(set(investment_periods)):
+            raise ValueError("config all years in investment_periods must be unique")
+        if sorted(investment_periods) != investment_periods:
+            raise ValueError(
+                "config investment_periods must be provided in sequential order"
+            )
+        return investment_periods
+
 
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     wacc: float
+    discount_rate: float
     network: NetworkConfig
     temporal: TemporalConfig
     iasr_workbook_version: str

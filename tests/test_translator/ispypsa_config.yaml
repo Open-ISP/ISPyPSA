@@ -12,6 +12,8 @@ scenario: Step Change
 # Weighted average cost of capital for annuitisation of generation and transmission
 # costs, as a fraction, i.e. 0.07 is 7%.
 wacc: 0.07
+# Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
+discount_rate: 0.05
 network:
   # Does the model consider the expansion of sub-region to sub-region transmission
   # capacity
@@ -46,6 +48,7 @@ temporal:
   start_year: 2025
   end_year: 2025
   reference_year_cycle: [2018]
+  investment_periods: [2025]
   aggregation:
     # Representative weeks to use instead of full yearly temporal representation.
     # Options:
