@@ -83,7 +83,6 @@ def _add_investment_periods(
         )
 
     inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
-    inv_periods_df["investment_periods"] = inv_periods_df["investment_periods"]
     inv_periods_df = inv_periods_df.sort_values("investment_periods")
 
     result = pd.merge_asof(
