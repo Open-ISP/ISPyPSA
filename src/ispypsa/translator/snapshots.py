@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
@@ -106,3 +107,46 @@ def _add_investment_periods(
         )
 
     return result.loc[:, ["investment_periods", "snapshots"]]
+
+
+def _create_investment_period_weightings(
+    investment_periods: list[int], model_end_year: int, discount_rate: float
+) -> pd.DataFrame:
+    """Create a pd.DataFrame specifying the weighting of each investment period based on
+    the sum of discounted periods during the period.
+
+    Args:
+        investment_periods: list of years in which investment periods start.
+        model_end_year: int specifying the last year modelling
+        discount_rate: fraction (float) specifying the discount rate i.e. 5% is 0.05.
+
+    Returns: pd.DataFrame with columns 'period', "years" and 'objective'. Where
+        "period" is the start years of the investment periods, "years" is the length
+        of each investment period, and "objective" is the relative weight of the
+        objective function in each investment period.
+    """
+    # Add model_end_year to calculate final period length
+    all_years = investment_periods + [model_end_year]
+
+    # Calculate period lengths
+    investment_period_lengths = np.diff(all_years).astype("int64")
+
+    # Create DataFrame with periods and their lengths
+    investment_period_weightings = pd.DataFrame(
+        {"period": investment_periods, "years": investment_period_lengths}
+    )
+
+    model_start_year = investment_periods[0]
+
+    def calc_weighting(period_start_year, period_length):
+        T0 = period_start_year - model_start_year
+        T1 = T0 + period_length
+        r = discount_rate
+        discounted_weights = [(1 / (1 + r) ** t) for t in range(T0, T1)]
+        return sum(discounted_weights)
+
+    investment_period_weightings["objective"] = investment_period_weightings.apply(
+        lambda row: calc_weighting(row["period"], row["years"]), axis=1
+    )
+
+    return investment_period_weightings

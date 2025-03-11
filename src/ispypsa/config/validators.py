@@ -90,9 +90,9 @@ class TemporalConfig(BaseModel):
     @field_validator("investment_periods")
     @classmethod
     def validate_investment_periods(cls, investment_periods: float, info):
-        if min(investment_periods) > info.data.get("start_year"):
+        if min(investment_periods) != info.data.get("start_year"):
             raise ValueError(
-                "config first investment period must be less than or equal to start_year"
+                "config first investment period must be equal to start_year"
             )
         if len(investment_periods) != len(set(investment_periods)):
             raise ValueError("config all years in investment_periods must be unique")
@@ -107,6 +107,7 @@ class ModelConfig(BaseModel):
     ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     wacc: float
+    discount_rate: float
     network: NetworkConfig
     temporal: TemporalConfig
     iasr_workbook_version: str

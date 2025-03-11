@@ -9,7 +9,7 @@ from ispypsa.translator.buses import (
     _translate_rezs_to_buses,
     create_pypsa_friendly_bus_demand_timeseries,
 )
-from ispypsa.translator.snapshot import (
+from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
 )
