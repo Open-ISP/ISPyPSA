@@ -58,33 +58,37 @@ def create_ispypsa_inputs_template(
     """Creates a template set of `ISPyPSA` input tables based on IASR tables.
 
     Examples:
+        Peform required imports:
 
-    # Peform required imports.
-    >>> from pathlib import Path
-    >>> from ispypsa.config import load_config
-    >>> from ispypsa.data_fetch import read_csvs, write_csvs
-    >>> from ispypsa.templater import load_manually_extracted_tables
-    >>> from ispypsa.templater import create_ispypsa_inputs_template
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs, write_csvs
+        >>> from ispypsa.templater import load_manually_extracted_tables
+        >>> from ispypsa.templater import create_ispypsa_inputs_template
 
-    # Tables previously extracted from IASR workbook using isp_workbook_parser are
-    # loaded.
-    >>> iasr_tables = read_csvs(Path("iasr_directory"))
+        Tables previously extracted from IASR workbook using isp_workbook_parser are
+        loaded:
 
-    # Some tables can't be handled by isp_workbook_parser so ISPyPSA ships with the
-    # missing data.
-    >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
+        >>> iasr_tables = read_csvs(Path("iasr_directory"))
 
-    # Now a template can be created by specifying the ISP scenario to use and the
-    # spacial granularity of model.
-    >>> ispypsa_inputs_template = create_ispypsa_inputs_template(
-    ... scenario="Step Change",
-    ... regional_granularity="sub_regions",
-    ... iasr_tables=iasr_tables,
-    ... manually_extracted_tables=manually_extracted_tables
-    ... )
+        Some tables can't be handled by isp_workbook_parser so ISPyPSA ships with the
+        missing data:
 
-    # Write the template tables to a directory as CSVs.
-    >>> write_csvs(ispypsa_inputs_template)
+        >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
+
+        Now a template can be created by specifying the ISP scenario to use and the
+        spacial granularity of model:
+
+        >>> ispypsa_inputs_template = create_ispypsa_inputs_template(
+        ... scenario="Step Change",
+        ... regional_granularity="sub_regions",
+        ... iasr_tables=iasr_tables,
+        ... manually_extracted_tables=manually_extracted_tables
+        ... )
+
+        Write the template tables to a directory as CSVs:
+
+        >>> write_csvs(ispypsa_inputs_template)
 
     Args:
         scenario: ISP scenario to generate template inputs based on.
@@ -95,8 +99,8 @@ def create_ispypsa_inputs_template(
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
 
-    Returns: dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa
-        table docs)
+    Returns:
+        dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa table docs)
     """
 
     template = {}
