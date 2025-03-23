@@ -128,8 +128,11 @@ def create_pypsa_friendly_existing_generator_timeseries(
         )
         # datetime in nanoseconds required by PyPSA
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
+        trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
         trace = _time_series_filter(trace, snapshots)
         _check_time_series(
-            trace["Datetime"], snapshots["snapshots"], "generator trace data", gen
+            trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
         )
+        trace = pd.merge(trace, snapshots, on="snapshots")
+        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)

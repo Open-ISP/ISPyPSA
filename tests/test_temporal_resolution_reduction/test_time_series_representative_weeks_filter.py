@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from ispypsa.translator.snapshot import _create_complete_snapshots_index
+from ispypsa.translator.snapshots import _create_complete_snapshots_index
 from ispypsa.translator.temporal_filters import (
     _filter_snapshots_for_representative_weeks,
 )
