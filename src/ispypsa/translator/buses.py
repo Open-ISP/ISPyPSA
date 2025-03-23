@@ -70,7 +70,7 @@ def create_pypsa_friendly_bus_demand_timeseries(
     regional_granularity: str,
     reference_year_mapping: dict[int:int],
     year_type: Literal["fy", "calendar"],
-    snapshot: pd.DataFrame,
+    snapshots: pd.DataFrame,
 ) -> None:
     """Gets trace data for operational demand by constructing a timeseries from the
     start to end year using the reference year cycle provided.
@@ -93,7 +93,7 @@ def create_pypsa_friendly_bus_demand_timeseries(
             year with start_year and end_year specifiying the financial year to return
             data for, using year ending nomenclature (2016 ->FY2015/2016). If
             'calendar', then filtering is by calendar year.
-        snapshot: pd.DataFrame containing the expected time series values.
+        snapshots: pd.DataFrame containing the expected time series values.
 
     Returns:
         None
@@ -134,13 +134,18 @@ def create_pypsa_friendly_bus_demand_timeseries(
         node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
         # datetime in nanoseconds required by PyPSA
         node_trace["Datetime"] = node_trace["Datetime"].astype("datetime64[ns]")
-        node_trace = _time_series_filter(node_trace, snapshot)
+        node_trace = node_trace.rename(
+            columns={"Datetime": "snapshots", "Value": "p_set"}
+        )
+        node_trace = _time_series_filter(node_trace, snapshots)
         _check_time_series(
-            node_trace["Datetime"],
-            snapshot["snapshots"],
+            node_trace["snapshots"],
+            snapshots["snapshots"],
             "demand data",
             demand_node,
         )
+        node_trace = pd.merge(node_trace, snapshots, on="snapshots")
+        node_trace = node_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
         node_trace.to_parquet(
             Path(output_trace_path, f"{demand_node}.parquet"), index=False
         )

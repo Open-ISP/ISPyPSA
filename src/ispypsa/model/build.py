@@ -10,6 +10,7 @@ from ispypsa.model.generators import (
     _add_generators_to_network,
 )
 from ispypsa.model.initialise import _initialise_network
+from ispypsa.model.investment_period_weights import _add_investment_period_weights
 from ispypsa.model.lines import _add_lines_to_network
 
 
@@ -48,6 +49,10 @@ def build_pypsa_network(
 
     """
     network = _initialise_network(pypsa_friendly_tables["snapshots"])
+
+    _add_investment_period_weights(
+        network, pypsa_friendly_tables["investment_period_weights"]
+    )
 
     _add_carriers_to_network(network, pypsa_friendly_tables["generators"])
 
