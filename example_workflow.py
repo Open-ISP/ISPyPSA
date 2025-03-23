@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from isp_trace_parser import construct_reference_year_mapping
-
 from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.logging import configure_logging
@@ -11,8 +9,6 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
-    create_pypsa_friendly_bus_demand_timeseries,
-    create_pypsa_friendly_existing_generator_timeseries,
     create_pypsa_friendly_inputs,
 )
 
@@ -55,35 +51,18 @@ write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 
-reference_year_mapping = construct_reference_year_mapping(
-    start_year=config.temporal.start_year,
-    end_year=config.temporal.end_year,
-    reference_years=config.temporal.reference_year_cycle,
-)
-create_pypsa_friendly_existing_generator_timeseries(
-    ispypsa_tables["ecaa_generators"],
+create_pypsa_friendly_timeseries_inputs(
+    config,
+    ispypsa_tables,
+    snapshots,
     parsed_traces_directory,
-    pypsa_friendly_inputs_location,
-    generator_types=["solar", "wind"],
-    reference_year_mapping=reference_year_mapping,
-    year_type=config.temporal.year_type,
-    snapshots=pypsa_friendly_input_tables["snapshots"],
-)
-create_pypsa_friendly_bus_demand_timeseries(
-    ispypsa_tables["sub_regions"],
-    parsed_traces_directory,
-    pypsa_friendly_inputs_location,
-    scenario=config.scenario,
-    regional_granularity=config.network.nodes.regional_granularity,
-    reference_year_mapping=reference_year_mapping,
-    year_type=config.temporal.year_type,
-    snapshots=pypsa_friendly_input_tables["snapshots"],
+    pypsa_friendly_investment_timeseries_location,
 )
 
 # Build a PyPSA network object.
 network = build_pypsa_network(
     pypsa_friendly_input_tables,
-    path_to_pypsa_friendly_timeseries_data=pypsa_friendly_inputs_location,
+    path_to_pypsa_friendly_timeseries_data=pypsa_friendly_investment_timeseries_location,
 )
 
 # Solve for least cost operation/expansion
@@ -91,3 +70,31 @@ network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
 save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
+
+# Operational modelling extension
+operational_snapshots = create_pypsa_friendly_snapshots(config.temporal.operational)
+
+create_pypsa_friendly_timeseries_inputs(
+    config,
+    ispypsa_tables,
+    operational_snapshots,
+    parsed_traces_directory,
+    pypsa_friendly_operational_timeseries_location,
+)
+
+update_network_timeseries(
+    network,
+    pypsa_friendly_input_tables,
+    operational_snapshots,
+    pypsa_friendly_operational_timeseries_location,
+)
+
+network.fix_optimal_capacities()
+
+network.optimize_with_rolling_horizon(
+    operational_snapshots,
+    horizon=config.temporal.operational.horizon,
+    overlap=config.temporal.operational.overlap,
+)
+
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")
