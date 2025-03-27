@@ -4,6 +4,12 @@ _GENERATOR_ATTRIBUTES = {
     "fuel_type": "carrier",
 }
 
+_NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
+    "technology_location_id": "name",
+    "maximum_capacity_mw": "p_nom",
+    "fuel_type": "carrier",
+}
+
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
 _LINE_ATTRIBUTES = {

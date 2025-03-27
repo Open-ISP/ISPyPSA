@@ -11,6 +11,8 @@ _GENERATOR_PROPERTY_TABLES = [
 ]
 
 _NEW_ENTRANTS_COST_TABLES = [
+    "coal_and_biomass_price_consultant_scenario_mapping",
+    "biomass_prices",
     "build_costs_scenario_mapping",
     "build_costs_current_policies",
     "build_costs_global_nze_by_2050",
@@ -47,6 +49,9 @@ _GENERATORS_REQUIRED_PROPERTY_TABLES = [
     "expected_closure_years",
     "coal_minimum_stable_level",
     "liquid_fuel_prices",
+    "gpg_emissions_reduction_h2_kogan",
+    "gpg_emissions_reduction_h2_sa_turbine",
+    "gpg_emissions_reduction_biomethane",
     "locational_cost_factors",
     "technology_cost_breakdown_ratios",
     "lead_time_and_project_life",

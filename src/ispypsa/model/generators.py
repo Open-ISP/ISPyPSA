@@ -75,7 +75,12 @@ def _add_generators_to_network(
     path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
     generators.apply(
         lambda row: _add_generator_to_network(
-            row.to_dict(), network, path_to_solar_traces, path_to_wind_traces
+            # add a dropna cols to each row? If input is optional to pypsa objects??
+            # check that either p_nom or p_max_pu is not nan?
+            row.to_dict(),
+            network,
+            path_to_solar_traces,
+            path_to_wind_traces,
         ),
         axis=1,
     )

@@ -246,7 +246,6 @@ lookup information that can be used to retrieve values.
         for opex mapping to rename columns in the table.
 """
 
-
 """
  _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to
  lists of dictionaries containing the CSV file name, region_id and policy_id for each
@@ -319,8 +318,11 @@ _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP = {
     ],
 }
 
-_WIND_RESOURCE_QUALITIES = {
+
+_VRE_RESOURCE_QUALITY_AND_TECH_CODES = {
     "Wind": ["WH", "WM"],
     "Wind - offshore (fixed)": "WFX",
     "Wind - offshore (floating)": "WFL",
+    "Large scale Solar PV": "SAT",
+    "Solar Thermal (15hrs storage)": "CST",
 }

@@ -10,7 +10,7 @@ from ispypsa.templater.helpers import (
     _convert_financial_year_columns_to_float,
 )
 
-from .helpers import _snakecase_string
+from .helpers import _fuzzy_match_names, _snakecase_string
 from .lists import _ECAA_GENERATOR_TYPES
 
 
@@ -42,6 +42,19 @@ def _template_generator_dynamic_properties(
     liquid_fuel_prices = iasr_tables["liquid_fuel_prices"]
     liquid_fuel_prices = _template_liquid_fuel_prices(liquid_fuel_prices, scenario)
 
+    biomass_prices = _template_new_entrant_biomass_prices(iasr_tables, scenario)
+
+    h2_gpg_emissions_reduction_factors = _template_h2_gpg_emissions_reduction_factors(
+        iasr_tables, scenario
+    )
+
+    biom_gpg_emissions_reduction = iasr_tables["gpg_emissions_reduction_biomethane"]
+    biom_gpg_emissions_reduction_factors = (
+        _template_biom_gpg_emissions_reduction_factors(
+            biom_gpg_emissions_reduction, scenario
+        )
+    )
+
     full_outage_forecasts = _template_existing_generators_full_outage_forecasts(
         iasr_tables["full_outages_forecast_existing_generators"]
     )
@@ -72,6 +85,9 @@ def _template_generator_dynamic_properties(
         "coal_prices": coal_prices,
         "gas_prices": gas_prices,
         "liquid_fuel_prices": liquid_fuel_prices,
+        "biomass_prices": biomass_prices,
+        "gpg_emissions_reduction_h2": h2_gpg_emissions_reduction_factors,
+        "gpg_emissions_reduction_biomethane": biom_gpg_emissions_reduction_factors,
         "full_outage_forecasts": full_outage_forecasts,
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
@@ -271,7 +287,143 @@ def _template_new_entrant_build_costs(
     )
     build_costs = build_costs.set_index("technology")
     build_costs *= 1000.0
-    return build_costs
+    return build_costs.reset_index()
+
+
+def _template_new_entrant_biomass_prices(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """Creates a new entrant biomass prices template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant biomass pricess
+    """
+    scenario_mapping = iasr_tables["coal_and_biomass_price_consultant_scenario_mapping"]
+    scenario_mapping = scenario_mapping.set_index(scenario_mapping.columns[0])
+    scenario_mapping = scenario_mapping.transpose().squeeze()
+    fuel_cost_scenario_desc = scenario_mapping[scenario]
+
+    biomass_prices = iasr_tables["biomass_prices"]
+    biomass_prices.loc[:, "Price Scenario"] = _fuzzy_match_names(
+        biomass_prices.loc[:, "Price Scenario"],
+        scenario_mapping.values,
+        "Templating biomass prices by fuel cost scenario",
+        "existing",
+        threshold=95,
+    )
+    biomass_prices = biomass_prices.drop(columns=["Biomass price"]).set_index(
+        "Price Scenario"
+    )
+
+    biomass_prices = _convert_financial_year_columns_to_float(biomass_prices)
+    biomass_prices.columns = _add_units_to_financial_year_columns(
+        biomass_prices.columns, "$/GJ"
+    )
+    biomass_prices = biomass_prices.loc[[fuel_cost_scenario_desc], :]
+    return biomass_prices.reset_index(drop=True)
+
+
+def _template_h2_gpg_emissions_reduction_factors(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """Creates an emissions reduction factor template for H2 GPG plants SA Hydrogen
+    Turbine and Kogan Gas.
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for H2 GPG plant emissions reductions factors
+    """
+    # get both H2 GPG emissions reductions tables and combine
+    kogan_gas_emissions_reduction_factors = iasr_tables[
+        "gpg_emissions_reduction_h2_kogan"
+    ].rename(columns={"Kogan Gas": "scenario"})
+    kogan_gas_emissions_reduction_factors["generator"] = "Kogan Gas"
+
+    sa_hydrogen_turbine_emissions_reduction_factors = iasr_tables[
+        "gpg_emissions_reduction_h2_sa_turbine"
+    ].rename(columns={"SA Hydrogen Turbine": "scenario"})
+    sa_hydrogen_turbine_emissions_reduction_factors["generator"] = "SA Hydrogen Turbine"
+
+    h2_gpg_emissions_reduction_factors = pd.concat(
+        [
+            kogan_gas_emissions_reduction_factors,
+            sa_hydrogen_turbine_emissions_reduction_factors,
+        ],
+        axis=0,
+    )
+    # select the rows for the scenario given in config only
+    h2_gpg_emissions_reduction_factors_scenario = (
+        h2_gpg_emissions_reduction_factors[
+            h2_gpg_emissions_reduction_factors["scenario"] == scenario
+        ]
+        .drop(columns=["scenario"])
+        .set_index("generator")
+    )
+    h2_gpg_emissions_reduction_factors_scenario.columns = (
+        _add_units_to_financial_year_columns(
+            h2_gpg_emissions_reduction_factors_scenario.columns, "%"
+        )
+    )
+    h2_gpg_emissions_reduction_factors_scenario = (
+        _convert_financial_year_columns_to_float(
+            h2_gpg_emissions_reduction_factors_scenario
+        )
+    )
+    return h2_gpg_emissions_reduction_factors_scenario.reset_index()
+
+
+def _template_biom_gpg_emissions_reduction_factors(
+    biom_gpg_emissions_reduction: pd.DataFrame, scenario: str
+) -> pd.DataFrame:
+    """Creates an emissions reduction factor template for GPG plant transitioning
+    to biomethane.
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        biom_gpg_emissions_reduction: pd.DataFrame table from IASR workbook specifying
+            gas fired generation emissions reduction factors from biomethane
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for biomethane GPG emissions reductions factors
+    """
+    # first column is unnamed: set name to "scenario"
+    rename_unnamed_col_dict = {
+        col: "scenario"
+        for col in biom_gpg_emissions_reduction.columns
+        if "Unnamed" in col
+    }
+    biom_gpg_emissions_reduction = biom_gpg_emissions_reduction.rename(
+        columns=rename_unnamed_col_dict
+    )
+    biom_gpg_emissions_reduction.columns = _add_units_to_financial_year_columns(
+        biom_gpg_emissions_reduction.columns, "%"
+    )
+    biom_gpg_emissions_reduction = biom_gpg_emissions_reduction.set_index("scenario")
+    biom_gpg_emissions_reduction = _convert_financial_year_columns_to_float(
+        biom_gpg_emissions_reduction
+    )
+    biom_gpg_emissions_reduction_scenario = biom_gpg_emissions_reduction.loc[
+        [scenario], :
+    ]
+    return biom_gpg_emissions_reduction_scenario.reset_index(drop=True)
 
 
 def _template_new_entrant_wind_and_solar_connection_costs(
