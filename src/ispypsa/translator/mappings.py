@@ -1,7 +1,18 @@
-_GENERATOR_ATTRIBUTES = {
+_ECAA_GENERATOR_ATTRIBUTES = {
     "generator": "name",
     "maximum_capacity_mw": "p_nom",
+    "minimum_load_mw": "p_min_pu",
     "fuel_type": "carrier",
+    "lifetime": "lifetime",
+}
+
+_NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
+    "generator": "name",
+    "maximum_capacity_mw": "p_nom_max",
+    "unit_capacity_mw": "p_nom_mod",
+    "minimum_stable_level_%": "p_min_pu",  # TODO: make sure this becomes per unit
+    "fuel_type": "carrier",
+    "lifetime": "lifetime",
 }
 
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
@@ -49,4 +60,30 @@ _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE = {
     "generator_output": "p",
     "load_consumption": "p",
     "storage_output": "p",
+}
+
+_CARRIER_TO_FUEL_COST_TABLES = {
+    "Gas": dict(
+        base_table="gas_prices",
+        blend_table="biomethane_prices",
+        blend_percent_table="gpg_emissions_reduction_biomethane",
+        fuel_cost_mapping_col="generator",
+    ),
+    "Black Coal": dict(base_table="coal_prices", fuel_cost_mapping_col="generator"),
+    "Brown Coal": dict(base_table="coal_prices", fuel_cost_mapping_col="generator"),
+    "Liquid Fuel": dict(
+        base_table="liquid_fuel_prices",
+    ),
+    "Hyblend": dict(
+        base_table="gas_prices",
+        blend_table="hydrogen_prices",
+        blend_percent_table="gpg_emissions_reduction_h2",
+        fuel_cost_mapping_col="generator",
+    ),
+    "Biomass": dict(
+        base_table="biomass_prices",
+    ),
+    "Hydrogen": dict(
+        base_table="hydrogen_prices",
+    ),
 }

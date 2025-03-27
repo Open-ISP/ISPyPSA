@@ -9,6 +9,7 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
+    create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
@@ -67,6 +68,12 @@ create_pypsa_friendly_timeseries_inputs(
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
+create_pypsa_friendly_dynamic_marginal_costs(
+    ispypsa_tables,
+    pypsa_friendly_input_tables["snapshots"],
+    pypsa_friendly_inputs_location,
+)
+
 
 # Build a PyPSA network object.
 network = build_pypsa_network(

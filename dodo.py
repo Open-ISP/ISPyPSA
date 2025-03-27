@@ -15,6 +15,7 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
+    create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
@@ -124,6 +125,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         pypsa_tables["snapshots"],
         trace_data_path,
         _CAPACITY_EXPANSION_TIMESERIES_LOCATION,
+    )
+    create_pypsa_friendly_dynamic_marginal_costs(
+        ispypsa_tables, pypsa_tables["snapshots"], pypsa_inputs_location
     )
 
 

@@ -14,6 +14,7 @@ dependencies = [
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
     "thefuzz>=0.22.1",
+    "isp-trace-parser>=1.0.3",
     "pyarrow>=18.0.0",
     "tables>=3.10.1",
     "isp-trace-parser>=1.0.3",

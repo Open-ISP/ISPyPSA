@@ -170,6 +170,11 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         table_lookup="Generator type",
         table_value="Total plant size (MW)",
     ),
+    "unit_capacity_mw": dict(
+        table="maximum_capacity_new_entrants",
+        table_lookup="Generator type",
+        table_value="Unit size (MW)",
+    ),
     "maintenance_duration_%": dict(
         table="maintenance_new_entrants",
         table_lookup="Generator type",
@@ -245,7 +250,6 @@ lookup information that can be used to retrieve values.
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
-
 
 """
  _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to
@@ -496,8 +500,11 @@ _REZ_CONFIG = {
     "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
 }
 
-_WIND_RESOURCE_QUALITIES = {
+
+_VRE_RESOURCE_QUALITY_AND_TECH_CODES = {
     "Wind": ["WH", "WM"],
     "Wind - offshore (fixed)": "WFX",
     "Wind - offshore (floating)": "WFL",
+    "Large scale Solar PV": "SAT",
+    "Solar Thermal (15hrs storage)": "CST",
 }

@@ -11,7 +11,10 @@ from .helpers import (
     _where_any_substring_appears,
 )
 from .lists import _NEW_GENERATOR_TYPES
-from .mappings import _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP, _WIND_RESOURCE_QUALITIES
+from .mappings import (
+    _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+    _VRE_RESOURCE_QUALITY_AND_TECH_CODES,
+)
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -36,12 +39,17 @@ def _template_new_generators_static_properties(
     new_generator_summaries = []
     for gen_type in _NEW_GENERATOR_TYPES:
         df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
-        df.columns = ["Generator", *df.columns[1:]]
+        df.columns = ["Generator Name", *df.columns[1:]]
         new_generator_summaries.append(df)
     new_generator_summaries = pd.concat(new_generator_summaries, axis=0).reset_index(
         drop=True
     )
     cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
+    # drop any battery storage
+    cleaned_new_generator_summaries = cleaned_new_generator_summaries.loc[
+        ~cleaned_new_generator_summaries["technology_type"].str.contains("Battery"),
+        :,
+    ].reset_index(drop=True)
     merged_cleaned_new_generator_summaries = (
         _merge_and_set_new_generators_static_properties(
             cleaned_new_generator_summaries, iasr_tables
@@ -90,11 +98,16 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
-    # enforces capitalisation structure for instances of str "storage" in generator col
-    df["generator"] = df["generator"].replace(
+    # enforces capitalisation structure for instances of str "storage" in generator_name col
+    df["generator_name"] = df["generator_name"].replace(
         [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
     )
     df = _fix_forced_outage_columns(df)
+
+    # Drop rows that contain new entrants for the Illawarra REZ (N12) - these
+    # don't have any trace data from AEMO currently and "No VRE is projected for this REZ."
+    # (AEMO 2024 | Appendix 3. Renewable Energy Zones, p.38)
+    df = df.loc[~(df["rez_location"] == "Illawarra"), :]
 
     # adds extra necessary columns taking appropriate mapping values
     # NOTE: this could be done more efficiently in future if needed, potentially
@@ -102,8 +115,9 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df["partial_outage_derating_factor_%"] = df[
         "forced_outage_rate_partial_outage_%_of_time"
     ]
-    df["maximum_capacity_mw"] = df["generator"]
-    df["lifetime"] = df["generator"]
+    df["maximum_capacity_mw"] = df["generator_name"]
+    df["unit_capacity_mw"] = df["generator_name"]
+    df["lifetime"] = df["generator_name"]
     df["minimum_stable_level_%"] = df["technology_type"]
     df["summer_peak_rating_%"] = df["summer_rating_mw"]
     df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
@@ -157,8 +171,7 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
-    df = _add_wind_resource_quality(df)
-    df = _add_technology_rez_subregion_column(df, "technology_location_id")
+    df = _add_technology_rez_subregion_column(df, iasr_tables, "generator")
     # replace remaining string values in static property columns
     df = df.infer_objects()
     for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
@@ -218,7 +231,7 @@ def _process_and_merge_opex(
     """
     # update the mapping in this column to include generator name and the
     # cost region initially given
-    df[col_name] = df["generator"] + " " + df[col_name]
+    df[col_name] = df["generator_name"] + " " + df[col_name]
     # renames columns by removing the specified table_col_prefix (the string present
     # at the start of all variable col names due to row merging from isp-workbook-parser)
     table_data = table_data.rename(
@@ -280,7 +293,7 @@ def _calculate_and_merge_tech_specific_lcfs(
     for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
         df_to_match_gen_names["Technology"] = _fuzzy_match_names(
             df_to_match_gen_names["Technology"],
-            df["generator"].unique(),
+            df["generator_name"].unique(),
             "calculating and merging in LCFs to static new entrant gen summary",
             not_match="existing",
             threshold=90,
@@ -305,7 +318,7 @@ def _calculate_and_merge_tech_specific_lcfs(
             )
             calculated_or_given_lcf /= 100
         df.loc[
-            ((df["generator"] == tech) & (df[tech_lcf_col] == row["Location"])),
+            ((df["generator_name"] == tech) & (df[tech_lcf_col] == row["Location"])),
             tech_lcf_col,
         ] = calculated_or_given_lcf
     # fills rows with no LCF (some PHES REZs) with pd.NA
@@ -380,47 +393,65 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
     return df
 
 
-def _add_wind_resource_quality(
-    df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Adds an extra column containing the ISP wind resource quality code and where needed
-    duplicates wind generator rows so each resource quality is represented."""
-
-    import ipdb
-
-    ipdb.set_trace()
-
-    df["wind_resource_quality"] = df["generator"]
-    df["wind_resource_quality"] = df["wind_resource_quality"].map(
-        _WIND_RESOURCE_QUALITIES
-    )
-
-    # check the effect on index here? Confirm that this does what I want.
-    df = df.explode("wind_resource_quality")
-
-    return df
-
-
 def _add_technology_rez_subregion_column(
-    df: pd.DataFrame, new_col_name: str
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], new_col_name: str
 ) -> pd.DataFrame:
     """Adds an extra column holding the technology type and either REZ or ISP
     subregion ID."""
-    # adds new column filled with REZ zone to start
+
+    # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
+    # update references to "Portland Coast" to "Southern Ocean"
+    rez_or_region_cols = [col for col in df.columns if "rez" in col or "region" in col]
+    df[rez_or_region_cols] = df[rez_or_region_cols].replace(
+        {
+            r".+Tasmania Coast": "North Tasmania Coast",
+            r"Portland Coast": "Southern Ocean",
+        },
+        regex=True,
+    )
+    # adds new column filled with REZ names (inc. updated references)
     df[new_col_name] = df["rez_location"]
-    # fills rows that don't have a REZ value with ISP subregion
-    df[new_col_name] = df[new_col_name].where(pd.notna, df["sub_region_id"])
 
-    # adds together the generator name and REZ/subregion separated by a space.
-    # NOTE: this currently uses full generator names and full REZ names
-    # directly from the summary table to ensure each row has a unique value.
-    df[new_col_name] = df["generator"] + " " + df[new_col_name]
+    rez_id_table = iasr_tables["renewable_energy_zones"]
+    replacement_dict = (
+        rez_id_table.loc[:, ["Name", "ID"]].set_index("Name").squeeze().to_dict()
+    )
+    # add Non-REZ option IDs for Victoria Non-REZ (V0) and New South Wales Non-REZ (N0)
+    non_rez_ids = {"New South Wales Non-REZ": "N0", "Victoria Non-REZ": "V0"}
+    replacement_dict.update(non_rez_ids)
 
-    return df
+    where_str = df[new_col_name].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, new_col_name] = _fuzzy_match_names(
+        df.loc[where_str, new_col_name],
+        replacement_dict.keys(),
+        f"adding unique id column for new entrant generators called {new_col_name}",
+        not_match="existing",
+        threshold=90,
+    )
+    df[new_col_name] = df[new_col_name].replace(replacement_dict)
 
+    # add a col with resource quality/technology code:
+    df["temporary_quality_col"] = df["generator_name"]
+    df["temporary_quality_col"] = df["temporary_quality_col"].map(
+        _VRE_RESOURCE_QUALITY_AND_TECH_CODES
+    )
+    # expand to account for fixed and floating offshore wind resources:
+    df = df.explode("temporary_quality_col").reset_index(drop=True)
+    # apply different naming convention for rez and non-rez new entrants:
+    df.loc[
+        _where_any_substring_appears(df["technology_type"], ["solar", "wind"]),
+        new_col_name,
+    ] = (
+        df["technology_type"]
+        + "_"
+        + df[new_col_name]
+        + "_"
+        + df["temporary_quality_col"]
+    )
 
-root_folder = Path("ispypsa_runs")
-_PARSED_WORKBOOK_CACHE = root_folder / Path("workbook_table_cache")
-
-
-test = template_new_generators_static_properties(_PARSED_WORKBOOK_CACHE)
+    df[new_col_name] = df[new_col_name].where(
+        df[new_col_name].notna(), df["generator_name"] + "_" + df["sub_region_id"]
+    )
+    return df.drop(columns=["temporary_quality_col"]).drop_duplicates(
+        subset=[new_col_name], ignore_index=True
+    )
