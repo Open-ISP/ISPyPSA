@@ -62,3 +62,44 @@ def _add_bus_for_custom_constraints(network: pypsa.Network) -> None:
     Returns: None
     """
     network.add(class_name="Bus", name="bus_for_custom_constraint_gens")
+
+
+def _update_bus_demand_timeseries(
+    bus_name: str, network: pypsa.Network, path_to_demand_traces: Path
+) -> None:
+    """
+    Update a Bus's demand timeseries data in the pypsa.Network.
+
+    Args:
+        bus_name: String defining the bus name
+        network: The `pypsa.Network` object
+        path_to_demand_traces: `pathlib.Path` that points to the
+            directory containing demand traces
+
+    Returns: None
+    """
+
+    demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
+    if demand_trace_path.exists():
+        demand = pd.read_parquet(demand_trace_path)
+        demand = demand.set_index(["snapshots"])
+        network.loads_t.p_set[f"load_{bus_name}"].loc[:, ["p_set"]] = demand["p_set"]
+
+
+def _update_buses_demand_timeseries(
+    network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
+) -> None:
+    """Update buses a demand timeseries in the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        buses: `pd.DataFrame` with `PyPSA` style `Bus` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+
+    Returns: None
+    """
+    path_to_demand_traces = path_to_timeseries_data / Path("demand_traces")
+    buses["name"].apply(
+        lambda x: _update_bus_demand_timeseries(x, network, path_to_demand_traces)
+    )

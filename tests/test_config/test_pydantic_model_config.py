@@ -33,15 +33,28 @@ def test_valid_config(
                 "rez_to_sub_region_transmission_default_limit": 1e6,
             },
             "temporal": {
-                "operational_temporal_resolution_min": 30,
                 "path_to_parsed_traces": "tests/test_traces",
                 "year_type": year_type,
-                "start_year": 2025,
-                "end_year": 2026,
-                "reference_year_cycle": [2018],
-                "investment_periods": [2025],
-                "aggregation": {
-                    "representative_weeks": representative_weeks,
+                "range": {
+                    "start_year": 2025,
+                    "end_year": 2026,
+                },
+                "capacity_expansion": {
+                    "resolution_min": 30,
+                    "reference_year_cycle": [2018],
+                    "investment_periods": [2025],
+                    "aggregation": {
+                        "representative_weeks": representative_weeks,
+                    },
+                },
+                "operational": {
+                    "resolution_min": 30,
+                    "reference_year_cycle": [2018],
+                    "horizon": 336,
+                    "overlap": 48,
+                    "aggregation": {
+                        "representative_weeks": representative_weeks,
+                    },
                 },
             },
             "solver": "highs",
@@ -69,15 +82,28 @@ def test_invalid_scenario():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -105,15 +131,28 @@ def test_invalid_node_granularity():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -141,15 +180,28 @@ def test_invalid_nodes_rezs():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -177,15 +229,28 @@ def test_not_a_directory_parsed_traces_path():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/wrong_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -213,15 +278,28 @@ def test_invalid_parsed_traces_path():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "ispypsa_runs",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -249,15 +327,28 @@ def test_invalid_end_year():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2024,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2024,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -285,15 +376,28 @@ def test_invalid_representative_weeks():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2025,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": 0,
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2025,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": 0,  # Should be a list or None
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -321,15 +425,28 @@ def test_invalid_wacc():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -357,15 +474,28 @@ def test_invalid_discount_rate():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -393,15 +523,28 @@ def test_invalid_annuitisation_lifetime():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -429,15 +572,28 @@ def test_invalid_transmission_expansion():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -465,15 +621,28 @@ def test_invalid_rez_transmission_expansion():
                     "rez_to_sub_region_transmission_default_limit": 1e6,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -501,15 +670,28 @@ def test_invalid_rez_to_sub_region_transmission_default_limit():
                     "rez_to_sub_region_transmission_default_limit": "help",
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -537,19 +719,32 @@ def test_invalid_iasr_workbook_version():
                     "rez_to_sub_region_transmission_default_limit": 1e5,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
-                "iasr_workbook_version": 6.0,
+                "iasr_workbook_version": 6.0,  # Should be a string
             }
         )
 
@@ -573,15 +768,28 @@ def test_invalid_first_investment_period_after_start_year():
                     "rez_to_sub_region_transmission_default_limit": 1e5,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2026],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2026],  # Should be 2025
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -609,15 +817,28 @@ def test_invalid_first_investment_period_before_start_year():
                     "rez_to_sub_region_transmission_default_limit": 1e5,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2024],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2024],  # Should be >= 2025
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -645,15 +866,28 @@ def test_invalid_investment_periods_not_unique():
                     "rez_to_sub_region_transmission_default_limit": 1e5,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2025, 2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025, 2025],  # Duplicate
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",
@@ -681,15 +915,175 @@ def test_invalid_investment_periods_not_sorted():
                     "rez_to_sub_region_transmission_default_limit": 1e5,
                 },
                 "temporal": {
-                    "operational_temporal_resolution_min": 30,
                     "path_to_parsed_traces": "tests/test_traces",
                     "year_type": "fy",
-                    "start_year": 2025,
-                    "end_year": 2026,
-                    "reference_year_cycle": [2018],
-                    "investment_periods": [2026, 2025],
-                    "aggregation": {
-                        "representative_weeks": [0],
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2026, 2025],  # Not in order
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_resolution_min():
+    with pytest.raises(ValueError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "discount_rate": 0.05,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 45,  # Not a multiple of 30
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_horizon():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "discount_rate": 0.05,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": "wrong",  # Should be an integer
+                        "overlap": 48,
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                },
+                "solver": "highs",
+                "iasr_workbook_version": "6.0",
+            }
+        )
+
+
+def test_invalid_horizon():
+    with pytest.raises(ValidationError):
+        ModelConfig(
+            **{
+                "ispypsa_run_name": "test",
+                "scenario": "Step Change",
+                "wacc": 0.07,
+                "discount_rate": 0.05,
+                "network": {
+                    "transmission_expansion": True,
+                    "rez_transmission_expansion": True,
+                    "annuitisation_lifetime": 30,
+                    "nodes": {
+                        "regional_granularity": "sub_regions",
+                        "rezs": "discrete_nodes",
+                    },
+                    "rez_to_sub_region_transmission_default_limit": 1e5,
+                },
+                "temporal": {
+                    "path_to_parsed_traces": "tests/test_traces",
+                    "year_type": "fy",
+                    "range": {
+                        "start_year": 2025,
+                        "end_year": 2026,
+                    },
+                    "capacity_expansion": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "investment_periods": [2025],
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
+                    },
+                    "operational": {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": "wrong",  # Should be an integer
+                        "aggregation": {
+                            "representative_weeks": [0],
+                        },
                     },
                 },
                 "solver": "highs",

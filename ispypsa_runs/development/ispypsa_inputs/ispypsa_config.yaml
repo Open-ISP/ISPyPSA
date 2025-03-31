@@ -40,25 +40,41 @@ network:
   # through custom constraint (MW).
   rez_to_sub_region_transmission_default_limit: 1e5
 temporal:
-  operational_temporal_resolution_min: 30
   # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
   # from the environment variable "PATH_TO_PARSED_TRACES"
   path_to_parsed_traces: ENV
   year_type: fy
-  start_year: 2025
-  end_year: 2028
-  reference_year_cycle: [2018]
-  # List of investment period start years. An investment period runs until the next the
-  # periods begins.
-  investment_periods: [2025, 2026]
-  aggregation:
-    # Representative weeks to use instead of full yearly temporal representation.
-    # Options:
-    #   "None": Full yearly temporal representation is used.
-    #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
-    #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
-    #   first full week of each modelled year.
-    representative_weeks: [1, 12, 25, 38]
+  range:
+    start_year: 2025
+    end_year: 2028
+  capacity_expansion:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    # List of investment period start years. An investment period runs until the next the
+    # periods begins.
+    investment_periods: [2025, 2026]
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [1, 12, 25, 38]
+  operational:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    horizon: 336
+    overlap: 48
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [1, 2, 12, 25, 38]
+
 # External solver to use
 # Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
 #   Free, and by default, installed with ISPyPSA:

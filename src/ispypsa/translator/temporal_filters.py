@@ -1,7 +1,13 @@
 from datetime import datetime, timedelta
+from typing import Literal
 
 import pandas as pd
 
+from ispypsa.config import (
+    ModelConfig,
+    TemporalAggregationConfig,
+    TemporalRangeConfig,
+)
 from ispypsa.config.validators import TemporalConfig
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 
@@ -31,7 +37,12 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
     return time_series_data[time_series_data["snapshots"].isin(snapshots["snapshots"])]
 
 
-def _filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
+def _filter_snapshots(
+    year_type: Literal["fy", "calendar"],
+    temporal_range: TemporalRangeConfig,
+    temporal_aggregation_config: TemporalAggregationConfig,
+    snapshots: pd.DataFrame,
+) -> pd.DataFrame:
     """Appy filter to the snapshots based on the model config.
 
     - If config.representative_weeks is not None then filter the
@@ -48,42 +59,52 @@ def _filter_snapshots(config: TemporalConfig, snapshots: pd.DataFrame):
     ...     representative_weeks: list[int]
 
     >>> @dataclass
-    ... class TemporalConfig:
-    ...     start_year: int
-    ...     end_year: int
-    ...     year_type: str
+    ... class TemporalOperationalConfig:
     ...     aggregation: TemporalAggregationConfig
 
-    >>> config = TemporalConfig(
-    ...     start_year=2024,
-    ...     end_year=2024,
-    ...     year_type='calendar',
-    ...     aggregation=TemporalAggregationConfig(
-    ...        representative_weeks=[1],
-    ...     )
+    >>> temporal_agg = TemporalAggregationConfig(
+    ...     representative_weeks=[1],
     ... )
 
-    >>> snapshots = pd.DataFrame(index=pd.date_range('2024-01-01', '2024-12-31', freq='h'))
+    >>> @dataclass
+    ... class TemporalRangeConfig:
+    ...     start_year: int
+    ...     end_year: int
 
-    >>> snapshots = _filter_snapshots(config, snapshots)
+    >>> temporal_range = TemporalRangeConfig(
+    ...     start_year=2024,
+    ...     end_year=2024,
+    ... )
 
-    >>> snapshots.index[0]
+    >>> snapshots = pd.DataFrame(
+    ... {"snapshots": pd.date_range('2024-01-01', '2024-12-31', freq='h')}
+    ... )
+
+    >>> snapshots = _filter_snapshots(
+    ...     "calendar",
+    ...     temporal_range,
+    ...     temporal_agg,
+    ...     snapshots
+    ...  )
+
+    >>> snapshots["snapshots"].iloc[0]
     Timestamp('2024-01-01 01:00:00')
 
-    >>> snapshots.index[-1]
+    >>> snapshots["snapshots"].iloc[-1]
     Timestamp('2024-01-08 00:00:00')
 
     Args:
+         fy:
          config: TemporalConfig defining snapshot filtering.
          snapshots: pd.DataFrame with datetime index containing the snapshot
     """
-    if config.aggregation.representative_weeks is not None:
+    if temporal_aggregation_config.representative_weeks is not None:
         snapshots = _filter_snapshots_for_representative_weeks(
-            representative_weeks=config.aggregation.representative_weeks,
+            representative_weeks=temporal_aggregation_config.representative_weeks,
             snapshots=snapshots,
-            start_year=config.start_year,
-            end_year=config.end_year,
-            year_type=config.year_type,
+            start_year=temporal_range.start_year,
+            end_year=temporal_range.end_year,
+            year_type=year_type,
         )
     return snapshots
 

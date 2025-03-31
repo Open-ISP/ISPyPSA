@@ -97,3 +97,65 @@ def _add_custom_constraint_generators_to_network(
     """
     generators["class_name"] = "Generator"
     generators.apply(lambda row: network.add(**row.to_dict()), axis=1)
+
+
+def _update_generator_availability_timeseries(
+    name: str,
+    carrier: str,
+    network: pypsa.Network,
+    path_to_solar_traces: Path,
+    path_to_wind_traces: Path,
+) -> None:
+    """Updates the timeseries availability of the generator in the `pypsa.Network`.
+
+    Args:
+        name: str specifying the generators name
+        carrier: the generator fuel type
+        network: The `pypsa.Network` object
+        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
+        path_to_wind_traces: `pathlib.Path` for directory containing wind traces
+
+    Returns: None
+    """
+
+    if carrier == "Wind":
+        trace_data = _get_trace_data(name, path_to_wind_traces)
+    elif carrier == "Solar":
+        trace_data = _get_trace_data(name, path_to_solar_traces)
+    else:
+        trace_data = None
+
+    if trace_data is not None:
+        trace_data = trace_data.set_index(["snapshots"])
+        network.generators_t.p_max_pu[name].loc[:, ["p_max_pu"]] = trace_data[
+            "p_max_pu"
+        ]
+
+
+def _update_generators_availability_timeseries(
+    network: pypsa.Network,
+    generators: pd.DataFrame,
+    path_to_timeseries_data: Path,
+):
+    """Updates the timeseries availability of the generators in the pypsa-friendly `
+    pd.DataFrame` in the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+    Returns: None
+    """
+    path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
+    path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
+    generators.apply(
+        lambda row: _update_generator_availability_timeseries(
+            row["name"],
+            row["carrier"],
+            network,
+            path_to_solar_traces,
+            path_to_wind_traces,
+        ),
+        axis=1,
+    )
