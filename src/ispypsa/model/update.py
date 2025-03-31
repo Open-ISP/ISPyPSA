@@ -82,3 +82,5 @@ def update_network_timeseries(
         pypsa_friendly_input_tables["buses"],
         pypsa_friendly_timeseries_location,
     )
+
+    network.optimize.create_model()

@@ -126,10 +126,8 @@ def _update_generator_availability_timeseries(
         trace_data = None
 
     if trace_data is not None:
-        trace_data = trace_data.set_index(["snapshots"])
-        network.generators_t.p_max_pu[name].loc[:, ["p_max_pu"]] = trace_data[
-            "p_max_pu"
-        ]
+        trace_data = trace_data.set_index(["investment_periods", "snapshots"])
+        network.generators_t.p_max_pu[name] = trace_data.loc[:, ["p_max_pu"]]
 
 
 def _update_generators_availability_timeseries(
