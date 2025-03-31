@@ -60,7 +60,7 @@ def _translate_ecaa_generators(
 def create_pypsa_friendly_existing_generator_timeseries(
     ecaa_generators: pd.DataFrame,
     trace_data_path: Path | str,
-    pypsa_inputs_path: Path | str,
+    pypsa_timeseries_inputs_path: Path | str,
     generator_types: List[Literal["solar", "wind"]],
     reference_year_mapping: dict[int:int],
     year_type: Literal["fy", "calendar"],
@@ -74,8 +74,8 @@ def create_pypsa_friendly_existing_generator_timeseries(
         ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
         trace_data_path: Path to directory containing trace data parsed by
             isp-trace-parser
-        pypsa_inputs_path: Path to director where input translated to pypsa format will
-            be saved
+        pypsa_timeseries_inputs_path: Path to director where timeseries inputs
+            translated to pypsa format will be saved
         reference_year_mapping: dict[int: int], mapping model years to trace data
             reference years
         generator_types: List[Literal['solar', 'wind']], which types of generator to
@@ -95,7 +95,7 @@ def create_pypsa_friendly_existing_generator_timeseries(
     }
 
     output_paths = {
-        gen_type: Path(pypsa_inputs_path, f"{gen_type}_traces")
+        gen_type: Path(pypsa_timeseries_inputs_path, f"{gen_type}_traces")
         for gen_type in generator_types
     }
 
@@ -134,5 +134,8 @@ def create_pypsa_friendly_existing_generator_timeseries(
             trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
         )
         trace = pd.merge(trace, snapshots, on="snapshots")
-        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
+        if "investment_periods" in trace.columns:
+            trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
+        else:
+            trace = trace.loc[:, ["snapshots", "p_max_pu"]]
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)

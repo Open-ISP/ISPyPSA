@@ -9,7 +9,7 @@ from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 def _create_complete_snapshots_index(
     start_year: int,
     end_year: int,
-    operational_temporal_resolution_min: int,
+    temporal_resolution_min: int,
     year_type: str,
 ) -> pd.DataFrame:
     """Creates a DatetimeIndex, stored in DataFrame, defining the snapshots for the model before temporal aggregation.
@@ -20,7 +20,7 @@ def _create_complete_snapshots_index(
     Args:
         start_year: int specifying the start year
         end_year: int specifying the end year
-        operational_temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
+        temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
         year_type: str specifying the year type. 'fy' for financial year means that start_year and end_year refer to
             the financial year ending in the given year, and calendar means start_year and end_year refer to
             standard calendar years.
@@ -32,12 +32,12 @@ def _create_complete_snapshots_index(
         year_type, start_year, end_year
     )
 
-    if operational_temporal_resolution_min < 60:
+    if temporal_resolution_min < 60:
         hour = 0
-        minute = operational_temporal_resolution_min
+        minute = temporal_resolution_min
     else:
-        hour = operational_temporal_resolution_min // 60
-        minute = operational_temporal_resolution_min % 60
+        hour = temporal_resolution_min // 60
+        minute = temporal_resolution_min % 60
 
     start_date = datetime(year=start_year, month=month, day=1, hour=hour, minute=minute)
     end_date = datetime(year=end_year, month=month, day=1, hour=0, minute=0)
@@ -45,7 +45,7 @@ def _create_complete_snapshots_index(
     time_index = pd.date_range(
         start=start_date,
         end=end_date,
-        freq=str(operational_temporal_resolution_min) + "min",
+        freq=str(temporal_resolution_min) + "min",
         name="snapshots",
     )
     return pd.DataFrame(time_index).reset_index(drop=False)

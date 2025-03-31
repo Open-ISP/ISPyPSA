@@ -95,7 +95,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
 
