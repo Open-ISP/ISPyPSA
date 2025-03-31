@@ -82,8 +82,8 @@ def _update_bus_demand_timeseries(
     demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
     if demand_trace_path.exists():
         demand = pd.read_parquet(demand_trace_path)
-        demand = demand.set_index(["snapshots"])
-        network.loads_t.p_set[f"load_{bus_name}"].loc[:, ["p_set"]] = demand["p_set"]
+        demand = demand.set_index(["investment_periods", "snapshots"])
+        network.loads_t.p_set[f"load_{bus_name}"] = demand.loc[:, ["p_set"]]
 
 
 def _update_buses_demand_timeseries(
