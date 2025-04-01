@@ -145,10 +145,7 @@ def create_pypsa_friendly_bus_demand_timeseries(
             demand_node,
         )
         node_trace = pd.merge(node_trace, snapshots, on="snapshots")
-        if "investment_periods" in node_trace.columns:
-            node_trace = node_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
-        else:
-            node_trace = node_trace.loc[:, ["snapshots", "p_set"]]
+        node_trace = node_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
         node_trace.to_parquet(
             Path(output_trace_path, f"{demand_node}.parquet"), index=False
         )

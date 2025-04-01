@@ -134,8 +134,5 @@ def create_pypsa_friendly_existing_generator_timeseries(
             trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
         )
         trace = pd.merge(trace, snapshots, on="snapshots")
-        if "investment_periods" in trace.columns:
-            trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
-        else:
-            trace = trace.loc[:, ["snapshots", "p_max_pu"]]
+        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
         trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)
