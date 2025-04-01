@@ -173,3 +173,8 @@ ispypsa_runs/**/*.hdf5
 
 # ignore doit database
 .doit*
+
+uv.lock
+LICENSE
+tests/test_config/test_pydantic_model_config.py
+*.csv

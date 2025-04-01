@@ -1,6 +1,8 @@
 from datetime import datetime
 
+import pandas as pd
 import pytest
+from pandas.testing import assert_frame_equal
 
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
@@ -9,7 +11,7 @@ from ispypsa.translator.snapshots import (
 
 
 @pytest.mark.parametrize(
-    "start_year,end_year, year_type, operational_temporal_resolution_min, expected_first_datetime, expected_last_datetime, expected_length",
+    "start_year,end_year, year_type, temporal_resolution_min, expected_first_datetime, expected_last_datetime, expected_length",
     [
         # One financial year with half hour resolution
         (
@@ -117,7 +119,7 @@ def test_snapshot_creation(
     start_year: int,
     end_year: int,
     year_type: str,
-    operational_temporal_resolution_min: int,
+    temporal_resolution_min: int,
     expected_first_datetime: datetime,
     expected_last_datetime: datetime,
     expected_length: int,
@@ -126,17 +128,11 @@ def test_snapshot_creation(
         start_year=start_year,
         end_year=end_year,
         year_type=year_type,
-        temporal_resolution_min=operational_temporal_resolution_min,
+        temporal_resolution_min=temporal_resolution_min,
     )
     assert snapshot["snapshots"].iloc[0] == expected_first_datetime
     assert snapshot["snapshots"].iloc[-1] == expected_last_datetime
     assert len(snapshot) == expected_length
-
-
-import numpy as np
-import pandas as pd
-import pytest
-from pandas.testing import assert_frame_equal
 
 
 def test_add_investment_periods_calendar_year_mapping():
