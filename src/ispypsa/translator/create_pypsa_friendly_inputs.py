@@ -1,13 +1,21 @@
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
+from isp_trace_parser import construct_reference_year_mapping
 
-from ispypsa.config import ModelConfig
+from ispypsa.config import (
+    ModelConfig,
+    TemporalCapacityInvestmentConfig,
+    TemporalOperationalConfig,
+    TemporalRangeConfig,
+)
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
     _translate_nem_regions_to_buses,
     _translate_rezs_to_buses,
+    create_pypsa_friendly_bus_demand_timeseries,
 )
 from ispypsa.translator.custom_constraints import (
     _translate_custom_constraint_lhs,
@@ -16,6 +24,7 @@ from ispypsa.translator.custom_constraints import (
 )
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
+    create_pypsa_friendly_existing_generator_timeseries,
 )
 from ispypsa.translator.lines import _translate_flow_paths_to_lines
 from ispypsa.translator.mappings import (
@@ -43,6 +52,86 @@ _BASE_TRANSLATOR_OUPUTS = [
     "custom_constraints_rhs",
     "custom_constraints_generators",
 ]
+
+
+def create_pypsa_friendly_snapshots(
+    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
+) -> pd.DataFrame:
+    """
+    Creates a pd.DataFrame defining the modelled time intervals and corresponding
+    investment periods.
+
+    If the model_phase 'operational' is provieded then a single investment period is
+    used for all snapshots (labelled as the model start year). Investment periods
+    are provided even for operational modelling because this allows the snapshots of
+    PyPSA.network which have been used for capacity expansion modelling to be directly
+    overwritten with the new snapshots/investment_periods data, PyPSA throws an error
+    if you try and overwrite with just snaphots.
+
+    Examples:
+
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        ...     create_pypsa_friendly_snapshots
+        ... )
+
+        Get a ISPyPSA ModelConfig instance
+
+        >>> config = load_config(Path("path/to/config/file.yaml"))
+
+        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        sub_regions tables).
+
+        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
+
+        Define which phase of the modelling we need the time series data for.
+
+        >>> model_phase = "capacity_expansion"
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+
+    Args:
+        config: ispypsa.ModelConfig instance
+        model_phase: string defining whether the snapshots are for the operational or
+            capacity expansion phase of the modelling. This allows the correct temporal
+            config inputs to be used from the ModelConfig instance.
+
+    Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
+        the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
+        each time interval modelled. 'investment_periods' periods are refered to by the
+        year (financial or calander) in which they begin.
+    """
+    if model_phase == "capacity_expansion":
+        resolution_min = config.temporal.capacity_expansion.resolution_min
+        aggregation = config.temporal.capacity_expansion.aggregation
+        investment_periods = config.temporal.capacity_expansion.investment_periods
+    else:
+        resolution_min = config.temporal.operational.resolution_min
+        aggregation = config.temporal.operational.aggregation
+        investment_periods = [config.temporal.range.start_year]
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        temporal_resolution_min=resolution_min,
+        year_type=config.temporal.year_type,
+    )
+
+    snapshots = _filter_snapshots(
+        config.temporal.year_type,
+        config.temporal.range,
+        aggregation,
+        snapshots,
+    )
+
+    snapshots = _add_investment_periods(
+        snapshots, investment_periods, config.temporal.year_type
+    )
+
+    return snapshots
 
 
 def create_pypsa_friendly_inputs(
@@ -81,22 +170,13 @@ def create_pypsa_friendly_inputs(
     """
     pypsa_inputs = {}
 
-    snapshots = _create_complete_snapshots_index(
-        start_year=config.temporal.start_year,
-        end_year=config.temporal.end_year,
-        operational_temporal_resolution_min=config.temporal.operational_temporal_resolution_min,
-        year_type=config.temporal.year_type,
-    )
-
-    snapshots = _filter_snapshots(config=config.temporal, snapshots=snapshots)
-
-    pypsa_inputs["snapshots"] = _add_investment_periods(
-        snapshots, config.temporal.investment_periods, config.temporal.year_type
+    pypsa_inputs["snapshots"] = create_pypsa_friendly_snapshots(
+        config, "capacity_expansion"
     )
 
     pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
-        config.temporal.investment_periods,
-        config.temporal.end_year,
+        config.temporal.capacity_expansion.investment_periods,
+        config.temporal.range.end_year,
         config.discount_rate,
     )
 
@@ -168,6 +248,121 @@ def create_pypsa_friendly_inputs(
     )
 
     return pypsa_inputs
+
+
+def create_pypsa_friendly_timeseries_inputs(
+    config: ModelConfig,
+    model_phase: Literal["capacity_expansion", "operational"],
+    ispypsa_tables: dict[str : pd.DataFrame],
+    snapshots: pd.DataFrame,
+    parsed_traces_directory: Path,
+    pypsa_friendly_timeseries_inputs_location: Path,
+) -> None:
+    """Creates on disk the timeseries data files in PyPSA friendly format for generation
+    and demand.
+
+    - a time series file is created for each wind and solar generator in the
+    ecaa_generators table (table in ispypsa_tables dict). The time series data is saved
+    in parquet files in the 'solar_traces' and 'wind_traces' directories with the
+    columns "snapshots" (datetime) and "p_max_pu" (float specifying availability in MW).
+
+    - a time series file is created for each model region specifying the load in that
+    region (regions set by config.network.nodes.regional_granularity). The time series
+    data is saved in parquet files in the 'demand_traces' directory with the columns
+    "snapshots" (datetime) and "p_set" (float specifying load in MW).
+
+    Examples:
+
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        ...     create_pypsa_friendly_snapshots,
+        ...     create_pypsa_friendly_timeseries_inputs
+        ... )
+
+        Get a ISPyPSA ModelConfig instance
+
+        >>> config = load_config(Path("path/to/config/file.yaml"))
+
+        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        sub_regions tables).
+
+        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
+
+        Define which phase of the modelling we need the time series data for.
+
+        >>> model_phase = "capacity_expansion"
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+
+        Now the complete set of time series files needed to run the PyPSA model can
+        be created.
+
+        >>> create_pypsa_friendly_timeseries_inputs(
+        ...     config,
+        ...     model_phase,
+        ...     ispypsa_tables
+        ...     snapshots
+        ...     Path("path/to/parsed/isp/traces"),
+        ...     Path("path/to/write/time/series/inputs/to")
+        ... )
+
+    Args:
+        config: ispypsa.ModelConfig instance
+        model_phase: string defining whether the snapshots are for the operational or
+            capacity expansion phase of the modelling. This allows the correct temporal
+            config inputs to be used from the ModelConfig instance.
+        ispypsa_tables: dict of pd.DataFrames defining the ISPyPSA input tables.
+            Inparticular the dict needs to contain the ecaa_generators and
+            sub_regions tables, the other tables aren't required for the time series
+            data creation. The ecaa_generators table needs the columns 'generator' (name
+            or generator as str) and 'fuel_type' (str with 'Wind' and 'Solar' fuel types
+            as appropraite). The sub_regions table needs to have the columns
+            'isp_sub_region_id' (str) and 'nem_region_id' (str) if a 'regional'
+            granuality is used.
+        snapshots: a pd.DataFrame with the columns 'period' (int) and 'snapshots'
+            (datetime) defining the time intervals and coresponding investment periods
+            to be modelled.
+        parsed_traces_directory: a pathlib.Path defining where the trace data which
+            has been parsed using isp-trace-parser is located.
+        pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
+            time series data which is to be created should be saved.
+
+    Returns: None
+    """
+
+    if model_phase == "capacity_expansion":
+        reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
+    else:
+        reference_year_cycle = config.temporal.operational.reference_year_cycle
+
+    reference_year_mapping = construct_reference_year_mapping(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        reference_years=reference_year_cycle,
+    )
+    create_pypsa_friendly_existing_generator_timeseries(
+        ispypsa_tables["ecaa_generators"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        generator_types=["solar", "wind"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
+    create_pypsa_friendly_bus_demand_timeseries(
+        ispypsa_tables["sub_regions"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        scenario=config.scenario,
+        regional_granularity=config.network.nodes.regional_granularity,
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
 
 
 def list_translator_output_files(output_path=None):
