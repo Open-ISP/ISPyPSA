@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from ..templater.lists import _ISP_SCENARIOS
 
@@ -24,17 +24,25 @@ class TemporalAggregationConfig(BaseModel):
     representative_weeks: list[int] | None
 
 
-class TemporalConfig(BaseModel):
-    operational_temporal_resolution_min: int
-    path_to_parsed_traces: str
-    year_type: Literal["fy", "calendar"]
+class TemporalRangeConfig(BaseModel):
     start_year: int
     end_year: int
+
+    @model_validator(mode="after")
+    def validate_end_year(self):
+        if self.end_year < self.start_year:
+            raise ValueError(
+                "config end_year must be greater than or equal to start_year"
+            )
+        return self
+
+
+class TemporalDetailedConfig(BaseModel):
     reference_year_cycle: list[int]
-    investment_periods: list[int]
+    resolution_min: int
     aggregation: TemporalAggregationConfig
 
-    @field_validator("operational_temporal_resolution_min")
+    @field_validator("resolution_min")
     @classmethod
     def validate_temporal_resolution_min(cls, operational_temporal_resolution_min: int):
         # TODO properly implement temporal aggregation so this first check can be removed.
@@ -51,6 +59,23 @@ class TemporalConfig(BaseModel):
                 "config operational_temporal_resolution_min must be multiple of 30 min"
             )
         return operational_temporal_resolution_min
+
+
+class TemporalOperationalConfig(TemporalDetailedConfig):
+    horizon: int
+    overlap: int
+
+
+class TemporalCapacityInvestmentConfig(TemporalDetailedConfig):
+    investment_periods: list[int]
+
+
+class TemporalConfig(BaseModel):
+    path_to_parsed_traces: str
+    year_type: Literal["fy", "calendar"]
+    range: TemporalRangeConfig
+    capacity_expansion: TemporalCapacityInvestmentConfig
+    operational: TemporalOperationalConfig = None
 
     @field_validator("path_to_parsed_traces")
     @classmethod
@@ -78,29 +103,29 @@ class TemporalConfig(BaseModel):
             )
         return path_to_parsed_traces
 
-    @field_validator("end_year")
-    @classmethod
-    def validate_end_year(cls, end_year: float, info):
-        if end_year < info.data.get("start_year"):
-            raise ValueError(
-                "config end_year must be greater than or equal to start_year"
-            )
-        return end_year
-
-    @field_validator("investment_periods")
-    @classmethod
-    def validate_investment_periods(cls, investment_periods: float, info):
-        if min(investment_periods) != info.data.get("start_year"):
+    @model_validator(mode="after")
+    def validate_investment_periods(self):
+        if min(self.capacity_expansion.investment_periods) != self.range.start_year:
             raise ValueError(
                 "config first investment period must be equal to start_year"
             )
-        if len(investment_periods) != len(set(investment_periods)):
+        if len(self.capacity_expansion.investment_periods) != len(
+            set(self.capacity_expansion.investment_periods)
+        ):
             raise ValueError("config all years in investment_periods must be unique")
-        if sorted(investment_periods) != investment_periods:
+        if (
+            sorted(self.capacity_expansion.investment_periods)
+            != self.capacity_expansion.investment_periods
+        ):
             raise ValueError(
                 "config investment_periods must be provided in sequential order"
             )
-        return investment_periods
+        return self
+
+
+class UnservedEnergyConfig(BaseModel):
+    cost: float = None
+    generator_size_mw: float = 1e5  # Default to a very large value (100,000 MW)
 
 
 class ModelConfig(BaseModel):
@@ -111,6 +136,7 @@ class ModelConfig(BaseModel):
     network: NetworkConfig
     temporal: TemporalConfig
     iasr_workbook_version: str
+    unserved_energy: UnservedEnergyConfig
     solver: Literal[
         "highs",
         "cbc",
