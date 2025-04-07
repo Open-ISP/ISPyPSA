@@ -173,3 +173,6 @@ ispypsa_runs/**/*.hdf5
 
 # ignore doit database
 .doit*
+
+uv.lock
+*.csv

@@ -133,8 +133,8 @@ def create_pypsa_friendly_snapshots(
 
 
 def create_pypsa_friendly_inputs(
-    config: ModelConfig, ispypsa_tables: dict[str : pd.DataFrame]
-) -> dict[str : pd.DataFrame]:
+    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
+) -> dict[str, pd.DataFrame]:
     """Creates a set of tables for defining a `PyPSA` network from a set `ISPyPSA` tables.
 
     Examples:
@@ -261,7 +261,7 @@ def create_pypsa_friendly_inputs(
 def create_pypsa_friendly_timeseries_inputs(
     config: ModelConfig,
     model_phase: Literal["capacity_expansion", "operational"],
-    ispypsa_tables: dict[str : pd.DataFrame],
+    ispypsa_tables: dict[str, pd.DataFrame],
     snapshots: pd.DataFrame,
     parsed_traces_directory: Path,
     pypsa_friendly_timeseries_inputs_location: Path,
@@ -373,7 +373,7 @@ def create_pypsa_friendly_timeseries_inputs(
     )
 
 
-def list_translator_output_files(output_path=None):
+def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
     files = _BASE_TRANSLATOR_OUPUTS
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
