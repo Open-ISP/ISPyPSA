@@ -6,9 +6,6 @@ from isp_trace_parser import construct_reference_year_mapping
 
 from ispypsa.config import (
     ModelConfig,
-    TemporalCapacityInvestmentConfig,
-    TemporalOperationalConfig,
-    TemporalRangeConfig,
 )
 from ispypsa.translator.buses import (
     _create_single_region_bus,
@@ -23,6 +20,7 @@ from ispypsa.translator.custom_constraints import (
     _translate_custom_constraints_generators,
 )
 from ispypsa.translator.generators import (
+    _create_unserved_energy_generators,
     _translate_ecaa_generators,
     create_pypsa_friendly_existing_generator_timeseries,
 )
@@ -193,6 +191,16 @@ def create_pypsa_friendly_inputs(
         buses.append(_translate_nem_regions_to_buses(ispypsa_tables["nem_regions"]))
     elif config.network.nodes.regional_granularity == "single_region":
         buses.append(_create_single_region_bus())
+
+    if config.unserved_energy.cost is not None:
+        unserved_energy_generators = _create_unserved_energy_generators(
+            buses[0],  # create generators for just demand buses not rez buses too.
+            config.unserved_energy.cost,
+            config.unserved_energy.generator_size_mw,
+        )
+        pypsa_inputs["generators"] = pd.concat(
+            [pypsa_inputs["generators"], unserved_energy_generators]
+        )
 
     if config.network.nodes.rezs == "discrete_nodes":
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))

@@ -123,6 +123,11 @@ class TemporalConfig(BaseModel):
         return self
 
 
+class UnservedEnergyConfig(BaseModel):
+    cost: float = None
+    generator_size_mw: float = 1e5  # Default to a very large value (100,000 MW)
+
+
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
     scenario: Literal[tuple(_ISP_SCENARIOS)]
@@ -131,6 +136,7 @@ class ModelConfig(BaseModel):
     network: NetworkConfig
     temporal: TemporalConfig
     iasr_workbook_version: str
+    unserved_energy: UnservedEnergyConfig
     solver: Literal[
         "highs",
         "cbc",

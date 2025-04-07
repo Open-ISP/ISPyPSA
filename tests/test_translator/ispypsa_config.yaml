@@ -14,6 +14,12 @@ scenario: Step Change
 wacc: 0.07
 # Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
 discount_rate: 0.05
+# Unserved energy configuration
+unserved_energy:
+  # Cost of unserved energy in $/MWh. Set to None to disable unserved energy generators.
+  cost: 10000.0
+  # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
+  generator_size_mw: 50000.0
 network:
   # Does the model consider the expansion of sub-region to sub-region transmission
   # capacity
