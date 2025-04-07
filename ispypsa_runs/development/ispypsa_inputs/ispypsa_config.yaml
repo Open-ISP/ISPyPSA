@@ -16,10 +16,10 @@ wacc: 0.07
 discount_rate: 0.05
 # Unserved energy configuration
 unserved_energy:
-  # Cost of unserved energy in $/MWh. Set to None to disable unserved energy generators.
+  # Cost of unserved energy in $/MWh. Set to 'None' to disable unserved energy generators.
   cost: 10000.0
   # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
-  generator_size_mw: 50000.0
+  generator_size_mw: 100000.0
 network:
   # Does the model consider the expansion of sub-region to sub-region transmission
   # capacity
@@ -57,7 +57,7 @@ temporal:
     resolution_min: 30
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs until the next the
-    # periods begins.
+    # period begins.
     investment_periods: [2025, 2026]
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.

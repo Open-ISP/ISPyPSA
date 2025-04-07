@@ -84,7 +84,7 @@ def update_network_timeseries(
         pypsa_friendly_timeseries_location,
     )
 
-    # The underlying linopy model needs to get built again here so that the new time s
+    # The underlying linopy model needs to get built again here so that the new time
     # series data is used in the linopy model rather than the old data.
     network.optimize.create_model()
 
