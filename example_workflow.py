@@ -100,9 +100,10 @@ update_network_timeseries(
     operational_timeseries_location,
 )
 
-# Never use network.optimize() as this will remove custom constraints.
+
 network.optimize.fix_optimal_capacities()
 
+# Never use network.optimize() as this will remove custom constraints.
 network.optimize.optimize_with_rolling_horizon(
     horizon=config.temporal.operational.horizon,
     overlap=config.temporal.operational.overlap,

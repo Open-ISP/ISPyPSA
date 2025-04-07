@@ -60,7 +60,8 @@ def build_pypsa_network(
         network, pypsa_friendly_tables["buses"], path_to_pypsa_friendly_timeseries_data
     )
 
-    _add_bus_for_custom_constraints(network)
+    if not pypsa_friendly_tables["custom_constraints_generators"].empty:
+        _add_bus_for_custom_constraints(network)
 
     _add_lines_to_network(network, pypsa_friendly_tables["lines"])
 
