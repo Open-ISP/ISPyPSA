@@ -75,6 +75,7 @@ network = build_pypsa_network(
 )
 
 # Solve for least cost operation/expansion
+# Never use network.optimize() as this will remove custom constraints.
 network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
@@ -99,6 +100,7 @@ update_network_timeseries(
     operational_timeseries_location,
 )
 
+# Never use network.optimize() as this will remove custom constraints.
 network.optimize.fix_optimal_capacities()
 
 network.optimize.optimize_with_rolling_horizon(

@@ -74,6 +74,7 @@ def build_pypsa_network(
         path_to_pypsa_friendly_timeseries_data,
     )
 
+    # The underlying linopy model needs to get built so we can add custom constraints.
     network.optimize.create_model()
 
     _add_custom_constraints(

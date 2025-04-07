@@ -4,6 +4,7 @@ import pandas as pd
 import pypsa
 
 from ispypsa.model.buses import _update_buses_demand_timeseries
+from ispypsa.model.custom_constraints import _add_custom_constraints
 from ispypsa.model.generators import _update_generators_availability_timeseries
 
 
@@ -83,4 +84,13 @@ def update_network_timeseries(
         pypsa_friendly_timeseries_location,
     )
 
+    # The underlying linopy model needs to get built again here so that the new time s
+    # series data is used in the linopy model rather than the old data.
     network.optimize.create_model()
+
+    # As we rebuilt the linopy model now we need to re add custom constrains.
+    _add_custom_constraints(
+        network,
+        pypsa_friendly_input_tables["custom_constraints_rhs"],
+        pypsa_friendly_input_tables["custom_constraints_lhs"],
+    )
