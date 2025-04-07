@@ -57,6 +57,37 @@ def _translate_ecaa_generators(
     return ecaa_generators_pypsa_format
 
 
+def _create_unserved_energy_generators(
+    buses: pd.DataFrame, cost: float, generator_size_mw: float
+) -> pd.DataFrame:
+    """Create unserved energy generators for each bus in the network.
+
+    These generators allow the model to opt for unserved energy at a very high cost
+    when other options are exhausted or infeasible, preventing model infeasibility.
+
+    Args:
+        buses: DataFrame containing bus information with a 'name' column
+        cost: Marginal cost of unserved energy ($/MWh)
+        generator_size_mw: Size of unserved energy generators (MW)
+
+    Returns:
+        DataFrame containing unserved energy generators in PyPSA format
+    """
+
+    generators = pd.DataFrame(
+        {
+            "name": "unserved_energy_" + buses["name"],
+            "carrier": "Unserved Energy",
+            "bus": buses["name"],
+            "p_nom": generator_size_mw,
+            "p_nom_extendable": False,
+            "marginal_cost": cost,
+        }
+    )
+
+    return generators
+
+
 def create_pypsa_friendly_existing_generator_timeseries(
     ecaa_generators: pd.DataFrame,
     trace_data_path: Path | str,
