@@ -9,7 +9,7 @@ from ispypsa.model.generators import _update_generators_availability_timeseries
 
 def update_network_timeseries(
     network: pypsa.Network,
-    pypsa_friendly_input_tables: dict[str : pd.DataFrame],
+    pypsa_friendly_input_tables: dict[str, pd.DataFrame],
     snapshots: pd.DataFrame,
     pypsa_friendly_timeseries_location: Path,
 ) -> None:

@@ -134,7 +134,7 @@ def _update_generators_availability_timeseries(
     network: pypsa.Network,
     generators: pd.DataFrame,
     path_to_timeseries_data: Path,
-):
+) -> None:
     """Updates the timeseries availability of the generators in the pypsa-friendly `
     pd.DataFrame` in the `pypsa.Network`.
 
