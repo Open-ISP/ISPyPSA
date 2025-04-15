@@ -127,6 +127,9 @@ def _template_powering_australia_plan(
 
     # append new column which is the policy_id
     power_aus_plan["policy_id"] = "power_aus"
+    # append new column which is the region_id
+    power_aus_plan["region_id"] = "NEM"
+
     return power_aus_plan
 
 
@@ -162,10 +165,10 @@ def _template_technology_capacity_targets(
         target_row_idx = df.index[target_row_mask][0]
         # Create a new dataframe with just FY and capacity
         values_df = pd.DataFrame(
-            {"FY": df.columns[1:], "capacity_mw": df.iloc[target_row_idx, 1:]}
+            {"FY": df.columns[1:], "mw": df.iloc[target_row_idx, 1:]}
         )
 
-        values_df["capacity_mw"] = values_df["capacity_mw"].astype(float)
+        values_df["mw"] = values_df["mw"].astype(float)
         values_df["region_id"] = target["region_id"]
         values_df["policy_id"] = target["policy_id"]
 
@@ -217,17 +220,15 @@ def _template_renewable_generation_targets(
         df = df[~df.iloc[:, 0].str.contains("Notes", case=False)]
 
         renewable_gen_target = df.melt(
-            id_vars=df.columns[0], var_name="FY", value_name="capacity_gwh"
+            id_vars=df.columns[0], var_name="FY", value_name="gwh"
         )
 
         # Convert GWh to MWh
-        renewable_gen_target["capacity_mwh"] = (
-            renewable_gen_target["capacity_gwh"].astype(float) * 1000
-        )
+        renewable_gen_target["mwh"] = renewable_gen_target["gwh"].astype(float) * 1000
         renewable_gen_target["region_id"] = target["region_id"]
         renewable_gen_target["policy_id"] = target["policy_id"]
         renewable_generation_targets.append(
-            renewable_gen_target[["FY", "region_id", "policy_id", "capacity_mwh"]]
+            renewable_gen_target[["FY", "region_id", "policy_id", "mwh"]]
         )
 
     # Combine all dataframes

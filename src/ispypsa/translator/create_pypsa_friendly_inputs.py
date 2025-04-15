@@ -22,6 +22,11 @@ from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
     _CUSTOM_CONSTRAINT_LHS_TABLES,
     _CUSTOM_CONSTRAINT_RHS_TABLES,
+    _POLICY_CONSTRAINT_TABLES,
+)
+from ispypsa.translator.policy_custom_constraints import (
+    _translate_custom_constraints_policy_lhs,
+    _translate_custom_constraints_policy_rhs,
 )
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_flow_paths,
@@ -167,6 +172,15 @@ def create_pypsa_friendly_inputs(
         )
     )
 
+    custom_constraint_policy_tables = [
+        ispypsa_tables[table] for table in _POLICY_CONSTRAINT_TABLES
+    ]
+    pypsa_inputs["custom_constraints_policy_lhs"] = (
+        _translate_custom_constraints_policy_lhs(custom_constraint_policy_tables)
+    )
+    pypsa_inputs["custom_constraints_policy_rhs"] = (
+        _translate_custom_constraints_policy_rhs(custom_constraint_policy_tables)
+    )
     return pypsa_inputs
 
 
