@@ -40,9 +40,21 @@ def _template_generator_dynamic_properties(
     gas_prices = _template_gas_prices(gas_prices)
 
     liquid_fuel_prices = iasr_tables["liquid_fuel_prices"]
-    liquid_fuel_prices = _template_liquid_fuel_prices(liquid_fuel_prices, scenario)
+    liquid_fuel_prices = _template_liquid_h2_biomethane_prices(
+        liquid_fuel_prices, "liquid_fuel_price", scenario
+    )
 
-    biomass_prices = _template_new_entrant_biomass_prices(iasr_tables, scenario)
+    hydrogen_prices = iasr_tables["hydrogen_prices"]
+    hydrogen_prices = _template_liquid_h2_biomethane_prices(
+        hydrogen_prices, "hydrogen_price", scenario
+    )
+
+    biomethane_prices = iasr_tables["biomethane_prices"]
+    biomethane_prices = _template_liquid_h2_biomethane_prices(
+        biomethane_prices, "biomethane_price", scenario
+    )
+
+    biomass_prices = _template_biomass_prices(iasr_tables, scenario)
 
     h2_gpg_emissions_reduction_factors = _template_h2_gpg_emissions_reduction_factors(
         iasr_tables, scenario
@@ -86,6 +98,8 @@ def _template_generator_dynamic_properties(
         "gas_prices": gas_prices,
         "liquid_fuel_prices": liquid_fuel_prices,
         "biomass_prices": biomass_prices,
+        "hydrogen_prices": hydrogen_prices,
+        "biomethane_prices": biomethane_prices,
         "gpg_emissions_reduction_h2": h2_gpg_emissions_reduction_factors,
         "gpg_emissions_reduction_biomethane": biom_gpg_emissions_reduction_factors,
         "full_outage_forecasts": full_outage_forecasts,
@@ -135,32 +149,34 @@ def _template_gas_prices(gas_prices: pd.DataFrame) -> pd.DataFrame:
     return gas_prices
 
 
-def _template_liquid_fuel_prices(
-    liquid_fuel_prices: pd.DataFrame, scenario: str
+def _template_liquid_h2_biomethane_prices(
+    price_table: pd.DataFrame, price_col_name: str, scenario: str
 ) -> pd.Series:
-    """Creates a liquid fuel prices template
+    """Creates a prices template for liquid fuel, hydrogen or biomethane.
 
     The function behaviour depends on the `scenario` specified in the model
-    configuration.
+    configuration and the fuel type defined in price_table.
 
     Args:
-        liquid_fuel_prices: pd.DataFrame table from IASR workbook specifying liquid fuel
-            price forecasts.
+        price_table: pd.DataFrame table from IASR workbook specifying price forecasts
+            for the given fuel type.
+        price_col_name: name of the column containing the fuel type.
         scenario: Scenario obtained from the model configuration
 
     Returns:
-        `pd.DataFrame`: ISPyPSA template for liquid fuel prices
+        `pd.DataFrame`: ISPyPSA template for specified prices (one of liquid fuel,
+            hydrogen or biomethane).
     """
-    liquid_fuel_prices.columns = _add_units_to_financial_year_columns(
-        liquid_fuel_prices.columns, "$/GJ"
+    price_table.columns = _add_units_to_financial_year_columns(
+        price_table.columns, "$/GJ"
     )
-    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price").set_index(
-        "liquid_fuel_price_scenario"
+    price_table = price_table.drop(columns=price_col_name).set_index(
+        f"{price_col_name}_scenario"
     )
-    liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
-    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[[scenario], :]
-    liquid_fuel_prices_scenario = liquid_fuel_prices_scenario.reset_index(drop=True)
-    return liquid_fuel_prices_scenario
+    price_table = _convert_financial_year_columns_to_float(price_table)
+    price_table_scenario = price_table.loc[[scenario], :]
+    price_table_scenario = price_table_scenario.reset_index(drop=True)
+    return price_table_scenario
 
 
 def _template_existing_generators_full_outage_forecasts(
@@ -290,7 +306,7 @@ def _template_new_entrant_build_costs(
     return build_costs.reset_index()
 
 
-def _template_new_entrant_biomass_prices(
+def _template_biomass_prices(
     iasr_tables: dict[str : pd.DataFrame], scenario: str
 ) -> pd.DataFrame:
     """Creates a new entrant biomass prices template
@@ -464,9 +480,10 @@ def _template_new_entrant_wind_and_solar_connection_costs(
     non_rez_connection_costs_forecasts = iasr_tables[
         f"connection_cost_forecast_non_rez_{file_scenario}"
     ]
-    non_rez_connection_costs_forecasts = non_rez_connection_costs_forecasts.set_index(
-        "Non-REZ name"
-    )
+    # Rename column here to align index names for future use
+    non_rez_connection_costs_forecasts = non_rez_connection_costs_forecasts.rename(
+        columns={"Non-REZ name": "REZ names"}
+    ).set_index("REZ names")
 
     wind_solar_connection_cost_forecasts = pd.concat(
         [non_rez_connection_costs_forecasts, wind_solar_connection_costs_forecasts],

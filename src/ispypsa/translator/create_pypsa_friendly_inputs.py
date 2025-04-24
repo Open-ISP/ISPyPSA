@@ -102,14 +102,22 @@ def create_pypsa_friendly_inputs(
     )
 
     translated_ecaa_generators = _translate_ecaa_generators(
-        ispypsa_tables["ecaa_generators"], config.network.nodes.regional_granularity
-    )
-    translated_new_entrant_generators = _translate_new_entrant_generators(
-        ispypsa_tables["new_entrant_generators"],
+        ispypsa_tables,
+        config.temporal.investment_periods,
         config.network.nodes.regional_granularity,
     )
+
+    translated_new_entrant_generators = _translate_new_entrant_generators(
+        ispypsa_tables,
+        config.temporal.investment_periods,
+        config.discount_rate,
+        config.network.nodes.regional_granularity,
+    )
+
     pypsa_inputs["generators"] = pd.concat(
-        [translated_ecaa_generators, translated_new_entrant_generators], axis="rows"
+        [translated_ecaa_generators, translated_new_entrant_generators],
+        axis=0,
+        ignore_index=True,
     )
 
     buses = []

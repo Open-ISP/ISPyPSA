@@ -49,6 +49,8 @@ _GENERATORS_REQUIRED_PROPERTY_TABLES = [
     "expected_closure_years",
     "coal_minimum_stable_level",
     "liquid_fuel_prices",
+    "hydrogen_prices",
+    "biomethane_prices",
     "gpg_emissions_reduction_h2_kogan",
     "gpg_emissions_reduction_h2_sa_turbine",
     "gpg_emissions_reduction_biomethane",

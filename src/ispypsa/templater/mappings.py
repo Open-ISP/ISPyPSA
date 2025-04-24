@@ -170,6 +170,11 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         table_lookup="Generator type",
         table_value="Total plant size (MW)",
     ),
+    "unit_capacity_mw": dict(
+        table="maximum_capacity_new_entrants",
+        table_lookup="Generator type",
+        table_value="Unit size (MW)",
+    ),
     "maintenance_duration_%": dict(
         table="maintenance_new_entrants",
         table_lookup="Generator type",

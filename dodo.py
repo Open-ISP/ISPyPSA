@@ -16,8 +16,10 @@ from ispypsa.templater import (
 )
 from ispypsa.translator import (
     create_pypsa_friendly_bus_demand_timeseries,
-    create_pypsa_friendly_existing_generator_timeseries,
+    create_pypsa_friendly_dynamic_marginal_costs,
+    create_pypsa_friendly_ecaa_generator_timeseries,
     create_pypsa_friendly_inputs,
+    create_pypsa_friendly_new_entrant_generator_timeseries,
     list_translator_output_files,
 )
 
@@ -110,8 +112,17 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         end_year=config.temporal.end_year,
         reference_years=config.temporal.reference_year_cycle,
     )
-    create_pypsa_friendly_existing_generator_timeseries(
+    create_pypsa_friendly_ecaa_generator_timeseries(
         ispypsa_tables["ecaa_generators"],
+        trace_data_path,
+        pypsa_inputs_location,
+        generator_types=["solar", "wind"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=pypsa_tables["snapshots"],
+    )
+    create_pypsa_friendly_new_entrant_generator_timeseries(
+        ispypsa_tables["new_entrant_generators"],
         trace_data_path,
         pypsa_inputs_location,
         generator_types=["solar", "wind"],
@@ -128,6 +139,9 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
         snapshots=pypsa_tables["snapshots"],
+    )
+    create_pypsa_friendly_dynamic_marginal_costs(
+        ispypsa_tables, pypsa_tables["snapshots"], pypsa_inputs_location
     )
 
 

@@ -5,7 +5,7 @@ import pandas as pd
 
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
-    create_pypsa_friendly_existing_generator_timeseries,
+    create_pypsa_friendly_ecaa_generator_timeseries,
 )
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
@@ -101,7 +101,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     snapshots = _add_investment_periods(snapshots, [2025], "fy")
 
-    create_pypsa_friendly_existing_generator_timeseries(
+    create_pypsa_friendly_ecaa_generator_timeseries(
         ecaa_ispypsa,
         parsed_trace_path,
         tmp_path,

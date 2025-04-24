@@ -12,8 +12,10 @@ from ispypsa.templater import (
 )
 from ispypsa.translator import (
     create_pypsa_friendly_bus_demand_timeseries,
-    create_pypsa_friendly_existing_generator_timeseries,
+    create_pypsa_friendly_dynamic_marginal_costs,
+    create_pypsa_friendly_ecaa_generator_timeseries,
     create_pypsa_friendly_inputs,
+    create_pypsa_friendly_new_entrant_generator_timeseries,
 )
 
 # Define root folder for modelling files.
@@ -60,8 +62,17 @@ reference_year_mapping = construct_reference_year_mapping(
     end_year=config.temporal.end_year,
     reference_years=config.temporal.reference_year_cycle,
 )
-create_pypsa_friendly_existing_generator_timeseries(
+create_pypsa_friendly_ecaa_generator_timeseries(
     ispypsa_tables["ecaa_generators"],
+    parsed_traces_directory,
+    pypsa_friendly_inputs_location,
+    generator_types=["solar", "wind"],
+    reference_year_mapping=reference_year_mapping,
+    year_type=config.temporal.year_type,
+    snapshots=pypsa_friendly_input_tables["snapshots"],
+)
+create_pypsa_friendly_new_entrant_generator_timeseries(
+    ispypsa_tables["new_entrant_generators"],
     parsed_traces_directory,
     pypsa_friendly_inputs_location,
     generator_types=["solar", "wind"],
@@ -79,6 +90,12 @@ create_pypsa_friendly_bus_demand_timeseries(
     year_type=config.temporal.year_type,
     snapshots=pypsa_friendly_input_tables["snapshots"],
 )
+create_pypsa_friendly_dynamic_marginal_costs(
+    ispypsa_tables,
+    pypsa_friendly_input_tables["snapshots"],
+    pypsa_friendly_inputs_location,
+)
+
 
 # Build a PyPSA network object.
 network = build_pypsa_network(
