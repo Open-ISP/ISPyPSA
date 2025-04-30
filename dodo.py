@@ -127,7 +127,10 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
         _CAPACITY_EXPANSION_TIMESERIES_LOCATION,
     )
     create_pypsa_friendly_dynamic_marginal_costs(
-        ispypsa_tables, pypsa_tables["snapshots"], pypsa_inputs_location
+        ispypsa_tables,
+        pypsa_tables["generators"],
+        pypsa_tables["snapshots"],
+        pypsa_inputs_location,
     )
 
 

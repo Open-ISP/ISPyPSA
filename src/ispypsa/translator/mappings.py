@@ -4,16 +4,27 @@ _ECAA_GENERATOR_ATTRIBUTES = {
     "minimum_load_mw": "p_min_pu",
     "fuel_type": "carrier",
     "lifetime": "lifetime",
+    "fuel_cost_mapping": "extra_fuel_cost_mapping",
+    "vom_$/mwh_sent_out": "extra_vom_$/mwh_sent_out",
+    "heat_rate_gj/mwh": "extra_heat_rate_gj/mwh",
 }
 
 _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
     "generator": "name",
     "maximum_capacity_mw": "p_nom_max",
     "unit_capacity_mw": "p_nom_mod",
-    "minimum_stable_level_%": "p_min_pu",  # TODO: make sure this becomes per unit
+    "minimum_stable_level_%": "p_min_pu",
     "fuel_type": "carrier",
     "lifetime": "lifetime",
+    "fuel_cost_mapping": "extra_fuel_cost_mapping",
+    "vom_$/mwh_sent_out": "extra_vom_$/mwh_sent_out",
+    "heat_rate_gj/mwh": "extra_heat_rate_gj/mwh",
 }
+
+# _GENERATOR_ATTRIBUTES dictionaries:
+# Fields that have "extra" at the beginning of the value string indicate columns
+# that are used in calculating PyPSA input values for generators, but aren't
+# attributes of Generator objects are aren't passed to the network.
 
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 

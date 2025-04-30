@@ -136,9 +136,9 @@ def _split_out_sub_region_name_and_id(data: pd.DataFrame):
     )
     sub_region_name_and_id.columns = [_snakecase_string(name_id_col)]
     sub_region_name_and_id[_snakecase_string(name_id_col + " ID")] = (
-        sub_region_name_and_id[_snakecase_string(name_id_col)].replace(
-            _NEM_SUB_REGION_IDS
-        )
+        sub_region_name_and_id[
+            _snakecase_string(name_id_col)
+        ].replace(_NEM_SUB_REGION_IDS)
     )
     return sub_region_name_and_id
 

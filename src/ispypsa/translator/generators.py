@@ -20,6 +20,8 @@ from ispypsa.translator.mappings import (
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
 
+# TODO: Add seasonal ratings as p_max_pu (capacity factor upper limits)
+
 
 def _translate_ecaa_generators(
     ispypsa_tables: dict[str : pd.DataFrame],
@@ -47,9 +49,10 @@ def _translate_ecaa_generators(
         ecaa_generators, ispypsa_tables["closure_years"]
     )
     # set build_year field to the first investment period (first year modelled)
-    ecaa_generators["build_year"] = investment_periods[0]
+    ecaa_generators["build_year"] = int(0)
+    # NOTE: lifetime can be a float - consider adding month of retirement?
     ecaa_generators["lifetime"] = (
-        ecaa_generators["closure_year"] - ecaa_generators["build_year"]
+        ecaa_generators["closure_year"] - investment_periods[0]
     )
 
     gen_attributes = _ECAA_GENERATOR_ATTRIBUTES.copy()
@@ -77,6 +80,12 @@ def _translate_ecaa_generators(
     ecaa_generators_pypsa_format["capital_cost"] = 0.0
 
     # p_max_pu: include summer/winter ratings?
+
+    # add generator type column
+    ecaa_generators_pypsa_format = _add_generator_type_column(
+        ecaa_generators_pypsa_format, ecaa_generators
+    )
+
     return ecaa_generators_pypsa_format
 
 
@@ -140,12 +149,11 @@ def _translate_new_entrant_generators(
     elif regional_granularity == "nem_regions":
         gen_attributes["region_id"] = "bus"
 
-    new_entrant_generators = new_entrant_generators.loc[:, gen_attributes.keys()]
-    new_entrant_generators_renamed = new_entrant_generators.rename(
-        columns=gen_attributes
-    )
+    new_entrant_generators_renamed = new_entrant_generators.loc[
+        :, gen_attributes.keys()
+    ].rename(columns=gen_attributes)
 
-    # create a row for each new entrant generator in each possible build year (investment period)
+    # create a row for each new entrant gen in each possible build year (investment period)
     # NOTE: could be separated into its own function?
     new_entrant_generators_by_build_year = []
     for year in investment_periods:
@@ -162,12 +170,9 @@ def _translate_new_entrant_generators(
     if regional_granularity == "single_region":
         new_entrant_generators_pypsa_format["bus"] = "NEM"
 
-    # Add marginal_cost col with a string mapping to the name of parquet file
-    # containing marginal cost timeseries - replace non-word chars with underscores.
-    new_entrant_generators_pypsa_format["marginal_cost"] = (
-        new_entrant_generators_pypsa_format["name"].apply(
-            lambda gen_name: re.sub(r"[^\w]+", r"_", gen_name)
-        )
+    # add generator type column
+    new_entrant_generators_pypsa_format = _add_generator_type_column(
+        new_entrant_generators_pypsa_format, new_entrant_generators
     )
 
     # then add build_year to new entrant generator names as well to maintain unique gens:
@@ -175,6 +180,14 @@ def _translate_new_entrant_generators(
         new_entrant_generators_pypsa_format["name"]
         + "_"
         + new_entrant_generators_pypsa_format["build_year"].astype(str)
+    )
+
+    # Add marginal_cost col with a string mapping to the name of parquet file
+    # containing marginal cost timeseries - replace non-word chars with underscores.
+    new_entrant_generators_pypsa_format["marginal_cost"] = (
+        new_entrant_generators_pypsa_format["name"].apply(
+            lambda gen_name: re.sub(r"[^\w]+", r"_", gen_name)
+        )
     )
 
     # calculate capital costs for each generator:
@@ -186,60 +199,56 @@ def _translate_new_entrant_generators(
         new_entrant_generators_pypsa_format["name"].replace(capital_costs)
     )
 
+    # filter generators with nan capital cost -> this indicates build limit of 0.0MW
+    # TODO: think about further filtering with build limits...?
+    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format[
+        ~new_entrant_generators_pypsa_format["capital_cost"].isna()
+    ]
+
+    # Convert p_min_pu from percentage to float between 0-1:
+    new_entrant_generators_pypsa_format["p_min_pu"] /= 100.0
+    new_entrant_generators_pypsa_format["p_nom_extendable"] = True
+
     return new_entrant_generators_pypsa_format
 
 
 def create_pypsa_friendly_dynamic_marginal_costs(
     ispypsa_tables: dict[str : pd.DataFrame],
+    generators: pd.DataFrame,
     snapshots: pd.DataFrame,
     pypsa_inputs_path: Path | str,
-) -> pd.DataFrame:
+) -> None:
     """
     Args:
         ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
             (add link to ispypsa input tables docs).
+        generators: `PyPSA` formatted pd.DataFrame containing details of generators
+            to be added to the PyPSA network.
         snapshots: pd.DataFrame containing the expected time series values.
-        pypsa_inputs_path: Path to director where input translated to pypsa format will
+        pypsa_inputs_path: Path to directory where input translated to pypsa format will
             be saved
 
-            # TODO: ADD EXAMPLE
+    Returns:
+        None
+
+        # TODO: ADD EXAMPLE
     """
 
-    useful_columns = ["fuel_cost_mapping", "vom_$/mwh_sent_out", "heat_rate_gj/mwh"]
-    # first load in all generators and get name, fuel type and fuel cost mapping cols:
-    ecaa_generators = ispypsa_tables["ecaa_generators"].copy()
-    ecaa_fuel_cols_only = ecaa_generators.loc[
-        :, list(_ECAA_GENERATOR_ATTRIBUTES.keys()) + useful_columns
-    ]
-    ecaa_fuel_cols_only = ecaa_fuel_cols_only.rename(columns=_ECAA_GENERATOR_ATTRIBUTES)
-
-    # for new entrants drop rows with battery or water fuel type (hydro)
-    new_entrant_generators = ispypsa_tables["new_entrant_generators"].copy()
-    new_entrant_fuel_cols_only = new_entrant_generators.loc[
-        ~new_entrant_generators["fuel_type"].isin(["Battery"]),
-        list(_NEW_ENTRANT_GENERATOR_ATTRIBUTES.keys()) + useful_columns,
-    ]
-    new_entrant_fuel_cols_only = new_entrant_fuel_cols_only.rename(
-        columns=_NEW_ENTRANT_GENERATOR_ATTRIBUTES
-    )
-
-    all_generators = pd.concat(
-        [ecaa_fuel_cols_only, new_entrant_fuel_cols_only], axis=0
-    )
-
-    fuel_costs = _get_dynamic_fuel_costs(ispypsa_tables, all_generators)
+    fuel_costs = _get_dynamic_fuel_costs(ispypsa_tables, generators)
     fuel_costs = fuel_costs.set_index(["carrier", "fuel_cost_mapping"])
-    # maybe consider this in fuel_costs function or just handle more nicely!!
-    all_generators = all_generators.set_index("name")
+
+    all_generators = generators.copy().set_index("name")
     marginal_costs_by_generator = []
     for name, row in all_generators.iterrows():
         gen_fuel_costs = fuel_costs.loc[
-            (row["carrier"], row["fuel_cost_mapping"]), :
+            (row["carrier"], row["extra_fuel_cost_mapping"]), :
         ].squeeze()
-        marginal_costs = (gen_fuel_costs * row["heat_rate_gj/mwh"]) + row[
-            "vom_$/mwh_sent_out"
+        marginal_costs = (gen_fuel_costs * row["extra_heat_rate_gj/mwh"]) + row[
+            "extra_vom_$/mwh_sent_out"
         ]
-        marginal_costs.name = name
+        # Update name so it can be written as filename (removing special chars)
+        name_with_no_special_characters = re.sub(r"[^\w]+", r"_", name)
+        marginal_costs.name = name_with_no_special_characters
         marginal_costs_by_generator.append(marginal_costs)
 
     # concat in wide format because: later will need to map years to snapshots
@@ -248,7 +257,6 @@ def create_pypsa_friendly_dynamic_marginal_costs(
     marginal_costs_by_generator["start_date"] = (
         marginal_costs_by_generator.index.str.extract(r"(\d{4})", expand=False)
     ) + "-07-01"
-
     marginal_costs_by_generator["start_date"] = pd.to_datetime(
         marginal_costs_by_generator["start_date"]
     )
@@ -266,14 +274,6 @@ def create_pypsa_friendly_dynamic_marginal_costs(
     output_dir = Path(pypsa_inputs_path, "marginal_cost_timeseries")
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
-
-    # Rename columns so they can be written as filenames (removing special chars)
-    marginal_cost_timeseries = marginal_cost_timeseries.rename(
-        columns={
-            col: re.sub(r"[^\w]+", r"_", col)
-            for col in marginal_cost_timeseries.columns
-        }
-    )
 
     for generator in marginal_cost_timeseries.columns:
         gen_marginal_costs_ts = marginal_cost_timeseries.loc[:, generator].reset_index()
@@ -305,9 +305,8 @@ def _get_dynamic_fuel_costs(
     """
 
     unique_carriers = generators_df["carrier"].unique()
-
     all_dynamic_fuel_prices = []
-    non_fuel_carriers = []
+    non_fuel_carriers = ["Wind", "Water", "Solar"]
     for carrier in unique_carriers:
         if carrier in _CARRIER_TO_FUEL_COST_TABLES.keys():
             carrier_prices_table = _get_single_carrier_fuel_prices(
@@ -315,17 +314,18 @@ def _get_dynamic_fuel_costs(
             )
             carrier_prices_table["carrier"] = carrier
             all_dynamic_fuel_prices.append(carrier_prices_table)
-        elif carrier in ["Wind", "Water", "Solar"]:
-            # add any carriers without corresponding fuel cost tables to a separate list
-            non_fuel_carriers.append(carrier)
 
-    non_fuel_costs_df = generators_df.loc[
-        generators_df["carrier"].isin(non_fuel_carriers),
-        ["fuel_cost_mapping", "carrier"],
-    ].drop_duplicates()
+    non_fuel_costs_df = (
+        generators_df.loc[
+            generators_df["carrier"].isin(non_fuel_carriers),
+            ["extra_fuel_cost_mapping", "carrier"],
+        ]
+        .drop_duplicates()
+        .rename(columns={"extra_fuel_cost_mapping": "fuel_cost_mapping"})
+    )
 
     all_dynamic_fuel_prices.append(non_fuel_costs_df)
-    dynamic_fuel_prices = pd.concat(all_dynamic_fuel_prices, axis=0)
+    dynamic_fuel_prices = pd.concat(all_dynamic_fuel_prices, axis=0, ignore_index=True)
     # Set fuel prices for "free" carriers (wind, solar, water) to 0.0 for all years
     dynamic_fuel_prices.loc[
         dynamic_fuel_prices["carrier"].isin(non_fuel_carriers),
@@ -372,20 +372,27 @@ def _get_single_carrier_fuel_prices(
     # over time (hyblend, gas)
     if carrier == "Gas":
         base_prices_table = _calculate_gas_biomethane_blend_prices(
-            base_prices_table, table_mapping, ispypsa_tables
+            base_prices_table,
+            ispypsa_tables[table_mapping["blend_table"]],
+            ispypsa_tables[table_mapping["blend_percent_table"]],
         )
 
     if carrier == "Hyblend":
         hyblend_name_mapping = (
             generators_df.loc[
-                generators_df["carrier"] == "Hyblend", ["name", "fuel_cost_mapping"]
+                generators_df["carrier"] == "Hyblend",
+                ["name", "extra_fuel_cost_mapping"],
             ]
             .set_index("name")
             .squeeze()
             .to_dict()
         )
         base_prices_table = _calculate_hyblend_prices(
-            base_prices_table, hyblend_name_mapping, table_mapping, ispypsa_tables
+            base_prices_table,
+            ispypsa_tables[table_mapping["blend_table"]],
+            ispypsa_tables[table_mapping["blend_percent_table"]],
+            hyblend_name_mapping,
+            table_mapping["fuel_cost_mapping_col"],
         )
 
     return base_prices_table.reset_index()
@@ -393,9 +400,10 @@ def _get_single_carrier_fuel_prices(
 
 def _calculate_hyblend_prices(
     base_prices_table: pd.DataFrame,
+    blend_prices_table: pd.DataFrame,
+    blend_percentages_table: pd.DataFrame,
     hyblend_name_mapping: dict[str:str],
-    table_mapping: dict[str:str],
-    ispypsa_tables: dict[str : pd.DataFrame],
+    fuel_cost_mapping_col: str,
 ) -> pd.DataFrame:
     """Calculates gas prices including impacts of blending with hydrogen ("Hyblend"
     carrier/fuel_type).
@@ -403,12 +411,14 @@ def _calculate_hyblend_prices(
     Args:
         base_prices_table: dataframe containing the prices of the fuel to be blended
             with hydrogen (in IASR v6, this is Gas).
+        blend_prices_table: pd.DataFrame containing the hydrogen prices to blend
+            with gas prices over time.
+        blend_percentages_table: pd.DataFrame containing the percentages of natural
+            gas present in the gas-hydrogen blend over time.
         hyblend_name_mapping: dictionary containing a mapping between the fuel_cost_mapping
             string and generator name string for each generator with Hyblend carrier.
-        table_mapping: dictionary with mapping to `ISPyPSA` input table names
-            necessary to calculate Hyblend fuel prices.
-        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
-            (add link to ispypsa input tables docs).
+        fuel_cost_mapping_col: the name of the column used to map fuel prices to
+            a generator.
 
     Returns:
         `pd.DataFrame`: calculated gas prices including hydrogen blend in tabular
@@ -419,12 +429,11 @@ def _calculate_hyblend_prices(
     base_prices_hyblend_only = base_prices_table.loc[hyblend_name_mapping.values(), :]
 
     # Get the hydrogen prices and mix percentages, replace generator names by fuel cost mapping:
-    blend_prices_series = ispypsa_tables[table_mapping["blend_table"]].squeeze()
-
+    blend_prices_series = blend_prices_table.squeeze()
     blend_percentages = (
-        ispypsa_tables[table_mapping["blend_percent_table"]]
-        .replace(hyblend_name_mapping)
-        .set_index(table_mapping["fuel_cost_mapping_col"])
+        blend_percentages_table.replace(hyblend_name_mapping).set_index(
+            fuel_cost_mapping_col
+        )
     ) / 100
     blend_percentages.index.name = "fuel_cost_mapping"
     # rename columns to match base_prices_hyblend_only column names (preserving order)
@@ -442,33 +451,31 @@ def _calculate_hyblend_prices(
 
 def _calculate_gas_biomethane_blend_prices(
     base_prices_table: pd.DataFrame,
-    table_mapping: dict[str:str],
-    ispypsa_tables: dict[str : pd.DataFrame],
+    blend_prices_table: pd.DataFrame,
+    blend_percentages_table: pd.DataFrame,
 ) -> pd.DataFrame:
     """Calculates gas prices including impacts of blending with biomethane.
 
     Args:
-        base_prices_table: dataframe containing the base gas prices.
-        table_mapping: dictionary with mapping to `ISPyPSA` input table names
-            necessary to calculate gas fuel prices.
-        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
-            (add link to ispypsa input tables docs).
+        base_prices_table: pd.DataFrame containing the base gas prices.
+        blend_prices_table: pd.DataFrame containing the biomethane prices to blend
+            with gas prices over time.
+        blend_percentages_table: pd.DataFrame containing the percentages of natural
+            gas present in the gas-biomethane blend over time.
 
     Returns:
         `pd.DataFrame`: calculated gas prices including biomethane blend in tabular
             format.
     """
-    biomethane_prices_series = ispypsa_tables[table_mapping["blend_table"]].squeeze()
-    biomethane_mix_percentages = ispypsa_tables[table_mapping["blend_percent_table"]]
+    biomethane_prices_series = blend_prices_table.squeeze()
+    biomethane_mix_percentages = blend_percentages_table
     # rename percentage columns so they match price table columns
     biomethane_mix_percentages = biomethane_mix_percentages.rename(
         columns={
             col: col.replace("%", "$/gj") for col in biomethane_mix_percentages.columns
         }
     )
-
     biomethane_percentage_series = biomethane_mix_percentages.squeeze() / 100
-
     base_prices_table = (
         base_prices_table * biomethane_percentage_series
         + biomethane_prices_series * (1 - biomethane_percentage_series)
@@ -689,6 +696,35 @@ def _add_closure_year_column(
     return ecaa_generators
 
 
+def _add_generator_type_column(
+    pypsa_friendly_generators: pd.DataFrame, generators: pd.DataFrame
+) -> pd.DataFrame:
+    """Adds a column containing the generator type for ECAA generators.
+    Args:
+        pypsa_friendly_generators: `PyPSA` formatted pd.DataFrame detailing either new entrant or ECAA generators.
+        generators: `ISPyPSA` formatted pd.Dataframe containing generator types
+            for either ECAA or new entrant generators.
+    Returns:
+        `pd.DataFrame`: `PyPSA` ECAA and new entrant generator attributes table with additional generator type
+            column. New additional generator type column is called "extra_generator_type" as it's not used in `PyPSA` model directly.
+    """
+    # Create a mapping from generator name to technology type
+    gen_to_type = pd.Series(
+        generators["technology_type"].values, index=generators["generator"]
+    ).to_dict()
+
+    # First do fuzzy matching to get generator names, then map to technology types
+    pypsa_friendly_generators["extra_generator_type"] = _fuzzy_match_names(
+        pypsa_friendly_generators["name"],
+        generators["generator"].unique(),
+        "adding generator_type column to pypsa_friendly_generators table",
+        not_match=None,
+        threshold=90,
+    ).apply(lambda x: gen_to_type.get(x, None) if x != None else None)
+
+    return pypsa_friendly_generators
+
+
 def _calculate_annuitised_new_entrant_gen_capital_costs(
     ispypsa_tables: dict[str : pd.DataFrame],
     investment_periods: list[int],
@@ -795,6 +831,8 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
                 "connection_cost_$/mw",
             ]
 
+        # TODO: add handling for Nick's note: annuitised_cost * investment length
+        # (what investment length to use?)
         build_and_connection_annuitised = _annuitised_investment_costs(
             (build_cost + connection_cost), wacc, row["lifetime"]
         )
