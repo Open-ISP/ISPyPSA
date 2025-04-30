@@ -186,10 +186,11 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
         service="WFS",
         version="2.0.0",
         request="GetFeature",
-        typeNames="Foundation_Electricity_Infrastructure:Transmission_Substations",
+        typeNames="National_Electricity_Infrastructure:Electricity_Transmission_Substations",
+        # "Foundation_Electricity_Infrastructure:Transmission_Substations",
         maxFeatures=10000,
     )
-    url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
+    url = "https://services.ga.gov.au/gis/services/National_Electricity_Infrastructure/MapServer/WFSServer"
     substation_coordinates = {}
     try:
         r = requests.get(url, params=params, timeout=60)
@@ -197,8 +198,8 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
             data = xmltodict.parse(r.content)
             features = data["wfs:FeatureCollection"]["wfs:member"]
             for feature in features:
-                substation = feature["esri:Transmission_Substations"]
-                name = substation.get("esri:NAME")
+                substation = feature["esri:Electricity_Transmission_Substations"]
+                name = substation.get("esri:SUBSTATION_NAME")
                 coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
                 lat, long = coordinates.split(" ")
                 substation_coordinates[name] = {
