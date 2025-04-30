@@ -95,6 +95,9 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df["partial_outage_derating_factor_%"] = df[
         "forced_outage_rate_partial_outage_%_of_time"
     ]
+    # adds a commissioning date column that takes generator mappings
+    df["commissioning_date"] = df["generator"]
+
     return df
 
 
@@ -265,7 +268,8 @@ def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
 
 
 def _process_and_merge_existing_gpg_min_load(
-    df: pd.DataFrame, existing_gpg_min_loads
+    df: pd.DataFrame,
+    existing_gpg_min_loads: pd.DataFrame,
 ) -> pd.DataFrame:
     """Processes and merges in gas-fired generation minimum load data
 

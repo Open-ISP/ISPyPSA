@@ -72,6 +72,13 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         alternative_lookups=["Project"],
         table_value="Installed capacity (MW)",
     ),
+    "commissioning_date": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
+        table_lookup="Generator",
+        alternative_lookups=["Project"],
+        table_value="Commissioning date",
+        alternative_values=["Indicative commissioning date"],
+    ),
     "maintenance_duration_%": dict(
         table="maintenance_existing_generators",
         table_lookup="Generator type",
