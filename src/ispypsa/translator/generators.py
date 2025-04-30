@@ -80,6 +80,12 @@ def _translate_ecaa_generators(
     ecaa_generators_pypsa_format["capital_cost"] = 0.0
 
     # p_max_pu: include summer/winter ratings?
+
+    # add generator type column
+    ecaa_generators_pypsa_format = _add_generator_type_column(
+        ecaa_generators_pypsa_format, ecaa_generators
+    )
+
     return ecaa_generators_pypsa_format
 
 
@@ -112,10 +118,9 @@ def _translate_new_entrant_generators(
     elif regional_granularity == "nem_regions":
         gen_attributes["region_id"] = "bus"
 
-    new_entrant_generators = new_entrant_generators.loc[:, gen_attributes.keys()]
-    new_entrant_generators_renamed = new_entrant_generators.rename(
-        columns=gen_attributes
-    )
+    new_entrant_generators_renamed = new_entrant_generators.loc[
+        :, gen_attributes.keys()
+    ].rename(columns=gen_attributes)
 
     # create a row for each new entrant gen in each possible build year (investment period)
     # NOTE: could be separated into its own function?
@@ -133,6 +138,11 @@ def _translate_new_entrant_generators(
 
     if regional_granularity == "single_region":
         new_entrant_generators_pypsa_format["bus"] = "NEM"
+
+    # add generator type column
+    new_entrant_generators_pypsa_format = _add_generator_type_column(
+        new_entrant_generators_pypsa_format, new_entrant_generators
+    )
 
     # then add build_year to new entrant generator names as well to maintain unique gens:
     new_entrant_generators_pypsa_format["name"] = (
@@ -653,6 +663,35 @@ def _add_closure_year_column(
         closure_years_dict
     )
     return ecaa_generators
+
+
+def _add_generator_type_column(
+    pypsa_friendly_generators: pd.DataFrame, generators: pd.DataFrame
+) -> pd.DataFrame:
+    """Adds a column containing the generator type for ECAA generators.
+    Args:
+        pypsa_friendly_generators: `PyPSA` formatted pd.DataFrame detailing either new entrant or ECAA generators.
+        generators: `ISPyPSA` formatted pd.Dataframe containing generator types
+            for either ECAA or new entrant generators.
+    Returns:
+        `pd.DataFrame`: `PyPSA` ECAA and new entrant generator attributes table with additional generator type
+            column. New additional generator type column is called "extra_generator_type" as it's not used in `PyPSA` model directly.
+    """
+    # Create a mapping from generator name to technology type
+    gen_to_type = pd.Series(
+        generators["technology_type"].values, index=generators["generator"]
+    ).to_dict()
+
+    # First do fuzzy matching to get generator names, then map to technology types
+    pypsa_friendly_generators["extra_generator_type"] = _fuzzy_match_names(
+        pypsa_friendly_generators["name"],
+        generators["generator"].unique(),
+        "adding generator_type column to pypsa_friendly_generators table",
+        not_match=None,
+        threshold=90,
+    ).apply(lambda x: gen_to_type.get(x, None) if x != None else None)
+
+    return pypsa_friendly_generators
 
 
 def _calculate_annuitised_new_entrant_gen_capital_costs(
