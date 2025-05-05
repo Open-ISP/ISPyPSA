@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version < '3.11'",
@@ -360,7 +361,7 @@ name = "click"
 version = "8.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
 wheels = [
@@ -917,7 +918,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "platform_system == 'Darwin'" },
+    { name = "appnope", marker = "sys_platform == 'darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -959,7 +960,7 @@ wheels = [
 
 [[package]]
 name = "isp-trace-parser"
-version = "1.0.1"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "joblib" },
@@ -967,15 +968,15 @@ dependencies = [
     { name = "polars" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/ee/bb1766136177990809f922b31d157aa64276de2bd39d52dc5396d03869d1/isp_trace_parser-1.0.1.tar.gz", hash = "sha256:24b2bfea350bc7d9cf914cf37aca94ae2ae8d6a30e4c827bf2421f83440613c7", size = 47637 }
+sdist = { url = "https://files.pythonhosted.org/packages/47/e7/31602674cebf1b951f113d0c185a00499a1d387ffdda4cf6e2e5a34c2004/isp_trace_parser-1.0.3.tar.gz", hash = "sha256:8862ac7bfe41ac7d3b7ac05e5f4f9fb9ce21689e48b5c73a1ca4b8f4b503f395", size = 47948 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/db/5275985f5305975443f58363307a0283b3549fdeec53b99827148d803f6a/isp_trace_parser-1.0.1-py3-none-any.whl", hash = "sha256:f7c59e0b449017454e9821d87ca80393e8599a9072dc1480a7d0fea93581ead3", size = 44849 },
+    { url = "https://files.pythonhosted.org/packages/30/5a/74b90f1aaeec4304e9a80d310fb2ba247b960489b84463dee45f18fbfc8d/isp_trace_parser-1.0.3-py3-none-any.whl", hash = "sha256:a17bebd07edf6edd9c31b27dff361dfc64efbfd44d0f9e61c8642089ba461b1a", size = 45111 },
 ]
 
 [[package]]
 name = "isp-workbook-parser"
 version = "2.4.1"
-source = { registry = "https://pypi.org/simple" }
+source = { editable = "../isp-workbook-parser" }
 dependencies = [
     { name = "openpyxl" },
     { name = "pandas" },
@@ -983,9 +984,23 @@ dependencies = [
     { name = "pyyaml" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/b3/c82c654fdfa843b00e08609492204d68435a125138e8294ebaf51d5ef245/isp_workbook_parser-2.4.1.tar.gz", hash = "sha256:61d6577d90ff804ef662368d77a1c1978ab7456aae863f71478c55f20f1621d6", size = 52394 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/0a/ce602e2f1a45dc45bcb266c43fcf9901eaeeb182f24cb15e3ff2774b0f0f/isp_workbook_parser-2.4.1-py3-none-any.whl", hash = "sha256:65731de03f29af97ead30a903d0fa3e45a5e9862358c82ea21e6ed807ea444df", size = 84820 },
+
+[package.metadata]
+requires-dist = [
+    { name = "openpyxl", specifier = ">=3.1.5" },
+    { name = "pandas", specifier = ">=2.2.2" },
+    { name = "pydantic", specifier = ">=2.8.2" },
+    { name = "pyyaml", specifier = ">=6.0.1" },
+    { name = "thefuzz", specifier = ">=0.22.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ipdb", specifier = ">=0.13.13" },
+    { name = "ipython", specifier = ">=8.0" },
+    { name = "pre-commit", specifier = ">=3.8.0" },
+    { name = "pytest", specifier = ">=8.3.2" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
 ]
 
 [[package]]
@@ -1031,8 +1046,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
-    { name = "isp-trace-parser", specifier = ">=1.0.0" },
-    { name = "isp-workbook-parser", specifier = ">=2.4.1" },
+    { name = "isp-trace-parser", specifier = ">=1.0.3" },
+    { name = "isp-workbook-parser", editable = "../isp-workbook-parser" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
@@ -1042,6 +1057,7 @@ requires-dist = [
     { name = "thefuzz", specifier = ">=0.22.1" },
     { name = "xmltodict", specifier = ">=0.13.0" },
 ]
+provides-extras = ["solvers"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3093,7 +3109,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
