@@ -2,7 +2,13 @@ from pathlib import Path
 
 from isp_workbook_parser import Parser
 
-from ..templater.mappings import _GENERATOR_PROPERTIES
+from ..templater.mappings import (
+    _GENERATOR_PROPERTIES, 
+    _FLOW_PATH_AGUMENTATION_TABLES,
+    _FLOW_PATH_COST_TABLES,
+    _PREPATORY_ACTIVITIES_TABLES,
+    _ACTIONABLE_ISP_PROJECTS_TABLES
+)
 
 _GENERATOR_PROPERTY_TABLES = [
     table_name
@@ -33,6 +39,14 @@ _NETWORK_REQUIRED_TABLES = [
     "interconnector_transfer_capability",
     "initial_build_limits",
 ]
+
+_NETWORK_REQUIRED_TABLES = (
+    _NETWORK_REQUIRED_TABLES 
+    + _FLOW_PATH_AGUMENTATION_TABLES
+    + _FLOW_PATH_COST_TABLES
+    + _PREPATORY_ACTIVITIES_TABLES
+    + _ACTIONABLE_ISP_PROJECTS_TABLES
+)
 
 _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES = [
     "existing_generators_summary",
