@@ -429,6 +429,9 @@ def _add_technology_rez_subregion_column(
         threshold=90,
     )
     df[new_col_name] = df[new_col_name].replace(replacement_dict)
+    # drop rows with REZ N12 (Build limit for VRE == 0.0MW)
+    # TODO: incorporate this into build limit filtering?
+    df = df.loc[df[new_col_name] != "N12"]
 
     # add a col with resource quality/technology code:
     df["temporary_quality_col"] = df["generator_name"]
