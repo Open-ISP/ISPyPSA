@@ -11,7 +11,10 @@ from ispypsa.templater.helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from ispypsa.translator.helpers import _annuitised_investment_costs
+from ispypsa.translator.helpers import (
+    _annuitised_investment_costs,
+    _get_build_year_as_int,
+)
 from ispypsa.translator.mappings import (
     _CARRIER_TO_FUEL_COST_TABLES,
     _ECAA_GENERATOR_ATTRIBUTES,
@@ -20,13 +23,12 @@ from ispypsa.translator.mappings import (
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
 
-# TODO: Add seasonal ratings as p_max_pu (capacity factor upper limits)
-
 
 def _translate_ecaa_generators(
     ispypsa_tables: dict[str : pd.DataFrame],
     investment_periods: list[int],
     regional_granularity: str = "sub_regions",
+    year_type: str = "fy",
 ) -> pd.DataFrame:
     """Process data on existing, committed, anticipated, and additional (ECAA) generators
     into a format aligned with PyPSA inputs.
@@ -38,6 +40,9 @@ def _translate_ecaa_generators(
             from the model configuration.
         regional_granularity: Regional granularity of the nodes obtained from the model
             configuration. Defaults to "sub_regions".
+        year_type: str which should be "fy" or "calendar". If "fy" then investment
+            period ints are interpreted as specifying financial years (according to the
+            calendar year the financial year ends in).
 
     Returns:
         `pd.DataFrame`: `PyPSA` style ECAA generator attributes in tabular format.
@@ -48,12 +53,10 @@ def _translate_ecaa_generators(
     ecaa_generators = _add_closure_year_column(
         ecaa_generators, ispypsa_tables["closure_years"]
     )
-    # set build_year field to the first investment period (first year modelled)
-    ecaa_generators["build_year"] = int(0)
-    # NOTE: lifetime can be a float - consider adding month of retirement?
     ecaa_generators["lifetime"] = (
         ecaa_generators["closure_year"] - investment_periods[0]
     )
+    ecaa_generators = ecaa_generators[ecaa_generators["lifetime"] > 0]
 
     gen_attributes = _ECAA_GENERATOR_ATTRIBUTES.copy()
     if regional_granularity == "sub_regions":
@@ -67,6 +70,12 @@ def _translate_ecaa_generators(
     )
     if regional_granularity == "single_region":
         ecaa_generators_pypsa_format["bus"] = "NEM"
+
+    # set build_year field to 0 for generators without a commissioning date, else
+    # set to commissioning year as int (accounting for financial years):
+    ecaa_generators_pypsa_format["build_year"] = ecaa_generators_pypsa_format[
+        "build_year"
+    ].apply(_get_build_year_as_int, args=(year_type,))
 
     # Add marginal_cost col with a string mapping to the name of parquet file
     # containing marginal cost timeseries - replace non-word chars with underscores.
@@ -149,31 +158,32 @@ def _translate_new_entrant_generators(
     elif regional_granularity == "nem_regions":
         gen_attributes["region_id"] = "bus"
 
-    new_entrant_generators_renamed = new_entrant_generators.loc[
-        :, gen_attributes.keys()
-    ].rename(columns=gen_attributes)
-
     # create a row for each new entrant gen in each possible build year (investment period)
     # NOTE: could be separated into its own function?
     new_entrant_generators_by_build_year = []
     for year in investment_periods:
-        new_entrant_generators_year = new_entrant_generators_renamed.copy()
+        new_entrant_generators_year = new_entrant_generators.copy()
         new_entrant_generators_year["build_year"] = year
         new_entrant_generators_by_build_year.append(new_entrant_generators_year)
 
-    new_entrant_generators_pypsa_format = pd.concat(
+    new_entrant_generators_all_build_years = pd.concat(
         new_entrant_generators_by_build_year,
         axis=0,
         ignore_index=True,
     )
 
-    if regional_granularity == "single_region":
-        new_entrant_generators_pypsa_format["bus"] = "NEM"
-
-    # add generator type column
-    new_entrant_generators_pypsa_format = _add_generator_type_column(
-        new_entrant_generators_pypsa_format, new_entrant_generators
+    capital_costs_dict = _calculate_annuitised_new_entrant_gen_capital_costs(
+        new_entrant_generators_all_build_years,
+        ispypsa_tables["new_entrant_build_costs"],
+        ispypsa_tables["new_entrant_wind_and_solar_connection_costs"],
+        ispypsa_tables["new_entrant_non_vre_connection_costs"],
+        investment_periods,
+        wacc,
     )
+
+    new_entrant_generators_pypsa_format = new_entrant_generators_all_build_years.loc[
+        :, gen_attributes.keys()
+    ].rename(columns=gen_attributes)
 
     # then add build_year to new entrant generator names as well to maintain unique gens:
     new_entrant_generators_pypsa_format["name"] = (
@@ -181,6 +191,13 @@ def _translate_new_entrant_generators(
         + "_"
         + new_entrant_generators_pypsa_format["build_year"].astype(str)
     )
+    new_entrant_generators_pypsa_format["capital_cost"] = (
+        new_entrant_generators_pypsa_format["name"].replace(capital_costs_dict)
+    )
+    # filter generators with nan capital cost -> this indicates build limit of 0.0MW
+    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format[
+        ~new_entrant_generators_pypsa_format["capital_cost"].isna()
+    ]
 
     # Add marginal_cost col with a string mapping to the name of parquet file
     # containing marginal cost timeseries - replace non-word chars with underscores.
@@ -190,20 +207,13 @@ def _translate_new_entrant_generators(
         )
     )
 
-    # calculate capital costs for each generator:
-    capital_costs = _calculate_annuitised_new_entrant_gen_capital_costs(
-        ispypsa_tables, investment_periods, wacc
-    )
+    if regional_granularity == "single_region":
+        new_entrant_generators_pypsa_format["bus"] = "NEM"
 
-    new_entrant_generators_pypsa_format["capital_cost"] = (
-        new_entrant_generators_pypsa_format["name"].replace(capital_costs)
+    # add generator type column
+    new_entrant_generators_pypsa_format = _add_generator_type_column(
+        new_entrant_generators_pypsa_format, new_entrant_generators
     )
-
-    # filter generators with nan capital cost -> this indicates build limit of 0.0MW
-    # TODO: think about further filtering with build limits...?
-    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format[
-        ~new_entrant_generators_pypsa_format["capital_cost"].isna()
-    ]
 
     # Convert p_min_pu from percentage to float between 0-1:
     new_entrant_generators_pypsa_format["p_min_pu"] /= 100.0
@@ -240,9 +250,11 @@ def create_pypsa_friendly_dynamic_marginal_costs(
     all_generators = generators.copy().set_index("name")
     marginal_costs_by_generator = []
     for name, row in all_generators.iterrows():
-        gen_fuel_costs = fuel_costs.loc[
-            (row["carrier"], row["extra_fuel_cost_mapping"]), :
-        ].squeeze()
+        gen_fuel_costs = (
+            fuel_costs.loc[(row["carrier"], row["extra_fuel_cost_mapping"]), :]
+            .fillna(0.0)
+            .squeeze()
+        )
         marginal_costs = (gen_fuel_costs * row["extra_heat_rate_gj/mwh"]) + row[
             "extra_vom_$/mwh_sent_out"
         ]
@@ -427,7 +439,6 @@ def _calculate_hyblend_prices(
 
     # Select only the gas prices that are directly referenced by hyblend fuel cost mappings
     base_prices_hyblend_only = base_prices_table.loc[hyblend_name_mapping.values(), :]
-
     # Get the hydrogen prices and mix percentages, replace generator names by fuel cost mapping:
     blend_prices_series = blend_prices_table.squeeze()
     blend_percentages = (
@@ -440,12 +451,10 @@ def _calculate_hyblend_prices(
     blend_percentages = blend_percentages.rename(
         columns={col: col.replace("%", "$/gj") for col in blend_percentages.columns}
     )
-
     base_prices_hyblend_only = (
         base_prices_hyblend_only * blend_percentages
         + blend_prices_series * (1 - blend_percentages)
     )
-
     return base_prices_hyblend_only
 
 
@@ -467,6 +476,7 @@ def _calculate_gas_biomethane_blend_prices(
         `pd.DataFrame`: calculated gas prices including biomethane blend in tabular
             format.
     """
+
     biomethane_prices_series = blend_prices_table.squeeze()
     biomethane_mix_percentages = blend_percentages_table
     # rename percentage columns so they match price table columns
@@ -625,36 +635,29 @@ def create_pypsa_friendly_new_entrant_generator_timeseries(
     }
 
     for gen in generators:
-        # temp solution to avoid errors with N12 traces not currently existing:
-        if "N12" not in gen:
-            generator_type = gen_to_type[gen].lower()
-            try:
-                area_abbreviation = re.search(r"[A-Z]\d+", gen)[0]
-            except:
-                print("yeep")
-                area_abbreviation = re.search(r"[A-Z]\d+", gen)
+        generator_type = gen_to_type[gen].lower()
+        area_abbreviation = re.search(r"[A-Z]\d+", gen)[0]
+        technology_or_resource_quality = re.search(r"\d_([A-Z]{2,3})", gen).group(1)
+        trace = query_functions[generator_type](
+            reference_year_mapping,
+            area_abbreviation,
+            technology_or_resource_quality,
+            directory=trace_data_paths[generator_type],
+            year_type=year_type,
+        )
+        # datetime in nanoseconds required by PyPSA
+        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
+        trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
 
-            technology_or_resource_quality = re.search(r"\d_([A-Z]{2,3})", gen).group(1)
-            trace = query_functions[generator_type](
-                reference_year_mapping,
-                area_abbreviation,
-                technology_or_resource_quality,
-                directory=trace_data_paths[generator_type],
-                year_type=year_type,
-            )
-            # datetime in nanoseconds required by PyPSA
-            trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-            trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
-
-            trace = _time_series_filter(trace, snapshots)
-            _check_time_series(
-                trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
-            )
-            trace = pd.merge(trace, snapshots, on="snapshots")
-            trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
-            trace.to_parquet(
-                Path(output_paths[generator_type], f"{gen}.parquet"), index=False
-            )
+        trace = _time_series_filter(trace, snapshots)
+        _check_time_series(
+            trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
+        )
+        trace = pd.merge(trace, snapshots, on="snapshots")
+        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
+        trace.to_parquet(
+            Path(output_paths[generator_type], f"{gen}.parquet"), index=False
+        )
 
 
 def _add_closure_year_column(
@@ -726,7 +729,10 @@ def _add_generator_type_column(
 
 
 def _calculate_annuitised_new_entrant_gen_capital_costs(
-    ispypsa_tables: dict[str : pd.DataFrame],
+    new_entrant_generators_each_build_year: pd.DataFrame,
+    new_entrant_build_costs: pd.DataFrame,
+    new_entrant_wind_and_solar_connection_costs: pd.DataFrame,
+    new_entrant_non_vre_connection_costs: pd.DataFrame,
     investment_periods: list[int],
     wacc: float,
 ) -> pd.DataFrame:
@@ -734,8 +740,16 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
     build year.
 
     Args:
-        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
-            (add link to ispypsa input tables docs).
+        new_entrant_generators_each_build_year: dataframe containing `ISPyPSA` formatted
+            new-entrant generator detail, with a row for each generator in every possible
+            build year.
+        new_entrant_build_costs: `ISPyPSA` formatted dataframe with build costs in $/MW for
+            each new-entrant generator type and build year.
+        new_entrant_wind_and_solar_connection_costs: `ISPyPSA` formatted dataframe
+            containing connection cost details (including system strength costs) in $/MW for
+            new VRE (wind and solar) generators in each REZ and build year.
+        new_entrant_non_vre_connection_costs: `ISPyPSA` formatted dataframe with
+            connection costs  in $/MWfor non-VRE new entrant generators in each NEM state.
         investment_periods: list of years in which investment periods start obtained
             from the model configuration.
         wacc: as float, weighted average cost of capital, an interest rate specifying
@@ -748,18 +762,7 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
             costs where relevant.
     """
 
-    new_entrant_generators = ispypsa_tables["new_entrant_generators"].copy()
-    new_entrant_generators_each_build_year = []
-    for year in investment_periods:
-        new_entrants_one_year = new_entrant_generators.copy()
-        new_entrants_one_year["build_year"] = year
-        new_entrant_generators_each_build_year.append(new_entrants_one_year)
-
-    new_entrant_generators_each_build_year = pd.concat(
-        new_entrant_generators_each_build_year, axis=0, ignore_index=True
-    )
-
-    build_costs = ispypsa_tables["new_entrant_build_costs"]
+    build_costs = new_entrant_build_costs.copy()
     build_costs.loc[:, "technology"] = _fuzzy_match_names(
         build_costs.loc[:, "technology"],
         new_entrant_generators_each_build_year["generator_name"].unique(),
@@ -767,7 +770,6 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
         not_match="existing",
         threshold=90,
     )
-
     build_costs = build_costs.set_index("technology")
 
     build_year_strings = {
@@ -778,9 +780,9 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
 
     # add the system strength connection costs to build_year_strings dict to filter VRE connection costs:
     build_year_strings["system_strength_connection_cost_$/mw"] = "system_strength"
-    wind_and_solar_connection_costs = ispypsa_tables[
-        "new_entrant_wind_and_solar_connection_costs"
-    ].set_index("REZ names")
+    wind_and_solar_connection_costs = (
+        new_entrant_wind_and_solar_connection_costs.copy().set_index("REZ names")
+    )
     wind_and_solar_connection_costs = wind_and_solar_connection_costs.loc[
         :, build_year_strings.keys()
     ]
@@ -788,7 +790,7 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
         columns=build_year_strings
     ).fillna(0.0)
 
-    non_vre_connection_costs = ispypsa_tables["new_entrant_non_vre_connection_costs"]
+    non_vre_connection_costs = new_entrant_non_vre_connection_costs.copy()
     non_vre_connection_costs = non_vre_connection_costs.melt(
         id_vars=["Region"],
         var_name="connection_cost_technology",
@@ -808,7 +810,7 @@ def _calculate_annuitised_new_entrant_gen_capital_costs(
     )
     new_entrant_capital_costs_dict = {}
     for idx, row in new_entrant_generators_each_build_year.iterrows():
-        # build cost = build_cost * LCF (given as %, so divide by 100)
+        # build cost = build_cost * LCF (LCF given as %, so divide by 100)
         build_cost = (
             build_costs.at[row["generator_name"], row["build_year"]]
             * row["technology_specific_lcf_%"]

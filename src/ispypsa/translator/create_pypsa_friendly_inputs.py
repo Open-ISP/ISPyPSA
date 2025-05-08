@@ -94,6 +94,7 @@ def create_pypsa_friendly_inputs(
         ispypsa_tables,
         config.temporal.investment_periods,
         config.network.nodes.regional_granularity,
+        config.temporal.year_type,
     )
 
     translated_new_entrant_generators = _translate_new_entrant_generators(
