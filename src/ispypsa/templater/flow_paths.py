@@ -5,14 +5,14 @@ from pathlib import Path
 import pandas as pd
 
 from .helpers import (
-    _snakecase_string,
     _fuzzy_match_names,
-    _strip_all_text_after_numeric_value
+    _snakecase_string,
+    _strip_all_text_after_numeric_value,
 )
 from .mappings import (
+    _FLOW_PATH_CONFIG,
     _HVDC_FLOW_PATHS,
-    FLOW_PATH_CONFIG,
-    REZ_CONFIG,
+    _REZ_CONFIG,
 )
 
 
@@ -193,8 +193,7 @@ def _clean_capability_column_names(capability_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _template_sub_regional_flow_path_costs(
-    iasr_tables: dict[str, pd.DataFrame], 
-    scenario: str
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> pd.DataFrame:
     """
     Process flow path augmentation options and cost forecasts to find least cost options for each flow path.
@@ -214,15 +213,12 @@ def _template_sub_regional_flow_path_costs(
             - <financial year>_$/mw (one column per year, e.g., '2024_25_$/mw')
     """
     return process_transmission_costs(
-        iasr_tables=iasr_tables,
-        scenario=scenario,
-        config=FLOW_PATH_CONFIG
+        iasr_tables=iasr_tables, scenario=scenario, config=_FLOW_PATH_CONFIG
     )
 
 
 def _template_rez_transmission_costs(
-    iasr_tables: dict[str, pd.DataFrame], 
-    scenario: str
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> pd.DataFrame:
     """
     Process REZ augmentation options and cost forecasts to find least cost options for each REZ.
@@ -241,60 +237,48 @@ def _template_rez_transmission_costs(
             - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
     """
     return process_transmission_costs(
-        iasr_tables=iasr_tables,
-        scenario=scenario,
-        config=REZ_CONFIG
+        iasr_tables=iasr_tables, scenario=scenario, config=_REZ_CONFIG
     )
 
 
 def process_transmission_costs(
-    iasr_tables: dict[str, pd.DataFrame],
-    scenario: str,
-    config: dict
+    iasr_tables: dict[str, pd.DataFrame], scenario: str, config: dict
 ) -> pd.DataFrame:
     """
     Generic function to process transmission costs (flow path or REZ).
-    
+
     Args:
         iasr_tables: dict[str, pd.DataFrame] specifying IASR tables
         scenario: str specifying the scenario name
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
             - table_names: dict with augmentation and cost table lists
             - mappings: dict with mappings for preparatory activities and other data
-            
+
     Returns:
         pd.DataFrame containing the least cost options with standardized column structure
     """
     cost_scenario = _determine_cost_scenario(scenario)
-    
+
     # Get and process augmentation table
-    aug_table = _get_augmentation_table(
-        iasr_tables=iasr_tables,
-        config=config
-    )
-    
+    aug_table = _get_augmentation_table(iasr_tables=iasr_tables, config=config)
+
     # Get and process cost table
     cost_table = _get_cost_table(
-        iasr_tables=iasr_tables,
-        cost_scenario=cost_scenario,
-        config=config
+        iasr_tables=iasr_tables, cost_scenario=cost_scenario, config=config
     )
-    
+
     # Find least cost options
     final_costs = _get_least_cost_options(
-        aug_table=aug_table,
-        cost_table=cost_table,
-        config=config
+        aug_table=aug_table, cost_table=cost_table, config=config
     )
-    
+
     return final_costs
 
 
 def _get_augmentation_table(
-    iasr_tables: dict[str, pd.DataFrame],
-    config: dict
+    iasr_tables: dict[str, pd.DataFrame], config: dict
 ) -> pd.DataFrame:
     """
     Concatenate and clean all augmentation tables for a given transmission type.
@@ -305,9 +289,9 @@ def _get_augmentation_table(
             - option (option_name or option)
             - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
         config: dict with processing configuration containing:
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
             - table_names: dict with augmentation table lists
-            
+
     Returns:
         pd.DataFrame containing the concatenated augmentation table. Columns:
             - id (flow_path or rez_constraint_id)
@@ -319,20 +303,20 @@ def _get_augmentation_table(
     if missing:
         logging.warning(f"Missing augmentation tables: {missing}")
     aug_tables = [
-        iasr_tables[table_name] for table_name in table_names if table_name in iasr_tables
+        iasr_tables[table_name]
+        for table_name in table_names
+        if table_name in iasr_tables
     ]
     if not aug_tables:
         raise ValueError("No augmentation tables found in iasr_tables.")
     aug_table = pd.concat(aug_tables, ignore_index=True)
-    aug_table = _clean_augmentation_names(aug_table, config)
-    aug_table = _prepare_aug_table_columns(aug_table, config)
+    aug_table = _clean_augmentation_table_column_names(aug_table, config)
+    aug_table = _clean_augmentation_table_column_values(aug_table, config)
     return aug_table
 
 
 def _get_cost_table(
-    iasr_tables: dict[str, pd.DataFrame],
-    cost_scenario: str,
-    config: dict
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
 ) -> pd.DataFrame:
     """
     Combine all cost tables, preparatory activities, and actionable projects for a given scenario into a single DataFrame.
@@ -348,24 +332,26 @@ def _get_cost_table(
             - column_mappings: dict mapping standard column names to type-specific names
             - table_names: dict with cost table lists
             - mappings: dict with mappings for preparatory activities and other data
-            
+
     Returns:
         pd.DataFrame containing the combined cost table. Columns:
             - id (flow_path or rez_constraint_id)
             - option (option_name or option)
             - <financial year> (e.g., '2024_25', ...)
     """
-    cost_table_names = _get_cost_table_names(cost_scenario, config)
+    cost_table_names = config["table_names"]["cost"][cost_scenario]
     cost_table = _get_cleaned_cost_tables(iasr_tables, cost_table_names, config)
     prep_activities = _get_prep_activities_table(iasr_tables, cost_scenario, config)
-    actionable_projects = _get_actionable_projects_table(iasr_tables, cost_scenario, config)
-    return _combine_cost_tables(cost_table, prep_activities, actionable_projects, config)
+    actionable_projects = _get_actionable_projects_table(
+        iasr_tables, cost_scenario, config
+    )
+    return _combine_cost_tables(
+        cost_table, prep_activities, actionable_projects, config
+    )
 
 
 def _get_least_cost_options(
-    aug_table: pd.DataFrame,
-    cost_table: pd.DataFrame,
-    config: dict
+    aug_table: pd.DataFrame, cost_table: pd.DataFrame, config: dict
 ) -> pd.DataFrame:
     """
     For each transmission, select the augmentation option with the lowest cost per MW of increased capacity,
@@ -383,8 +369,8 @@ def _get_least_cost_options(
             - <financial year> (e.g., '2024_25', ...)
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
-            
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
     Returns:
         pd.DataFrame containing columns:
             - id (flow_path or rez_constraint_id)
@@ -399,18 +385,17 @@ def _get_least_cost_options(
         aug_table["option"],
         "matching transmission augmentation options and costs",
         not_match="existing",
-        threshold=80
+        threshold=80,
     )
     transmission_analysis = pd.merge(
-        aug_table,
-        valid_costs_df,
-        on=["id", "option"],
-        how="inner"
+        aug_table, valid_costs_df, on=["id", "option"], how="inner"
     )
-    _log_unmatched_transmission_options(aug_table, valid_costs_df, transmission_analysis)
+    _log_unmatched_transmission_options(
+        aug_table, valid_costs_df, transmission_analysis
+    )
     transmission_analysis["cost_per_mw"] = (
-        transmission_analysis["cost_million"] /
-        transmission_analysis["nominal_capacity_increase"]
+        transmission_analysis["cost"]
+        / transmission_analysis["nominal_capacity_increase"]
     )
     least_cost_options = transmission_analysis.loc[
         transmission_analysis.groupby("id")["cost_per_mw"].idxmin()
@@ -419,12 +404,14 @@ def _get_least_cost_options(
         cost_table,
         least_cost_options[["id", "option", "nominal_capacity_increase"]],
         on=["id", "option"],
-        how="inner"
+        how="inner",
     )
     # Divide each financial year column by capacity and rename with _$/mw suffix
     for year_col in year_cols:
         new_col = f"{year_col}_$/mw"
-        final_costs[new_col] = final_costs[year_col] / final_costs["nominal_capacity_increase"]
+        final_costs[new_col] = (
+            final_costs[year_col] / final_costs["nominal_capacity_increase"]
+        )
         final_costs.drop(columns=year_col, inplace=True)
     final_costs = final_costs.rename(columns=config["out_going_column_mappings"])
     return final_costs
@@ -448,26 +435,38 @@ def _determine_cost_scenario(scenario: str) -> str:
         raise ValueError(f"scenario: {scenario} not recognised.")
 
 
-def _clean_augmentation_names(aug_table: pd.DataFrame, config: dict) -> pd.DataFrame:
+def _clean_augmentation_table_column_names(
+    aug_table: pd.DataFrame, config: dict
+) -> pd.DataFrame:
     """
     Clean and rename columns in the augmentation table.
 
     Args:
         aug_table: pd.DataFrame specifying the augmentation table.
         config: dict with processing configuration containing:
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
-            
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
     Returns:
         pd.DataFrame containing the cleaned and renamed augmentation table.
     """
     # Map specific columns to standardized names
-    # Reverse the in_comming_column_mappings dict to go from specific -> generic
-    aug_table = aug_table.rename(columns=config["in_comming_column_mappings"])
-    cols_to_keep = list(set([col for col in config["in_comming_column_mappings"].values() if col in aug_table.columns]))
+    # Reverse the in_coming_column_mappings dict to go from specific -> generic
+    aug_table = aug_table.rename(columns=config["in_coming_column_mappings"])
+    cols_to_keep = list(
+        set(
+            [
+                col
+                for col in config["in_coming_column_mappings"].values()
+                if col in aug_table.columns
+            ]
+        )
+    )
     return aug_table.loc[:, cols_to_keep]
 
 
-def _prepare_aug_table_columns(aug_table: pd.DataFrame, config: dict) -> pd.DataFrame:
+def _clean_augmentation_table_column_values(
+    aug_table: pd.DataFrame, config: dict
+) -> pd.DataFrame:
     """
     Prepare and typecast augmentation table columns for analysis.
 
@@ -475,8 +474,8 @@ def _prepare_aug_table_columns(aug_table: pd.DataFrame, config: dict) -> pd.Data
         aug_table: pd.DataFrame containing transmission-specific columns
         config: dict with processing configuration containing:
             - transmission_type: str specifying the type of transmission
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
-            
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
     Returns:
         pd.DataFrame containing standardized columns:
             - id (flow_path or rez_constraint_id)
@@ -484,51 +483,31 @@ def _prepare_aug_table_columns(aug_table: pd.DataFrame, config: dict) -> pd.Data
             - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
     """
     transmission_type = config["transmission_type"]
-    
+
     # Handle flow path special case: calculate capacity as max of forward and reverse
     if transmission_type == "flow_path":
         aug_table["forward_capacity_increase"] = pd.to_numeric(
-            _strip_all_text_after_numeric_value(aug_table["forward_capacity_increase"]), 
-            errors='coerce'
+            _strip_all_text_after_numeric_value(aug_table["forward_capacity_increase"]),
+            errors="coerce",
         )
         aug_table["reverse_capacity_increase"] = pd.to_numeric(
-            _strip_all_text_after_numeric_value(aug_table["reverse_capacity_increase"]), 
-            errors='coerce'
+            _strip_all_text_after_numeric_value(aug_table["reverse_capacity_increase"]),
+            errors="coerce",
         )
-        aug_table["nominal_capacity_increase"] = aug_table[["forward_capacity_increase", "reverse_capacity_increase"]].max(axis=1)
-    else: 
+        aug_table["nominal_capacity_increase"] = aug_table[
+            ["forward_capacity_increase", "reverse_capacity_increase"]
+        ].max(axis=1)
+    else:
         aug_table["nominal_capacity_increase"] = pd.to_numeric(
-            _strip_all_text_after_numeric_value(aug_table["nominal_capacity_increase"]), 
-            errors='coerce'
+            _strip_all_text_after_numeric_value(aug_table["nominal_capacity_increase"]),
+            errors="coerce",
         )
     return aug_table
 
 
-def _get_cost_table_names(cost_scenario: str, config: dict) -> list:
-    """
-    Get the names of the cost tables for a given scenario and transmission type.
-
-    Args:
-        cost_scenario: str specifying the internal scenario key.
-        config: dict with processing configuration containing:
-            - transmission_type: str, either "flow_path" or "rez"
-            - table_names: dict with cost table lists
-            
-    Returns:
-        list specifying the names of cost tables.
-    """
-    transmission_type = config["transmission_type"]
-    if transmission_type == "flow_path":
-        return [
-            flow_path for flow_path in config["table_names"]["cost"][cost_scenario]
-        ]
-    elif transmission_type == "rez":
-        return [
-            table for table in config["table_names"]["cost"]
-        ]
-
-
-def _get_cleaned_cost_tables(iasr_tables: dict[str, pd.DataFrame], cost_table_names: list, config: dict) -> pd.DataFrame:
+def _get_cleaned_cost_tables(
+    iasr_tables: dict[str, pd.DataFrame], cost_table_names: list, config: dict
+) -> pd.DataFrame:
     """
     Retrieve, clean, concatenate, and filter all cost tables for a scenario and transmission type.
 
@@ -539,8 +518,8 @@ def _get_cleaned_cost_tables(iasr_tables: dict[str, pd.DataFrame], cost_table_na
             - <financial year> (e.g., '2024-25', ...)
         cost_table_names: list of str specifying the names of cost tables to extract and clean.
         config: dict with processing configuration containing:
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
-            
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
     Returns:
         pd.DataFrame containing the concatenated and filtered cost tables. Columns:
             - id (flow_path or rez_constraint_id)
@@ -555,19 +534,25 @@ def _get_cleaned_cost_tables(iasr_tables: dict[str, pd.DataFrame], cost_table_na
         if table_name not in iasr_tables:
             continue
         table = iasr_tables[table_name].copy()
+        table = table.rename(columns=config["in_coming_column_mappings"])
         cost_tables.append(table)
     if not cost_tables:
         raise ValueError("No cost tables found in iasr_tables.")
     cost_table = pd.concat(cost_tables, ignore_index=True)
-    cost_table = cost_table.rename(columns=config["in_comming_column_mappings"])
-    table.columns = [_snakecase_string(col) for col in table.columns]
-    forecast_year_cols = [col for col in cost_table.columns if re.match(r"^\d{4}_\d{2}$", col)]
-    cost_table[forecast_year_cols[0]] = pd.to_numeric(cost_table[forecast_year_cols[0]], errors='coerce')
-    cost_table = cost_table.dropna(subset=forecast_year_cols, how='all')
+    cost_table.columns = [_snakecase_string(col) for col in cost_table.columns]
+    forecast_year_cols = [
+        col for col in cost_table.columns if re.match(r"^\d{4}_\d{2}$", col)
+    ]
+    cost_table[forecast_year_cols[0]] = pd.to_numeric(
+        cost_table[forecast_year_cols[0]], errors="coerce"
+    )
+    cost_table = cost_table.dropna(subset=forecast_year_cols, how="all")
     return cost_table
 
 
-def _get_prep_activities_table(iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict) -> pd.DataFrame:
+def _get_prep_activities_table(
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
+) -> pd.DataFrame:
     """
     Process the preparatory activities table for a given transmission type.
 
@@ -578,7 +563,7 @@ def _get_prep_activities_table(iasr_tables: dict[str, pd.DataFrame], cost_scenar
         cost_scenario: str specifying the internal scenario key.
         config: dict with processing configuration containing:
             - mappings: dict with mappings for preparatory activities and other data
-            
+
     Returns:
         pd.DataFrame containing the aggregated preparatory activities. Columns:
             - id (flow_path or rez_constraint_id)
@@ -587,59 +572,84 @@ def _get_prep_activities_table(iasr_tables: dict[str, pd.DataFrame], cost_scenar
     """
     transmission_type = config["transmission_type"]
     if transmission_type == "flow_path":
-        prep_activities_table_name = f"flow_path_costs_forecast_{cost_scenario}_preparatory_activities"
+        prep_activities_table_name = (
+            f"flow_path_augmentation_costs_{cost_scenario}_preparatory_activities"
+        )
     elif transmission_type == "rez":
-        prep_activities_table_name = f"rez_costs_forecast_{cost_scenario}_preparatory_activities"
-    
+        prep_activities_table_name = (
+            f"rez_augmentation_costs_{cost_scenario}_preparatory_activities"
+        )
+
     if prep_activities_table_name not in iasr_tables:
-        logging.warning(f"Missing preparatory activities table: {prep_activities_table_name}")
+        logging.warning(
+            f"Missing preparatory activities table: {prep_activities_table_name}"
+        )
         # Return empty DataFrame with expected columns
         return pd.DataFrame(columns=["id", "option"])
-    
-    prep_activities = prep_activities.rename(columns=config["in_comming_column_mappings"])
-    prep_activities.columns = [_snakecase_string(col) for col in prep_activities.columns]
-    
+
+    prep_activities = iasr_tables[prep_activities_table_name].copy()
+    prep_activities = prep_activities.rename(
+        columns=config["in_coming_column_mappings"]
+    )
+    prep_activities.columns = [
+        _snakecase_string(col) for col in prep_activities.columns
+    ]
+    prep_activities = prep_activities.drop(
+        columns=[col for col in prep_activities.columns if "unnamed" in col]
+    )
+
     if transmission_type == "flow_path":
         # Flow path preparatory activities processing
         # Validate 'flow_path' values
-        invalid_flow_paths = set(prep_activities['id']) - set(config["mappings"]["prep_activities_name_to_option"].keys())
+        invalid_flow_paths = set(prep_activities["id"]) - set(
+            config["mappings"]["prep_activities_name_to_option"].keys()
+        )
         if invalid_flow_paths:
             raise ValueError(
                 f"Missing mapping values for the flow paths provided: {sorted(invalid_flow_paths)}. "
                 f"Please ensure these are present in templater/mappings.py."
             )
-        prep_activities['option'] = prep_activities['id'].map(config["mappings"]["prep_activities_name_to_option"])
-        
+        prep_activities["option"] = prep_activities["id"].map(
+            config["mappings"]["prep_activities_name_to_option"]
+        )
+
         # Validate 'option_name' values
-        invalid_option_names = set(prep_activities['option']) - set(config["mappings"]["option_to_id"].keys())
+        invalid_option_names = set(prep_activities["option"]) - set(
+            config["mappings"]["option_to_id"].keys()
+        )
         if invalid_option_names:
             raise ValueError(
                 f"Missing mapping values for the option names provided: {sorted(invalid_option_names)}. "
                 f"Please ensure these are present in templater/mappings.py."
             )
-        prep_activities = prep_activities.groupby('option').sum().reset_index()
-        prep_activities['id'] = prep_activities['option'].map(config["mappings"]["option_to_id"])
-    
+        prep_activities = prep_activities.groupby("option").sum().reset_index()
+        prep_activities["id"] = prep_activities["option"].map(
+            config["mappings"]["option_to_id"]
+        )
+
     elif transmission_type == "rez":
         # Validate REZ names/IDs
-        invalid_rez_names = set(prep_activities["rez_constraint_id"]) - set(config["mappings"]["prep_activities_mapping"].keys())
+        invalid_rez_names = set(prep_activities["rez"]) - set(
+            config["prep_activities_mapping"].keys()
+        )
         if invalid_rez_names:
             raise ValueError(
                 f"Missing mapping values for the REZ names provided: {sorted(invalid_rez_names)}. "
                 f"Please ensure these are present in templater/mappings.py."
             )
-        
-        prep_activities['option'] = prep_activities["id"].apply(
-            lambda x: config["mappings"]["prep_activities_mapping"][x][1]
+
+        prep_activities["option"] = prep_activities["rez"].apply(
+            lambda x: config["prep_activities_mapping"][x][1]
         )
-        prep_activities['id'] = prep_activities["id"].apply(
-            lambda x: config["mappings"]["prep_activities_mapping"][x][0]
+        prep_activities["id"] = prep_activities["rez"].apply(
+            lambda x: config["prep_activities_mapping"][x][0]
         )
-    
-    return prep_activities
+    return _sort_cols(prep_activities, ["id", "option"])
 
 
-def _get_actionable_projects_table(iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict) -> pd.DataFrame:
+def _get_actionable_projects_table(
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
+) -> pd.DataFrame:
     """
     Process the actionable ISP projects table for flow paths.
 
@@ -650,7 +660,7 @@ def _get_actionable_projects_table(iasr_tables: dict[str, pd.DataFrame], cost_sc
         cost_scenario: str specifying the internal scenario key.
         config: dict with processing configuration containing:
             - mappings: dict with mappings for actionable projects and other data
-            
+
     Returns:
         pd.DataFrame containing the actionable projects table. Columns:
             - id (flow_path)
@@ -658,45 +668,69 @@ def _get_actionable_projects_table(iasr_tables: dict[str, pd.DataFrame], cost_sc
             - <financial year> (e.g., '2024_25', '2025_26', ...)
     """
     transmission_type = config["transmission_type"]
-    
+
     # REZ has no actionable projects, return empty DataFrame
     if transmission_type == "rez":
         return pd.DataFrame(columns=["id", "option"])
-    
+
     # Process flow path actionable projects
-    actionable_projects_table_name = f"flow_path_costs_forecast_{cost_scenario}_actionable_isp_projects"
-    
+    actionable_projects_table_name = (
+        f"flow_path_augmentation_costs_{cost_scenario}_actionable_isp_projects"
+    )
+
     if actionable_projects_table_name not in iasr_tables:
-        logging.warning(f"Missing actionable ISP projects table: {actionable_projects_table_name}")
+        logging.warning(
+            f"Missing actionable ISP projects table: {actionable_projects_table_name}"
+        )
         # Return empty DataFrame with expected columns
         return pd.DataFrame(columns=["id", "option"])
-    
+
     actionable_projects = iasr_tables[actionable_projects_table_name].copy()
-    actionable_projects = actionable_projects.rename(columns=config["in_comming_column_mappings"])
-    actionable_projects.columns = [_snakecase_string(col) for col in actionable_projects.columns]
-    
+    actionable_projects = actionable_projects.rename(
+        columns=config["in_coming_column_mappings"]
+    )
+    actionable_projects.columns = [
+        _snakecase_string(col) for col in actionable_projects.columns
+    ]
+    actionable_projects = actionable_projects.drop(
+        columns=[col for col in actionable_projects.columns if "unnamed" in col]
+    )
+
     # Validate 'flow_path' values
-    invalid_flow_paths = set(actionable_projects['id']) - set(config["mappings"]["actionable_name_to_option"].keys())
+    invalid_flow_paths = set(actionable_projects["id"]) - set(
+        config["mappings"]["actionable_name_to_option"].keys()
+    )
     if invalid_flow_paths:
         raise ValueError(
             f"Missing mapping values for the flow paths provided: {sorted(invalid_flow_paths)}. "
             f"Please ensure these are present in {config['mappings']['actionable_name_to_option']}."
         )
-    actionable_projects['option'] = actionable_projects['id'].map(config["mappings"]["actionable_name_to_option"])
-    
+    actionable_projects["option"] = actionable_projects["id"].map(
+        config["mappings"]["actionable_name_to_option"]
+    )
+
     # Validate 'option_name' values
-    invalid_option_names = set(actionable_projects['option']) - set(config["mappings"]["actionable_option_to_id"].keys())
+    invalid_option_names = set(actionable_projects["option"]) - set(
+        config["mappings"]["actionable_option_to_id"].keys()
+    )
     if invalid_option_names:
         raise ValueError(
             f"Missing mapping values for the option names provided: {sorted(invalid_option_names)}. "
             f"Please ensure these are present in {config['mappings']['actionable_option_to_id']}."
         )
-    actionable_projects['id'] = actionable_projects['option'].map(config["mappings"]["actionable_option_to_id"])
-    
-    return actionable_projects
+    actionable_projects["id"] = actionable_projects["option"].map(
+        config["mappings"]["actionable_option_to_id"]
+    )
+
+    return _sort_cols(actionable_projects, ["id", "option"])
 
 
-def _combine_cost_tables(cost_table: pd.DataFrame, prep_activities: pd.DataFrame, actionable_projects: pd.DataFrame, config: dict) -> pd.DataFrame:
+def _combine_cost_tables(
+    cost_table: pd.DataFrame,
+    prep_activities: pd.DataFrame,
+    actionable_projects: pd.DataFrame,
+    config: dict,
+) -> pd.DataFrame:
     """
     Combine the cost table, preparatory activities table, and actionable projects table into a single DataFrame.
 
@@ -705,12 +739,17 @@ def _combine_cost_tables(cost_table: pd.DataFrame, prep_activities: pd.DataFrame
         prep_activities: pd.DataFrame specifying the preparatory activities table.
         actionable_projects: pd.DataFrame specifying the actionable projects table.
         config: dict with processing configuration containing:
-            - in_comming_column_mappings: dict mapping standard column names to type-specific names
-            
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
     Returns:
         pd.DataFrame containing the combined cost table.
     """
-    tables = [cost_table, prep_activities, actionable_projects]
+    tables = [cost_table, prep_activities]
+
+    # Only include actionable_projects if it's not empty
+    if not actionable_projects.empty:
+        tables.append(actionable_projects)
+
     return pd.concat(tables, ignore_index=True)
 
 
@@ -724,13 +763,15 @@ def _get_year_columns(cost_table: pd.DataFrame) -> list:
     Returns:
         list of str specifying the financial year columns.
     """
-    year_cols = [col for col in cost_table.columns if re.match(r'\d{4}_\d{2}', col)]
+    year_cols = [col for col in cost_table.columns if re.match(r"\d{4}_\d{2}", col)]
     if not year_cols:
         raise ValueError("No financial year columns found in cost table")
     return year_cols
 
 
-def _find_first_year_with_complete_costs(cost_table: pd.DataFrame, year_cols: list) -> pd.DataFrame:
+def _find_first_year_with_complete_costs(
+    cost_table: pd.DataFrame, year_cols: list
+) -> pd.DataFrame:
     """
     Find the first year with complete costs for each transmission.
 
@@ -745,20 +786,20 @@ def _find_first_year_with_complete_costs(cost_table: pd.DataFrame, year_cols: li
         pd.DataFrame containing columns:
             - id (flow_path or rez_constraint_id)
             - option (option_name or option)
-            - cost_million
+            - cost
             - first_valid_year_col
     """
     valid_cost_rows = []
     missing_full_year_transmissions = []
-    for transmission, group in cost_table.groupby('id'):
+    for transmission, group in cost_table.groupby("id"):
         found = False
         # Iterate through years (sort years based of first int in year string)
-        for year in sorted(year_cols, key=lambda y: int(y.split('_')[0])):
-            costs = pd.to_numeric(group[year], errors='coerce')
+        for year in sorted(year_cols, key=lambda y: int(y.split("_")[0])):
+            costs = pd.to_numeric(group[year], errors="coerce")
             if not costs.isna().any():
                 for idx, row in group.iterrows():
                     entry = row[["id", "option"]].to_dict()
-                    entry["cost_million"] = costs.loc[idx]
+                    entry["cost"] = costs.loc[idx]
                     entry["first_valid_year_col"] = year
                     valid_cost_rows.append(entry)
                 found = True
@@ -766,11 +807,15 @@ def _find_first_year_with_complete_costs(cost_table: pd.DataFrame, year_cols: li
         if not found:
             missing_full_year_transmissions.append(transmission)
     if missing_full_year_transmissions:
-        raise ValueError(f"No year found with all non-NA costs for transmissions: {missing_full_year_transmissions}")
+        raise ValueError(
+            f"No year found with all non-NA costs for transmissions: {missing_full_year_transmissions}"
+        )
     return pd.DataFrame(valid_cost_rows)
 
 
-def _log_unmatched_transmission_options(aug_table: pd.DataFrame, valid_costs_df: pd.DataFrame, merged_df: pd.DataFrame):
+def _log_unmatched_transmission_options(
+    aug_table: pd.DataFrame, valid_costs_df: pd.DataFrame, merged_df: pd.DataFrame
+):
     """
     Logs (id, option) pairs that were dropped from each side during the merge.
     """
@@ -782,6 +827,18 @@ def _log_unmatched_transmission_options(aug_table: pd.DataFrame, valid_costs_df:
     dropped_from_right = right_keys - merged_keys
 
     if dropped_from_left:
-        logging.info(f"Dropped options from augmentation table: {sorted(dropped_from_left)}")
+        logging.info(
+            f"Dropped options from augmentation table: {sorted(dropped_from_left)}"
+        )
     if dropped_from_right:
         logging.info(f"Dropped options from cost table: {sorted(dropped_from_right)}")
+
+
+def _sort_cols(table: pd.DataFrame, start_cols: list[str]) -> pd.DataFrame:
+    """
+    Reorder a pd.DataFrame's column using the fixed order provided in start_cols and
+    then sorting the remaining columns alphabetically.
+    """
+    remaining_cols = list(set(table.columns) - set(start_cols))
+    sorted_remaining_columns = sorted(remaining_cols)
+    return table.loc[:, start_cols + sorted_remaining_columns]

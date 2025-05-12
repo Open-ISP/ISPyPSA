@@ -10,8 +10,9 @@ from ispypsa.templater.energy_policy_targets import (
 )
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
-    _template_sub_regional_flow_paths,
+    _template_rez_transmission_costs,
     _template_sub_regional_flow_path_costs,
+    _template_sub_regional_flow_paths,
 )
 from ispypsa.templater.nodes import (
     _template_regions,
@@ -117,7 +118,7 @@ def create_ispypsa_inputs_template(
         )
 
         template["flow_path_expansion_costs"] = _template_sub_regional_flow_path_costs(
-            iasr_tables["flow_path_transfer_capability"], scenario
+            iasr_tables, scenario
         )
 
     elif regional_granularity == "nem_regions":
@@ -140,6 +141,10 @@ def create_ispypsa_inputs_template(
 
     template["renewable_energy_zones"] = _template_rez_build_limits(
         iasr_tables["initial_build_limits"]
+    )
+
+    template["rez_transmission_expansion_costs"] = _template_rez_transmission_costs(
+        iasr_tables, scenario
     )
 
     template["ecaa_generators"] = _template_ecaa_generators_static_properties(
