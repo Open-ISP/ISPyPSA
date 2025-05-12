@@ -229,12 +229,16 @@ def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(cols, axis=1)
 
 
-def _strip_all_text_after_numeric_value(series: pd.Index | pd.Series) -> pd.Index | pd.Series:
+def _strip_all_text_after_numeric_value(
+    series: pd.Index | pd.Series,
+) -> pd.Index | pd.Series:
     """
-    Removes all text after the first numeric value. 
+    Removes all text after the first numeric value.
 
     Numeric value can contain commas and one period.
     """
     if series.dtypes == "object":
-        series = series.str.replace(r"^([0-9\.\,+]+)\s+.*", r"\1", regex=True)
+        series = series.astype(str).str.replace(
+            r"^([0-9\.\,+]+)\s+.*", r"\1", regex=True
+        )
     return series
