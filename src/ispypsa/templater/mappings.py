@@ -339,45 +339,58 @@ _FLOW_PATH_AGUMENTATION_TABLES = [
     "flow_path_augmentation_options_" + fp for fp in _SUBREGION_FLOW_PATHS
 ]
 
-_REZ_AGUMENTATION_TABLES = [
+_REZ_CONNECTION_AGUMENTATION_TABLES = [
     "rez_augmentation_options_" + region for region in list(_NEM_REGION_IDS)
 ]
 
-_FLOW_PATH_COST_TABLES = [
-    "flow_path_costs_forecast_progressive_change_" + fp for fp in _SUBREGION_FLOW_PATHS
-] + [
-    "flow_path_costs_forecast_step_change_and_green_energy_exports_" + fp for fp in _SUBREGION_FLOW_PATHS
+_FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE = [
+    "flow_path_augmentation_costs_progressive_change_" + fp
+    for fp in _SUBREGION_FLOW_PATHS
 ]
 
-_REZ_COST_TABLES = [
-    "rez_costs_forecast_progressive_change_" + region for region in list(_NEM_REGION_IDS)
-] + [
-    "rez_costs_forecast_step_change_and_green_energy_exports_" + region for region in list(_NEM_REGION_IDS)
+_FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS = [
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_" + fp
+    for fp in _SUBREGION_FLOW_PATHS
 ]
+
+_FLOW_PATH_AUGMENTATION_COST_TABLES = (
+    _FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE
+    + _FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS
+)
+
+_REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE = [
+    "rez_augmentation_costs_progressive_change_" + region
+    for region in list(_NEM_REGION_IDS)
+]
+
+_REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS = [
+    "rez_augmentation_costs_step_change_and_green_energy_exports_" + region
+    for region in list(_NEM_REGION_IDS)
+]
+
+_REZ_AUGMENTATION_COST_TABLES = (
+    _REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE
+    + _REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS
+)
 
 _FLOW_PATH_AGUMENTATION_NAME_ADJUSTMENTS = {
     "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Forward direction": "transfer_increase_forward_direction_MW",
     "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction": "transfer_increase_reverse_direction_MW",
 }
 
-_REZ_COSTS_NAME_ADJUSTMENTS = {
-    "REZ / Constraint ID": "rez_constraint_id",
-    "Option": "option_name"
-}
-
 _PREPATORY_ACTIVITIES_TABLES = [
-    "flow_path_costs_forecast_step_change_and_green_energy_exports_preparatory_activities",
-    "flow_path_costs_forecast_progressive_change_preparatory_activities"
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_preparatory_activities",
+    "flow_path_augmentation_costs_progressive_change_preparatory_activities",
 ]
 
-_REZ_PREPATORY_ACTIVITIES_TABLES = [
-    "rez_costs_forecast_step_change_and_green_energy_exports_preparatory_activities",
-    "rez_costs_forecast_progressive_change_preparatory_activities"
+_REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES = [
+    "rez_augmentation_costs_step_change_and_green_energy_exports_preparatory_activities",
+    "rez_augmentation_costs_progressive_change_preparatory_activities",
 ]
 
 _ACTIONABLE_ISP_PROJECTS_TABLES = [
-    "flow_path_costs_forecast_step_change_and_green_energy_exports_actionable_isp_projects",
-    "flow_path_costs_forecast_progressive_change_actionable_isp_projects"
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_actionable_isp_projects",
+    "flow_path_augmentation_costs_progressive_change_actionable_isp_projects",
 ]
 
 _PREPATORY_ACTIVITIES_NAME_TO_OPTION_NAME = {
@@ -388,7 +401,7 @@ _PREPATORY_ACTIVITIES_NAME_TO_OPTION_NAME = {
     "330kV QNI double circuit (NSW works)": "NNSW–SQ Option 2",
     "330kV QNI double circuit (QLD works)": "NNSW–SQ Option 2",
     "CQ-GG": "CQ-GG Option 1",
-    "Sydney Southern Ring": "CNSW-SNW Option 2"
+    "Sydney Southern Ring": "CNSW-SNW Option 2",
 }
 
 _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME = {
@@ -401,7 +414,7 @@ _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME = {
     "South West Victoria REZ Option 2A": ["SWV1", "Option 2A"],
     "South West Victoria REZ Option 2B": ["SWV1", "Option 2B"],
     "South West Victoria REZ Option 3A": ["SWV1", "Option 3A"],
-    "South West Victoria REZ Option 3B": ["SWV1", "Option 3B"]
+    "South West Victoria REZ Option 3B": ["SWV1", "Option 3B"],
 }
 
 _PREPATORY_ACTIVITIES_OPTION_NAME_TO_FLOW_PATH = {
@@ -413,66 +426,72 @@ _PREPATORY_ACTIVITIES_OPTION_NAME_TO_FLOW_PATH = {
 }
 
 _ACTIONABLE_ISP_PROJECTS_NAME_TO_OPTION_NAME = {
-    "Humelink": "SNSW-CNSW Option 1\n(HumeLink)",
+    "Humelink": "SNSW-CNSW Option 1 (HumeLink)",
     "VNI West": "VIC-SNSW Option 1 - VNI West (Kerang)",
-    "Project Marinus Stage 1": "TAS-VIC Option 1\n(Project Marinus Stage 1)",
-    "Project Marinus Stage 2": "TAS-VIC Option 2\n(Project Marinus Stage 2)",
+    "Project Marinus Stage 1": "TAS-VIC Option 1 (Project Marinus Stage 1)",
+    "Project Marinus Stage 2": "TAS-VIC Option 2 (Project Marinus Stage 2)",
 }
 
 _ACTIONABLE_ISP_PROJECTS_OPTION_NAME_TO_FLOW_PATH = {
-    "SNSW-CNSW Option 1\n(HumeLink)": "SNSW-CNSW",
+    "SNSW-CNSW Option 1 (HumeLink)": "SNSW-CNSW",
     "VIC-SNSW Option 1 - VNI West (Kerang)": "VIC-SNSW",
-    "TAS-VIC Option 1\n(Project Marinus Stage 1)": "TAS-VIC",
-    "TAS-VIC Option 2\n(Project Marinus Stage 2)": "TAS-VIC",
+    "TAS-VIC Option 1 (Project Marinus Stage 1)": "TAS-VIC",
+    "TAS-VIC Option 2 (Project Marinus Stage 2)": "TAS-VIC",
 }
 
 # Transmission cost processing configurations
-FLOW_PATH_CONFIG = {
+_FLOW_PATH_CONFIG = {
     "transmission_type": "flow_path",
-    "in_comming_column_mappings": {
+    "in_coming_column_mappings": {
         "Flow path": "id",
-        "Option name": "option",
+        "Flow Path": "id",
+        "Option Name": "option",
         "Option": "option",
         "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Forward direction": "forward_capacity_increase",
-        "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction": "reverse_capacity_increase"
+        "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction": "reverse_capacity_increase",
     },
-    "out_going_column_mappings":  {
+    "out_going_column_mappings": {
         "id": "flow_path",
+        "nominal_capacity_increase": "additional_network_capacity_mw",
     },
     "table_names": {
         "augmentation": _FLOW_PATH_AGUMENTATION_TABLES,
         "cost": {
-            "progressive_change": [f"flow_path_costs_forecast_progressive_change_{fp}" for fp in _SUBREGION_FLOW_PATHS],
-            "step_change_and_green_energy_exports": [f"flow_path_costs_forecast_step_change_and_green_energy_exports_{fp}" for fp in _SUBREGION_FLOW_PATHS]
+            "progressive_change": _FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE,
+            "step_change_and_green_energy_exports": _FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS,
         },
         "prep_activities": _PREPATORY_ACTIVITIES_TABLES,
-        "actionable_projects": _ACTIONABLE_ISP_PROJECTS_TABLES
+        "actionable_projects": _ACTIONABLE_ISP_PROJECTS_TABLES,
     },
     "mappings": {
         "prep_activities_name_to_option": _PREPATORY_ACTIVITIES_NAME_TO_OPTION_NAME,
         "option_to_id": _PREPATORY_ACTIVITIES_OPTION_NAME_TO_FLOW_PATH,
-        "actionable_name_to_option": _ACTIONABLE_ISP_PROJECTS_NAME_TO_OPTION_NAME, 
-        "actionable_option_to_id": _ACTIONABLE_ISP_PROJECTS_OPTION_NAME_TO_FLOW_PATH
-    }
+        "actionable_name_to_option": _ACTIONABLE_ISP_PROJECTS_NAME_TO_OPTION_NAME,
+        "actionable_option_to_id": _ACTIONABLE_ISP_PROJECTS_OPTION_NAME_TO_FLOW_PATH,
+    },
 }
 
-REZ_CONFIG = {
+_REZ_CONFIG = {
     "transmission_type": "rez",
-    "column_mappings": {
+    "in_coming_column_mappings": {
+        "REZ constraint ID": "id",
+        "REZ / Constraint ID": "id",
+        "Option": "option",
+        "REZ": "rez",
+        "REZ Name": "rez",
+        "Additional network capacity (MW)": "nominal_capacity_increase",
+    },
+    "out_going_column_mappings": {
         "id": "rez_constraint_id",
-        "option": "option_name",
-        "capacity": "additional_network_capacity_mw"
+        "nominal_capacity_increase": "additional_network_capacity_mw",
     },
     "table_names": {
-        "augmentation": _REZ_AGUMENTATION_TABLES,
+        "augmentation": _REZ_CONNECTION_AGUMENTATION_TABLES,
         "cost": {
-            "progressive_change": [f"rez_costs_forecast_progressive_change_{region}" for region in list(_NEM_REGION_IDS)],
-            "step_change_and_green_energy_exports": [f"rez_costs_forecast_step_change_and_green_energy_exports_{region}" for region in list(_NEM_REGION_IDS)]
+            "progressive_change": _REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE,
+            "step_change_and_green_energy_exports": _REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS,
         },
-        "prep_activities": _REZ_PREPATORY_ACTIVITIES_TABLES
+        "prep_activities": _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES,
     },
-    "mappings": {
-        "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME
-    },
-    "special_column_mappings": _REZ_COSTS_NAME_ADJUSTMENTS
+    "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
 }
