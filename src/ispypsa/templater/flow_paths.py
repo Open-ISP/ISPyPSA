@@ -39,7 +39,7 @@ def _template_sub_regional_flow_paths(
     # Only keep forward_direction_mw_summer_typical limit col as that all that's
     # being used for now.
     cols = [
-        "flow_path_name",
+        "flow_path",
         "node_from",
         "node_to",
         "carrier",
@@ -51,7 +51,7 @@ def _template_sub_regional_flow_paths(
         sub_regional_capabilities,
         transmission_expansion_costs,
         how="left",
-        on="flow_path_name",
+        on="flow_path",
     )
 
     return sub_regional_capabilities
@@ -78,7 +78,7 @@ def _template_regional_interconnectors(
     # Only keep forward_direction_mw_summer_typical limit col as that all that's
     # being used for now.
     cols = [
-        "flow_path_name",
+        "flow_path",
         "node_from",
         "node_to",
         "carrier",
@@ -113,17 +113,14 @@ def _get_flow_path_name_from_to_carrier(
     from_to_desc["carrier"] = from_to_desc.apply(
         lambda row: "DC"
         if any(
-            [
-                dc_line in row["descriptor"]
-                for dc_line in _HVDC_FLOW_PATHS["flow_path_name"]
-            ]
+            [dc_line in row["descriptor"] for dc_line in _HVDC_FLOW_PATHS["flow_path"]]
         )
         # manually detect Basslink since the name is not in the descriptor
         or (row["node_from"] == "TAS" and row["node_to"] == "VIC")
         else "AC",
         axis=1,
     )
-    from_to_desc["flow_path_name"] = from_to_desc.apply(
+    from_to_desc["flow_path"] = from_to_desc.apply(
         lambda row: _determine_flow_path_name(
             row.node_from,
             row.node_to,
@@ -156,7 +153,7 @@ def _determine_flow_path_name(
         name = _HVDC_FLOW_PATHS.loc[
             (_HVDC_FLOW_PATHS.node_from == node_from)
             & (_HVDC_FLOW_PATHS.node_to == node_to),
-            "flow_path_name",
+            "flow_path",
         ].iat[0]
     elif descriptor and (
         match := re.search(
