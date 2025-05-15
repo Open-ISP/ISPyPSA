@@ -5,8 +5,8 @@ import pandas as pd
 from ispypsa.templater import load_manually_extracted_tables
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
-    _template_sub_regional_flow_paths,
     _template_sub_regional_flow_path_costs,
+    _template_sub_regional_flow_paths,
 )
 
 
@@ -39,7 +39,7 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path_name
+            if name in flow_paths_template.flow_path
         ]
     )
     assert len(flow_paths_template) == 6
@@ -76,7 +76,7 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path_name
+            if name in flow_paths_template.flow_path
         ]
     )
     assert len(flow_paths_template) == 14

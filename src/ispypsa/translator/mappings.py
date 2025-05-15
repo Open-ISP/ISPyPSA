@@ -7,7 +7,7 @@ _GENERATOR_ATTRIBUTES = {
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
 _LINE_ATTRIBUTES = {
-    "flow_path_name": "name",
+    "flow_path": "name",
     "node_from": "bus0",
     "node_to": "bus1",
     "forward_direction_mw_summer_typical": "s_nom",

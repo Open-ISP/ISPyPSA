@@ -42,7 +42,7 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
     {
         "node_from": ["NNSW", "VIC", "TAS"],
         "node_to": ["SQ", "CSA", "VIC"],
-        "flow_path_name": ["Terranora", "Murraylink", "Basslink"],
+        "flow_path": ["Terranora", "Murraylink", "Basslink"],
     }
 )
 
