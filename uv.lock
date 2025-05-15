@@ -974,7 +974,7 @@ wheels = [
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.5.0"
+version = "2.6.0"
 source = { editable = "../isp-workbook-parser" }
 dependencies = [
     { name = "openpyxl" },
