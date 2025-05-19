@@ -215,14 +215,7 @@ def create_pypsa_friendly_inputs(
         )
 
     if config.network.nodes.regional_granularity != "single_region":
-        lines.append(
-            _translate_flow_paths_to_lines(
-                ispypsa_tables["flow_paths"],
-                config.network.transmission_expansion,
-                config.wacc,
-                config.network.annuitisation_lifetime,
-            )
-        )
+        lines.append(_translate_flow_paths_to_lines(ispypsa_tables, config))
 
     pypsa_inputs["buses"] = pd.concat(buses)
 

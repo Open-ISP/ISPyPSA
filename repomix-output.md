@@ -1,0 +1,12035 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+# File Summary
+
+## Purpose
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+## File Format
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A header with the file path (## File: path/to/file)
+  b. The full contents of the file in a code block
+
+## Usage Guidelines
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+## Notes
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+# Directory Structure
+```
+.github/workflows/cicd.yml
+.gitignore
+.pre-commit-config.yaml
+.python-version
+CONDUCT.md
+CONTRIBUTING.md
+demo_flow_path_costs.py
+example_workflow.py
+ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml
+package.json
+pyproject.toml
+README.md
+repomix.config.json
+src/ispypsa/__init__.py
+src/ispypsa/config/__init__.py
+src/ispypsa/config/load_config.py
+src/ispypsa/config/validators.py
+src/ispypsa/data_fetch/__init__.py
+src/ispypsa/data_fetch/csv_read_write.py
+src/ispypsa/iasr_table_caching/__init__.py
+src/ispypsa/iasr_table_caching/local_cache.py
+src/ispypsa/logging.py
+src/ispypsa/model/__init__.py
+src/ispypsa/model/build.py
+src/ispypsa/model/buses.py
+src/ispypsa/model/carriers.py
+src/ispypsa/model/custom_constraints.py
+src/ispypsa/model/generators.py
+src/ispypsa/model/initialise.py
+src/ispypsa/model/investment_period_weights.py
+src/ispypsa/model/lines.py
+src/ispypsa/model/save.py
+src/ispypsa/model/update.py
+src/ispypsa/templater/__init__.py
+src/ispypsa/templater/create_template.py
+src/ispypsa/templater/dynamic_generator_properties.py
+src/ispypsa/templater/energy_policy_targets.py
+src/ispypsa/templater/flow_paths.py
+src/ispypsa/templater/helpers.py
+src/ispypsa/templater/lists.py
+src/ispypsa/templater/manual_tables.py
+src/ispypsa/templater/manually_extracted_template_tables/6.0/policy_generator_types.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_expansion_costs.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_lhs.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_rhs.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_expansion_costs.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_lhs.csv
+src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_rhs.csv
+src/ispypsa/templater/mappings.py
+src/ispypsa/templater/nodes.py
+src/ispypsa/templater/renewable_energy_zones.py
+src/ispypsa/templater/static_ecaa_generator_properties.py
+src/ispypsa/templater/static_new_generator_properties.py
+src/ispypsa/translator/__init__.py
+src/ispypsa/translator/buses.py
+src/ispypsa/translator/create_pypsa_friendly_inputs.py
+src/ispypsa/translator/custom_constraints.py
+src/ispypsa/translator/generators.py
+src/ispypsa/translator/helpers.py
+src/ispypsa/translator/lines.py
+src/ispypsa/translator/mappings.py
+src/ispypsa/translator/renewable_energy_zones.py
+src/ispypsa/translator/snapshots.py
+src/ispypsa/translator/temporal_filters.py
+src/ispypsa/translator/time_series_checker.py
+tests/conftest.py
+tests/test_config/test_pydantic_model_config.py
+tests/test_model/test_custom_constraints.py
+tests/test_model/test_initialise.py
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/buses.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_generators.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_lhs.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_rhs.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/generators.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/investment_period_weights.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/lines.csv
+tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/snapshots.csv
+tests/test_model/test_updating_time_series.py
+tests/test_templater/test_create_ispypsa_inputs_template.py
+tests/test_templater/test_energy_policy_targets.py
+tests/test_templater/test_flow_path_costs.py
+tests/test_templater/test_flow_paths.py
+tests/test_templater/test_fuzzy_matching.py
+tests/test_templater/test_generator_dynamic_properties.py
+tests/test_templater/test_generator_static_properties.py
+tests/test_templater/test_helpers.py
+tests/test_templater/test_nodes.py
+tests/test_templater/test_renewable_energy_zones.py
+tests/test_templater/test_rez_transmission_costs.py
+tests/test_temporal_resolution_reduction/test_time_series_representative_weeks_filter.py
+tests/test_traces/demand/.keep
+tests/test_traces/solar/.keep
+tests/test_traces/wind/.keep
+tests/test_translator/ispypsa_config.yaml
+tests/test_translator/test_buses.py
+tests/test_translator/test_create_pypsa_friendly_inputs.py
+tests/test_translator/test_ecaa_generators.py
+tests/test_translator/test_investment_period_weighting.py
+tests/test_translator/test_lines.py
+tests/test_translator/test_snapshot.py
+tests/test_translator/test_time_series_checker.py
+tests/test_translator/test_translate_custom_constraints.py
+tests/test_translator/test_unserved_energy_generators.py
+```
+
+# Files
+
+## File: .github/workflows/cicd.yml
+````yaml
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install uv with cache
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      # Sync dependencies
+      - name: Sync dependencies
+        run: uv sync
+      # Run tests without updating uv.lock
+      - name: Run tests
+        run: uv run --frozen pytest
+      # Code coverage to codecov.io
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: tests/coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+  # Publishes to PyPi if tests are passed and release is created
+  publish:
+    if: github.event_name == 'release' && github.event.action == 'created'
+    needs: test
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/isp-workbook-parser/
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      # Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install uv with cache
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      # Sync dependencies
+      - name: Sync dependencies
+        run: uv sync
+      # Build
+      - name: Build
+        run: uv build
+      # Publish to PyPI
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+````
+
+## File: .python-version
+````
+3.12.3
+````
+
+## File: CONDUCT.md
+````markdown
+# Code of Conduct
+
+## Our Pledge
+
+In the interest of fostering an open and welcoming environment, we as contributors and maintainers pledge to making participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
+
+## Our Standards
+
+Examples of behavior that contributes to creating a positive environment include:
+
+* Using welcoming and inclusive language
+* Being respectful of differing viewpoints and experiences
+* Gracefully accepting constructive criticism
+* Focusing on what is best for the community
+* Showing empathy towards other community members
+
+Examples of unacceptable behavior by participants include:
+
+* The use of sexualized language or imagery and unwelcome sexual attention or advances
+* Trolling, insulting/derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or electronic address, without explicit permission
+* Other conduct which could reasonably be considered inappropriate in a professional setting
+
+## Our Responsibilities
+
+Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
+
+Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct, or to ban temporarily or permanently any contributor for other behaviors that they deem inappropriate, threatening, offensive, or harmful.
+
+## Scope
+
+This Code of Conduct applies both within project spaces and in public spaces when an individual is representing the project or its community. Examples of representing a project or community include using an official project e-mail address, posting via an official social media account, or acting as an appointed representative at an online or offline event. Representation of a project may be further defined and clarified by project maintainers.
+
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team. The project team will review and investigate all complaints, and will respond in a way that it deems appropriate to the circumstances. The project team is obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.
+
+Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
+
+## Attribution
+
+This Code of Conduct is adapted from the [Contributor Covenant homepage](http://contributor-covenant.org/version/1/4), version 1.4.
+````
+
+## File: CONTRIBUTING.md
+````markdown
+# Contributing
+
+Contributions are welcome, and they are greatly appreciated! Every little bit
+helps, and credit will always be given.
+
+## Types of Contributions
+
+### Report Bugs
+
+If you are reporting a bug, please include:
+
+* Your operating system name and version.
+* Any details about your local setup that might be helpful in troubleshooting.
+* Detailed steps to reproduce the bug, preferably with a simple code example that reproduces the bug.
+
+### Fix Bugs
+
+Look through the GitHub issues for bugs. Anything tagged with "bug" and "help
+wanted" is open to whoever wants to implement it.
+
+### Implement Features
+
+Look through the GitHub issues for features. Anything tagged with "enhancement"
+and "help wanted" is open to whoever wants to implement it.
+
+### Write Documentation
+
+You can never have enough documentation! Please feel free to contribute to any
+part of the documentation, such as the official docs, docstrings, or even
+on the web in blog posts, articles, and such.
+
+### Submit Feedback
+
+If you are proposing a feature:
+
+* Explain in detail how it would work.
+* Keep the scope as narrow as possible, to make it easier to implement.
+* Remember that this is a volunteer-driven project, and that contributions
+  are welcome :)
+
+## Get Started!
+
+Ready to contribute? Here's how to set up `ispypsa` for local development.
+
+1. Download a copy of `ispypsa` locally.
+2. Install [`uv`](https://github.com/astral-sh/uv).
+3. Install `ispypsa` using `uv` by running `uv sync` in the project directory.
+4. Install the `pre-commit` git hook scripts that `ispypsa` uses by running the following code using `uv`:
+
+      ```console
+      $ uv run pre-commit install
+      ```
+
+5. Use `git` (or similar) to create a branch for local development and make your changes:
+
+    ```console
+    $ git checkout -b name-of-your-bugfix-or-feature
+    ```
+
+6. When you're done making changes, check that your changes conform to any code formatting requirements (we use [`ruff`](https://github.com/astral-sh/ruff)) and pass any tests.
+    - `pre-commit` should run `ruff`, but if you wish to do so manually, run the following code to use `ruff` as a `uv` [tool](https://docs.astral.sh/uv/concepts/tools/):
+
+      ```bash
+      uvx ruff check --fix
+      uvx ruff format
+      ```
+
+    - Run tests by running `uv run --frozen pytest`
+
+7. Commit your changes and open a pull request.
+
+## Pull Request Guidelines
+
+Before you submit a pull request, check that it meets these guidelines:
+
+1. The pull request should include additional tests if appropriate.
+2. If the pull request adds functionality, the docstrings/README/docs should be updated.
+3. The pull request should work for all currently supported operating systems and versions of Python.
+
+## Code of Conduct
+
+Please note that the `ispypsa` project is released with a
+[Code of Conduct](CONDUCT.md). By contributing to this project you agree to abide by its terms.
+````
+
+## File: package.json
+````json
+{}
+````
+
+## File: README.md
+````markdown
+# ISPyPSA
+[![Continuous Integration and Deployment](https://github.com/Open-ISP/ISPyPSA/actions/workflows/cicd.yml/badge.svg)](https://github.com/Open-ISP/ISPyPSA/actions/workflows/cicd.yml)
+[![codecov](https://codecov.io/gh/Open-ISP/ISPyPSA/graph/badge.svg?token=rcEXuQgfOJ)](https://codecov.io/gh/Open-ISP/ISPyPSA)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/Open-ISP/ISPyPSA/main.svg)](https://results.pre-commit.ci/latest/github/Open-ISP/ISPyPSA/main)
+[![UV](https://camo.githubusercontent.com/4ab8b0cb96c66d58f1763826bbaa0002c7e4aea0c91721bdda3395b986fe30f2/68747470733a2f2f696d672e736869656c64732e696f2f656e64706f696e743f75726c3d68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f61737472616c2d73682f75762f6d61696e2f6173736574732f62616467652f76302e6a736f6e)](https://github.com/astral-sh/uv)
+
+An open-source capacity expansion modelling tool based on the methodology and assumptions used by the Australian Energy Market Operator (AEMO) to produce their Integrated System Plan.
+
+ISPyPSA leverages the capabilities of [PyPSA (Python for Power System Analysis)](https://github.com/pypsa/pypsa), an open source toolbox for simulating and optimising modern power and energy system.
+
+## Table of contents
+
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Examples
+
+## Contributing
+
+Interested in contributing to the source code or adding table configurations? Check out the [contributing instructions](./CONTRIBUTING.md), which also includes steps to install `ispypsa` for development.
+
+Please note that this project is released with a [Code of Conduct](./CONDUCT.md). By contributing to this project, you agree to abide by its terms.
+
+## License
+
+`ispypsa` was created as a part of the [OpenISP project](https://github.com/Open-ISP). It is licensed under the terms of [GNU GPL-3.0-or-later](LICENSE) licences.
+````
+
+## File: repomix.config.json
+````json
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 52428800
+  },
+  "output": {
+    "filePath": "repomix-output.md",
+    "style": "markdown",
+    "parsableStyle": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "compress": false,
+    "topFilesLength": 10,
+    "showLineNumbers": false,
+    "copyToClipboard": false,
+    "instruction-file-path": "instructions.md",
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100,
+      "includeDiffs": false
+    }
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": []
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}
+````
+
+## File: src/ispypsa/config/load_config.py
+````python
+from pathlib import Path
+
+import yaml
+
+from ispypsa.config.validators import ModelConfig
+
+
+def load_config(config_path: str | Path) -> ModelConfig:
+    """
+    Load and validate configuration from a YAML file.
+
+    Args:
+        config_path: Path to the YAML configuration file
+
+    Returns:
+        ModelConfig: Validated configuration object
+
+    Raises:
+        ValidationError: If the configuration is invalid
+        FileNotFoundError: If the config file doesn't exist
+        yaml.YAMLError: If the YAML is malformed
+    """
+    with open(config_path) as f:
+        config_dict = yaml.safe_load(f)
+
+    return ModelConfig(**config_dict)
+````
+
+## File: src/ispypsa/logging.py
+````python
+import logging
+import sys
+
+
+def configure_dependency_logger(name: str, level: int = logging.WARNING) -> None:
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.propagate = True
+    logger.setLevel(level)
+
+
+def configure_logging(
+    console: bool = True,
+    console_level: int = logging.WARNING,
+    file: bool = True,
+    file_level: int = logging.INFO,
+    log_file: str = "ISPyPSA.log",
+) -> None:
+    """Configures ISPyPSA logging
+
+    Args:
+        console: Whether to log to the console. Defaults to True.
+        console_level: Level of the console logging. Defaults to logging.WARNING.
+        file: Whether to log to a log file. Defaults to True.
+        file_level: Level of the file logging. Defaults to logging.INFO.
+        log_file: Name of the logging file. Defaults to "ISPyPSA.log".
+    """
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    handlers = []
+    if console:
+        console_handler = logging.StreamHandler(stream=sys.stdout)
+        console_handler.setLevel(console_level)
+        console_formatter = logging.Formatter("%(levelname)s: %(message)s")
+        console_handler.setFormatter(console_formatter)
+        handlers.append(console_handler)
+    if file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(file_level)
+        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
+        file_handler.setFormatter(file_formatter)
+        handlers.append(file_handler)
+    if not handlers:
+        handlers.append(logging.NullHandler())
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(levelname)s: %(message)s",
+        handlers=handlers,
+    )
+    configure_dependency_logger("pypsa", logging.INFO)
+````
+
+## File: src/ispypsa/templater/lists.py
+````python
+_ECAA_GENERATOR_TYPES = [
+    "existing_generators",
+    "committed_generators",
+    "anticipated_projects",
+    "additional_projects",
+]
+
+_NEW_GENERATOR_TYPES = ["new_entrants"]
+
+_ALL_GENERATOR_TYPES = _ECAA_GENERATOR_TYPES + _NEW_GENERATOR_TYPES
+
+_ALL_GENERATOR_STORAGE_TYPES = _ALL_GENERATOR_TYPES + [
+    "existing_committed_and_anticipated_batteries"
+]
+
+_CONDENSED_GENERATOR_TYPES = [
+    "existing_committed_anticipated_additional_generators",
+    "new_entrants",
+]
+
+_ISP_SCENARIOS = ["Progressive Change", "Step Change", "Green Energy Exports"]
+````
+
+## File: tests/test_traces/demand/.keep
+````
+# This dummy file exists to ensure that the parent directory can be committed
+````
+
+## File: tests/test_traces/solar/.keep
+````
+# This dummy file exists to ensure that the parent directory can be committed
+````
+
+## File: tests/test_traces/wind/.keep
+````
+# This dummy file exists to ensure that the parent directory can be committed
+````
+
+## File: .pre-commit-config.yaml
+````yaml
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  -   id: trailing-whitespace
+  -   id: end-of-file-fixer
+  -   id: check-yaml
+  -   id: check-added-large-files
+      exclude: ^uv.lock$
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.9.4
+  hooks:
+    # Run the linter.
+    - id: ruff
+      args: [ --select=I, --fix ]
+    # Run the formatter.
+    - id: ruff-format
+````
+
+## File: demo_flow_path_costs.py
+````python
+"""
+Demo script to test the flow path cost templating function.
+"""
+from pathlib import Path
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater.flow_paths import _template_sub_regional_flow_path_costs
+from ispypsa.logging import configure_logging
+
+
+configure_logging()
+
+def main():
+    """Run the demo."""
+    # Define root folder for data
+    root_folder = Path("ispypsa_runs")
+    workbook_cache_dir = root_folder / "workbook_table_cache"
+
+    print("Loading test data...")
+    iasr_tables = read_csvs(workbook_cache_dir)
+    print(f"Loaded {len(iasr_tables)} tables")
+
+    # Process each scenario
+    scenarios = ["Step Change", "Progressive Change", "Green Energy Exports"]
+
+    for scenario in scenarios:
+        results = _template_sub_regional_flow_path_costs(iasr_tables, scenario)
+        print(f"Found {len(results['flow_path'].unique())} flow paths")
+        print("\nSample results:")
+        print(results)
+
+        # Save results to CSV
+        scenario_name = scenario.lower().replace(" ", "_")
+        output_file = Path(f"flow_path_costs_{scenario_name}.csv")
+        results.to_csv(output_file, index=False)
+        print(f"\nResults saved to: {output_file}")
+
+
+if __name__ == "__main__":
+    main()
+````
+
+## File: src/ispypsa/data_fetch/__init__.py
+````python
+from ispypsa.data_fetch.csv_read_write import read_csvs, write_csvs
+
+__all__ = ["read_csvs", "write_csvs"]
+````
+
+## File: src/ispypsa/iasr_table_caching/__init__.py
+````python
+from ispypsa.iasr_table_caching.local_cache import build_local_cache, list_cache_files
+
+__all__ = ["build_local_cache", "list_cache_files"]
+````
+
+## File: src/ispypsa/model/investment_period_weights.py
+````python
+import pandas as pd
+import pypsa
+
+
+def _add_investment_period_weights(
+    network: pypsa.Network, investment_period_weights: pd.DataFrame
+) -> None:
+    """Adds investment period weights defined in a pypsa-friendly `pd.DataFrame` to the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        investment_period_weights: `pd.DataFrame` specifying the
+            investment period weights with columns 'period', "years" and 'objective'.
+            Where "period" is the start years of the investment periods, "years" is the
+            length of each investment period, and "objective" is the relative weight of
+            the objective function in each investment period.
+
+    Returns: None
+    """
+    investment_period_weights = investment_period_weights.set_index("period")
+    network.investment_period_weightings = investment_period_weights
+````
+
+## File: src/ispypsa/model/save.py
+````python
+from pathlib import Path
+
+import pypsa
+
+
+def save_results(network: pypsa.Network, save_directory: Path, save_name: str) -> None:
+    """Save the optimised PyPSA network as a hdf5 file."""
+    network.export_to_hdf5(Path(save_directory, f"{save_name}.hdf5"))
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_expansion_costs.csv
+````
+term_id,indicative_transmission_expansion_cost_$/mw
+NQ2-EXPANSION,430000
+SQ1-EXPANSION,490000
+SW1-EXPANSION,630000
+MN1-EXPANSION,320000
+MN1 North-EXPANSION,1430000
+NSA1-EXPANSION,220000
+NTE1-EXPANSION,340000
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_lhs.csv
+````
+constraint_id,term_type,term_id,coefficient
+NQ2,line_flow,CQ-NQ,-1
+NQ2,line_flow,Q4-CQ,1
+NQ2,line_flow,Q5-CQ,1
+NQ2,generator_capacity,NQ2-EXPANSION,-1
+SQ1,line_flow,SQ-CQ,-0.5
+SQ1,line_flow,Q7-SQ,1
+SQ1,generator_capacity,SQ1-EXPANSION,-1
+SWV1,line_flow,Heywood,-1
+SWV1,line_flow,V4-VIC,1
+SWV1,line_flow,V8-VIC,1
+SWV1,generator_capacity,SW1-EXPANSION,-1
+MN1,line_flow,S3-CSA,1
+MN1,line_flow,S4-CSA,0.5
+MN1,line_flow,S5-CSA,1
+MN1,line_flow,S6-CSA,1
+MN1,line_flow,S7-CSA,1
+MN1,line_flow,S8-CSA,1
+MN1,line_flow,S9-CSA,1
+MN1,load_consumption,CSA Export Electrolyser,-1
+MN1,generator_capacity,MN1-EXPANSION,-1
+MN1 North,line_flow,S3-CSA,1
+MN1 North,line_flow,S4-CSA,-0.5
+MN1 North,line_flow,S5-CSA,-1
+MN1 North,line_flow,S6-CSA,-1
+MN1 North,line_flow,S7-CSA,-1
+MN1 North,line_flow,S8-CSA,-1
+MN1 North,line_flow,S9-CSA,-1
+MN1 North,load_consumption,CSA Export Electrolyser,1
+MN1 North,generator_capacity,MN1 North-EXPANSION,-1
+NSA1,line_flow,S5-CSA,0.5
+NSA1,line_flow,S8-CSA,1
+NSA1,line_flow,S9-CSA,1
+NSA1,load_consumption,CSA Export Electrolyser,-1
+NSA1,generator_capacity,NSA1-EXPANSION,-1
+NSA1 North,line_flow,S5-CSA,-0.05
+NSA1 North,line_flow,S8-CSA,-1
+NSA1 North,line_flow,S9-CSA,-1
+NSA1 North,load_consumption,CSA Export Electrolyser,1
+NSA1 North,generator_capacity,NSA1-EXPANSION,-1
+NET1,line_flow,T1-TAS,1
+NET1,line_flow,T4-TAS,1
+NET1,generator_capacity,NTE1-EXPANSION,-1
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_group_constraints_rhs.csv
+````
+constraint_id,summer_peak,summer_typical,winter_reference
+NQ2,2500,2500,2750
+SQ1,1400,1400,1
+SWV1,1850,1850,1850
+MN1,2000,2000,2000
+MN1 North,800,800,800
+NSA1,1125,1125,1125
+NSA1 North,350,350,350
+NET1,1600,1600,1600
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_expansion_costs.csv
+````
+term_id,indicative_transmission_expansion_cost_$/mw
+SEVIC1-EXPANSION,150000
+SWQLD1-EXPANSION,60000
+S1-TBMO-EXPANSION,280000
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_rhs.csv
+````
+constraint_id,summer_peak,summer_typical,winter_reference
+SEVIC1,6000,6000,6000
+SWQLD1,5300,5300,5300
+S1-TBMO,350,350,350
+````
+
+## File: src/ispypsa/translator/time_series_checker.py
+````python
+import pandas as pd
+
+
+def _check_time_series(
+    time_series: pd.Series,
+    expected_time_series: pd.Series,
+    process_name: str,
+    table_name: str,
+):
+    """Compares a Datetime series against an expected Datetime series
+    and raises errors if the two series don't match.
+
+    Args:
+        time_series: pd.Series of type Datetime
+        expected_time_series: pd.Series of type Datetime
+        process_name: str, type of data being checked by higher level process
+        table_name: str, name of table that time_series comes from
+
+    Returns: None
+
+    Raises: ValueError if series don't match
+    """
+    # Check datetime units
+    time_unit = str(time_series.dtype)
+    expected_unit = str(expected_time_series.dtype)
+    if time_unit != expected_unit:
+        raise ValueError(
+            f"When processing {process_name}, time series for {table_name} had incorrect units. "
+            f"expected: {expected_unit}, got: {time_unit}"
+        )
+
+    extra = set(time_series) - set(expected_time_series)
+    if extra:
+        raise ValueError(
+            f"When processing {process_name}, unexpected time series values where found in {table_name}: {extra}"
+        )
+
+    missing = set(expected_time_series) - set(time_series)
+    if missing:
+        raise ValueError(
+            f"When processing {process_name}, expected time series values where missing from {table_name}: {missing}"
+        )
+
+    # Check if the order is different
+    if not time_series.equals(expected_time_series):
+        # Find first difference in order
+        for i, (val_a, val_b) in enumerate(zip(time_series, expected_time_series)):
+            if val_a != val_b:
+                raise ValueError(
+                    f"When processing {process_name}, time series for {table_name} did not have the expect order. Series differ in order at position {i}: "
+                    f"got={val_a}, expected={val_b}"
+                )
+````
+
+## File: tests/conftest.py
+````python
+from pathlib import Path
+import io
+
+import pandas as pd
+import pytest
+
+
+@pytest.fixture(scope="module")
+def workbook_table_cache_test_path():
+    return Path("tests", "test_workbook_table_cache")
+
+
+@pytest.fixture
+def csv_str_to_df():
+    def func(csv_str, **kwargs):
+        """Helper function to convert a CSV string to a DataFrame."""
+        # Remove spaces and tabs that have been included for readability.
+        csv_str = csv_str.replace(" ", "").replace("\t", "")
+        return pd.read_csv(io.StringIO(csv_str), **kwargs)
+    return func
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/buses.csv
+````
+name
+bus_one
+bus_two
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_rhs.csv
+````
+,constraint_name,rhs
+0,con_one,500
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/investment_period_weights.csv
+````
+period,years,objective
+2025,1,1.0
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/lines.csv
+````
+name,bus0,bus1,s_nom,s_nom_extendable,capital_cost
+line_one,bus_one,bus_two,1000.0,False,0.0
+````
+
+## File: tests/test_model/test_updating_time_series.py
+````python
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ispypsa.model import build_pypsa_network, update_network_timeseries
+
+
+def test_expand_then_operate():
+    """
+    Test expanding the network with two snapshots per year for two one year investment
+    periods and then operating the two years with five snapshot in each year.
+
+    The example uses:
+    - A single bus
+    - Three generators: solar, wind, and gas (fixed capacity)
+
+    CAPACITY EXPANSION PHASE:
+    - Two snapshots per investment period: one normal, one peak
+    - Normal demand: 100MW in 2025, 120MW in 2026
+    - Peak demand: 150MW in 2025, 180MW in 2026
+    - Generator parameters:
+        - Solar:
+            - Capital cost 0.4 $/MW (very low to force build to displace gas)
+            - marginal cost 0 $/MWh
+            - availability 0.5 (50%) in normal, 0 in peak
+            - Limited to 100MW max capacity
+        - Wind:
+            - Capital cost 0.5 $/MW (very low to force build to displace gas, but higher
+              than solar)
+            - marginal cost 0 $/MWh
+            - availability 0.4 (40%) in normal 0 in peak
+            - Limited to 200MW max capacity
+        - Gas:
+            - Fixed capacity of 200MW (not extendable)
+            - marginal cost 100 $/MWh
+
+    Expected capacity expansion results:
+    - Solar: 100MW built (provides 50MW at 50% availability)
+    - Wind: 175MW built (provides 70MW at 40% availability)
+    - Gas: 200MW (fixed)
+
+    OPERATIONAL PHASE:
+    - Five snapshots per investment period with simplified patterns
+    - Solar availability: [0, 0, 1, 0, 0] (only available at noon)
+    - Wind availability: [1, 0, 0, 0, 1] (only available at night)
+    - Demand: Flat 100MW in 2025, flat 120MW in 2026
+
+    Expected operational results (generation):
+    - Solar: [0, 0, 100, 0, 0] in both years
+    - Wind:
+        - 2025: [100, 0, 0, 0, 100]
+        - 2026: [120, 0, 0, 0, 120]
+    - Gas:
+        - 2025: [0, 100, 0, 100, 0]
+        - 2026: [0, 120, 20, 120, 0]
+    """
+
+    # Create temporary directory for the test
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_dir = Path(tmpdir)
+
+        # Create directories for time series data
+        solar_dir = temp_dir / "solar_traces"
+        wind_dir = temp_dir / "wind_traces"
+        demand_dir = temp_dir / "demand_traces"
+
+        solar_dir.mkdir()
+        wind_dir.mkdir()
+        demand_dir.mkdir()
+
+        # 1. Create capacity expansion snapshots (TWO per investment period - normal and peak)
+        capacity_expansion_snapshots = pd.DataFrame(
+            {
+                "investment_periods": [2025, 2025, 2026, 2026],
+                "snapshots": pd.to_datetime(
+                    [
+                        "2025-01-01 12:00",  # Normal snapshot
+                        "2025-01-15 18:00",  # Peak snapshot
+                        "2026-01-01 12:00",  # Normal snapshot
+                        "2026-01-15 18:00",  # Peak snapshot
+                    ]
+                ),
+            }
+        )
+
+        # Make sure discount rate is effectively zero by using equal weights
+        # This makes the optimization simple and deterministic
+
+        # 2. Create PyPSA friendly input tables
+        buses = pd.DataFrame(
+            {
+                "name": ["bus1"],
+            }
+        )
+
+        generators = pd.DataFrame(
+            {
+                "name": ["solar", "wind", "gas"],
+                "carrier": ["Solar", "Wind", "Gas"],
+                "bus": ["bus1", "bus1", "bus1"],
+                "p_nom": [0, 0, 200],  # Gas starts with 200MW capacity
+                "p_nom_extendable": [True, True, False],  # Gas not extendable
+                "p_nom_max": [100, 200, 200],  # Build limits
+                "capital_cost": [
+                    0.4,
+                    0.5,
+                    0,
+                ],  # capital cost (very low so wind solar are built to displace gas)
+                "marginal_cost": [0, 0, 100],  # Marginal costs in $/MWh
+            }
+        )
+
+        lines = pd.DataFrame()  # Empty for one node model
+
+        investment_period_weights = pd.DataFrame(
+            {
+                "period": [2025, 2026],
+                "years": [1, 1],
+                "objective": [1, 1],  # Equal weights for both years (no discounting)
+            }
+        )
+
+        # Empty custom constraints
+        custom_constraints_lhs = pd.DataFrame()
+        custom_constraints_rhs = pd.DataFrame()
+        custom_constraints_generators = pd.DataFrame()
+
+        # Compile all inputs
+        pypsa_friendly_inputs = {
+            "snapshots": capacity_expansion_snapshots,
+            "buses": buses,
+            "generators": generators,
+            "lines": lines,
+            "investment_period_weights": investment_period_weights,
+            "custom_constraints_lhs": custom_constraints_lhs,
+            "custom_constraints_rhs": custom_constraints_rhs,
+            "custom_constraints_generators": custom_constraints_generators,
+        }
+
+        # 3. Create time series data for capacity expansion
+        # Simple time series data with deterministic values
+        solar_cap_exp = pd.DataFrame(
+            {
+                "investment_periods": [2025, 2025, 2026, 2026],
+                "snapshots": pd.to_datetime(
+                    [
+                        "2025-01-01 12:00",
+                        "2025-01-15 18:00",
+                        "2026-01-01 12:00",
+                        "2026-01-15 18:00",
+                    ]
+                ),
+                "p_max_pu": [0.5, 0.0, 0.5, 0.0],  # 50% normal, 0% peak
+            }
+        )
+
+        wind_cap_exp = pd.DataFrame(
+            {
+                "investment_periods": [2025, 2025, 2026, 2026],
+                "snapshots": pd.to_datetime(
+                    [
+                        "2025-01-01 12:00",
+                        "2025-01-15 18:00",
+                        "2026-01-01 12:00",
+                        "2026-01-15 18:00",
+                    ]
+                ),
+                "p_max_pu": [0.4, 0.0, 0.4, 0.0],  # 40% normal, 0% peak
+            }
+        )
+
+        demand_cap_exp = pd.DataFrame(
+            {
+                "investment_periods": [2025, 2025, 2026, 2026],
+                "snapshots": pd.to_datetime(
+                    [
+                        "2025-01-01 12:00",
+                        "2025-01-15 18:00",
+                        "2026-01-01 12:00",
+                        "2026-01-15 18:00",
+                    ]
+                ),
+                "p_set": [100, 150, 120, 180],  # Normal and peak demand
+            }
+        )
+
+        # Save capacity expansion time series data
+        solar_cap_exp.to_parquet(solar_dir / "solar.parquet")
+        wind_cap_exp.to_parquet(wind_dir / "wind.parquet")
+        demand_cap_exp.to_parquet(demand_dir / "bus1.parquet")
+
+        # 4. Build PyPSA network for capacity expansion
+        network = build_pypsa_network(pypsa_friendly_inputs, temp_dir)
+
+        # 5. Run capacity expansion optimization
+        network.optimize.solve_model(solver_name="highs")
+
+        # Save the capacity expansion results
+        cap_exp_results = {
+            "solar": network.generators.loc["solar", "p_nom_opt"],
+            "wind": network.generators.loc["wind", "p_nom_opt"],
+            "gas": network.generators.loc["gas", "p_nom_opt"],
+        }
+
+        # 6. Create operational snapshots (5 per year)
+        operational_snapshots = pd.DataFrame(
+            {
+                "investment_periods": np.repeat([2025, 2026], 5),
+                "snapshots": pd.to_datetime(
+                    [
+                        # 2025 snapshots - midnight, 6am, noon, 6pm, midnight
+                        "2025-01-01 00:00",
+                        "2025-01-01 06:00",
+                        "2025-01-01 12:00",
+                        "2025-01-01 18:00",
+                        "2025-01-02 00:00",
+                        # 2026 snapshots - same times
+                        "2026-01-01 00:00",
+                        "2026-01-01 06:00",
+                        "2026-01-01 12:00",
+                        "2026-01-01 18:00",
+                        "2026-01-02 00:00",
+                    ]
+                ),
+            }
+        )
+
+        # 7. Create operational time series data with simple deterministic patterns
+        # Solar: only available at noon
+        solar_op = pd.DataFrame(
+            {
+                "investment_periods": np.repeat([2025, 2026], 5),
+                "snapshots": pd.to_datetime(
+                    [
+                        # 2025 snapshots
+                        "2025-01-01 00:00",
+                        "2025-01-01 06:00",
+                        "2025-01-01 12:00",
+                        "2025-01-01 18:00",
+                        "2025-01-02 00:00",
+                        # 2026 snapshots
+                        "2026-01-01 00:00",
+                        "2026-01-01 06:00",
+                        "2026-01-01 12:00",
+                        "2026-01-01 18:00",
+                        "2026-01-02 00:00",
+                    ]
+                ),
+                "p_max_pu": [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                # Only at noon
+            }
+        )
+
+        # Wind: only available at midnight
+        wind_op = pd.DataFrame(
+            {
+                "investment_periods": np.repeat([2025, 2026], 5),
+                "snapshots": pd.to_datetime(
+                    [
+                        # 2025 snapshots
+                        "2025-01-01 00:00",
+                        "2025-01-01 06:00",
+                        "2025-01-01 12:00",
+                        "2025-01-01 18:00",
+                        "2025-01-02 00:00",
+                        # 2026 snapshots
+                        "2026-01-01 00:00",
+                        "2026-01-01 06:00",
+                        "2026-01-01 12:00",
+                        "2026-01-01 18:00",
+                        "2026-01-02 00:00",
+                    ]
+                ),
+                "p_max_pu": [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+                # Only at midnight
+            }
+        )
+
+        # Demand: flat load profile
+        demand_op = pd.DataFrame(
+            {
+                "investment_periods": np.repeat([2025, 2026], 5),
+                "snapshots": pd.to_datetime(
+                    [
+                        # 2025 snapshots
+                        "2025-01-01 00:00",
+                        "2025-01-01 06:00",
+                        "2025-01-01 12:00",
+                        "2025-01-01 18:00",
+                        "2025-01-02 00:00",
+                        # 2026 snapshots
+                        "2026-01-01 00:00",
+                        "2026-01-01 06:00",
+                        "2026-01-01 12:00",
+                        "2026-01-01 18:00",
+                        "2026-01-02 00:00",
+                    ]
+                ),
+                "p_set": [
+                    100,
+                    100,
+                    100,
+                    100,
+                    100,
+                    120,
+                    120,
+                    120,
+                    120,
+                    120,
+                ],  # Flat demand
+            }
+        )
+
+        # Save operational time series data, overwriting the capacity expansion data
+        solar_op.to_parquet(solar_dir / "solar.parquet")
+        wind_op.to_parquet(wind_dir / "wind.parquet")
+        demand_op.to_parquet(demand_dir / "bus1.parquet")
+
+        # 8. Update network time series data
+        update_network_timeseries(
+            network, pypsa_friendly_inputs, operational_snapshots, temp_dir
+        )
+
+        # 9. Fix optimal capacities and run operational optimization
+        network.optimize.fix_optimal_capacities()
+
+        network.optimize.solve_model()
+
+        # 10. Verify the results
+        # 10.1 Check capacity expansion results
+        np.testing.assert_allclose(
+            cap_exp_results["solar"],
+            100,
+            rtol=1e-5,
+            err_msg="Should build exactly 100 MW of solar (limited by p_nom_max)",
+        )
+        np.testing.assert_allclose(
+            cap_exp_results["wind"],
+            175,
+            rtol=1e-5,
+            err_msg="Should build exactly 175 MW of wind",
+        )
+        np.testing.assert_allclose(
+            cap_exp_results["gas"],
+            200,
+            rtol=1e-5,
+            err_msg="Gas should remain at fixed 200 MW capacity",
+        )
+
+        # 10.2 Check operational results
+        solar_output = network.generators_t.p["solar"]
+        wind_output = network.generators_t.p["wind"]
+        gas_output = network.generators_t.p["gas"]
+
+        # Expected generation patterns for each generator
+        expected_solar = np.array([0, 0, 100, 0, 0, 0, 0, 100, 0, 0])
+        expected_wind = np.array([100, 0, 0, 0, 100, 120, 0, 0, 0, 120])
+        expected_gas = np.array([0, 100, 0, 100, 0, 0, 120, 20, 120, 0])
+
+        # Test that generation follows expected patterns
+        np.testing.assert_allclose(
+            solar_output,
+            expected_solar,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="Solar generation doesn't match expected pattern",
+        )
+        np.testing.assert_allclose(
+            wind_output,
+            expected_wind,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="Wind generation doesn't match expected pattern",
+        )
+        np.testing.assert_allclose(
+            gas_output,
+            expected_gas,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="Gas generation doesn't match expected pattern",
+        )
+
+        # 10.3 Verify that total generation matches demand
+        demand = network.loads_t.p_set["load_bus1"]
+        total_generation = solar_output + wind_output + gas_output
+
+        np.testing.assert_allclose(
+            total_generation,
+            demand,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="Total generation doesn't match demand",
+        )
+````
+
+## File: tests/test_templater/test_create_ispypsa_inputs_template.py
+````python
+from pathlib import Path
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater import (
+    create_ispypsa_inputs_template,
+    list_templater_output_files,
+    load_manually_extracted_tables,
+)
+
+
+def test_create_ispypsa_inputs_template_sub_regions(
+    workbook_table_cache_test_path: Path,
+):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    template_tables = create_ispypsa_inputs_template(
+        "Step Change", "sub_regions", iasr_tables, manual_tables
+    )
+
+    for table in list_templater_output_files("sub_regions"):
+        assert table in template_tables.keys()
+
+    assert "neregions" not in template_tables.keys()
+
+    assert "sub_region_reference_node" in template_tables["sub_regions"].columns
+    assert (
+        "sub_region_reference_node_voltage_kv" in template_tables["sub_regions"].columns
+    )
+
+    assert "CNSW" in template_tables["flow_paths"]["node_from"].values
+
+
+def test_create_ispypsa_inputs_template_regions(workbook_table_cache_test_path: Path):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    template_tables = create_ispypsa_inputs_template(
+        "Step Change", "nem_regions", iasr_tables, manual_tables
+    )
+
+    for table in list_templater_output_files("nem_regions"):
+        assert table in template_tables.keys()
+
+    assert "sub_region_reference_node" not in template_tables["sub_regions"].columns
+    assert (
+        "sub_region_reference_node_voltage_kv"
+        not in template_tables["sub_regions"].columns
+    )
+
+    assert "NSW" in template_tables["flow_paths"]["node_from"].values
+
+
+def test_create_ispypsa_inputs_template_single_regions(
+    workbook_table_cache_test_path: Path,
+):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    template_tables = create_ispypsa_inputs_template(
+        "Step Change", "single_region", iasr_tables, manual_tables
+    )
+
+    for table in list_templater_output_files("single_region"):
+        assert table in template_tables.keys()
+
+    assert "sub_region_reference_node" not in template_tables["sub_regions"].columns
+    assert (
+        "sub_region_reference_node_voltage_kv"
+        not in template_tables["sub_regions"].columns
+    )
+````
+
+## File: tests/test_templater/test_fuzzy_matching.py
+````python
+import pandas as pd
+
+from ispypsa.templater.helpers import _fuzzy_match_names
+
+
+def test_regions() -> None:
+    regions_with_errors_mapped_to_correct_names = {
+        "New South Walks": "New South Wales",
+        "Coinsland": "Queensland",
+        "North Australia": "South Australia",
+        "Bigtoria": "Victoria",
+        "Radmania": "Tasmania",
+    }
+    sub_regions_with_errors, correct_names = zip(
+        *regions_with_errors_mapped_to_correct_names.items()
+    )
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(sub_regions_with_errors),
+        choices=correct_names,
+        task_desc="testing",
+    )
+    assert (matches == pd.Series(correct_names)).all()
+
+
+def test_fuzzy_matching_above_threshold() -> None:
+    regions_with_errors_mapped_to_correct_names = {
+        "New South Walks": "New South Wales",
+        "Coinsland": "Queensland",
+        "North Australia": "South Australia",
+        "Bigtoria": "Victoria",
+        "Radmania": "Tasmania",
+    }
+    sub_regions_with_errors, correct_names = zip(
+        *regions_with_errors_mapped_to_correct_names.items()
+    )
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(sub_regions_with_errors),
+        choices=correct_names,
+        task_desc="testing",
+        threshold=70,
+    )
+    assert (
+        matches
+        == [
+            "New South Wales",
+            "Coinsland",
+            "South Australia",
+            "Victoria",
+            "Tasmania",
+        ]
+    ).all()
+
+
+def test_sub_region_ids() -> None:
+    sub_regions_with_errors_mapped_to_correct_names = {
+        "Northern Queensland": "Northern Queensland",
+        "Central Queensland": "Central Queensland",
+        "Gladstone Grid": "Gladstone Grid",
+        "South Queensland": "Southern Queensland",
+        "Northern New South Wales": "Northern New South Wales",
+        "Central New South Wales": "Central New South Wales",
+        "South NSW": "Southern New South Wales",
+        "Sydney, New Castle, Wollongong": "Sydney, Newcastle, Wollongong",
+        "Victoria": "Victoria",
+        "Central South Australia": "Central South Australia",
+        "South East South Australia": "South East South Australia",
+        "Tasmania": "Tasmania",
+    }
+    sub_regions_with_errors, correct_names = zip(
+        *sub_regions_with_errors_mapped_to_correct_names.items()
+    )
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(sub_regions_with_errors),
+        choices=correct_names,
+        task_desc="testing",
+    )
+    assert (matches == pd.Series(correct_names)).all()
+
+
+def test_generator_names() -> None:
+    generators_with_errors_mapped_to_correct_names = {
+        "Bayswater": "Bayswater",
+        "Eraring": "Eraring",
+        "Mt Piper": "Mt Piper",
+        "Torrens Island B": "Torrens Island",
+        "Bogong / Mackay": "Bogong / MacKay",
+        "Lincoln Gap Wind Farm - Stage 2": "Lincoln Gap Wind Farm - stage 2",
+    }
+    generators_with_errors, correct_names = zip(
+        *generators_with_errors_mapped_to_correct_names.items()
+    )
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(generators_with_errors),
+        choices=correct_names,
+        task_desc="testing",
+        threshold=90,
+        not_match="No Match",
+    )
+    assert (matches == pd.Series(correct_names)).all()
+
+
+def test_abstract() -> None:
+    # Even though 'a' is a better match for 'ab' than 'c', 'ab' should still map to 'c' because 'a' is taken.
+    abstract_mapping = {
+        "a": "a",
+        "b": "b",
+        "ab": "c",
+    }
+    to_match, choices = zip(*abstract_mapping.items())
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(to_match),
+        choices=choices,
+        task_desc="testing",
+    )
+    assert (matches == pd.Series(choices)).all()
+
+
+def test_abstract_to_non_exact_best_match_gets_priority() -> None:
+    abstract_mapping = {
+        "a": "a",
+        "b": "b",
+        "testng": "testing",
+        "testg": "not a good match",
+    }
+    to_match, choices = zip(*abstract_mapping.items())
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(to_match),
+        choices=choices,
+        task_desc="testing",
+    )
+    assert (matches == pd.Series(choices)).all()
+
+
+def test_abstract_threshold() -> None:
+    # With a threshold of 90 'ab' is not allowed to match with 'c' and so defaults to matching with itself.
+    abstract_mapping = {
+        "a": "a",
+        "b": "b",
+        "ab": "ab",
+    }
+    choices = ["a", "b", "c"]
+    to_match, correct_answers = zip(*abstract_mapping.items())
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(to_match),
+        choices=choices,
+        task_desc="testing",
+        threshold=90.0,
+    )
+    assert (matches == pd.Series(correct_answers)).all()
+
+
+def test_abstract_threshold_no_match() -> None:
+    # With a threshold of 90 'ab' is not allowed to match with 'c' and with no_match set to 'No Match', the
+    # match for 'ab' should return as 'No Match'.
+    abstract_mapping = {
+        "a": "a",
+        "b": "b",
+        "ab": "No Match",
+    }
+    choices = ["a", "b", "c"]
+    to_match, correct_answers = zip(*abstract_mapping.items())
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(to_match),
+        choices=choices,
+        task_desc="testing",
+        threshold=90.0,
+        not_match="No Match",
+    )
+    assert (matches == pd.Series(correct_answers)).all()
+
+
+def test_abstract_run_out_of_choices() -> None:
+    # If there aren't enough choice resorts to the no_match mode (which by default is to match with self)
+    abstract_mapping = {
+        "a": "a",
+        "b": "b",
+        "ab": "ab",
+    }
+    choices = [
+        "a",
+        "b",
+    ]
+    to_match, correct_answers = zip(*abstract_mapping.items())
+    matches = _fuzzy_match_names(
+        name_series=pd.Series(to_match),
+        choices=choices,
+        task_desc="testing",
+    )
+    assert (matches == pd.Series(correct_answers)).all()
+````
+
+## File: tests/test_templater/test_helpers.py
+````python
+import pandas as pd
+import pytest
+
+from ispypsa.templater.helpers import (
+    _snakecase_string,
+    _where_any_substring_appears,
+)
+
+snakecase_test_cases = {
+    # Single word cases
+    "word": "word",
+    "Word": "word",
+    # CamelCase variations
+    "CamelCaseWord": "camel_case_word",
+    "HTTPResponseCode": "http_response_code",
+    "JSONDataFormat": "json_data_format",
+    # Acronyms
+    "NEM Region": "nem_region",
+    # Mixed cases and symbols
+    "snake_case_word": "snake_case_word",
+    "Already_snake_case": "already_snake_case",
+    "wordWith123Numbers": "word_with_123_numbers",
+    "123numberedWords": "123numbered_words",
+    "Word_with-Mixed_Cases-and_dashes": "word_with_mixed_cases_and_dashes",
+    "MergedWord_with-Mixed_Cases-and_dashes": "merged_word_with_mixed_cases_and_dashes",
+    # Special characters and whitespace
+    " words  With   spaces ": "words_with_spaces",
+    # Empty strings and unusual cases
+    "": "",
+    " ": "",
+    # Duplicates and delimiters
+    "Multiple___Underscores": "multiple_underscores",
+    "multiple--dashes": "multiple_dashes",
+    # Non-printable or control characters
+    "line\nbreaks\tand\ttabs": "line_breaks_and_tabs",
+    # Columns with units
+    "FOM ($/kW/annum)": "fom_$/kw/annum",
+    "VOM ($/MWh sent-out)": "vom_$/mwh_sent_out",
+    "Capacity (MW)": "capacity_mw",
+    # Columns with years
+    "Mean time to repair_Partial outage_Post 2022": "mean_time_to_repair_partial_outage_post_2022",
+    "2022-23": "2022_23",
+    # String with commas
+    "Existing, Committed and Anticipated batteries": "existing_committed_and_anticipated_batteries",
+}
+
+
+@pytest.mark.parametrize(
+    "input,expected", [(k, v) for k, v in snakecase_test_cases.items()]
+)
+def test_snakecase(input: str, expected: str):
+    processed_input = _snakecase_string(input)
+    assert processed_input == expected
+
+
+def test_where_any_substring_appears():
+    test_input = [
+        "Wind",
+        "wind",
+        "OCGT",
+        "All Solar PV",
+        "Hydroelectric",
+        "Solar thermal",
+    ]
+    output = _where_any_substring_appears(
+        pd.Series(test_input), ["solar", "wind", "hydro"]
+    )
+    assert (output == [True, True, False, True, True, True]).all()
+    output_2 = _where_any_substring_appears(pd.Series(test_input), ["solar"])
+    assert (output_2 == [False, False, False, True, False, True]).all()
+````
+
+## File: tests/test_templater/test_rez_transmission_costs.py
+````python
+import numpy as np
+import pandas as pd
+import pytest
+
+from ispypsa.templater.flow_paths import (
+    _get_augmentation_table,
+    _get_cost_table,
+    _get_least_cost_options,
+    _template_rez_transmission_costs,
+    process_transmission_costs,
+)
+from ispypsa.templater.mappings import (
+    _REZ_CONFIG,
+    _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
+)
+
+
+def test_template_rez_transmission_costs_simple_least_cost_option():
+    # Augmentation tables for SWQLD1 and SWV1 REZs
+    aug_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "Additional network capacity (MW)": [100, 200, 40],
+        }
+    )
+    aug_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1", "SWV1"],
+            "Option": [
+                "Option 1A",
+                "Option 1B",
+                "Option 2A",
+            ],
+            "Additional network capacity (MW)": [150, 70, 120],
+        }
+    )
+    # Cost tables for SWQLD1 and SWV1 REZs
+    # Option 2 is least cost and has the largest increase so should be chosen.
+    cost_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "2024_25": [50, 40, 60],
+            "2025_26": [55, 45, 65],
+        }
+    )
+    # Option 1A is least cost and has the largest increase so should be chosen.
+    cost_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1", "SWV1"],
+            "Option": ["Option 1A", "Option 1B", "Option 2A"],
+            "2024_25": [70, 80, 100],
+            "2025_26": [75, 85, 110],
+        }
+    )
+    # Preparatory activities table (should not be chosen due to higher costs)
+    # Using entries that exist in _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME
+    prep_acts = pd.DataFrame(
+        {
+            "REZ": [
+                "Darling Downs REZ Expansion(Stage 1)",
+                "South West Victoria REZ Option 1A",
+            ],
+            "2024_25": [100, 110],
+            "2025_26": [110, 120],
+        }
+    )
+
+    # Compose iasr_tables dict with correct table names
+    iasr_tables = {
+        "rez_augmentation_options_QLD": aug_table_swqld,
+        "rez_augmentation_options_VIC": aug_table_swv,
+        "rez_augmentation_costs_progressive_change_QLD": cost_table_swqld,
+        "rez_augmentation_costs_progressive_change_VIC": cost_table_swv,
+        "rez_augmentation_costs_progressive_change_preparatory_activities": prep_acts,
+    }
+    scenario = "Progressive Change"
+    # Run function
+    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    # Check least cost options are chosen for SWQLD1 and SWV1
+    swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
+    swv_row = result[result["rez_constraint_id"] == "SWV1"]
+    assert swqld_row["option"].iloc[0] == "Option 2"
+    assert swv_row["option"].iloc[0] == "Option 1A"
+    # Check additional_network_capacity_mw is correct
+    assert swqld_row["additional_network_capacity_mw"].iloc[0] == 200
+    assert swv_row["additional_network_capacity_mw"].iloc[0] == 150
+    # Check cost per year column is correct (cost divided by capacity)
+    # For SWQLD1 Option 2: 2024_25 = 40/200 = 0.2, 2025_26 = 45/200 = 0.225
+    # For SWV1 Option 1A: 2024_25 = 70/150 ≈ 0.4667, 2025_26 = 75/150 = 0.5
+    assert abs(swqld_row["2024_25_$/mw"].iloc[0] - 0.2) < 1e-6
+    assert abs(swqld_row["2025_26_$/mw"].iloc[0] - 0.225) < 1e-6
+    assert abs(swv_row["2024_25_$/mw"].iloc[0] - (70 / 150)) < 1e-6
+    assert abs(swv_row["2025_26_$/mw"].iloc[0] - 0.5) < 1e-6
+
+
+def test_template_rez_transmission_costs_prep_activities_chosen():
+    """
+    The cost of the non preparatory activities have been made very high
+    and therefore preparatory activities should be chosen.
+    """
+    # Augmentation tables for SWQLD1 and SWV1 REZs
+    aug_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "Additional network capacity (MW)": [100, 150, 200],
+        }
+    )
+    aug_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1", "SWV1"],
+            "Option": ["Option 1A", "Option 1B", "Option 2A"],
+            "Additional network capacity (MW)": [140, 150, 160],
+        }
+    )
+    # Standard cost tables - options that have costs in prep activities should have NaN here
+    cost_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "2024_25": [
+                np.nan,
+                1000,
+                1000,
+            ],  # Option 1 has NaN since it's in prep activities
+            "2025_26": [np.nan, 1000, 1000],
+        }
+    )
+    cost_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1", "SWV1"],
+            "Option": ["Option 1A", "Option 1B", "Option 2A"],
+            "2024_25": [
+                1000,
+                1000,
+                np.nan,
+            ],  # Option 2A has NaN since it's in prep activities
+            "2025_26": [1000, 1000, np.nan],
+        }
+    )
+    # Preparatory activities table (set low cost)
+    # Using entries that exist in _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME
+    prep_acts = pd.DataFrame(
+        {
+            "REZ": [
+                "Darling Downs REZ Expansion(Stage 1)",
+                "South West Victoria REZ Option 2A",
+            ],
+            "2024_25": [10, 15],
+            "2025_26": [20, 25],
+        }
+    )
+
+    # Compose iasr_tables dict
+    iasr_tables = {
+        "rez_augmentation_options_QLD": aug_table_swqld,
+        "rez_augmentation_options_VIC": aug_table_swv,
+        "rez_augmentation_costs_progressive_change_QLD": cost_table_swqld,
+        "rez_augmentation_costs_progressive_change_VIC": cost_table_swv,
+        "rez_augmentation_costs_progressive_change_preparatory_activities": prep_acts,
+    }
+    scenario = "Progressive Change"
+    # Run function
+    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    # Check that the prep activity is chosen for SWQLD1 and SWV1
+    swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
+    swv_row = result[result["rez_constraint_id"] == "SWV1"]
+    assert swqld_row["option"].iloc[0] == "Option 1"
+    assert swv_row["option"].iloc[0] == "Option 2A"
+    # Check additional_network_capacity_mw is correct
+    assert swqld_row["additional_network_capacity_mw"].iloc[0] == 100
+    assert swv_row["additional_network_capacity_mw"].iloc[0] == 160
+    # Check cost per year column is correct (cost divided by capacity)
+    assert abs(swqld_row["2024_25_$/mw"].iloc[0] - (10 / 100)) < 1e-6
+    assert abs(swqld_row["2025_26_$/mw"].iloc[0] - (20 / 100)) < 1e-6
+    assert abs(swv_row["2024_25_$/mw"].iloc[0] - (15 / 160)) < 1e-6
+    assert abs(swv_row["2025_26_$/mw"].iloc[0] - (25 / 160)) < 1e-6
+
+
+def test_template_rez_transmission_costs_use_first_year_with_valid_costs():
+    """
+    Test that the first year with non-nan cost data for all options is used.
+    """
+    # SWQLD1: only 2025_26 has all non-nan costs
+    aug_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "Additional network capacity (MW)": [150, 150, 150],
+        }
+    )
+    # Even though option 3 is cheaper than option 2 in 2024_25, option 1 should get
+    # chosen because 2025_26 is used as the comparison year and it has the lowest cost there.
+    cost_table_swqld = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWQLD1", "SWQLD1", "SWQLD1"],
+            "Option": ["Option 1", "Option 2", "Option 3"],
+            "2024_25": [np.nan, 50, 10],
+            "2025_26": [35, 45, 50],
+        }
+    )
+    # SWV1: all years have valid costs
+    aug_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1"],
+            "Option": ["Option 1A", "Option 1B"],
+            "Additional network capacity (MW)": [90, 100],
+        }
+    )
+    cost_table_swv = pd.DataFrame(
+        {
+            "REZ constraint ID": ["SWV1", "SWV1"],
+            "Option": ["Option 1A", "Option 1B"],
+            "2024_25": [100, 10],
+            "2025_26": [10, 100],
+        }
+    )
+    iasr_tables = {
+        "rez_augmentation_options_QLD": aug_table_swqld,
+        "rez_augmentation_options_VIC": aug_table_swv,
+        "rez_augmentation_costs_progressive_change_QLD": cost_table_swqld,
+        "rez_augmentation_costs_progressive_change_VIC": cost_table_swv,
+    }
+    scenario = "Progressive Change"
+    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    # SWQLD1: Only 2025_26 has all non-nan costs, so selection is based on that year for all years
+    swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
+    assert swqld_row["option"].iloc[0] == "Option 1"
+    assert swqld_row["additional_network_capacity_mw"].iloc[0] == 150
+    assert np.isnan(swqld_row["2024_25_$/mw"].iloc[0])
+    assert abs(swqld_row["2025_26_$/mw"].iloc[0] - (35 / 150)) < 1e-6
+    # SWV1: both years valid, Option 1B is the least cost only in first,
+    # but should be chosen on this basis.
+    swv_row = result[result["rez_constraint_id"] == "SWV1"]
+    assert swv_row["option"].iloc[0] == "Option 1B"
+    assert swv_row["additional_network_capacity_mw"].iloc[0] == 100
+    assert abs(swv_row["2024_25_$/mw"].iloc[0] - (10 / 100)) < 1e-6
+    assert abs(swv_row["2025_26_$/mw"].iloc[0] - (100 / 100)) < 1e-6
+````
+
+## File: tests/test_translator/test_investment_period_weighting.py
+````python
+import pandas as pd
+from pandas.testing import assert_frame_equal
+
+from ispypsa.translator.snapshots import _create_investment_period_weightings
+
+
+def test_create_investment_period_weightings_basic():
+    """Test with simple investment periods of 2020, 2030, 2040."""
+    # Setup
+    investment_periods = [2020, 2030, 2040]
+    model_end_year = 2050
+    discount_rate = 0.05
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
+            "period": [2020, 2030, 2040],
+            "years": [10, 10, 10],
+            "objective": [
+                sum([(1 / (1 + 0.05) ** t) for t in range(0, 10)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(10, 20)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(20, 30)]),
+            ],
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_create_investment_period_weightings_variable_length():
+    """Test with variable length investment periods."""
+    # Setup
+    investment_periods = [2020, 2025, 2035]
+    model_end_year = 2050
+    discount_rate = 0.05
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
+            "period": [2020, 2025, 2035],
+            "years": [5, 10, 15],
+            "objective": [
+                sum([(1 / (1 + 0.05) ** t) for t in range(0, 5)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(5, 15)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(15, 30)]),
+            ],
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_create_investment_period_weightings_zero_discount():
+    """Test with zero discount rate."""
+    # Setup
+    investment_periods = [2020, 2030]
+    model_end_year = 2040
+    discount_rate = 0.0
+
+    # Expected result - with zero discount rate, the weight is just the number of years
+    expected = pd.DataFrame(
+        {
+            "period": [2020, 2030],
+            "years": [10, 10],
+            "objective": [10.0, 10.0],  # Weight equals years with no discounting
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_create_investment_period_weightings_single_period():
+    """Test with a single investment period."""
+    # Setup
+    investment_periods = [2020]
+    model_end_year = 2030
+    discount_rate = 0.05
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
+            "period": [2020],
+            "years": [10],
+            "objective": [sum([(1 / (1 + 0.05) ** t) for t in range(0, 10)])],
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_create_investment_period_weightings_alternative_discount():
+    """Test with different discount rate."""
+    # Setup
+    investment_periods = [2020, 2025]
+    model_end_year = 2030
+    discount_rate = 0.10  # 10% discount rate
+
+    # Expected result
+    expected = pd.DataFrame(
+        {
+            "period": [2020, 2025],
+            "years": [5, 5],
+            "objective": [
+                sum([(1 / (1 + 0.10) ** t) for t in range(0, 5)]),
+                sum([(1 / (1 + 0.10) ** t) for t in range(5, 10)]),
+            ],
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_create_investment_period_weightings_trivial_discount():
+    """Test with a discount rate of 100% (1.0) for easy manual verification.
+
+    With a discount rate of 100%, each year the weight becomes halved:
+    - Year 0: 1/(1+1)^0 = 1
+    - Year 1: 1/(1+1)^1 = 0.5
+    - Year 2: 1/(1+1)^2 = 0.25
+    - Year 3: 1/(1+1)^3 = 0.125
+    - etc.
+
+    This makes it very easy to manually verify the calculation.
+    """
+    # Setup
+    investment_periods = [2020, 2022]
+    model_end_year = 2024
+    discount_rate = 1.0  # 100% discount rate
+
+    # With r = 1.0, the discounted weights are:
+    # Period 1 (2020-2022): [1, 0.5] = 1.5
+    # Period 2 (2022-2024): [0.25, 0.125] = 0.375
+
+    # Expected result with manually calculated values
+    expected = pd.DataFrame(
+        {
+            "period": [2020, 2022],
+            "years": [2, 2],
+            "objective": [1.5, 0.375],  # Manually verified
+        }
+    )
+
+    # Call function
+    result = _create_investment_period_weightings(
+        investment_periods, model_end_year, discount_rate
+    )
+
+    # Assert
+    assert_frame_equal(result, expected)
+````
+
+## File: tests/test_translator/test_lines.py
+````python
+import io
+import re
+
+import pandas as pd
+import pytest
+
+from ispypsa.translator.lines import (
+    _translate_existing_flow_path_capacity_to_lines,
+    _translate_flow_path_expansion_costs_to_lines,
+    _translate_flow_paths_to_lines,
+)
+
+
+def test_translate_existing_flow_path_capacity_to_lines(csv_str_to_df):
+    """Test that existing flow paths are correctly translated to lines."""
+    # Create sample data for testing
+    existing_flow_paths_csv = """
+    flow_path,      carrier,  node_from,  node_to,  forward_direction_mw_summer_typical
+    PathA-PathB,    AC,       NodeA,      NodeB,    1000
+    PathB-PathC,    AC,       NodeB,      NodeC,    2000
+    """
+    existing_flow_paths = csv_str_to_df(existing_flow_paths_csv)
+
+    # Expected result
+    expected_lines_csv = """
+    name,                 carrier,  bus0,     bus1,     s_nom,  capital_cost,  s_nom_extendable
+    PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,   ,              False
+    PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,   ,              False
+    """
+    expected_lines = csv_str_to_df(expected_lines_csv)
+    expected_lines["capital_cost"] = pd.to_numeric(expected_lines["capital_cost"], errors="coerce")
+
+    # Convert the flow paths to lines
+    result = _translate_existing_flow_path_capacity_to_lines(existing_flow_paths)
+
+    # Assert the results match expectations
+    pd.testing.assert_frame_equal(
+        result.sort_index(axis=1), expected_lines.sort_index(axis=1)
+    )
+
+
+def test_translate_flow_path_expansion_costs_to_lines(csv_str_to_df):
+    """Test that flow path expansion costs are correctly translated to lines."""
+    # Create sample data for testing
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw
+    PathA-PathB,   500,                             ,          1200
+    PathB-PathC,   800,                             1500,          1800
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_lines_csv = """
+    name,        carrier,  bus0,    bus1,    s_nom
+    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    PathB-PathC, AC,       NodeB,   NodeC,   2000
+    """
+    existing_lines_df = csv_str_to_df(existing_lines_csv)
+
+    investment_periods = [2026, 2027]
+    year_type = "fy"
+    wacc = 0.07
+    asset_lifetime = 30
+
+    # Call the function
+    result = _translate_flow_path_expansion_costs_to_lines(
+        flow_path_expansion_costs,
+        existing_lines_df,
+        investment_periods,
+        year_type,
+        wacc,
+        asset_lifetime,
+    )
+
+    # Expected result structure - use a fixed capital_cost for assertion purposes
+    # The actual values depend on the annuitization formula
+    expected_result_csv = """
+    name,                 carrier,  bus0,    bus1,    s_nom,  s_nom_extendable,  s_nom_max,  build_year,  lifetime
+    PathB-PathC_exp_2026, AC,       NodeB,   NodeC,   0.0,    True,              800,        2026,        30
+    PathA-PathB_exp_2027, AC,       NodeA,   NodeB,   0.0,    True,              500,        2027,        30
+    PathB-PathC_exp_2027, AC,       NodeB,   NodeC,   0.0,    True,              800,        2027,        30
+    """
+    expected_result = csv_str_to_df(expected_result_csv)
+
+    # Sort both result and expected result for comparison
+    result = result.sort_values(["name"]).reset_index(drop=True)
+    expected_result = expected_result.sort_values(["name"]).reset_index(drop=True)
+
+    # Check that column names match
+    assert set(expected_result.columns).issubset(set(result.columns))
+
+    # Check all columns except capital_cost (which uses the annuitization formula)
+    for col in expected_result.columns:
+        pd.testing.assert_series_equal(
+            result[col],
+            expected_result[col],
+            check_dtype=False,  # Allow float vs int differences
+            check_names=False,  # Ignore index names
+        )
+
+    # Check capital costs separately - should be greater than 0
+    assert all(result["capital_cost"] > 0)
+
+
+def test_translate_flow_path_expansion_costs_to_lines_empty(csv_str_to_df):
+    """Test that empty flow path expansion costs result in empty DataFrame."""
+    # Create empty DataFrame
+    flow_path_expansion_costs_csv = """
+    flow_path,additional_network_capacity_mw,2025_26_$/mw
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_lines_csv = """
+    name,        carrier,  bus0,    bus1,    s_nom
+    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    """
+    existing_lines_df = csv_str_to_df(existing_lines_csv)
+
+    # Call the function with empty data
+    result = _translate_flow_path_expansion_costs_to_lines(
+        flow_path_expansion_costs,
+        existing_lines_df,
+        [2026],
+        "fy",
+        0.07,
+        30,
+    )
+
+    # The result should be an empty DataFrame
+    assert result.empty
+
+
+def test_translate_flow_path_expansion_costs_to_lines_no_matching_years(csv_str_to_df):
+    """Test when none of the expansion costs match the investment periods."""
+    # Create sample data for testing
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw
+    PathA-PathB,   500,                             1000
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_lines_csv = """
+    name,        carrier,  bus0,    bus1,    s_nom
+    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    """
+    existing_lines_df = csv_str_to_df(existing_lines_csv)
+
+    # Investment periods don't include 2026
+    investment_periods = [2027, 2028]
+    year_type = "fy"
+    wacc = 0.07
+    asset_lifetime = 30
+
+    # Call the function
+    result = _translate_flow_path_expansion_costs_to_lines(
+        flow_path_expansion_costs,
+        existing_lines_df,
+        investment_periods,
+        year_type,
+        wacc,
+        asset_lifetime,
+    )
+
+    # The result should be an empty DataFrame since no years match
+    assert result.empty
+
+
+def test_translate_flow_paths_to_lines_with_expansion(csv_str_to_df):
+    """Test that flow paths are translated to lines with expansion."""
+    # Create sample input data
+    flow_paths_csv = """
+    flow_path,      carrier,  node_from,  node_to,  forward_direction_mw_summer_typical
+    PathA-PathB,    AC,       NodeA,      NodeB,    1000
+    PathB-PathC,    AC,       NodeB,      NodeC,    2000
+    """
+
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw
+    PathA-PathB,   500,                             1000,          1200
+    PathB-PathC,   800,                             1500,          1800
+    """
+
+    ispypsa_tables = {
+        "flow_paths": csv_str_to_df(flow_paths_csv),
+        "flow_path_expansion_costs": csv_str_to_df(flow_path_expansion_costs_csv)
+    }
+
+    # Mock config with expansion enabled
+    class MockTemporalConfig:
+        class MockCapacityExpansion:
+            investment_periods = [2026, 2027]
+
+        year_type = "fy"
+        capacity_expansion = MockCapacityExpansion()
+
+    class MockNetworkConfig:
+        annuitisation_lifetime = 30
+        transmission_expansion = True  # This is the key parameter needed
+
+    class MockConfig:
+        temporal = MockTemporalConfig()
+        network = MockNetworkConfig()
+        wacc = 0.07
+
+    config = MockConfig()
+
+    # Call the function
+    result = _translate_flow_paths_to_lines(ispypsa_tables, config)
+
+    # Check the result is of the expected length
+    assert len(result) == 6
+
+    # Check that the result includes both existing and expansion lines
+    assert any("_existing" in name for name in result["name"])
+    assert any("_exp_" in name for name in result["name"])
+
+
+def test_translate_flow_paths_to_lines_without_expansion(csv_str_to_df):
+    """Test that flow paths are translated to lines without expansion."""
+    # Create sample input data
+    flow_paths_csv = """
+    flow_path,      carrier,  node_from,  node_to,  forward_direction_mw_summer_typical
+    PathA-PathB,    AC,       NodeA,      NodeB,    1000
+    PathB-PathC,    AC,       NodeB,      NodeC,    2000
+    """
+
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw
+    PathA-PathB,   500,                             1000,          1200
+    PathB-PathC,   800,                             1500,          1800
+    """
+
+    ispypsa_tables = {
+        "flow_paths": csv_str_to_df(flow_paths_csv),
+        "flow_path_expansion_costs": csv_str_to_df(flow_path_expansion_costs_csv)
+    }
+
+    # Mock config with expansion disabled
+    class MockTemporalConfig:
+        class MockCapacityExpansion:
+            investment_periods = [2026, 2027]
+
+        year_type = "fy"
+        capacity_expansion = MockCapacityExpansion()
+
+    class MockNetworkConfig:
+        annuitisation_lifetime = 30
+        transmission_expansion = False  # This is the key parameter needed
+
+    class MockConfig:
+        temporal = MockTemporalConfig()
+        network = MockNetworkConfig()
+        wacc = 0.07
+
+    config = MockConfig()
+
+    # Call the function
+    result = _translate_flow_paths_to_lines(ispypsa_tables, config)
+
+    # Expected result - only existing lines, no expansion lines
+    expected_result_csv = """
+    name,                 bus0,     bus1,     s_nom,  capital_cost,  s_nom_extendable,  carrier
+    PathA-PathB_existing, NodeA,    NodeB,    1000,   ,              False,             AC
+    PathB-PathC_existing, NodeB,    NodeC,    2000,   ,              False,             AC
+    """
+    expected_result = csv_str_to_df(expected_result_csv)
+    expected_result["capital_cost"] = pd.to_numeric(expected_result["capital_cost"], errors="coerce")
+
+    # Sort both dataframes for comparison
+    result = result.sort_values("name").reset_index(drop=True)
+    expected_result = expected_result.sort_values("name").reset_index(drop=True)
+
+    # Assert the results match expectations
+    for col in expected_result.columns:
+        pd.testing.assert_series_equal(
+            result[col],
+            expected_result[col],
+            check_dtype=False,
+            check_names=False,
+        )
+
+
+def test_translate_flow_path_expansion_costs_to_lines_calendar_year_error(csv_str_to_df):
+    """Test that calendar year type raises a NotImplementedError."""
+    # Create sample data
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw
+    PathA-PathB,   500,                             1000
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_lines_csv = """
+    name,        carrier,  bus0,    bus1,    s_nom
+    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    """
+    existing_lines_df = csv_str_to_df(existing_lines_csv)
+
+    investment_periods = [2026]
+    year_type = "calendar"  # This should trigger the error
+    wacc = 0.07
+    asset_lifetime = 30
+
+    # Check that the correct error is raised
+    with pytest.raises(NotImplementedError, match="Calendar year cost mapping not yet implemented"):
+        _translate_flow_path_expansion_costs_to_lines(
+            flow_path_expansion_costs,
+            existing_lines_df,
+            investment_periods,
+            year_type,
+            wacc,
+            asset_lifetime,
+        )
+
+
+def test_translate_flow_path_expansion_costs_to_lines_invalid_year_type(csv_str_to_df):
+    """Test that an invalid year type raises a ValueError."""
+    # Create sample data
+    flow_path_expansion_costs_csv = """
+    flow_path,     additional_network_capacity_mw,  2025_26_$/mw
+    PathA-PathB,   500,                             1000
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_lines_csv = """
+    name,        carrier,  bus0,    bus1,    s_nom
+    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    """
+    existing_lines_df = csv_str_to_df(existing_lines_csv)
+
+    investment_periods = [2026]
+    year_type = "invalid_year_type"  # This should trigger the error
+    wacc = 0.07
+    asset_lifetime = 30
+
+    # Check that the correct error is raised
+    with pytest.raises(ValueError, match="Unknown year_type"):
+        _translate_flow_path_expansion_costs_to_lines(
+            flow_path_expansion_costs,
+            existing_lines_df,
+            investment_periods,
+            year_type,
+            wacc,
+            asset_lifetime,
+        )
+````
+
+## File: tests/test_translator/test_time_series_checker.py
+````python
+import pandas as pd
+import pytest
+
+from ispypsa.translator.time_series_checker import _check_time_series
+
+
+def test_identical_series_passes():
+    """Test that identical series pass validation"""
+    series_a = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+            pd.Timestamp("2024-01-01 15:00:00"),
+            pd.Timestamp("2024-01-01 16:00:00"),
+        ]
+    )
+    series_b = series_a.copy()
+
+    # Should not raise any exceptions
+    _check_time_series(series_a, series_b, "time_process", "measurements")
+
+
+def test_extra_values_raises_error():
+    """Test that extra values in time_series raises ValueError"""
+    expected = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+        ]
+    )
+    actual = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+            pd.Timestamp("2024-01-01 15:00:00"),  # Extra value
+        ]
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        _check_time_series(actual, expected, "time_process", "measurements")
+
+    assert "unexpected time series values" in str(exc_info.value)
+    assert "15:00:00" in str(exc_info.value)
+
+
+def test_missing_values_raises_error():
+    """Test that missing values in time_series raises ValueError"""
+    expected = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+        ]
+    )
+    actual = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),  # Missing last value
+        ]
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        _check_time_series(actual, expected, "time_process", "measurements")
+
+    assert "expected time series values where missing" in str(exc_info.value)
+    assert "14:00:00" in str(exc_info.value)
+
+
+def test_different_order_raises_error():
+    """Test that different order raises ValueError"""
+    expected = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 13:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+        ]
+    )
+    actual = pd.Series(
+        [
+            pd.Timestamp("2024-01-01 13:00:00"),  # Swapped order
+            pd.Timestamp("2024-01-01 12:00:00"),
+            pd.Timestamp("2024-01-01 14:00:00"),
+        ]
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        _check_time_series(actual, expected, "time_process", "measurements")
+
+    assert "did not have the expect order" in str(exc_info.value)
+    assert "13:00:00" in str(exc_info.value)
+    assert "12:00:00" in str(exc_info.value)
+
+
+def test_different_units_raises_error():
+    """Test that different datetime units raise ValueError"""
+    expected = pd.Series(
+        [pd.Timestamp("2024-01-01 12:00:00"), pd.Timestamp("2024-01-01 13:00:00")]
+    ).astype("datetime64[s]")
+
+    actual = pd.Series(
+        [pd.Timestamp("2024-01-01 12:00:00"), pd.Timestamp("2024-01-01 13:00:00")]
+    ).astype("datetime64[ms]")
+
+    with pytest.raises(ValueError) as exc_info:
+        _check_time_series(actual, expected, "time_process", "measurements")
+
+    assert "incorrect units" in str(exc_info.value)
+    assert "datetime64[s]" in str(exc_info.value)
+    assert "datetime64[ms]" in str(exc_info.value)
+````
+
+## File: tests/test_translator/test_translate_custom_constraints.py
+````python
+import numpy as np
+import pandas as pd
+
+from ispypsa.translator.custom_constraints import (
+    _translate_custom_constraint_lhs,
+    _translate_custom_constraint_rhs,
+    _translate_custom_constraints_generators,
+)
+
+
+def test_translate_custom_constraints_generators():
+    ispypsa_custom_constraint_gens = pd.DataFrame(
+        {
+            "variable_name": ["X", "Y"],
+            "constraint_id": ["A", "B"],
+            "indicative_transmission_expansion_cost_$/mw": [0.0, np.nan],
+        }
+    )
+    expected_pypsa_custom_constraint_gens = pd.DataFrame(
+        {
+            "name": ["X", "Y"],
+            "constraint_name": ["A", "B"],
+            "capital_cost": [0.0, np.nan],
+            "bus": "bus_for_custom_constraint_gens",
+            "p_nom": [0.0, 0.0],
+            "p_nom_extendable": [True, False],
+        }
+    )
+    pypsa_custom_constraint_gens = _translate_custom_constraints_generators(
+        [ispypsa_custom_constraint_gens],
+        expansion_on=True,
+        wacc=5.0,
+        asset_lifetime=10,
+    )
+    pd.testing.assert_frame_equal(
+        expected_pypsa_custom_constraint_gens, pypsa_custom_constraint_gens
+    )
+
+
+def test_translate_custom_constraints_rhs():
+    ispypsa_custom_constraint_rhs = pd.DataFrame(
+        {
+            "constraint_id": ["A", "B"],
+            "summer_typical": [10.0, 20.0],
+        }
+    )
+    expected_pypsa_custom_constraint_rhs = pd.DataFrame(
+        {
+            "constraint_name": ["A", "B"],
+            "rhs": [10.0, 20.0],
+        }
+    )
+    pypsa_custom_constraint_rhs = _translate_custom_constraint_rhs(
+        [ispypsa_custom_constraint_rhs]
+    )
+    pd.testing.assert_frame_equal(
+        expected_pypsa_custom_constraint_rhs, pypsa_custom_constraint_rhs
+    )
+
+
+def test_translate_custom_constraints_lhs():
+    ispypsa_custom_constraint_lhs = pd.DataFrame(
+        {
+            "variable_name": ["X", "Y", "Z", "W", "F"],
+            "constraint_id": ["A", "B", "A", "B", "A"],
+            "term_type": [
+                "line_flow",
+                "generator_capacity",
+                "generator_output",
+                "load_consumption",
+                "storage_output",
+            ],
+            "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
+        }
+    )
+    expected_pypsa_custom_constraint_lhs = pd.DataFrame(
+        {
+            "variable_name": ["X", "Y", "Z", "W", "F"],
+            "constraint_name": ["A", "B", "A", "B", "A"],
+            "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "component": ["Line", "Generator", "Generator", "Load", "Storage"],
+            "attribute": ["s", "p_nom", "p", "p", "p"],
+        }
+    )
+    pypsa_custom_constraint_lhs = _translate_custom_constraint_lhs(
+        [ispypsa_custom_constraint_lhs]
+    )
+    pd.testing.assert_frame_equal(
+        expected_pypsa_custom_constraint_lhs, pypsa_custom_constraint_lhs
+    )
+````
+
+## File: tests/test_translator/test_unserved_energy_generators.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.config import load_config
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater import (
+    create_ispypsa_inputs_template,
+    load_manually_extracted_tables,
+)
+from ispypsa.translator import (
+    create_pypsa_friendly_inputs,
+)
+from ispypsa.translator.generators import _create_unserved_energy_generators
+
+
+def test_unserved_energy_generator_creation(workbook_table_cache_test_path: Path):
+    """Test that unserved energy generators are created when cost is specified."""
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
+
+    # Set unserved energy cost for testing
+    config.unserved_energy.cost = 10000.0
+    config.unserved_energy.generator_size_mw = 5000.0
+
+    template_tables = create_ispypsa_inputs_template(
+        config.scenario,
+        config.network.nodes.regional_granularity,
+        iasr_tables,
+        manual_tables,
+    )
+    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
+
+    # Check for unserved energy generators
+    generators = pypsa_tables["generators"]
+    unserved_generators = generators[generators["carrier"] == "Unserved Energy"]
+
+    # Should be one generator per bus
+    # In this specific test data there are only 2 sub_regions
+    assert len(unserved_generators) == 2
+
+    # Check properties of unserved generators
+    for _, gen in unserved_generators.iterrows():
+        assert gen["name"].startswith("unserved_energy_")
+        assert gen["p_nom"] == 5000.0
+        assert gen["p_nom_extendable"] == False
+        assert gen["marginal_cost"] == 10000.0
+        assert gen["bus"] in pypsa_tables["buses"]["name"].values
+
+
+def test_no_unserved_energy_generators_when_cost_is_none(
+    workbook_table_cache_test_path: Path,
+):
+    """Test that no unserved energy generators are created when cost is None."""
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
+
+    # Ensure unserved energy cost is None
+    config.unserved_energy.cost = None
+
+    template_tables = create_ispypsa_inputs_template(
+        config.scenario,
+        config.network.nodes.regional_granularity,
+        iasr_tables,
+        manual_tables,
+    )
+    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
+
+    # Check that no unserved energy generators exist
+    generators = pypsa_tables["generators"]
+    unserved_generators = generators[generators["carrier"] == "Unserved Energy"]
+
+    assert len(unserved_generators) == 0
+
+
+def test_create_unserved_energy_generators():
+    """Test the _create_unserved_energy_generators function directly."""
+    buses = pd.DataFrame({"name": ["bus1", "bus2", "bus3"]})
+
+    # Test with cost specified
+    unserved_generators = _create_unserved_energy_generators(buses, 5000.0, 1000.0)
+    assert len(unserved_generators) == 3
+    assert all(unserved_generators["marginal_cost"] == 5000.0)
+    assert all(unserved_generators["p_nom"] == 1000.0)
+    assert all(unserved_generators["carrier"] == "Unserved Energy")
+````
+
+## File: src/ispypsa/__init__.py
+````python
+import pandas as pd
+
+# pandas options
+pd.set_option("future.no_silent_downcasting", True)
+
+
+__all__ = []
+````
+
+## File: src/ispypsa/config/__init__.py
+````python
+from ispypsa.config.load_config import load_config
+from ispypsa.config.validators import (
+    ModelConfig,
+    TemporalAggregationConfig,
+    TemporalCapacityInvestmentConfig,
+    TemporalOperationalConfig,
+    TemporalRangeConfig,
+)
+
+__all__ = [
+    "load_config",
+    "ModelConfig",
+    "TemporalRangeConfig",
+    "TemporalAggregationConfig",
+    "TemporalOperationalConfig",
+    "TemporalCapacityInvestmentConfig",
+]
+````
+
+## File: src/ispypsa/data_fetch/csv_read_write.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+
+def read_csvs(directory: Path | str) -> dict[str : pd.DataFrame]:
+    """Read all the CSVs in a directory into a dictionary with filenames (without csv
+    extension) as keys.
+
+    Args:
+        directory: Path to directory to read CSVs from.
+
+    Returns:
+        `pd.DataFrame`: Cleaned generator summary DataFrame
+    """
+    files = Path(directory).glob("*.csv")
+    return {file.name[:-4]: pd.read_csv(file) for file in files}
+
+
+def write_csvs(data_dict: dict[str : pd.DataFrame], directory: Path | str):
+    """Write all pd.DataFrames in a dictionary with filenames as keys (without csv extension)
+    to CSVs.
+
+    Args:
+        data_dict: Dictionary of pd.DataFrames to write to csv files.
+        directory: Path to directory to save CSVs to.
+
+    """
+    for file_name, data in data_dict.items():
+        save_path = Path(directory) / Path(f"{file_name}.csv")
+        data.to_csv(save_path)
+````
+
+## File: src/ispypsa/model/carriers.py
+````python
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+
+def _add_carriers_to_network(network: pypsa.Network, generators: pd.DataFrame) -> None:
+    """Adds the Carriers in the generators table, and the AC and DC Carriers to the
+    `pypsa.Network`.
+
+    Args:
+         network: The `pypsa.Network` object
+         generators: `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+
+    Returns: None
+    """
+    carriers = list(generators["carrier"].unique()) + ["AC", "DC"]
+    network.add("Carrier", carriers)
+````
+
+## File: src/ispypsa/templater/__init__.py
+````python
+from ispypsa.templater.create_template import (
+    create_ispypsa_inputs_template,
+    list_templater_output_files,
+)
+from ispypsa.templater.manual_tables import load_manually_extracted_tables
+
+__all__ = [
+    "create_ispypsa_inputs_template",
+    "load_manually_extracted_tables",
+    "list_templater_output_files",
+]
+````
+
+## File: src/ispypsa/templater/helpers.py
+````python
+import logging
+import re
+from typing import Iterable
+
+import numpy as np
+import pandas as pd
+from thefuzz import fuzz
+
+
+def _fuzzy_match_names(
+    name_series: pd.Series,
+    choices: Iterable[str],
+    task_desc: str,
+    not_match: str = "existing",
+    threshold: int = 0,
+) -> pd.Series:
+    """
+    Fuzzy matches values in `name_series` with values in `choices`.
+    Fuzzy matching is used where typos or minor differences in names in raw data
+    may cause issues with exact mappings (e.g. using a dictionary mapping).
+    This function is only suitable for use where name_series does not have
+    repeated values since matching is done without replacement
+
+    Args:
+        name_series: :class:`pandas.Series` with names to be matched with values in
+            `choices`
+        choices: Iterable of `choices` that are replacement values
+        task_desc: Task description to include in logging information
+        not_match: optional. Defaults to "existing". If "existing", wherever a match
+            that exceeds the threshold does not exist the existing value is retained.
+            If any other string, this will be used to replace the existing value
+            where a match that exceeds the threshold does not exist.
+        threshold: match quality threshold to exceed for replacement. Between 0 and 100
+
+    Returns:
+        :class:`pandas.Series` with values from `choices` that correspond to the closest
+            match to the original values in `name_series`
+    """
+    match_dict = _one_to_one_priority_based_fuzzy_matching(
+        set(name_series), set(choices), not_match, threshold
+    )
+    matched_series = name_series.apply(lambda x: match_dict[x])
+    _log_fuzzy_match(name_series, matched_series, task_desc)
+    return matched_series
+
+
+def _one_to_one_priority_based_fuzzy_matching(
+    strings_to_match: set, choices: set, not_match: str, threshold: int
+):
+    """
+    Find matches between two sets of strings, assuming that strings_to_match and choices
+    contain unique values (e.g. from the index column of a table) that must be matched one
+    to one. This is done by:
+
+        1. Identifying exact matches
+        2. Matching remaining strings by finding the highest similarity pair and then
+           recording the best match (iteratively).
+
+    Args:
+        strings_to_match: set of strings to find a match for in the set of choices.
+        choices: set of strings to choose from when finding matches.
+        not_match: optional. Defaults to "existing". If "existing", wherever a match
+            that exceeds the threshold does not exist, the existing value is retained.
+            If any other string, this will be used to replace the existing value
+            where a match that exceeds the threshold does not exist.
+        threshold: match quality threshold to exceed for replacement. Between 0 and 100
+
+    Returns:
+        dict: dict matching strings to the choice they matched with.
+    """
+
+    matches = []
+
+    remaining_strings_to_match = strings_to_match
+    remaining_choices = choices
+
+    # Find and remove exact matches
+    exact_matches = remaining_strings_to_match.intersection(remaining_choices)
+    for s in exact_matches:
+        matches.append((s, s))
+        remaining_strings_to_match.remove(s)
+        remaining_choices.remove(s)
+
+    # Convert remaining sets to lists for index access
+    remaining_strings_to_match_list = list(remaining_strings_to_match)
+    remaining_choices_list = list(remaining_choices)
+
+    # For remaining strings, use greedy approach with fuzzy matching
+    while remaining_strings_to_match_list and remaining_choices_list:
+        best_score = -1
+        best_pair = None
+
+        # Find the highest similarity score among remaining pairs
+        for i, str_a in enumerate(remaining_strings_to_match_list):
+            for j, str_b in enumerate(remaining_choices_list):
+                score = fuzz.ratio(str_a, str_b)
+                if score > best_score and score >= threshold:
+                    best_score = score
+                    best_pair = (i, j, str_a, str_b, score)
+
+        if best_pair:
+            i, j, str_a, str_b, score = best_pair
+            matches.append((str_a, str_b))
+
+            # Remove matched strings
+            remaining_strings_to_match_list.pop(i)
+            remaining_choices_list.pop(j)
+        else:
+            # If none of the remaining string comparisons is greater
+            # than the threshold provided break and resort to the
+            # no_match strategy.
+            break
+
+    for str_to_match in remaining_strings_to_match_list:
+        if not_match == "existing":
+            matches.append((str_to_match, str_to_match))
+        else:
+            matches.append((str_to_match, not_match))
+
+    return dict(matches)
+
+
+def _log_fuzzy_match(
+    original_series: pd.Series, matched_series: pd.Series, task_desc: str
+) -> None:
+    """Log any fuzzy matches at the INFO level"""
+    if any(diff := matched_series != original_series):
+        originals = original_series[diff]
+        matches = matched_series[diff]
+        for original, match in zip(originals, matches):
+            logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
+
+
+def _snakecase_string(string: str) -> str:
+    """Returns the input string in snakecase
+
+    Steps:
+        1. Strip leading and tailing spaces
+        2. Catch units that are not properly handled by following steps (e.g. "MWh")
+        3. Replaces words starting with an uppercase character (and not otherwise
+            containing capitals) that are not at the start of the string or preceded
+            by an underscore, with the same word preceded by an underscore
+        4. Replaces groups of numbers (2+ digits) that are not at the start of the string
+            or preceded by an underscore, with the same group of numbers preceded
+            by an underscore
+        5. Replaces hyphens with underscores
+        6. Replaces commas with underscores
+        7. Replaces spaces not followed by an underscore with an underscore, and any
+            remaining spaces with nothing
+        8. Replaces parentheses with nothing
+        9. Removese duplicated underscores
+        10. Makes all characters lowercase
+
+    Args:
+        string: String to be snakecased
+    """
+    string = string.strip().replace("MWh", "mwh")
+    precede_words_with_capital_with_underscore = re.sub(
+        r"(?<!^)(?<!_)([A-Z][a-z0-9]+)", r"_\1", string
+    )
+    precede_number_groups_with_underscore = re.sub(
+        r"(?<!^)(?<!_)(?<![0-9])([0-9]{2,}+)(?![a-zA-Z]+)",
+        r"_\1",
+        precede_words_with_capital_with_underscore,
+    )
+    replace_hyphens = re.sub(r"-", "_", precede_number_groups_with_underscore)
+    replace_commas = re.sub(r",", "_", replace_hyphens)
+    replace_spaces = re.sub(r"\s(?!_)", "_", replace_commas).replace(" ", "")
+    replace_parentheses = re.sub(r"\(|\)|", "", replace_spaces)
+    replace_duplicated_underscores = re.sub(r"_+", "_", replace_parentheses)
+    snaked = replace_duplicated_underscores.lower()
+    return snaked
+
+
+def _where_any_substring_appears(
+    series: pd.Series, substrings: Iterable[str]
+) -> pd.Series:
+    """Returns string elements of a series that contain any of the provided
+    substrings (not case sensitive).
+
+    Args:
+        series: :class:`pd.Series`
+        substrings: Iterable containing substrings to use for selection
+
+    Returns:
+        Boolean :class:`pd.Series` with `True` where a substring appears in a string
+    """
+    series_where_str = series.apply(lambda x: isinstance(x, str))
+    false_series = pd.Series(np.repeat(False, len(series)))
+    if not any(series_where_str):
+        return false_series
+    substrings = list(substrings)
+    wheres = []
+    for string in substrings:
+        wheres.append(
+            false_series.where(
+                ~series_where_str,
+                series.str.contains(string, case=False, na=False),
+            )
+        )
+    if len(wheres) < 2:
+        boolean = wheres.pop()
+    else:
+        boolean = np.logical_or(wheres[0], wheres[1])
+        for i in range(2, len(wheres)):
+            boolean = np.logical_or(boolean, wheres[i])
+    return boolean
+
+
+def _add_units_to_financial_year_columns(
+    columns: pd.Index, units_str: str
+) -> list[str]:
+    """Adds '_{units_str}' to the financial year columns"""
+    cols = [
+        _snakecase_string(col + f"_{units_str}")
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+        else _snakecase_string(col)
+        for col in columns
+    ]
+    return cols
+
+
+def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Forcefully converts FY columns to float columns"""
+    cols = [
+        df[col].astype(float) if re.match(r"[0-9]{4}_[0-9]{2}", col) else df[col]
+        for col in df.columns
+    ]
+    return pd.concat(cols, axis=1)
+
+
+def _strip_all_text_after_numeric_value(
+    series: pd.Index | pd.Series,
+) -> pd.Index | pd.Series:
+    """
+    Removes all text after the first numeric value.
+
+    Numeric value can contain commas and one period.
+    """
+    if series.dtypes == "object":
+        series = series.astype(str).str.replace(
+            r"^([0-9\.\,+]+)\s+.*", r"\1", regex=True
+        )
+    return series
+````
+
+## File: src/ispypsa/translator/__init__.py
+````python
+from ispypsa.translator.buses import create_pypsa_friendly_bus_demand_timeseries
+from ispypsa.translator.create_pypsa_friendly_inputs import (
+    create_pypsa_friendly_inputs,
+    create_pypsa_friendly_snapshots,
+    create_pypsa_friendly_timeseries_inputs,
+    list_translator_output_files,
+)
+from ispypsa.translator.generators import (
+    create_pypsa_friendly_existing_generator_timeseries,
+)
+
+__all__ = [
+    "list_translator_output_files",
+    "create_pypsa_friendly_inputs",
+    "create_pypsa_friendly_snapshots",
+    "create_pypsa_friendly_timeseries_inputs",
+    "create_pypsa_friendly_existing_generator_timeseries",
+    "create_pypsa_friendly_bus_demand_timeseries",
+]
+````
+
+## File: src/ispypsa/translator/helpers.py
+````python
+def _get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
+    """Get the model start year, end year, and start/end month for iteration, which depend on
+    financial vs calendar year.
+    """
+    if year_type == "fy":
+        start_year = start_year - 1
+        end_year = end_year
+        month = 7
+    else:
+        start_year = start_year
+        end_year = end_year + 1
+        month = 1
+    return start_year, end_year, month
+
+
+def _annuitised_investment_costs(
+    capital_cost: float, wacc: float, asset_lifetime: int
+) -> float:
+    """Calculate the cost of capital cost spread over the asset lifetime.
+
+    Args:
+        capital_cost: as float, typically in $/MW
+        wacc: as float, weighted average cost of capital, an interest rate specifying
+            how expensive it is to borrow money for the asset investment.
+        asset_lifetime: as int, asset lifetime in years.
+
+    Returns: float specifying the annuitised cost in $/MW/yr
+    """
+    return (capital_cost * wacc) / (1 - (1 + wacc) ** (-1.0 * asset_lifetime))
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_generators.csv
+````
+,name,capital_cost,p_nom,bus,p_nom_extendable
+0,con_one-EXPANSION,10000.0,0.0,bus_for_custom_constraint_gens,True
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/generators.csv
+````
+name,p_nom,carrier,bus,marginal_cost
+Bayswater,2715.0,Black Coal,bus_one,50.0
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/snapshots.csv
+````
+,investment_periods,snapshots
+0,2025,2025-01-01 00:00:00
+1,2025,2025-01-01 00:30:00
+2,2025,2025-01-01 01:00:00
+3,2025,2025-01-01 01:30:00
+4,2025,2025-01-01 02:00:00
+5,2025,2025-01-01 02:30:00
+6,2025,2025-01-01 03:00:00
+7,2025,2025-01-01 03:30:00
+8,2025,2025-01-01 04:00:00
+9,2025,2025-01-01 04:30:00
+10,2025,2025-01-01 05:00:00
+11,2025,2025-01-01 05:30:00
+12,2025,2025-01-01 06:00:00
+13,2025,2025-01-01 06:30:00
+14,2025,2025-01-01 07:00:00
+15,2025,2025-01-01 07:30:00
+16,2025,2025-01-01 08:00:00
+17,2025,2025-01-01 08:30:00
+18,2025,2025-01-01 09:00:00
+19,2025,2025-01-01 09:30:00
+20,2025,2025-01-01 10:00:00
+21,2025,2025-01-01 10:30:00
+22,2025,2025-01-01 11:00:00
+23,2025,2025-01-01 11:30:00
+24,2025,2025-01-01 12:00:00
+25,2025,2025-01-01 12:30:00
+26,2025,2025-01-01 13:00:00
+27,2025,2025-01-01 13:30:00
+28,2025,2025-01-01 14:00:00
+29,2025,2025-01-01 14:30:00
+30,2025,2025-01-01 15:00:00
+31,2025,2025-01-01 15:30:00
+32,2025,2025-01-01 16:00:00
+33,2025,2025-01-01 16:30:00
+34,2025,2025-01-01 17:00:00
+35,2025,2025-01-01 17:30:00
+36,2025,2025-01-01 18:00:00
+37,2025,2025-01-01 18:30:00
+38,2025,2025-01-01 19:00:00
+39,2025,2025-01-01 19:30:00
+40,2025,2025-01-01 20:00:00
+41,2025,2025-01-01 20:30:00
+42,2025,2025-01-01 21:00:00
+43,2025,2025-01-01 21:30:00
+44,2025,2025-01-01 22:00:00
+45,2025,2025-01-01 22:30:00
+46,2025,2025-01-01 23:00:00
+47,2025,2025-01-01 23:30:00
+48,2025,2025-01-02 00:00:00
+````
+
+## File: tests/test_templater/test_energy_policy_targets.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater.energy_policy_targets import (
+    _template_powering_australia_plan,
+    _template_renewable_generation_targets,
+    _template_renewable_share_targets,
+    _template_technology_capacity_targets,
+)
+from ispypsa.templater.lists import _ISP_SCENARIOS
+from ispypsa.templater.mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
+
+
+def test_template_renewable_share_targets(workbook_table_cache_test_path: Path):
+    """Test the renewable share targets template creation"""
+
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+
+    df = _template_renewable_share_targets(iasr_tables)
+
+    # Check basic DataFrame structure
+    expected_columns = ["FY", "region_id", "pct", "policy_id"]
+    assert all(col in df.columns for col in expected_columns)
+
+    # Check data types
+    assert df["FY"].dtype == "object"  # String type
+    assert df["region_id"].dtype == "object"  # String type
+    assert df["policy_id"].dtype == "object"  # String type
+    assert df["pct"].dtype == "float64"
+    assert all(df["pct"].between(0, 100))
+
+    # Check that FY format is correct (YYYY_YY)
+    assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
+
+    # Check expected regions are present
+    expected_regions = {"VIC", "QLD"}
+    assert set(df["region_id"]) == expected_regions
+
+    # Test specific known values (sample check)
+    vic_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")]["pct"].iloc[0]
+    qld_2030 = df[(df["region_id"] == "QLD") & (df["FY"] == "2030_31")]["pct"].iloc[0]
+
+    assert vic_2024 == 40
+    assert qld_2030 == 60
+
+    # test specific known values (sample check)
+    vic_policy_2024 = df[(df["region_id"] == "VIC") & (df["FY"] == "2024_25")][
+        "policy_id"
+    ].iloc[0]
+    qld_policy_2030 = df[(df["region_id"] == "QLD") & (df["FY"] == "2030_31")][
+        "policy_id"
+    ].iloc[0]
+
+    assert vic_policy_2024 == "vret"
+    assert qld_policy_2030 == "qret"
+
+
+def test_template_powering_australia_plan(workbook_table_cache_test_path: Path):
+    """Test the Powering Australia Plan template creation"""
+
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df_full = iasr_tables["powering_australia_plan_trajectory"]
+    for scenario in _ISP_SCENARIOS:
+        df = _template_powering_australia_plan(df_full, scenario)
+
+        # Check basic DataFrame structure
+        expected_columns = ["FY", "pct", "policy_id"]
+        assert all(col in df.columns for col in expected_columns)
+
+        # Check data types
+        assert df["FY"].dtype == "object"  # String type
+        assert df["pct"].dtype == "float64"
+        assert all(df["pct"].between(0, 100))
+
+        # Check that FY format is correct (YYYY_YY)
+        assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
+
+        assert not df.isnull().any().any()
+
+
+def test_template_technology_capacity_targets(workbook_table_cache_test_path: Path):
+    """Test the technology capacity targets template creation"""
+
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = _template_technology_capacity_targets(iasr_tables)
+
+    # Check basic DataFrame structure
+    expected_columns = ["FY", "region_id", "capacity_mw", "policy_id"]
+    assert all(col in df.columns for col in expected_columns)
+
+    # Check data types
+    assert df["FY"].dtype == "object"  # String type
+    assert df["region_id"].dtype == "object"  # String type
+    assert df["capacity_mw"].dtype == "float64"
+    assert df["policy_id"].dtype == "object"  # String type
+
+    # Check that capacity values are non-negative
+    assert all(df["capacity_mw"] >= 0)
+
+    # Check that FY format is correct (YYYY_YY)
+    assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
+
+    # Check expected technologies are present
+    target_files = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
+        "template_technology_capacity_targets"
+    ]
+    expected_policy_ids = {target["policy_id"] for target in target_files}
+    assert set(df["policy_id"]) == expected_policy_ids
+
+    # Test specific known values (sample check)
+    vic_storage_2024 = df[
+        (df["region_id"] == "VIC")
+        & (df["policy_id"] == "vic_storage")
+        & (df["FY"] == "2028_29")
+    ]["capacity_mw"].iloc[0]
+    nem_generator_2030 = df[
+        (df["region_id"] == "NEM")
+        & (df["policy_id"] == "cis_generator")
+        & (df["FY"] == "2026_27")
+    ]["capacity_mw"].iloc[0]
+
+    assert vic_storage_2024 == 1950.0
+    assert nem_generator_2030 == 4000.0
+
+    # Check sorting
+    assert df.equals(
+        df.sort_values(["region_id", "policy_id", "FY"]).reset_index(drop=True)
+    )
+
+
+def test_template_renewable_generation_targets(workbook_table_cache_test_path: Path):
+    """Test the renewable generation targets template creation"""
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = _template_renewable_generation_targets(iasr_tables)
+
+    # Check basic DataFrame structure
+    expected_columns = ["FY", "region_id", "capacity_mwh"]
+    assert all(col in df.columns for col in expected_columns)
+
+    # Check data types
+    assert df["FY"].dtype == "object"  # String type
+    assert df["region_id"].dtype == "object"  # String type
+    assert df["capacity_mwh"].dtype == "float64"
+    assert df["policy_id"].dtype == "object"  # String type
+
+    # Check that capacity values are non-negative
+    assert all(df["capacity_mwh"] >= 0)
+
+    # Check that FY format is correct (YYYY_YY)
+    assert all(df["FY"].str.match(r"\d{4}_\d{2}"))
+
+    # Test specific known values (sample check)
+    nsw_2024 = df[(df["region_id"] == "NSW") & (df["FY"] == "2024_25")][
+        "capacity_mwh"
+    ].iloc[0]
+    qld_2033 = df[(df["region_id"] == "TAS") & (df["FY"] == "2033_34")][
+        "capacity_mwh"
+    ].iloc[0]
+
+    assert nsw_2024 == 12898000.0
+    assert qld_2033 == 17850000.0
+
+    # Verify no "Notes" rows in output
+    assert not df["FY"].str.contains("Notes", case=False).any()
+````
+
+## File: tests/test_templater/test_flow_path_costs.py
+````python
+import numpy as np
+import pandas as pd
+import pytest
+
+from ispypsa.templater.flow_paths import (
+    _get_augmentation_table,
+    _get_cost_table,
+    _get_least_cost_options,
+    _template_sub_regional_flow_path_costs,
+    process_transmission_costs,
+)
+from ispypsa.templater.mappings import (
+    _FLOW_PATH_AGUMENTATION_TABLES,
+    _FLOW_PATH_CONFIG,
+)
+
+
+def test_template_sub_regional_flow_path_costs_simple_least_cost_option():
+    # Augmentation tables for NNSW-SQ and TAS-VIC
+    aug_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2", "NNSW–SQ Option 5"],
+            "forward_capacity_increase": [100, 200, 40],
+            "reverse_capacity_increase": [90, 140, 50],
+        }
+    )
+    aug_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": [
+                "TAS-VIC Option 1 (Project Marinus Stage 1)",
+                "TAS-VIC Option 2 (Project Marinus Stage 2)",
+            ],
+            "forward_capacity_increase": [130, 70],
+            "reverse_capacity_increase": [150, 65],
+        }
+    )
+    # Cost tables for NNSW-SQ and TAS-VIC
+    # Option 2 is least cost and has the largest increase so should be chosen.
+    cost_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2"],
+            "2024_25": [50, 40],
+            "2025_26": [55, 45],
+        }
+    )
+    # Option 1 is least cost and has the largest increase so should be chosen.
+    cost_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": [
+                "TAS-VIC Option 1 (Project Marinus Stage 1)",
+                "TAS-VIC Option 2 (Project Marinus Stage 2)",
+            ],
+            "2024_25": [70, np.nan],  # actionable ISP option has NaN
+            "2025_26": [75, np.nan],
+        }
+    )
+    # Preparatory activities and actionable ISP tables (should not be chosen)
+    # Note: ISPyPSA contains internal mappings which match the names used in Preparatory
+    # and actionable isp cost tables to the names used in the augmentation tables.
+    prep_acts = pd.DataFrame(
+        {
+            "Flow path": ["500kV QNI Connect (NSW works)"],
+            "2024_25": [100],
+            "2025_26": [110],
+        }
+    )
+    actionable_isp = pd.DataFrame(
+        {
+            "Flow path": ["Project Marinus Stage 1"],
+            "2024_25": [999],
+            "2025_26": [999],
+        }
+    )
+    # Compose iasr_tables dict
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": aug_table_nnsw_sq,
+        "flow_path_augmentation_options_TAS-VIC": aug_table_tas_vic,
+        "flow_path_augmentation_costs_progressive_change_NNSW-SQ": cost_table_nnsw_sq,
+        "flow_path_augmentation_costs_progressive_change_TAS-VIC": cost_table_tas_vic,
+        "flow_path_augmentation_costs_progressive_change_preparatory_activities": prep_acts,
+        "flow_path_augmentation_costs_progressive_change_actionable_isp_projects": actionable_isp,
+    }
+    scenario = "Progressive Change"
+    # Run function
+    result = _template_sub_regional_flow_path_costs(iasr_tables, scenario)
+    # Check least cost options are chosen for NNSW-SQ and TAS-VIC
+    nnsw_sq_row = result[result["flow_path"] == "NNSW-SQ"]
+    tas_vic_row = result[result["flow_path"] == "TAS-VIC"]
+    assert nnsw_sq_row["option"].iloc[0] == "NNSW-SQ Option 2"
+    assert tas_vic_row["option"].iloc[0] == "TAS-VIC Option 1 (Project Marinus Stage 1)"
+    # Check nominal_flow_limit_increase_mw is correct
+    assert nnsw_sq_row["additional_network_capacity_mw"].iloc[0] == 200
+    assert tas_vic_row["additional_network_capacity_mw"].iloc[0] == 150
+    # Check cost per year column is correct (cost divided by nominal limit)
+    # For NNSW-SQ Option 2: 2024_25 = 40/200 = 0.2, 2025_26 = 45/200 = 0.225
+    # For TAS-VIC Option 1: 2024_25 = 70/150 ≈ 0.4667, 2025_26 = 75/150 = 0.5
+    assert abs(nnsw_sq_row["2024_25_$/mw"].iloc[0] - 0.2) < 1e-6
+    assert abs(nnsw_sq_row["2025_26_$/mw"].iloc[0] - 0.225) < 1e-6
+    assert abs(tas_vic_row["2024_25_$/mw"].iloc[0] - (70 / 150)) < 1e-6
+    assert abs(tas_vic_row["2025_26_$/mw"].iloc[0] - 0.5) < 1e-6
+
+
+def test_template_sub_regional_flow_path_costs_prep_and_actionable_chosen():
+    """
+    The cost of the non preparatory activities and non actionable isp projects
+    have been made very high and therefore preparatory activities and
+    actionable isp projects should be chosen.
+    """
+    # Augmentation tables for NNSW-SQ and TAS-VIC
+    aug_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2", "NNSW–SQ Option 5"],
+            "forward_capacity_increase": [100, 150, 200],
+            "reverse_capacity_increase": [100, 150, 150],
+        }
+    )
+    aug_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": [
+                "TAS-VIC Option 1 (Project Marinus Stage 1)",
+                "TAS-VIC Option 2 (Project Marinus Stage 2)",
+            ],
+            "forward_capacity_increase": [140, 150],
+            "reverse_capacity_increase": [145, 130],
+        }
+    )
+    # Standard cost tables (set high or NaN)
+    cost_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2"],
+            "2024_25": [1000, 1000],
+            "2025_26": [1000, 1000],
+        }
+    )
+    cost_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": [
+                "TAS-VIC Option 1 (Project Marinus Stage 1)",
+                "TAS-VIC Option 2 (Project Marinus Stage 2)",
+            ],
+            "2024_25": [1000, np.nan],
+            "2025_26": [1000, np.nan],
+        }
+    )
+    # Preparatory activities and actionable ISP tables (set low cost)
+    # Note: ISPyPSA contains internal mappings which match the names used in Preparatory
+    # and actionable isp cost tables to the names used in the augmentation tables.
+    prep_acts = pd.DataFrame(
+        {
+            "Flow path": ["500kV QNI Connect (NSW works)"],
+            "2024-25": [10],
+            "2025-26": [20],
+        }
+    )
+    actionable_isp = pd.DataFrame(
+        {
+            "Flow path": ["Project Marinus Stage 2"],
+            "2024-25": [15],
+            "2025-26": [25],
+        }
+    )
+    # Compose iasr_tables dict
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": aug_table_nnsw_sq,
+        "flow_path_augmentation_options_TAS-VIC": aug_table_tas_vic,
+        "flow_path_augmentation_costs_progressive_change_NNSW-SQ": cost_table_nnsw_sq,
+        "flow_path_augmentation_costs_progressive_change_TAS-VIC": cost_table_tas_vic,
+        "flow_path_augmentation_costs_progressive_change_preparatory_activities": prep_acts,
+        "flow_path_augmentation_costs_progressive_change_actionable_isp_projects": actionable_isp,
+    }
+    scenario = "Progressive Change"
+    # Run function
+    result = _template_sub_regional_flow_path_costs(iasr_tables, scenario)
+    # Check that the prep activity is chosen for NNSW-SQ and actionable ISP for TAS-VIC
+    nnsw_sq_row = result[result["flow_path"] == "NNSW-SQ"]
+    tas_vic_row = result[result["flow_path"] == "TAS-VIC"]
+    assert nnsw_sq_row["option"].iloc[0] == "NNSW–SQ Option 5"
+    assert tas_vic_row["option"].iloc[0] == "TAS-VIC Option 2 (Project Marinus Stage 2)"
+    # Check nominal_flow_limit_increase_mw is correct
+    assert nnsw_sq_row["additional_network_capacity_mw"].iloc[0] == 200
+    assert tas_vic_row["additional_network_capacity_mw"].iloc[0] == 150
+    # Check cost per year column is correct (cost divided by nominal limit)
+    assert abs(nnsw_sq_row["2024_25_$/mw"].iloc[0] - (10 / 200)) < 1e-6
+    assert abs(nnsw_sq_row["2025_26_$/mw"].iloc[0] - (20 / 200)) < 1e-6
+    assert abs(tas_vic_row["2024_25_$/mw"].iloc[0] - (15 / 150)) < 1e-6
+    assert abs(tas_vic_row["2025_26_$/mw"].iloc[0] - (25 / 150)) < 1e-6
+
+
+def test_template_sub_regional_flow_path_costs_use_first_year_with_valid_costs():
+    """
+    Test that the first year with non-nan cost data for all options is used.
+    """
+    # NNSW-SQ: only 2025_26 has all non-nan costs
+    aug_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2", "NNSW-SQ Option 3"],
+            "forward_capacity_increase": [150, 200, 200],
+            "reverse_capacity_increase": [200, 150, 150],
+        }
+    )
+    # Even though option 3 is cheaper than option 2 in 2024_25, option 2 should get
+    # chosen because 2025_26 is used as the comparison year.
+    cost_table_nnsw_sq = pd.DataFrame(
+        {
+            "Flow path": ["NNSW-SQ", "NNSW-SQ", "NNSW-SQ"],
+            "Option Name": ["NNSW-SQ Option 1", "NNSW-SQ Option 2", "NNSW-SQ Option 3"],
+            "2024_25": [np.nan, 50, 10],
+            "2025_26": [35, 45, 50],
+        }
+    )
+    # TAS-VIC: all years have valid costs
+    aug_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": ["TAS-VIC Option 1", "TAS-VIC Option 2"],
+            "forward_capacity_increase": [90, 100],
+            "reverse_capacity_increase": [100, 90],
+        }
+    )
+    cost_table_tas_vic = pd.DataFrame(
+        {
+            "Flow path": ["TAS-VIC", "TAS-VIC"],
+            "Option Name": ["TAS-VIC Option 1", "TAS-VIC Option 2"],
+            "2024_25": [100, 10],
+            "2025_26": [10, 100],
+        }
+    )
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": aug_table_nnsw_sq,
+        "flow_path_augmentation_options_TAS-VIC": aug_table_tas_vic,
+        "flow_path_augmentation_costs_progressive_change_NNSW-SQ": cost_table_nnsw_sq,
+        "flow_path_augmentation_costs_progressive_change_TAS-VIC": cost_table_tas_vic,
+    }
+    scenario = "Progressive Change"
+    result = _template_sub_regional_flow_path_costs(iasr_tables, scenario)
+    # NNSW-SQ: Only 2025_26 has all non-nan costs, so selection is based on that year for all years
+    nnsw_sq_row = result[result["flow_path"] == "NNSW-SQ"]
+    assert nnsw_sq_row["option"].iloc[0] == "NNSW-SQ Option 1"
+    assert nnsw_sq_row["additional_network_capacity_mw"].iloc[0] == 200
+    assert np.isnan(nnsw_sq_row["2024_25_$/mw"].iloc[0])
+    assert abs(nnsw_sq_row["2025_26_$/mw"].iloc[0] - (35 / 200)) < 1e-6
+    # TAS-VIC: both years valid, Option 2 is the least cost only in first,
+    # but should be chosen on this basis.
+    tas_vic_row = result[result["flow_path"] == "TAS-VIC"]
+    assert tas_vic_row["option"].iloc[0] == "TAS-VIC Option 2"
+    assert tas_vic_row["additional_network_capacity_mw"].iloc[0] == 100
+    assert abs(tas_vic_row["2024_25_$/mw"].iloc[0] - (10 / 100)) < 1e-6
+    assert abs(tas_vic_row["2025_26_$/mw"].iloc[0] - (100 / 100)) < 1e-6
+
+
+def test_get_least_cost_options_logs_unmatched(caplog):
+    """
+    Test that _get_least_cost_options logs dropped flow_path/option_name pairs from both tables.
+    """
+    # Augmentation table has one extra option not in cost table
+    aug_table = pd.DataFrame(
+        {
+            "id": ["A", "A", "B"],
+            "option": ["opt1", "opt2", "opt3"],
+            "nominal_capacity_increase": [100, 200, 300],
+        }
+    )
+    # Cost table has one extra option not in aug table
+    cost_table = pd.DataFrame(
+        {
+            "id": ["A", "A", "B"],
+            "option": ["opt1", "opt2", "opt4"],
+            "2024_25": [10, 20, 30],
+            "2025_26": [15, 25, 35],
+        }
+    )
+    # Only the (B, opt3) and (B, opt4) pairs should be dropped
+    with caplog.at_level("INFO"):
+        result = _get_least_cost_options(aug_table, cost_table, _FLOW_PATH_CONFIG)
+    # Check logs for both dropped pairs
+    assert "Dropped options from augmentation table: [('B', 'opt3')]" in caplog.text
+    assert "Dropped options from cost table: [('B', 'opt4')]" in caplog.text
+
+
+def test_get_full_flow_path_aug_table_logs_missing_tables(caplog):
+    """
+    Test that _get_augmentation_table logs a warning when augmentation tables are missing.
+    """
+    # Only provide one of the required augmentation tables
+    present_table = _FLOW_PATH_CONFIG["table_names"]["augmentation"][0]
+    iasr_tables = {
+        present_table: pd.DataFrame(
+            {
+                "Flow path": ["A"],
+                "Option Name": ["opt1"],
+                "forward_capacity_increase": [100],
+                "reverse_capacity_increase": [90],
+            }
+        )
+    }
+    missing = [
+        t
+        for t in _FLOW_PATH_CONFIG["table_names"]["augmentation"]
+        if t != present_table
+    ]
+    with caplog.at_level("WARNING"):
+        _get_augmentation_table(iasr_tables, _FLOW_PATH_CONFIG)
+    # Check that the warning about missing tables is logged
+    assert f"Missing augmentation tables: {missing}" in caplog.text
+
+
+def test_get_cleaned_flow_path_cost_tables_logs_missing_tables(caplog):
+    """
+    Test that _get_cost_table logs a warning when cost tables are missing.
+    """
+    # Only provide one of the required cost tables
+    cost_scenario = "progressive_change"
+    cost_table_names = _FLOW_PATH_CONFIG["table_names"]["cost"][cost_scenario]
+    present_table = cost_table_names[0]
+    iasr_tables = {
+        present_table: pd.DataFrame(
+            {
+                "id": ["A"],
+                "option": ["opt1"],
+                "2024_25": [10],
+            }
+        )
+    }
+    missing = [t for t in cost_table_names if t != present_table]
+    with caplog.at_level("WARNING"):
+        _get_cost_table(iasr_tables, cost_scenario, _FLOW_PATH_CONFIG)
+    # Check that the warning about missing tables is logged
+    assert f"Missing cost tables: {missing}" in caplog.text
+````
+
+## File: tests/test_translator/test_create_pypsa_friendly_inputs.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.config import load_config
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater import (
+    create_ispypsa_inputs_template,
+    load_manually_extracted_tables,
+)
+from ispypsa.translator import (
+    create_pypsa_friendly_inputs,
+    create_pypsa_friendly_snapshots,
+    create_pypsa_friendly_timeseries_inputs,
+    list_translator_output_files,
+)
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
+
+
+class DummyConfigOne:
+    """Simple dummy config class for testing."""
+
+    def __init__(self):
+        # Default configuration that can be modified by tests
+        self.temporal = type(
+            "obj",
+            (object,),
+            {
+                "year_type": "fy",
+                "range": type("obj", (object,), {"start_year": 2025, "end_year": 2026}),
+                "capacity_expansion": type(
+                    "obj",
+                    (object,),
+                    {
+                        "resolution_min": 60,  # 60-minute intervals for capacity expansion
+                        "investment_periods": [2025, 2026],  # Two investment periods
+                        "reference_year_cycle": [2018],
+                        "aggregation": type(
+                            "obj", (object,), {"representative_weeks": [1]}
+                        ),
+                    },
+                ),
+                "operational": type(
+                    "obj",
+                    (object,),
+                    {
+                        "resolution_min": 30,  # 30-minute intervals for operational
+                        "reference_year_cycle": [2018],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": type(
+                            "obj", (object,), {"representative_weeks": [1, 2]}
+                        ),
+                    },
+                ),
+            },
+        )
+
+
+def test_create_pypsa_friendly_snapshots_capacity_expansion():
+    """Test create_pypsa_friendly_snapshots with capacity_expansion model_phase."""
+
+    config = DummyConfigOne()
+
+    # Call the function with capacity_expansion
+    snapshots = create_pypsa_friendly_snapshots(config, "capacity_expansion")
+
+    # Basic structure assertions
+    assert isinstance(snapshots, pd.DataFrame)
+    assert "snapshots" in snapshots.columns
+    assert "investment_periods" in snapshots.columns
+
+    # Check investment periods (should have both 2025 and 2026)
+    assert set(snapshots["investment_periods"].unique()) == {2025, 2026}
+
+    # Check timestamps (should be from the first week of the financial year 2025 and 2026)
+    first_date = snapshots["snapshots"].min()
+    assert first_date.year == 2024
+    assert first_date.month == 7
+
+    # Verify that capacity expansion parameters were used
+    # 1. Check resolution (60-minute intervals)
+    timestamps = snapshots["snapshots"].sort_values()
+    assert (timestamps.iloc[1] - timestamps.iloc[0]).seconds == 60 * 60
+
+    # 2. Check that we got the right number of snapshots:
+    # 1 week per year × 2 years at 60-min intervals:
+    # = 2 weeks × 7 days × 24 intervals = 336 snapshots
+    assert len(snapshots) == 336
+
+
+def test_create_pypsa_friendly_snapshots_operational():
+    """Test create_pypsa_friendly_snapshots with operational model_phase."""
+
+    config = DummyConfigOne()
+
+    # Call the function with operational
+    snapshots = create_pypsa_friendly_snapshots(config, "operational")
+
+    # Basic structure assertions
+    assert isinstance(snapshots, pd.DataFrame)
+    assert "snapshots" in snapshots.columns
+    assert "investment_periods" in snapshots.columns
+
+    # For operational mode, there should only be one investment period (start year)
+    # even though there are two investment periods in the capacity expansion config
+    assert set(snapshots["investment_periods"].unique()) == {2025}
+
+    # Check timestamps start in the right place
+    first_date = snapshots["snapshots"].min()
+    assert first_date.year == 2024
+    assert first_date.month == 7
+
+    # Verify that operational parameters were used
+    # 1. Check resolution (30-minute intervals)
+    timestamps = snapshots["snapshots"].sort_values()
+    assert (timestamps.iloc[1] - timestamps.iloc[0]).seconds == 30 * 60
+
+    # 2. Check that 2 representative weeks were used
+    # 2 week per year × 2 years at 60-min intervals:
+    # = 4 weeks × 7 days × 48 intervals = 336 snapshots
+    assert len(snapshots) == 1344
+
+
+def test_create_pypsa_inputs_template_sub_regions(workbook_table_cache_test_path: Path):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
+    template_tables = create_ispypsa_inputs_template(
+        config.scenario,
+        config.network.nodes.regional_granularity,
+        iasr_tables,
+        manual_tables,
+    )
+    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
+
+    for table in list_translator_output_files():
+        assert table in pypsa_tables.keys()
+
+    assert "SQ" in pypsa_tables["buses"]["name"].values
+    assert "Q1" in pypsa_tables["buses"]["name"].values
+
+
+def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
+    workbook_table_cache_test_path: Path,
+):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
+    config.network.nodes.rezs = "attached_to_parent_node"
+    template_tables = create_ispypsa_inputs_template(
+        config.scenario,
+        config.network.nodes.regional_granularity,
+        iasr_tables,
+        manual_tables,
+    )
+    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
+
+    for table in list_translator_output_files():
+        assert table in pypsa_tables.keys()
+
+    assert "SQ" in pypsa_tables["buses"]["name"].values
+    assert "Q1" not in pypsa_tables["buses"]["name"].values
+
+
+def test_create_ispypsa_inputs_template_single_regions(
+    workbook_table_cache_test_path: Path,
+):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    manual_tables = load_manually_extracted_tables("6.0")
+    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
+    config.network.nodes.regional_granularity = "single_region"
+    config.network.nodes.rezs = "attached_to_parent_node"
+    template_tables = create_ispypsa_inputs_template(
+        config.scenario,
+        config.network.nodes.regional_granularity,
+        iasr_tables,
+        manual_tables,
+    )
+    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
+
+    for table in list_translator_output_files():
+        assert table in pypsa_tables.keys()
+
+    assert "NEM" in pypsa_tables["buses"]["name"].values
+    assert pypsa_tables["lines"].empty
+
+
+class DummyConfigTwo:
+    """Simple dummy config class for testing."""
+
+    def __init__(self):
+        # Default configuration that can be modified by tests
+        self.scenario = "Step Change"
+        self.temporal = type(
+            "obj",
+            (object,),
+            {
+                "year_type": "fy",
+                "range": type("obj", (object,), {"start_year": 2025, "end_year": 2025}),
+                "path_to_parsed_traces": None,  # Will be set in the test
+                "capacity_expansion": type(
+                    "obj",
+                    (object,),
+                    {
+                        "resolution_min": 60,
+                        "investment_periods": [2025],
+                        "reference_year_cycle": [2011],
+                        "aggregation": {"representative_weeks": [1]},
+                    },
+                ),
+                "operational": type(
+                    "obj",
+                    (object,),
+                    {
+                        "resolution_min": 30,
+                        "reference_year_cycle": [2011],
+                        "horizon": 336,
+                        "overlap": 48,
+                        "aggregation": type(
+                            "obj", (object,), {"representative_weeks": [1, 2]}
+                        ),
+                    },
+                ),
+            },
+        )
+        self.network = type(
+            "obj",
+            (object,),
+            {"nodes": type("obj", (object,), {"regional_granularity": "sub_regions"})},
+        )
+
+
+def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
+    """Test create_pypsa_friendly_timeseries_inputs for capacity expansion mode."""
+
+    # Setup
+    config = DummyConfigTwo()
+
+    # Use the trace data that ships with the tests
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    config.temporal.path_to_parsed_traces = parsed_trace_path
+
+    # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
+    ispypsa_tables = {
+        "ecaa_generators": pd.DataFrame(
+            {
+                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+                "fuel_type": ["Solar", "Wind"],
+            }
+        ),
+        "sub_regions": pd.DataFrame(
+            {
+                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
+                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+            }
+        ),
+    }
+
+    # Create snapshots for capacity expansion (hourly)
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2025,
+        temporal_resolution_min=60,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    # Create output directory
+    output_dir = tmp_path / "timeseries_output"
+
+    # Call the function
+    create_pypsa_friendly_timeseries_inputs(
+        config,
+        "capacity_expansion",
+        ispypsa_tables,
+        snapshots,
+        parsed_trace_path,
+        output_dir,
+    )
+
+    # Verify outputs
+    # 1. Check that solar_traces directory was created with the right files
+    solar_dir = output_dir / "solar_traces"
+    assert solar_dir.exists()
+    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+
+    # 2. Check that wind_traces directory was created with the right files
+    wind_dir = output_dir / "wind_traces"
+    assert wind_dir.exists()
+    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+
+    # 3. Check that demand_traces directory was created with the right files
+    demand_dir = output_dir / "demand_traces"
+    assert demand_dir.exists()
+    assert (demand_dir / "CNSW.parquet").exists()
+    assert (demand_dir / "NNSW.parquet").exists()
+    assert (demand_dir / "CQ.parquet").exists()
+    assert (demand_dir / "NQ.parquet").exists()
+
+    # 4. Load and check content of one of the files to verify basic structure
+    solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
+
+    # Check structure of the output
+    assert "snapshots" in solar_trace.columns
+    assert "p_max_pu" in solar_trace.columns
+    assert "investment_periods" in solar_trace.columns
+
+    # Verify matching of snapshots to investment periods
+    assert set(solar_trace["investment_periods"].unique()) == {2025}
+
+
+def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
+    """Test create_pypsa_friendly_timeseries_inputs for operational mode."""
+
+    # Setup
+    config = DummyConfigTwo()
+
+    # Use the trace data that ships with the tests
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    config.temporal.path_to_parsed_traces = parsed_trace_path
+
+    # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
+    ispypsa_tables = {
+        "ecaa_generators": pd.DataFrame(
+            {
+                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+                "fuel_type": ["Solar", "Wind"],
+            }
+        ),
+        "sub_regions": pd.DataFrame(
+            {
+                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
+                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+            }
+        ),
+    }
+
+    # Create snapshots for operational model (half-hourly)
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2025,  # Just one year for operational
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    # Create output directory
+    output_dir = tmp_path / "timeseries_output"
+
+    # Call the function
+    create_pypsa_friendly_timeseries_inputs(
+        config, "operational", ispypsa_tables, snapshots, parsed_trace_path, output_dir
+    )
+
+    # Verify outputs
+    # 1. Check that solar_traces directory was created with the right files
+    solar_dir = output_dir / "solar_traces"
+    assert solar_dir.exists()
+    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+
+    # 2. Check that wind_traces directory was created with the right files
+    wind_dir = output_dir / "wind_traces"
+    assert wind_dir.exists()
+    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+
+    # 3. Check that demand_traces directory was created with the right files
+    demand_dir = output_dir / "demand_traces"
+    assert demand_dir.exists()
+    assert (demand_dir / "CNSW.parquet").exists()
+    assert (demand_dir / "NNSW.parquet").exists()
+    assert (demand_dir / "CQ.parquet").exists()
+    assert (demand_dir / "NQ.parquet").exists()
+
+    # 4. Load and check content of one of the files to verify basic structure
+    solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
+
+    # Check structure of the output
+    assert "snapshots" in solar_trace.columns
+    assert "p_max_pu" in solar_trace.columns
+    assert "investment_periods" in solar_trace.columns
+
+    # Verify only one investment period for operational
+    assert set(solar_trace["investment_periods"].unique()) == {2025}
+````
+
+## File: src/ispypsa/iasr_table_caching/local_cache.py
+````python
+from pathlib import Path
+
+from isp_workbook_parser import Parser
+
+from ..templater.mappings import (
+    _ACTIONABLE_ISP_PROJECTS_TABLES,
+    _FLOW_PATH_AGUMENTATION_TABLES,
+    _FLOW_PATH_AUGMENTATION_COST_TABLES,
+    _GENERATOR_PROPERTIES,
+    _PREPATORY_ACTIVITIES_TABLES,
+    _REZ_AUGMENTATION_COST_TABLES,
+    _REZ_CONNECTION_AGUMENTATION_TABLES,
+    _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES,
+)
+
+_GENERATOR_PROPERTY_TABLES = [
+    table_name
+    for key, val in _GENERATOR_PROPERTIES.items()
+    for table_name in [key + "_" + gen_type for gen_type in val]
+]
+
+_NEW_ENTRANTS_COST_TABLES = [
+    "build_costs_scenario_mapping",
+    "build_costs_current_policies",
+    "build_costs_global_nze_by_2050",
+    "build_costs_global_nze_post_2050",
+    "build_costs_pumped_hydro",
+    "connection_costs_for_wind_and_solar",
+    "connection_costs_other",
+    "connection_cost_forecast_wind_and_solar_progressive_change",
+    "connection_cost_forecast_wind_and_solar_step_change&green_energy_exports",
+    "connection_cost_forecast_non_rez_progressive_change",
+    "connection_cost_forecast_non_rez_step_change&green_energy_exports",
+]
+
+_NETWORK_REQUIRED_TABLES = [
+    "sub_regional_reference_nodes",
+    "regional_topology_representation",
+    "regional_reference_nodes",
+    "renewable_energy_zones",
+    "flow_path_transfer_capability",
+    "interconnector_transfer_capability",
+    "initial_build_limits",
+]
+
+_NETWORK_REQUIRED_TABLES = (
+    _NETWORK_REQUIRED_TABLES
+    + _FLOW_PATH_AGUMENTATION_TABLES
+    + _FLOW_PATH_AUGMENTATION_COST_TABLES
+    + _PREPATORY_ACTIVITIES_TABLES
+    + _ACTIONABLE_ISP_PROJECTS_TABLES
+    + _REZ_CONNECTION_AGUMENTATION_TABLES
+    + _REZ_AUGMENTATION_COST_TABLES
+    + _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES
+)
+
+_GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES = [
+    "existing_generators_summary",
+    "committed_generators_summary",
+    "anticipated_projects_summary",
+    "batteries_summary",
+    "additional_projects_summary",
+    "new_entrants_summary",
+]
+
+_GENERATORS_REQUIRED_PROPERTY_TABLES = [
+    "expected_closure_years",
+    "coal_minimum_stable_level",
+    "liquid_fuel_prices",
+    "locational_cost_factors",
+    "technology_cost_breakdown_ratios",
+    "lead_time_and_project_life",
+    "technology_specific_lcfs",
+] + _GENERATOR_PROPERTY_TABLES
+
+_POLICY_REQUIRED_TABLES = [
+    "vic_renewable_target_trajectory",
+    "qld_renewable_target_trajectory",
+    "powering_australia_plan_trajectory",
+    "capacity_investment_scheme_renewable_trajectory",
+    "capacity_investment_scheme_storage_trajectory",
+    "nsw_roadmap_storage_trajectory",
+    "vic_storage_target_trajectory",
+    "vic_offshore_wind_target_trajectory",
+    "nsw_roadmap_renewable_trajectory",
+    "tas_renewable_target_trajectory",
+]
+
+REQUIRED_TABLES = (
+    _NETWORK_REQUIRED_TABLES
+    + _GENERATORS_STORAGE_REQUIRED_SUMMARY_TABLES
+    + _GENERATORS_REQUIRED_PROPERTY_TABLES
+    + _NEW_ENTRANTS_COST_TABLES
+    + _POLICY_REQUIRED_TABLES
+)
+
+
+def build_local_cache(
+    cache_path: Path | str, workbook_path: Path | str, iasr_workbook_version: str
+) -> None:
+    """Uses `isp-workbook-parser` to build a local cache of parsed workbook CSVs
+
+    Args:
+        cache_path: Path that should be created for the local cache
+        workbook_path: Path to an ISP Assumptions Workbook that is supported by
+            `isp-workbook-parser`
+        iasr_workbook_version: str specifying the version of the work being used.
+    """
+    workbook = Parser(Path(workbook_path))
+    if workbook.workbook_version != iasr_workbook_version:
+        raise ValueError(
+            "The IASR workbook provided does not match the version "
+            "specified in the config."
+        )
+    tables_to_get = REQUIRED_TABLES
+    workbook.save_tables(cache_path, tables=tables_to_get)
+    return None
+
+
+def list_cache_files(cache_path):
+    files = REQUIRED_TABLES
+    files = [cache_path / Path(file + ".csv") for file in files]
+    return files
+````
+
+## File: src/ispypsa/model/initialise.py
+````python
+import pandas as pd
+import pypsa
+
+
+def _initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
+    """Creates a `pypsa.Network object` with snapshots defined.
+
+    Args:
+        snapshots: `pd.DataFrame` specifying the date times (`str`), in column labeled,
+         'snapshots', to be used in the `pypsa.Network` snapshots.
+
+    Returns:
+        `pypsa.Network` object
+    """
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], snapshots["snapshots"]]
+    )
+    network = pypsa.Network(
+        snapshots=snapshots_as_indexes,
+        investment_periods=snapshots["investment_periods"].unique(),
+    )
+    return network
+````
+
+## File: src/ispypsa/templater/manual_tables.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+
+def load_manually_extracted_tables(iasr_workbook_version: str):
+    """Retrieves the manually extracted template files for the IASR workbook version.
+
+    Args:
+        iasr_workbook_version: str specifying which version of the workbook is being
+            used to create the template.
+
+    Returns:
+        dict[str: `pd.DataFrame`]
+    """
+    path_to_tables = (
+        Path(__file__).parent
+        / Path("manually_extracted_template_tables")
+        / Path(iasr_workbook_version)
+    )
+    csv_files = path_to_tables.glob("*.csv")
+    df_files = {}
+    for file in csv_files:
+        df_files[file.name.replace(".csv", "")] = pd.read_csv(file)
+    return df_files
+````
+
+## File: src/ispypsa/translator/snapshots.py
+````python
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
+from ispypsa.translator.helpers import _get_iteration_start_and_end_time
+
+
+def _create_complete_snapshots_index(
+    start_year: int,
+    end_year: int,
+    temporal_resolution_min: int,
+    year_type: str,
+) -> pd.DataFrame:
+    """Creates a DatetimeIndex, stored in DataFrame, defining the snapshots for the model before temporal aggregation.
+
+    The index will start at the beginning of `start_year` and finish at the end of
+    `end_year` with the specified temporal resolution.
+
+    Args:
+        start_year: int specifying the start year
+        end_year: int specifying the end year
+        temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
+        year_type: str specifying the year type. 'fy' for financial year means that start_year and end_year refer to
+            the financial year ending in the given year, and calendar means start_year and end_year refer to
+            standard calendar years.
+
+    Returns:
+        pd.DataFrame
+    """
+    start_year, end_year, month = _get_iteration_start_and_end_time(
+        year_type, start_year, end_year
+    )
+
+    if temporal_resolution_min < 60:
+        hour = 0
+        minute = temporal_resolution_min
+    else:
+        hour = temporal_resolution_min // 60
+        minute = temporal_resolution_min % 60
+
+    start_date = datetime(year=start_year, month=month, day=1, hour=hour, minute=minute)
+    end_date = datetime(year=end_year, month=month, day=1, hour=0, minute=0)
+
+    time_index = pd.date_range(
+        start=start_date,
+        end=end_date,
+        freq=str(temporal_resolution_min) + "min",
+        name="snapshots",
+    )
+    return pd.DataFrame(time_index).reset_index(drop=False)
+
+
+def _add_investment_periods(
+    snapshots: pd.DataFrame,
+    investment_periods: list[int],
+    year_type: str,
+) -> pd.DataFrame:
+    """Add a column to the snapshots pd.DataFrame specifying the investment period that
+    each model time interval belongs too.
+
+    Args:
+        snapshots: pd.DataFrame with "snapshots" column specifying the time intervals
+            of the model as datetime objects.
+        investment_periods: list of ints specifying the investment period. Each int
+            specifies the year an investment period begins and each period lasts until
+            the next one starts.
+        year_type: str which should be "fy" or "calendar". If "fy" then investment
+            period ints are interpreted as specifying financial years (according to the
+            calendar year the financial year ends in).
+
+
+    Returns: pd.DataFrame with column "investment_periods" and "snapshots".
+    """
+    snapshots = snapshots.copy()
+    snapshots["calendar_year"] = snapshots["snapshots"].dt.year
+    snapshots["effective_year"] = snapshots["calendar_year"].astype("int64")
+
+    if year_type == "fy":
+        mask = snapshots["snapshots"].dt.month >= 7
+        snapshots.loc[mask, "effective_year"] = (
+            snapshots.loc[mask, "effective_year"] + 1
+        )
+
+    inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
+    inv_periods_df = inv_periods_df.sort_values("investment_periods")
+
+    result = pd.merge_asof(
+        snapshots,
+        inv_periods_df,
+        left_on="effective_year",
+        right_on="investment_periods",
+    )
+
+    # Check if any timestamps couldn't be mapped to an investment period
+    unmapped = result["investment_periods"].isna()
+    if unmapped.any():
+        # Get the earliest unmapped timestamp for the error message
+        earliest_unmapped = result.loc[unmapped, "snapshots"].min()
+        # Get the earliest investment period
+        earliest_period = min(investment_periods)
+        raise ValueError(
+            f"Investment periods not compatible with modelling time window."
+            f"Earliest unmapped timestamp: {earliest_unmapped}. "
+            f"Earliest investment period: {earliest_period}."
+        )
+
+    return result.loc[:, ["investment_periods", "snapshots"]]
+
+
+def _create_investment_period_weightings(
+    investment_periods: list[int], model_end_year: int, discount_rate: float
+) -> pd.DataFrame:
+    """Create a pd.DataFrame specifying the weighting of each investment period based on
+    the sum of discounted periods during the period.
+
+    Args:
+        investment_periods: list of years in which investment periods start.
+        model_end_year: int specifying the last year modelling
+        discount_rate: fraction (float) specifying the discount rate i.e. 5% is 0.05.
+
+    Returns: pd.DataFrame with columns 'period', "years" and 'objective'. Where
+        "period" is the start years of the investment periods, "years" is the length
+        of each investment period, and "objective" is the relative weight of the
+        objective function in each investment period.
+    """
+    # Add model_end_year to calculate final period length
+    all_years = investment_periods + [model_end_year]
+
+    # Calculate period lengths
+    investment_period_lengths = np.diff(all_years).astype("int64")
+
+    # Create DataFrame with periods and their lengths
+    investment_period_weightings = pd.DataFrame(
+        {"period": investment_periods, "years": investment_period_lengths}
+    )
+
+    model_start_year = investment_periods[0]
+
+    def calc_weighting(period_start_year, period_length):
+        T0 = period_start_year - model_start_year
+        T1 = T0 + period_length
+        r = discount_rate
+        discounted_weights = [(1 / (1 + r) ** t) for t in range(T0, T1)]
+        return sum(discounted_weights)
+
+    investment_period_weightings["objective"] = investment_period_weightings.apply(
+        lambda row: calc_weighting(row["period"], row["years"]), axis=1
+    )
+
+    return investment_period_weightings
+````
+
+## File: tests/test_templater/test_generator_static_properties.py
+````python
+from pathlib import Path
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater.mappings import (
+    _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+    _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+)
+from ispypsa.templater.static_ecaa_generator_properties import (
+    _template_ecaa_generators_static_properties,
+)
+from ispypsa.templater.static_new_generator_properties import (
+    _template_new_generators_static_properties,
+)
+
+
+def test_static_ecaa_generator_templater(workbook_table_cache_test_path: Path):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = _template_ecaa_generators_static_properties(iasr_tables)
+    for static_property_col in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.keys():
+        if (
+            "new_col_name"
+            in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP[static_property_col].keys()
+        ):
+            static_property_col = _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP[
+                static_property_col
+            ]["new_col_name"]
+        assert all(
+            df[static_property_col].apply(
+                lambda x: True if not isinstance(x, str) else False
+            )
+        )
+    assert set(df["status"]) == set(
+        ("Existing", "Committed", "Anticipated", "Additional projects")
+    )
+    where_solar, where_wind = (
+        df["technology_type"].str.contains("solar", case=False),
+        df["technology_type"].str.contains("wind", case=False),
+    )
+    for where_tech in (where_solar, where_wind):
+        tech_df = df.loc[where_tech, :]
+        assert all(tech_df["minimum_load_mw"] == 0.0)
+        assert all(tech_df["heat_rate_gj/mwh"] == 0.0)
+        assert all(tech_df["partial_outage_derating_factor_%"] == 0.0)
+
+
+def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    df = _template_new_generators_static_properties(iasr_tables)
+    for static_property_col in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.keys():
+        # checks few updated column names first
+        if (
+            "new_col_name"
+            in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP[static_property_col].keys()
+        ):
+            static_property_col = _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP[
+                static_property_col
+            ]["new_col_name"]
+        # checks that no strings (mappings) remain in each mapped column
+        assert all(
+            df[static_property_col].apply(
+                lambda x: True if not isinstance(x, str) else False
+            )
+        )
+
+    # checks that all entries in "status" col are "New Entrant" only
+    assert set(df["status"]) == set(["New Entrant"])
+
+    # checks that all entries in "technology_location_id" col are strings
+    assert all(
+        df.technology_location_id.apply(lambda x: True if isinstance(x, str) else False)
+    )
+
+    # checks that values that should be always set to zero are zero:
+    where_solar, where_wind, where_hydro, where_battery, where_ocgt, where_h2 = (
+        df["technology_type"].str.contains("solar", case=False),
+        df["technology_type"].str.contains("wind", case=False),
+        df["technology_type"].str.contains("pumped hydro", case=False),
+        df["technology_type"].str.contains("battery", case=False),
+        df["technology_type"].str.contains("ocgt", case=False),
+        df["technology_type"].str.contains("hydrogen", case=False),
+    )
+    zero_tests = {
+        "minimum_stable_level_%": (
+            where_solar,
+            where_wind,
+            where_hydro,
+            where_battery,
+            where_ocgt,
+            where_h2,
+        ),
+        "vom_$/mwh_sent_out": (
+            where_solar,
+            where_wind,
+            where_hydro,
+            where_battery,
+            where_h2,
+        ),
+        "heat_rate_gj/mwh": (where_solar, where_wind, where_hydro, where_battery),
+        "partial_outage_derating_factor_%": (where_solar, where_wind, where_battery),
+    }
+    for zero_col_name, technology_dfs in zero_tests.items():
+        for where_tech in technology_dfs:
+            tech_df = df.loc[where_tech, :]
+            assert all(tech_df[zero_col_name] == 0.0)
+````
+
+## File: tests/test_templater/test_nodes.py
+````python
+import logging
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.templater.nodes import _template_regions, _template_sub_regions
+
+
+def test_node_templater_nem_regions(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path("regional_reference_nodes.csv")
+    regional_reference_nodes = pd.read_csv(filepath)
+    regional_template = _template_regions(regional_reference_nodes)
+    assert set(regional_template.nem_region_id) == set(("QLD", "VIC"))
+    assert set(regional_template.isp_sub_region_id) == set(("SQ", "VIC"))
+    assert set(regional_template.regional_reference_node) == set(
+        ("Prominent Hill", "Barcaldine")
+    )
+    assert set(regional_template.regional_reference_node_voltage_kv) == set((132,))
+    # assert not regional_template.substation_longitude.empty
+    # assert not regional_template.substation_latitude.empty
+    assert len(regional_template.columns) == 4
+
+
+def test_templater_sub_regions(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path("sub_regional_reference_nodes.csv")
+    sub_regional_reference_nodes = pd.read_csv(filepath)
+    sub_regions_template = _template_sub_regions(sub_regional_reference_nodes)
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
+    assert set(sub_regions_template.sub_region_reference_node) == set(
+        ("Prominent Hill", "Barcaldine")
+    )
+    assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
+    # assert not sub_regions_template.substation_longitude.empty
+    # assert not sub_regions_template.substation_latitude.empty
+    assert len(sub_regions_template.columns) == 4
+
+
+def test_templater_sub_regions_mapping_only(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path("sub_regional_reference_nodes.csv")
+    sub_regional_reference_nodes = pd.read_csv(filepath)
+    sub_regions_template = _template_sub_regions(
+        sub_regional_reference_nodes, mapping_only=True
+    )
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
+    assert len(sub_regions_template.columns) == 2
+
+
+def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker):
+    mocker.patch(
+        # api_call is from slow.py but imported to main.py
+        "ispypsa.templater.nodes._request_transmission_substation_coordinates",
+        return_value=pd.DataFrame(({})).T,
+    )
+    filepath = workbook_table_cache_test_path / Path("sub_regional_reference_nodes.csv")
+    sub_regional_reference_nodes = pd.read_csv(filepath)
+    sub_regions_template = _template_sub_regions(sub_regional_reference_nodes)
+    assert set(sub_regions_template.isp_sub_region_id) == set(("SQ", "VIC"))
+    assert set(sub_regions_template.nem_region_id) == set(("QLD", "VIC"))
+    assert set(sub_regions_template.sub_region_reference_node) == set(
+        ("Prominent Hill", "Barcaldine")
+    )
+    assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
+    assert len(sub_regions_template.columns) == 4
+
+
+# def test_substation_coordinate_http_error(
+#     workbook_table_cache_test_path: Path, requests_mock, caplog
+# ):
+#     url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
+#     requests_mock.get(url, status_code=404)
+#     # Run the test and expect an HTTPError
+#     with caplog.at_level(logging.WARNING):
+#         filepath = workbook_table_cache_test_path / Path(
+#             "sub_regional_reference_nodes.csv"
+#         )
+#         sub_regional_reference_nodes = pd.read_csv(filepath)
+#         sub_regions_template = _template_sub_regions(sub_regional_reference_nodes)
+#     assert "Failed to fetch substation coordinates" in caplog.text
+#     assert "Network node data will be templated without coordinate data" in caplog.text
+````
+
+## File: tests/test_templater/test_renewable_energy_zones.py
+````python
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ispypsa.templater.renewable_energy_zones import (
+    _template_rez_build_limits,
+)
+
+
+def test_renewable_energy_zone_build_limits(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path("initial_build_limits.csv")
+    build_limits = pd.read_csv(filepath)
+    build_limits = _template_rez_build_limits(build_limits)
+    assert pd.Series(build_limits.rez_id.values).equals(
+        pd.Series(["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"])
+    )
+    assert pd.Series(build_limits.isp_sub_region_id.values).equals(
+        pd.Series(["NQ", "NQ", "NQ", "CQ", "CQ", "CQ"])
+    )
+    assert pd.Series(build_limits.wind_generation_total_limits_mw_high.values).equals(
+        pd.Series([570.0, 4700.0, 0.0, 0.0, 0.0, 0.0])
+    )
+    assert pd.Series(build_limits.wind_generation_total_limits_mw_medium.values).equals(
+        pd.Series([1710.0, 13900.0, 0.0, 0.0, 0.0, 0.0])
+    )
+    assert pd.Series(
+        build_limits.wind_generation_total_limits_mw_offshore_fixed.values
+    ).equals(pd.Series([0.0, 0.0, 0.0, 1000.0, 1000.0, 1000.0]))
+    assert pd.Series(
+        build_limits.wind_generation_total_limits_mw_offshore_floating.values
+    ).equals(pd.Series([0.0, 0.0, 0.0, 2800.0, 2800.0, 2800.0]))
+    assert pd.Series(
+        build_limits.solar_pv_plus_solar_thermal_limits_mw_solar.values
+    ).equals(pd.Series([1100.0, 0.0, 3400.0, 6900.0, 6900.0, 6900.0]))
+    assert pd.Series(
+        build_limits["rez_solar_resource_limit_violation_penalty_factor_$/mw"].values
+    ).equals(pd.Series([288711.0, 288711.0, np.nan, np.nan, np.nan, np.nan]))
+    # Remove while not being used.
+    # assert pd.Series(
+    #     build_limits.rez_transmission_network_limit_peak_demand.values
+    # ).equals(pd.Series([750.0, 700.0, np.nan, np.nan, np.nan, 0.0]))
+    assert pd.Series(
+        build_limits.rez_transmission_network_limit_summer_typical.values
+    ).equals(pd.Series([750.0, np.nan, 1000.0, np.nan, np.nan, 0.0]))
+    # Remove while not being used.
+    # assert pd.Series(
+    #     build_limits.rez_transmission_network_limit_winter_reference.values
+    # ).equals(pd.Series([np.nan, 700.0, 3000.0, 2000.0, np.nan, 0.0]))
+    assert pd.Series(
+        build_limits["indicative_transmission_expansion_cost_$/mw"].values
+    ).equals(pd.Series([1420000.0, 430000.0, 700000.0, np.nan, np.nan, 1000000.0]))
+````
+
+## File: .gitignore
+````
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#pdm.lock
+#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
+#   in version control.
+#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+.idea/
+scratch.py
+
+# Lockfiles
+.~lock*.xlsx#
+.~lock*.csv#
+
+# ispypsa ignores
+ispypsa_runs/**/*.csv
+ispypsa_runs/**/*.parquet
+ispypsa_runs/**/*.hdf5
+
+# ignore doit database
+.doit*
+
+uv.lock
+tests/test_workbook_table_cache/
+LICENSE
+dodo.py
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/policy_generator_types.csv
+````
+policy_id,generator
+cis_generator,Large scale Solar PV
+cis_generator,Wind
+cis_generator,Wind - offshore (fixed)
+cis_generator,Wind - offshore (floating)
+cis_storage,Solar Thermal (15hrs storage)
+cis_storage,Pumped Hydro
+cis_storage,Hydrogen reciprocating engines
+cis_storage,Battery Storage (1hr storage)
+cis_storage,Battery Storage (2hrs storage)
+cis_storage,Battery Storage (4hrs storage)
+cis_storage,Battery Storage (8hrs storage)
+nsw_generator,Large scale Solar PV
+nsw_generator,Wind
+nsw_generator,Wind - offshore (fixed)
+nsw_generator,Wind - offshore (floating)
+nsw_generator,Solar Thermal (15hrs storage)
+nsw_generator,Biomass
+nsw_storage,Battery Storage (8hrs storage)
+nsw_storage,Pumped Hydro (8hrs storage)
+nsw_storage,Pumped Hydro (24hrs storage)
+nsw_storage,Pumped Hydro (48hrs storage)
+vic_storage,Battery Storage (1hr storage)
+vic_storage,Battery Storage (2hrs storage)
+vic_storage,Battery Storage (4hrs storage)
+vic_storage,Battery Storage (8hrs storage)
+vic_storage,Pumped Hydro (8hrs storage)
+vic_storage,Pumped Hydro (24hrs storage)
+vic_storage,Pumped Hydro (48hrs storage)
+vic_offshore_wind,Wind - offshore (fixed)
+vic_offshore_wind,Wind - offshore (floating)
+qret,Hydro
+qret,Large scale Solar PV
+qret,Wind
+qret,Biomass
+qret,Solar Thermal (15hrs storage)
+vret,Hydro
+vret,Large scale Solar PV
+vret,Wind
+vret,Wind - offshore (fixed)
+vret,Wind - offshore (floating)
+vret,Biomass
+vret,Solar Thermal (15hrs storage)
+tret,Hydro
+tret,Large scale Solar PV
+tret,Solar Thermal (15hrs storage)
+tret,Wind
+tret,Wind - offshore (fixed)
+tret,Wind - offshore (floating)
+power_aus,Hydro
+power_aus,Large scale Solar PV
+power_aus,Solar Thermal (15hrs storage)
+power_aus,Wind
+power_aus,Wind - offshore (fixed)
+power_aus,Wind - offshore (floating)
+````
+
+## File: src/ispypsa/templater/manually_extracted_template_tables/6.0/rez_transmission_limit_constraints_lhs.csv
+````
+constraint_id,term_type,term_id,coefficient
+SEVIC1,line_flow,V5-VIC,1
+SEVIC1,line_flow,V7-VIC,1
+SEVIC1,line_flow,Basslink,1
+SEVIC1,generator_output,Loy Yang A Power Station,1
+SEVIC1,generator_output,Loy Yang B,1
+SEVIC1,generator_output,Yallourn W,1
+SEVIC1,generator_output,Jeeralang A,1
+SEVIC1,generator_output,Jeeralang B,1
+SEVIC1,generator_output,Bairnsdale,1
+SEVIC1,generator_output,Valley Power,1
+SEVIC1,generator_capacity,SEVIC1-EXPANSION,-1
+SWQLD1,line_flow,Q8-SQ,1
+SWQLD1,line_flow,NNSW-SQ,1.5
+SWQLD1,line_flow,SQ-CQ,-0.3
+SWQLD1,generator_output,Tarong,0.6
+SWQLD1,generator_output,Tarong North,0.6
+SWQLD1,generator_output,Kogan Creek,0.6
+SWQLD1,generator_output,Darling Downs,0.6
+SWQLD1,generator_output,Braemar,0.6
+SWQLD1,generator_output,Braemar 2 Power Station,0.6
+SWQLD1,generator_output,Millmerran,1.5
+SWQLD1,generator_output,Borumba,0.5
+SWQLD1,generator_capacity,SWQLD1-EXPANSION,-1
+S1-TBMO,line_flow,SESA-CSA,0.3
+S1-TBMO,line_flow,S1-SESA,1
+S1-TBMO,generator_output,Tailem Bend Solar Farm,1
+S1-TBMO,generator_output,Tailem Bend Solar Farm - stage 2,1
+S1-TBMO,storage_output,Tailem Bend Battery Project,1
+S1-TBMO,generator_capacity,S1-TBMO-EXPANSION,-1
+````
+
+## File: tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints/custom_constraints_lhs.csv
+````
+,constraint_name,component,attribute,variable_name,coefficient
+0,con_one,Line,s,line_one,1.0
+1,con_one,Generator,p,Bayswater,1.0
+2,con_one,Generator,p_nom,con_one-EXPANSION,-1.0
+````
+
+## File: tests/test_templater/test_generator_dynamic_properties.py
+````python
+from pathlib import Path
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.templater.dynamic_generator_properties import (
+    _template_generator_dynamic_properties,
+)
+from ispypsa.templater.lists import _ISP_SCENARIOS
+
+
+def test_generator_dynamic_properties_templater(workbook_table_cache_test_path: Path):
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+    for scenario in _ISP_SCENARIOS:
+        mapped_dfs = _template_generator_dynamic_properties(iasr_tables, scenario)
+        for key, df in mapped_dfs.items():
+            if "price" in key:
+                if key == "liquid_fuel_prices":
+                    assert all("$/gj" in col for col in df.columns[:])
+                    assert all(df.iloc[:, :].dtypes != "object")
+                else:
+                    assert all("$/gj" in col for col in df.columns[1:])
+                    assert all(df.iloc[:, 1:].dtypes != "object")
+                assert all(df.notna())
+            elif "outage" in key:
+                assert all(df.iloc[:, 1:].dtypes != "object")
+                assert all(df.notna())
+            elif "ratings" in key:
+                assert all(df.iloc[:, 3:].dtypes != "object")
+                assert all(df.notna())
+````
+
+## File: src/ispypsa/model/custom_constraints.py
+````python
+import logging
+from pathlib import Path
+
+import linopy
+import pandas as pd
+import pypsa
+
+
+def _get_variables(
+    model: linopy.Model, component_name: str, component_type: str, attribute_type: str
+):
+    """Retrieves variable objects from a linopy model based on a component name and
+    type.
+
+    Args:
+        model: The `linopy.Model` object
+        component_name: str, the name given to the component when added by ISPyPSA to
+            the `pypsa.Network`.
+        component_type: str, the type of variable, should be one of
+            'Generator', 'Line', 'Load', or 'Storage'
+        attribute_type: str, the type of variable, should be one of
+            'p', 'p_nom', or 's'
+
+    Returns: linopy.variables.Variable
+
+    """
+    var = None
+    if component_type == "Generator" and attribute_type == "p_nom":
+        var = model.variables.Generator_p_nom.at[f"{component_name}"]
+    elif component_type == "Line" and attribute_type == "s":
+        var = model.variables.Line_s.loc[:, f"{component_name}"]
+    elif component_type == "Generator" and attribute_type == "p":
+        var = model.variables.Generator_p.loc[:, f"{component_name}"]
+    elif component_type == "Load" and attribute_type == "p":
+        logging.info(
+            f"Load component {component_name} not added to custom constraint. "
+            f"Load variables not implemented."
+        )
+    elif component_type == "Storage" and attribute_type == "p":
+        logging.info(
+            f"Storage component {component_name} not added to custom constraint. "
+            f"Storage variables not implemented."
+        )
+    else:
+        raise ValueError(f"{component_type} and {attribute_type} is not defined.")
+    return var
+
+
+def _add_custom_constraints(
+    network: pypsa.Network,
+    custom_constraints_rhs: pd.DataFrame,
+    custom_constraints_lhs: pd.DataFrame,
+):
+    """Adds constrains defined in `custom_constraints_lhs.csv` and
+    `custom_constraints_rhs.csv` in the `path_to_pypsa_inputs` directory
+    to the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        custom_constraints_rhs: `pd.DataFrame` specifying custom constraint RHS values,
+            has two columns 'constraint_name' and 'rhs'.
+        custom_constraints_lhs: `pd.DataFrame` specifying custom constraint LHS values.
+            The DataFrame has five columns 'constraint_name', 'variable_name',
+            'component', 'attribute', and 'coefficient'. The 'component' specifies
+            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Line',
+            etc. The 'variable_name' specifies the name of the `PyPSA` component, and
+            the 'attribute' specifies the attribute of the component that the variable
+            belongs to i.e. 'p_nom', 's_nom', etc.
+
+    Returns: None
+    """
+    lhs = custom_constraints_lhs
+    rhs = custom_constraints_rhs
+
+    for index, row in rhs.iterrows():
+        constraint_name = row["constraint_name"]
+        constraint_lhs = lhs[lhs["constraint_name"] == constraint_name].copy()
+
+        # Retrieve the variable objects needed on the constraint lhs from the linopy
+        # model used by the pypsa.Network
+        variables = constraint_lhs.apply(
+            lambda row: _get_variables(
+                network.model, row["variable_name"], row["component"], row["attribute"]
+            ),
+            axis=1,
+        )
+
+        # Some variables may not be present in the modeled so these a filtered out.
+        # variables that couldn't be found are logged in _get_variables so this doesn't
+        # result in 'silent failure'.
+        retrieved_vars = ~variables.isna()
+        variables = variables.loc[retrieved_vars]
+        coefficients = constraint_lhs.loc[retrieved_vars, "coefficient"]
+
+        x = tuple(zip(coefficients, variables))
+        linear_expression = network.model.linexpr(*x)
+        network.model.add_constraints(
+            linear_expression <= row["rhs"], name=constraint_name
+        )
+````
+
+## File: src/ispypsa/model/update.py
+````python
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+from ispypsa.model.buses import _update_buses_demand_timeseries
+from ispypsa.model.custom_constraints import _add_custom_constraints
+from ispypsa.model.generators import _update_generators_availability_timeseries
+
+
+def update_network_timeseries(
+    network: pypsa.Network,
+    pypsa_friendly_input_tables: dict[str, pd.DataFrame],
+    snapshots: pd.DataFrame,
+    pypsa_friendly_timeseries_location: Path,
+) -> None:
+    """
+    Update the time series data in a pypsa.Network instance.
+
+    Designed to help convert capacity expansion network models into operational models
+    but may also be useful in other circumstances, such when running a capacity
+    expansion model with different reference year cycles.
+
+    Examples:
+
+        >>> import pandas as pd
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.model import update_network_timeseries
+
+        Get PyPSA friendly inputs (inparticular these need to contain the generators and
+        buses tables).
+
+        >>> pypsa_friendly_input_tables = read_csvs("path/to/pypsa/friendly/inputs")
+
+        Get the snapshots for the updated time series data.
+
+        >>> snapshots = pd.read_csv("new_snapshots.csv")
+
+        Get the pypsa.Network we want to update the time series data in.
+
+        >>> network = pypsa.Network()
+        >>> network.import_from_netcdf("existing_network.netcfd")
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> update_network_timeseries(
+        ...     network,
+        ...     pypsa_friendly_input_tables,
+        ...     snapshots,
+        ...     Path("path/to/time/series/data/files")
+        ... )
+
+    Args:
+        network: pypsa.Network which has set of generators, loads, and buses consistent
+            with the updated time series data. i.e. if generator 'Y' exists in the
+            existing network it also needs to exist in the updated time series data.
+        pypsa_friendly_input_tables: dictionary of dataframes in the `PyPSA` friendly
+            format. (add link to pypsa friendly format table docs)
+        snapshots: a pd.DataFrame containing the columns 'investment_periods' (int)
+            defining the investment a modelled inteval belongs to and 'snapshots'
+            (datetime) defining each time interval modelled. 'investment_periods'
+            periods are refered to by the year (financial or calander) in which they
+            begin.
+        pypsa_friendly_timeseries_location: `Path` to `PyPSA` friendly time series
+            data (add link to timeseries data docs).
+
+    Returns: None
+    """
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], snapshots["snapshots"]]
+    )
+    network.snapshots = snapshots_as_indexes
+    network.set_investment_periods(snapshots["investment_periods"].unique())
+    _update_generators_availability_timeseries(
+        network,
+        pypsa_friendly_input_tables["generators"],
+        pypsa_friendly_timeseries_location,
+    )
+    _update_buses_demand_timeseries(
+        network,
+        pypsa_friendly_input_tables["buses"],
+        pypsa_friendly_timeseries_location,
+    )
+
+    # The underlying linopy model needs to get built again here so that the new time
+    # series data is used in the linopy model rather than the old data.
+    network.optimize.create_model()
+
+    # As we rebuilt the linopy model now we need to re add custom constrains.
+    _add_custom_constraints(
+        network,
+        pypsa_friendly_input_tables["custom_constraints_rhs"],
+        pypsa_friendly_input_tables["custom_constraints_lhs"],
+    )
+````
+
+## File: src/ispypsa/templater/static_ecaa_generator_properties.py
+````python
+import logging
+import re
+from pathlib import Path
+
+import pandas as pd
+
+from .helpers import (
+    _fuzzy_match_names,
+    _snakecase_string,
+    _where_any_substring_appears,
+)
+from .lists import _ECAA_GENERATOR_TYPES
+from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+
+_OBSOLETE_COLUMNS = [
+    "Maximum capacity factor (%)",
+]
+
+
+def _template_ecaa_generators_static_properties(
+    iasr_tables: dict[str : pd.DataFrame],
+) -> pd.DataFrame:
+    """Processes the existing, commited, anticipated and additional (ECAA) generators
+    summary tables into an ISPyPSA template format
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA ECAA generators template
+    """
+    logging.info(
+        "Creating an existing, committed, anticipated and additional generators template"
+    )
+    ecaa_generator_summaries = []
+    for gen_type in _ECAA_GENERATOR_TYPES:
+        df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
+        df.columns = ["Generator", *df.columns[1:]]
+        ecaa_generator_summaries.append(df)
+    ecaa_generator_summaries = pd.concat(ecaa_generator_summaries, axis=0).reset_index(
+        drop=True
+    )
+    cleaned_ecaa_generator_summaries = _clean_generator_summary(
+        ecaa_generator_summaries
+    )
+    # drop any energy storage
+    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.loc[
+        ~cleaned_ecaa_generator_summaries["technology_type"].str.contains("Battery"),
+        :,
+    ].reset_index(drop=True)
+    merged_cleaned_ecaa_generator_summaries = (
+        _merge_and_set_ecaa_generators_static_properties(
+            cleaned_ecaa_generator_summaries, iasr_tables
+        )
+    )
+    return merged_cleaned_ecaa_generator_summaries
+
+
+def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Cleans generator summary tables
+
+    1. Converts column names to snakecase
+    2. Adds "_id" to the end of region/sub-region ID columns
+    3. Removes redundant outage columns
+    4. Adds partial outage derating factor column
+
+    Args:
+        df: Generator summary `pd.DataFrame`
+
+    Returns:
+        `pd.DataFrame`: Cleaned generator summary DataFrame
+    """
+
+    def _fix_forced_outage_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Removes until/post 2022 distinction in columns if it exists"""
+        if (
+            any(until_cols := [col for col in df.columns if "until" in col])
+            and any(post_cols := [col for col in df.columns if "post" in col])
+            and len(until_cols) == len(post_cols)
+        ):
+            df = df.rename(
+                columns={col: col.replace("_until_2022", "") for col in until_cols}
+            )
+            df = df.drop(columns=post_cols)
+        return df
+
+    df = df.drop(columns=_OBSOLETE_COLUMNS)
+    df.columns = [_snakecase_string(col_name) for col_name in df.columns]
+    df = df.rename(
+        columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
+    )
+    df = _fix_forced_outage_columns(df)
+    # adds a partial derating factor column that takes partial outage rate mappings
+    df["partial_outage_derating_factor_%"] = df[
+        "forced_outage_rate_partial_outage_%_of_time"
+    ]
+    return df
+
+
+def _merge_and_set_ecaa_generators_static_properties(
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+) -> pd.DataFrame:
+    """Merges into and sets static (i.e. not time-varying) generator properties in the
+    "Existing generator summary" template, and renames columns if this is specified
+    in the mapping.
+
+    Uses `ispypsa.templater.mappings._ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    as the mapping.
+
+    Args:
+        df: Existing generator summary DataFrame
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: Existing generator template with static properties filled in
+    """
+    # adds a max capacity column that takes the existing generator name mapping
+    df["maximum_capacity_mw"] = df["generator"]
+    # merge in static properties using the static property mapping
+    merged_static_cols = []
+    for col, table_attrs in _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
+        if type(table_attrs["table"]) is list:
+            data = [iasr_tables[table] for table in table_attrs["table"]]
+            data = pd.concat(data, axis=0)
+        else:
+            data = iasr_tables[table_attrs["table"]]
+        df, col = _merge_table_data(df, col, data, table_attrs)
+        merged_static_cols.append(col)
+    df = _process_and_merge_existing_gpg_min_load(
+        df, iasr_tables["gpg_min_stable_level_existing_generators"]
+    )
+    df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
+    df = _zero_renewable_minimum_load(df, "minimum_load_mw")
+    df = _zero_ocgt_recip_minimum_load(df, "minimum_load_mw")
+    df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
+        df, "partial_outage_derating_factor_%"
+    )
+    for outage_col in [col for col in df.columns if re.search("outage", col)]:
+        # correct remaining outage mapping differences
+        df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
+    # replace remaining string values in static property columns
+    df = df.infer_objects()
+    for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
+        df[col] = df[col].apply(lambda x: pd.NA if isinstance(x, str) else x)
+    return df
+
+
+def _merge_table_data(
+    df: pd.DataFrame, col: str, table_data: pd.DataFrame, table_attrs: dict
+) -> tuple[pd.DataFrame, str]:
+    """Replace values in the provided column of the summary mapping with those
+    in the corresponding table using the provided attributes in
+    `_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    """
+    # handle alternative lookup and value columns
+    for alt_attr in ("lookup", "value"):
+        if f"alternative_{alt_attr}s" in table_attrs.keys():
+            table_col = table_attrs[f"table_{alt_attr}"]
+            for alt_col in table_attrs[f"alternative_{alt_attr}s"]:
+                table_data[table_col] = table_data[table_col].where(
+                    pd.notna, table_data[alt_col]
+                )
+    replacement_dict = (
+        table_data.loc[:, [table_attrs["table_lookup"], table_attrs["table_value"]]]
+        .set_index(table_attrs["table_lookup"])
+        .squeeze()
+        .to_dict()
+    )
+    # handles differences of mapping values between summmary and outage tables
+    if re.search("outage", col):
+        df[col] = _rename_summary_outage_mappings(df[col])
+    # handles slight difference in capitalisation e.g. Bogong/Mackay vs Bogong/MacKay
+    where_str = df[col].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, col] = _fuzzy_match_names(
+        df.loc[where_str, col],
+        replacement_dict.keys(),
+        f"merging in the existing, committed, anticipated and additional generator static property {col}",
+        not_match="existing",
+        threshold=90,
+    )
+    if "generator_status" in table_attrs.keys():
+        row_filter = df["status"] == table_attrs["generator_status"]
+        df.loc[row_filter, col] = df.loc[row_filter, col].replace(replacement_dict)
+    else:
+        df[col] = df[col].replace(replacement_dict)
+    if "new_col_name" in table_attrs.keys():
+        df = df.rename(columns={col: table_attrs["new_col_name"]})
+        col = table_attrs["new_col_name"]
+    return df, col
+
+
+def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
+    """
+    Fill any empty heat rate values with the technology type, and then set
+    renewable energy (solar, wind, hydro) and battery storage heat rates to 0
+    """
+    df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(df[heat_rate_col], ["solar", "wind", "hydro"]),
+        heat_rate_col,
+    ] = 0.0
+    return df
+
+
+def _zero_renewable_minimum_load(
+    df: pd.DataFrame, minimum_load_col: str
+) -> pd.DataFrame:
+    """
+    Fill any empty minimum load values with the technology type, and then set values for
+    renewable energy (solar, wind, hydro) and battery storage minimum loads to 0
+    """
+    df[minimum_load_col] = df[minimum_load_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(df[minimum_load_col], ["solar", "wind", "hydro"]),
+        minimum_load_col,
+    ] = 0.0
+    return df
+
+
+def _zero_ocgt_recip_minimum_load(
+    df: pd.DataFrame, minimum_load_col: str
+) -> pd.DataFrame:
+    """
+    Set values for OCGT and Reciprocating Engine minimum loads to 0
+    """
+    df.loc[
+        _where_any_substring_appears(
+            df[minimum_load_col], ["OCGT", "Reciprocating Engine"]
+        ),
+        minimum_load_col,
+    ] = 0.0
+    return df
+
+
+def _zero_solar_wind_h2gt_partial_outage_derating_factor(
+    df: pd.DataFrame, po_derating_col: str
+) -> pd.DataFrame:
+    """
+    Fill any empty partial outage derating factor values with the technology type, and
+    then set values for solar, wind and H2 gas turbines to 0
+    """
+    df[po_derating_col] = df[po_derating_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(
+            df[po_derating_col], ["solar", "wind", "hydrogen-based gas turbine"]
+        ),
+        po_derating_col,
+    ] = 0.0
+    return df
+
+
+def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
+    """Renames values in the outage summary column to match those in the outages
+    workbook tables
+    """
+    return outage_series.replace(
+        {
+            "Steam Turbine & CCGT": "CCGT + Steam Turbine",
+            "OCGT Small": "Small peaking plants",
+        }
+    )
+
+
+def _process_and_merge_existing_gpg_min_load(
+    df: pd.DataFrame, existing_gpg_min_loads
+) -> pd.DataFrame:
+    """Processes and merges in gas-fired generation minimum load data
+
+    Only retains first Gas Turbine min load if there are multiple turbines (OPINIONATED).
+    """
+    to_merge = []
+    for station in existing_gpg_min_loads["Generator Station"].drop_duplicates():
+        station_rows = existing_gpg_min_loads[
+            existing_gpg_min_loads["Generator Station"] == station
+        ]
+        if len(station_rows) > 1:
+            # CCGTs with ST and GTs
+            if all(
+                [re.search("CCGT", tt) for tt in set(station_rows["Technology Type"])]
+            ):
+                gt_rows = station_rows.loc[
+                    station_rows["Technology Type"].str.contains("Gas Turbine")
+                ]
+                to_merge.append(gt_rows.iloc[0, :].squeeze())
+            # Handles cases like TIPSB
+            else:
+                to_merge.append(station_rows.iloc[0, :].squeeze())
+        else:
+            to_merge.append(station_rows.squeeze())
+    processed_gpg_min_loads = pd.concat(to_merge, axis=1).T
+    # manual corrections
+    processed_gpg_min_loads["Generator Station"] = processed_gpg_min_loads[
+        "Generator Station"
+    ].replace(
+        {"Tamar Valley": "Tamar Valley Combined Cycle", "Condamine": "Condamine A"}
+    )
+    processed_gpg_min_loads = processed_gpg_min_loads.set_index("Generator Station")
+    for gen, row in processed_gpg_min_loads.iterrows():
+        df.loc[df["generator"] == gen, "minimum_load_mw"] = row["Min Stable Level (MW)"]
+    return df
+````
+
+## File: src/ispypsa/translator/temporal_filters.py
+````python
+from datetime import datetime, timedelta
+from typing import Literal
+
+import pandas as pd
+
+from ispypsa.config import (
+    ModelConfig,
+    TemporalAggregationConfig,
+    TemporalRangeConfig,
+)
+from ispypsa.config.validators import TemporalConfig
+from ispypsa.translator.helpers import _get_iteration_start_and_end_time
+
+
+def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
+    """Filters a timeseries pandas DataFrame based using the datetime values in
+     the snapshots index.
+
+    Examples:
+
+    >>> datetime_index = pd.date_range('2020-01-01', '2020-01-03', freq='h')
+    >>> time_series_data = pd.DataFrame({'snapshots': datetime_index, 'p_set': range(len(datetime_index))})
+    >>> snapshots = pd.DataFrame(index=datetime_index[::12])  # Every 12 hours
+    >>> _time_series_filter(time_series_data, snapshots)
+                  snapshots  p_set
+    0  2020-01-01 00:00:00      0
+    12 2020-01-01 12:00:00     12
+    24 2020-01-02 00:00:00     24
+    36 2020-01-02 12:00:00     36
+    48 2020-01-03 00:00:00     48
+
+    Args:
+        time_series_data: pd.DataFrame with time series column called 'Datetime'
+        snapshots: pd.DataFrame with datetime index
+
+    """
+    return time_series_data[time_series_data["snapshots"].isin(snapshots["snapshots"])]
+
+
+def _filter_snapshots(
+    year_type: Literal["fy", "calendar"],
+    temporal_range: TemporalRangeConfig,
+    temporal_aggregation_config: TemporalAggregationConfig,
+    snapshots: pd.DataFrame,
+) -> pd.DataFrame:
+    """Appy filter to the snapshots based on the model config.
+
+    - If config.representative_weeks is not None then filter the
+      snapshots based on the supplied list of representative weeks.
+
+    Examples:
+
+    # Create dummy config class with just data need for example.
+
+    >>> from dataclasses import dataclass
+
+    >>> @dataclass
+    ... class TemporalAggregationConfig:
+    ...     representative_weeks: list[int]
+
+    >>> @dataclass
+    ... class TemporalOperationalConfig:
+    ...     aggregation: TemporalAggregationConfig
+
+    >>> temporal_agg = TemporalAggregationConfig(
+    ...     representative_weeks=[1],
+    ... )
+
+    >>> @dataclass
+    ... class TemporalRangeConfig:
+    ...     start_year: int
+    ...     end_year: int
+
+    >>> temporal_range = TemporalRangeConfig(
+    ...     start_year=2024,
+    ...     end_year=2024,
+    ... )
+
+    >>> snapshots = pd.DataFrame(
+    ... {"snapshots": pd.date_range('2024-01-01', '2024-12-31', freq='h')}
+    ... )
+
+    >>> snapshots = _filter_snapshots(
+    ...     "calendar",
+    ...     temporal_range,
+    ...     temporal_agg,
+    ...     snapshots
+    ...  )
+
+    >>> snapshots["snapshots"].iloc[0]
+    Timestamp('2024-01-01 01:00:00')
+
+    >>> snapshots["snapshots"].iloc[-1]
+    Timestamp('2024-01-08 00:00:00')
+
+    Args:
+         fy:
+         config: TemporalConfig defining snapshot filtering.
+         snapshots: pd.DataFrame with datetime index containing the snapshot
+    """
+    if temporal_aggregation_config.representative_weeks is not None:
+        snapshots = _filter_snapshots_for_representative_weeks(
+            representative_weeks=temporal_aggregation_config.representative_weeks,
+            snapshots=snapshots,
+            start_year=temporal_range.start_year,
+            end_year=temporal_range.end_year,
+            year_type=year_type,
+        )
+    return snapshots
+
+
+def _filter_snapshots_for_representative_weeks(
+    representative_weeks: list[int],
+    snapshots: pd.DataFrame,
+    start_year: int,
+    end_year: int,
+    year_type: str,
+):
+    """Filters a snapshot by a list of weeks.
+
+    A snapshot is provided as a pandas DatFrame with a datetime index. The
+    snapshot may be multiple years in length. The snapshot is filtered for
+    date times that fall within the weeks defined in representative_weeks.
+    The weeks are defined as full weeks within a financial or calendar year,
+    depending on the year_type provided.
+
+    Examples:
+    >>> # Filter for first and last full weeks of each calendar year from 2020-2022
+    >>> df = pd.DataFrame(index=pd.date_range('2020-01-01', '2022-12-31', freq='h'))
+    >>> _filter_snapshots_for_representative_weeks(
+    ...     representative_weeks=[1],
+    ...     snapshots=df,
+    ...     start_year=2020,
+    ...     end_year=2022,
+    ...     year_type='calendar'
+    ... ).head(3)
+    Empty DataFrame
+    Columns: []
+    Index: [2020-01-06 01:00:00, 2020-01-06 02:00:00, 2020-01-06 03:00:00]
+
+    >>> # Filter for weeks 1, 26 of financial years 2021-2022 (July 2020 - June 2022)
+    >>> df = pd.DataFrame(index=pd.date_range('2020-07-01', '2022-06-30', freq='h'))
+    >>> _filter_snapshots_for_representative_weeks(
+    ...     representative_weeks=[2],
+    ...     snapshots=df,
+    ...     start_year=2021,
+    ...     end_year=2022,
+    ...     year_type='fy'
+    ... ).head(3)
+    Empty DataFrame
+    Columns: []
+    Index: [2020-07-13 01:00:00, 2020-07-13 02:00:00, 2020-07-13 03:00:00]
+
+    Args:
+        representative_weeks: list[int] of full weeks to filter for. The
+            week 1 refers to the first full week (Monday-Sunday) falling
+            with in the year.
+        snapshots: pd.DataFrame with datetime index containing the snapshot
+        start_year: int defining the start year of the snapshot (inclusive)
+        end_year: int defining the end year of the snapshot (inclusive)
+        year_type: str defining year the 'fy' for financial year or 'calendar'
+
+    Raises: ValueError if the end of week falls outside after the year end i.e.
+        for all weeks 53 or greater and for some years the week 52.
+    """
+    start_year, end_year, month = _get_iteration_start_and_end_time(
+        year_type, start_year, end_year
+    )
+
+    snapshots = snapshots["snapshots"]
+
+    filtered_snapshots = []
+
+    for year in range(start_year, end_year):
+        start_of_year_date_time = datetime(
+            year=year, month=month, day=1, hour=0, minute=0
+        )
+        end_of_year_date_time = datetime(
+            year=year + 1, month=month, day=1, hour=0, minute=0
+        )
+        days_until_monday = (7 - start_of_year_date_time.weekday()) % 7
+        first_monday = start_of_year_date_time + timedelta(days=days_until_monday)
+        for week_number in representative_weeks:
+            nth_week_start = first_monday + timedelta(weeks=week_number - 1)
+            nth_week_end = nth_week_start + timedelta(days=7)
+
+            if nth_week_end - timedelta(seconds=1) > end_of_year_date_time:
+                raise ValueError(
+                    f"Representative week {week_number} ends after end of model year {year}."
+                    " Adjust config to use a smaller week_number for representative_weeks."
+                )
+
+            filtered_snapshots.append(
+                snapshots[
+                    (snapshots > nth_week_start) & (snapshots <= nth_week_end)
+                ].copy()
+            )
+
+    filtered_snapshots = pd.concat(filtered_snapshots)
+
+    filtered_snapshots = pd.DataFrame({"snapshots": filtered_snapshots})
+
+    return filtered_snapshots
+````
+
+## File: tests/test_model/test_custom_constraints.py
+````python
+from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.data_fetch import read_csvs
+from ispypsa.model import build_pypsa_network
+
+
+def test_custom_constraints():
+    start_date = datetime(year=2025, month=1, day=1, hour=0, minute=0)
+    end_date = datetime(year=2025, month=1, day=2, hour=0, minute=0)
+
+    snapshots = pd.date_range(
+        start=start_date, end=end_date, freq="30min", name="snapshots"
+    )
+
+    snapshots = pd.DataFrame(
+        {
+            "investment_periods": 2025,
+            "snapshots": snapshots,
+        }
+    )
+    pypsa_friendly_inputs_location = Path(
+        "tests/test_model/test_pypsa_friendly_inputs/test_custom_constraints"
+    )
+    snapshots.to_csv(pypsa_friendly_inputs_location / Path("snapshots.csv"))
+
+    pypsa_friendly_inputs = read_csvs(pypsa_friendly_inputs_location)
+
+    demand_data = snapshots.copy()
+    demand_data["p_set"] = 1000.0
+    demand_data.to_parquet(
+        pypsa_friendly_inputs_location / Path("demand_traces/bus_two.parquet")
+    )
+
+    network = build_pypsa_network(pypsa_friendly_inputs, pypsa_friendly_inputs_location)
+
+    network.optimize.solve_model()
+
+    assert network.generators.loc["con_one-EXPANSION", "p_nom_opt"] == 1500.0
+````
+
+## File: tests/test_templater/test_flow_paths.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.templater import load_manually_extracted_tables
+from ispypsa.templater.flow_paths import (
+    _template_regional_interconnectors,
+    _template_sub_regional_flow_path_costs,
+    _template_sub_regional_flow_paths,
+)
+
+
+def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path(
+        "interconnector_transfer_capability.csv"
+    )
+    interconnector_capabilities = pd.read_csv(filepath)
+    flow_paths_template = _template_regional_interconnectors(
+        interconnector_capabilities
+    )
+    assert all(
+        [
+            True
+            for carrier in flow_paths_template.carrier
+            if (carrier == "AC" or carrier == "DC")
+        ]
+    )
+    assert len(flow_paths_template[flow_paths_template.carrier == "DC"]) == 3
+    assert all(
+        [
+            True
+            for dtype in flow_paths_template[
+                [col for col in flow_paths_template.columns if "mw" in col]
+            ].dtypes
+            if dtype is int
+        ]
+    )
+    assert all(
+        [
+            True
+            for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
+            if name in flow_paths_template.flow_path
+        ]
+    )
+    assert len(flow_paths_template) == 6
+    assert len(flow_paths_template.columns) == 5
+
+
+def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path):
+    filepath = workbook_table_cache_test_path / Path(
+        "flow_path_transfer_capability.csv"
+    )
+    flow_path_transfer_capability = pd.read_csv(filepath)
+    flow_paths_template = _template_sub_regional_flow_paths(
+        flow_path_transfer_capability
+    )
+    assert all(
+        [
+            True
+            for carrier in flow_paths_template.carrier
+            if (carrier == "AC" or carrier == "DC")
+        ]
+    )
+    assert len(flow_paths_template[flow_paths_template.carrier == "DC"]) == 3
+    assert all(
+        [
+            True
+            for dtype in flow_paths_template[
+                [col for col in flow_paths_template.columns if "mw" in col]
+            ].dtypes
+            if dtype is int
+        ]
+    )
+    assert all(
+        [
+            True
+            for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
+            if name in flow_paths_template.flow_path
+        ]
+    )
+    assert len(flow_paths_template) == 14
+    assert len(flow_paths_template.columns) == 5
+````
+
+## File: tests/test_temporal_resolution_reduction/test_time_series_representative_weeks_filter.py
+````python
+from datetime import datetime
+
+import pytest
+
+from ispypsa.translator.snapshots import _create_complete_snapshots_index
+from ispypsa.translator.temporal_filters import (
+    _filter_snapshots_for_representative_weeks,
+)
+
+
+def test_create_representative_weeks_filter_one_week_start_of_fy():
+    snapshot = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2025,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+    snapshots = _filter_snapshots_for_representative_weeks(
+        representative_weeks=[1],
+        snapshots=snapshot,
+        start_year=2025,
+        end_year=2025,
+        year_type="fy",
+    )
+    expected_first_datetime = datetime(year=2024, month=7, day=1, minute=30)
+    expected_last_datetime = datetime(year=2024, month=7, day=8, minute=0)
+    assert snapshots["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshots["snapshots"].iloc[-1] == expected_last_datetime
+    assert len(snapshots.index) == 24 * 2 * 7
+
+
+def test_create_representative_weeks_filter_one_week_start_of_calendar_year():
+    snapshots = _create_complete_snapshots_index(
+        start_year=2024,
+        end_year=2024,
+        temporal_resolution_min=30,
+        year_type="calendar",
+    )
+    snapshots = _filter_snapshots_for_representative_weeks(
+        representative_weeks=[1],
+        snapshots=snapshots,
+        start_year=2024,
+        end_year=2024,
+        year_type="calendar",
+    )
+    expected_first_datetime = datetime(year=2024, month=1, day=1, minute=30)
+    expected_last_datetime = datetime(year=2024, month=1, day=8, minute=0)
+    assert snapshots["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshots["snapshots"].iloc[-1] == expected_last_datetime
+    assert len(snapshots.index) == 24 * 2 * 7
+
+
+def test_create_representative_weeks_filter_two_weeks_three_year_snapshot():
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2027,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+    snapshots = _filter_snapshots_for_representative_weeks(
+        representative_weeks=[1, 3],
+        snapshots=snapshots,
+        start_year=2025,
+        end_year=2027,
+        year_type="fy",
+    )
+    expected_first_datetime = datetime(year=2024, month=7, day=1, minute=30)
+    expected_last_datetime = datetime(year=2026, month=7, day=27, minute=0)
+    assert snapshots["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshots["snapshots"].iloc[-1] == expected_last_datetime
+    assert len(snapshots.index) == 24 * 2 * 7 * 2 * 3
+
+
+def test_create_representative_weeks_filter_two_weeks_of_calendar_year_three_year_snapshot():
+    snapshots = _create_complete_snapshots_index(
+        start_year=2024,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="calendar",
+    )
+    snapshots = _filter_snapshots_for_representative_weeks(
+        representative_weeks=[1, 3],
+        snapshots=snapshots,
+        start_year=2024,
+        end_year=2026,
+        year_type="calendar",
+    )
+    expected_first_datetime = datetime(year=2024, month=1, day=1, minute=30)
+    expected_last_datetime = datetime(year=2026, month=1, day=26, minute=0)
+    assert snapshots["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshots["snapshots"].iloc[-1] == expected_last_datetime
+    assert len(snapshots.index) == 24 * 2 * 7 * 2 * 3
+
+
+def test_create_representative_weeks_filter_fail_with_out_of_range_week_number():
+    snapshots = _create_complete_snapshots_index(
+        start_year=2024,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="calendar",
+    )
+    with pytest.raises(ValueError):
+        _filter_snapshots_for_representative_weeks(
+            representative_weeks=[1, 3, 52],
+            snapshots=snapshots,
+            start_year=2024,
+            end_year=2026,
+            year_type="calendar",
+        )
+````
+
+## File: tests/test_translator/test_ecaa_generators.py
+````python
+import os
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.translator.generators import (
+    _translate_ecaa_generators,
+    create_pypsa_friendly_existing_generator_timeseries,
+)
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
+
+
+def test_translate_ecaa_generators_sub_regions():
+    ecaa_ispypsa = pd.DataFrame(
+        {
+            "generator": ["a"],
+            "sub_region_id": ["X"],
+            "region_id": ["Q"],
+            "fuel_type": ["Solar"],
+            "maximum_capacity_mw": [100.0],
+        }
+    )
+    ecaa_pypsa_expected = pd.DataFrame(
+        {
+            "name": ["a"],
+            "p_nom": [100.0],
+            "carrier": ["Solar"],
+            "bus": ["X"],
+            "marginal_cost": [10.0],
+        }
+    )
+    ecaa_pypsa = _translate_ecaa_generators(ecaa_ispypsa, "sub_regions")
+    pd.testing.assert_frame_equal(ecaa_pypsa, ecaa_pypsa_expected)
+
+
+def test_translate_ecaa_generators_nem_regions():
+    ecaa_ispypsa = pd.DataFrame(
+        {
+            "generator": ["a"],
+            "sub_region_id": ["X"],
+            "region_id": ["Q"],
+            "fuel_type": ["Solar"],
+            "maximum_capacity_mw": [100.0],
+        }
+    )
+    ecaa_pypsa_expected = pd.DataFrame(
+        {
+            "name": ["a"],
+            "p_nom": [100.0],
+            "carrier": ["Solar"],
+            "bus": ["Q"],
+            "marginal_cost": [10.0],
+        }
+    )
+    ecaa_pypsa = _translate_ecaa_generators(ecaa_ispypsa, "nem_regions")
+    pd.testing.assert_frame_equal(ecaa_pypsa, ecaa_pypsa_expected)
+
+
+def test_translate_ecaa_generators_single_region():
+    ecaa_ispypsa = pd.DataFrame(
+        {
+            "generator": ["a"],
+            "sub_region_id": ["X"],
+            "region_id": ["Q"],
+            "fuel_type": ["Solar"],
+            "maximum_capacity_mw": [100.0],
+        }
+    )
+    ecaa_pypsa_expected = pd.DataFrame(
+        {
+            "name": ["a"],
+            "p_nom": [100.0],
+            "carrier": ["Solar"],
+            "bus": ["NEM"],
+            "marginal_cost": [10.0],
+        }
+    )
+    ecaa_pypsa = _translate_ecaa_generators(ecaa_ispypsa, "single_region")
+    pd.testing.assert_frame_equal(ecaa_pypsa, ecaa_pypsa_expected)
+
+
+def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+
+    ecaa_ispypsa = pd.DataFrame(
+        {
+            "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+            "fuel_type": ["Solar", "Wind"],
+        }
+    )
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    create_pypsa_friendly_existing_generator_timeseries(
+        ecaa_ispypsa,
+        parsed_trace_path,
+        tmp_path,
+        generator_types=["solar", "wind"],
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+        snapshots=snapshots,
+    )
+
+    files = [
+        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
+        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2025-1.parquet",
+        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2025-2.parquet",
+        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2026-1.parquet",
+    ]
+
+    files = [parsed_trace_path / Path(file) for file in files]
+
+    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
+    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[
+        :, ["investment_periods", "snapshots", "p_max_pu"]
+    ]
+    expected_trace = expected_trace.reset_index(drop=True)
+
+    got_trace = pd.read_parquet(
+        tmp_path / Path("solar_traces/Moree Solar Farm.parquet")
+    )
+
+    pd.testing.assert_frame_equal(expected_trace, got_trace)
+
+    files = [
+        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2024-2.parquet",
+        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2025-1.parquet",
+        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2025-2.parquet",
+        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2026-1.parquet",
+    ]
+
+    files = [parsed_trace_path / Path(file) for file in files]
+
+    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
+    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[
+        :, ["investment_periods", "snapshots", "p_max_pu"]
+    ]
+    expected_trace = expected_trace.reset_index(drop=True)
+
+    got_trace = pd.read_parquet(
+        tmp_path / Path("wind_traces/Canunda Wind Farm.parquet")
+    )
+
+    pd.testing.assert_frame_equal(expected_trace, got_trace)
+````
+
+## File: src/ispypsa/templater/dynamic_generator_properties.py
+````python
+import logging
+import re
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from ispypsa.templater.helpers import (
+    _add_units_to_financial_year_columns,
+    _convert_financial_year_columns_to_float,
+)
+
+from .helpers import _snakecase_string
+from .lists import _ECAA_GENERATOR_TYPES
+
+
+def _template_generator_dynamic_properties(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> dict[str, pd.DataFrame]:
+    """Creates ISPyPSA templates for dynamic generator properties (i.e. those that vary
+    with calendar/financial year).
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `dict[pd.DataFrame]`: Templates for dynamic generator properties including coal
+            prices, gas prices, full outage rates for existing generators, partial outage
+            rates for existing generators and ECAA generator seasonal ratings.
+    """
+    logging.info("Creating a template for dynamic generator properties")
+    snakecase_scenario = _snakecase_string(scenario)
+
+    coal_prices = iasr_tables[f"coal_prices_{snakecase_scenario}"]
+    coal_prices = _template_coal_prices(coal_prices)
+
+    gas_prices = iasr_tables[f"gas_prices_{snakecase_scenario}"]
+    gas_prices = _template_gas_prices(gas_prices)
+
+    liquid_fuel_prices = iasr_tables["liquid_fuel_prices"]
+    liquid_fuel_prices = _template_liquid_fuel_prices(liquid_fuel_prices, scenario)
+
+    full_outage_forecasts = _template_existing_generators_full_outage_forecasts(
+        iasr_tables["full_outages_forecast_existing_generators"]
+    )
+
+    partial_outage_forecasts = _template_existing_generators_partial_outage_forecasts(
+        iasr_tables["partial_outages_forecast_existing_generators"]
+    )
+
+    seasonal_ratings = [
+        iasr_tables[f"seasonal_ratings_{gen_type}"]
+        for gen_type in _ECAA_GENERATOR_TYPES
+    ]
+    seasonal_ratings = _template_seasonal_ratings(seasonal_ratings)
+
+    closure_years = iasr_tables["expected_closure_years"]
+    closure_years = _template_closure_years(closure_years)
+
+    build_costs = _template_new_entrant_build_costs(iasr_tables, scenario)
+    wind_and_solar_connection_costs = (
+        _template_new_entrant_wind_and_solar_connection_costs(iasr_tables, scenario)
+    )
+
+    connection_costs_other = iasr_tables["connection_costs_other"]
+    non_vre_connection_costs = _template_new_entrant_non_vre_connection_costs(
+        connection_costs_other
+    )
+    return {
+        "coal_prices": coal_prices,
+        "gas_prices": gas_prices,
+        "liquid_fuel_prices": liquid_fuel_prices,
+        "full_outage_forecasts": full_outage_forecasts,
+        "partial_outage_forecasts": partial_outage_forecasts,
+        "seasonal_ratings": seasonal_ratings,
+        "closure_years": closure_years,
+        "build_costs": build_costs,
+        "new_entrant_build_costs": build_costs,
+        "new_entrant_wind_and_solar_connection_costs": wind_and_solar_connection_costs,
+        "new_entrant_non_vre_connection_costs": non_vre_connection_costs,
+    }
+
+
+def _template_coal_prices(coal_prices: pd.DataFrame) -> pd.DataFrame:
+    """Creates a coal price template
+
+    Args:
+        coal_prices: pd.DataFrame table from IASR workbook specifying coal prices
+            forecasts.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for coal prices
+    """
+    coal_prices.columns = _add_units_to_financial_year_columns(
+        coal_prices.columns, "$/GJ"
+    )
+    coal_prices = coal_prices.drop(columns="coal_price_scenario")
+    coal_prices = _convert_financial_year_columns_to_float(coal_prices)
+    return coal_prices
+
+
+def _template_gas_prices(gas_prices: pd.DataFrame) -> pd.DataFrame:
+    """Creates a gas price template
+
+    Args:
+        gas_prices: pd.DataFrame table from IASR workbook specifying gas prices
+            forecasts.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for gas prices
+    """
+    cols = _add_units_to_financial_year_columns(gas_prices.columns, "$/GJ")
+    cols[0] = "generator"
+    gas_prices.columns = cols
+    gas_prices = gas_prices.drop(columns="gas_price_scenario")
+    gas_prices = _convert_financial_year_columns_to_float(gas_prices)
+    return gas_prices
+
+
+def _template_liquid_fuel_prices(
+    liquid_fuel_prices: pd.DataFrame, scenario: str
+) -> pd.Series:
+    """Creates a liquid fuel prices template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        liquid_fuel_prices: pd.DataFrame table from IASR workbook specifying liquid fuel
+            price forecasts.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for liquid fuel prices
+    """
+    liquid_fuel_prices.columns = _add_units_to_financial_year_columns(
+        liquid_fuel_prices.columns, "$/GJ"
+    )
+    liquid_fuel_prices = liquid_fuel_prices.drop(columns="liquid_fuel_price").set_index(
+        "liquid_fuel_price_scenario"
+    )
+    liquid_fuel_prices = _convert_financial_year_columns_to_float(liquid_fuel_prices)
+    liquid_fuel_prices_scenario = liquid_fuel_prices.loc[[scenario], :]
+    liquid_fuel_prices_scenario = liquid_fuel_prices_scenario.reset_index(drop=True)
+    return liquid_fuel_prices_scenario
+
+
+def _template_existing_generators_full_outage_forecasts(
+    full_outages_forecast: pd.DataFrame,
+) -> pd.DataFrame:
+    """Creates a full outage forecast template for existing generators
+
+    Args:
+        full_outages_forecast: pd.DataFrame table from IASR workbook specifying full
+            outage forecasts.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for full outage forecasts
+    """
+    full_outages_forecast.columns = [
+        _snakecase_string(col) for col in full_outages_forecast.columns
+    ]
+    full_outages_forecast = full_outages_forecast.set_index("fuel_type")
+    full_outages_forecast = _apply_all_coal_averages(full_outages_forecast)
+    full_outages_forecast = _convert_financial_year_columns_to_float(
+        full_outages_forecast.drop(index="All Coal Average")
+    )
+    full_outages_forecast = full_outages_forecast.reset_index()
+    return full_outages_forecast
+
+
+def _template_existing_generators_partial_outage_forecasts(
+    partial_outages_forecast: pd.DataFrame,
+) -> pd.DataFrame:
+    """Creates a partial outage forecast template for existing generators
+
+    Args:
+        partial_outages_forecast: pd.DataFrame table from IASR workbook specifying
+            partial outage forecasts.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for partial outage forecasts
+    """
+    partial_outages_forecast.columns = [
+        _snakecase_string(col) for col in partial_outages_forecast.columns
+    ]
+    partial_outages_forecast = partial_outages_forecast.set_index("fuel_type")
+    partial_outages_forecast = _apply_all_coal_averages(partial_outages_forecast)
+    partial_outages_forecast = _convert_financial_year_columns_to_float(
+        partial_outages_forecast.drop(index="All Coal Average")
+    )
+    partial_outages_forecast = partial_outages_forecast.reset_index()
+    return partial_outages_forecast
+
+
+def _template_closure_years(closure_years: pd.DataFrame) -> pd.DataFrame:
+    """Creates a closure years template for existing generators
+
+    Args:
+        closure_years: pd.DataFrame table from IASR workbook specifying full
+            generator closure years.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for full outage forecasts
+    """
+    closure_years.columns = [_snakecase_string(col) for col in closure_years.columns]
+    closure_years = closure_years.rename(columns={"generator_name": "generator"})
+    closure_years = closure_years.loc[
+        :, ["generator", "duid", "expected_closure_year_calendar_year"]
+    ]
+    return closure_years
+
+
+def _template_seasonal_ratings(
+    seasonal_ratings: list[pd.DataFrame],
+) -> pd.DataFrame:
+    """Creates a seasonal generator ratings template
+
+    Args:
+        seasonal_ratings: list of pd.DataFrame tables from IASR workbook specifying
+            the seasonal ratings of the different generator types.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for seasonal generator ratings
+    """
+
+    seasonal_rating = pd.concat(seasonal_ratings, axis=0)
+    seasonal_rating.columns = [
+        _snakecase_string(col) for col in seasonal_rating.columns
+    ]
+    seasonal_rating = _convert_seasonal_columns_to_float(seasonal_rating)
+    return seasonal_rating
+
+
+def _template_new_entrant_build_costs(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """Creates a new entrants build cost template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant build costs
+    """
+    scenario_mapping = iasr_tables["build_costs_scenario_mapping"]
+    scenario_mapping = scenario_mapping.set_index(scenario_mapping.columns[0])
+    scenario_mapping = scenario_mapping.transpose().squeeze()
+    gencost_scenario_desc = re.match(
+        r"GenCost\s(.*)", scenario_mapping[scenario]
+    ).group(1)
+
+    build_costs_scenario = iasr_tables[
+        f"build_costs_{_snakecase_string(gencost_scenario_desc)}"
+    ]
+    build_costs_phes = iasr_tables["build_costs_pumped_hydro"]
+
+    build_costs = pd.concat([build_costs_scenario, build_costs_phes], axis=0)
+    build_costs = _convert_financial_year_columns_to_float(build_costs)
+    build_costs = build_costs.drop(columns=["Source"])
+    # convert data in $/kW to $/MW
+    build_costs.columns = _add_units_to_financial_year_columns(
+        build_costs.columns, "$/MW"
+    )
+    build_costs = build_costs.set_index("technology")
+    build_costs *= 1000.0
+    return build_costs
+
+
+def _template_new_entrant_wind_and_solar_connection_costs(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """Creates a new entrant wind and solar connection cost template
+
+    The function behaviour depends on the `scenario` specified in the model
+    configuration.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant wind and solar connection costs
+    """
+    scenario = _snakecase_string(scenario)
+    if scenario == "step_change" or scenario == "green_energy_exports":
+        file_scenario = "step_change&green_energy_exports"
+    else:
+        file_scenario = scenario
+    # get rez cost forecasts and concatenate non-rez cost forecasts
+    wind_solar_connection_costs_forecasts = iasr_tables[
+        f"connection_cost_forecast_wind_and_solar_{file_scenario}"
+    ]
+    wind_solar_connection_costs_forecasts = (
+        wind_solar_connection_costs_forecasts.set_index("REZ names")
+    )
+    wind_solar_connection_costs_forecasts = (
+        wind_solar_connection_costs_forecasts.rename(
+            columns={"REZ network voltage (kV)": "Network voltage (kV)"}
+        )
+    )
+
+    non_rez_connection_costs_forecasts = iasr_tables[
+        f"connection_cost_forecast_non_rez_{file_scenario}"
+    ]
+    non_rez_connection_costs_forecasts = non_rez_connection_costs_forecasts.set_index(
+        "Non-REZ name"
+    )
+
+    wind_solar_connection_cost_forecasts = pd.concat(
+        [non_rez_connection_costs_forecasts, wind_solar_connection_costs_forecasts],
+        axis=0,
+    )
+    # get system strength connection cost from the initial connection cost table
+    initial_wind_solar_connection_costs = iasr_tables[
+        f"connection_costs_for_wind_and_solar"
+    ].set_index("REZ names")
+
+    system_strength_cost = (
+        initial_wind_solar_connection_costs["System Strength connection cost ($/kW)"]
+        * 1000
+    ).rename("System strength connection cost ($/MW)")
+    wind_solar_connection_cost_forecasts = pd.concat(
+        [wind_solar_connection_cost_forecasts, system_strength_cost], axis=1
+    )
+    # remove notes
+    wind_solar_connection_cost_forecasts = wind_solar_connection_cost_forecasts.replace(
+        "Note 1", np.nan
+    )
+    # calculate $/MW by dividing total cost by connection capacity in MVA
+    wind_solar_connection_cost_forecasts = _convert_financial_year_columns_to_float(
+        wind_solar_connection_cost_forecasts
+    )
+    fy_cols = [
+        col
+        for col in wind_solar_connection_cost_forecasts.columns
+        if re.match(r"[0-9]{4}-[0-9]{2}", col)
+    ]
+    for col in fy_cols:
+        wind_solar_connection_cost_forecasts[col] /= (
+            wind_solar_connection_cost_forecasts["Connection capacity (MVA)"]
+        )
+    wind_solar_connection_cost_forecasts.columns = _add_units_to_financial_year_columns(
+        wind_solar_connection_cost_forecasts.columns, "$/MW"
+    )
+    return wind_solar_connection_cost_forecasts.reset_index()
+
+
+def _template_new_entrant_non_vre_connection_costs(
+    connection_costs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Creates a new entrant non-VRE connection cost template
+
+    Args:
+        connection_costs: list of pd.DataFrame tables from IASR workbook specifying
+            the seasonal ratings of the different generator types.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA template for new entrant non-VRE connection costs
+    """
+    connection_costs = connection_costs.set_index("Region")
+    # convert to $/MW and add units to columns
+    col_rename_map = {}
+    for col in connection_costs.columns:
+        connection_costs[col] *= 1000
+        col_rename_map[col] = _snakecase_string(col) + "_$/mw"
+    connection_costs = connection_costs.rename(columns=col_rename_map)
+    return connection_costs.reset_index()
+
+
+def _convert_seasonal_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
+    """Forcefully converts seasonal columns to float columns"""
+    cols = [
+        df[col].astype(float)
+        if re.match(r"summer", col) or re.match(r"winter", col)
+        else df[col]
+        for col in df.columns
+    ]
+    return pd.concat(cols, axis=1)
+
+
+def _apply_all_coal_averages(outages_df: pd.DataFrame) -> pd.DataFrame:
+    """Applies the All Coal Average to each coal fuel type"""
+    where_coal_average = outages_df.loc["All Coal Average", :].notna()
+    for coal_row in outages_df.index[outages_df.index.str.contains("Coal")]:
+        outages_df.loc[coal_row, where_coal_average] = outages_df.loc[
+            "All Coal Average", where_coal_average
+        ]
+    return outages_df
+````
+
+## File: src/ispypsa/translator/custom_constraints.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.translator.helpers import _annuitised_investment_costs
+from ispypsa.translator.mappings import (
+    _CUSTOM_CONSTRAINT_ATTRIBUTES,
+    _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
+    _CUSTOM_CONSTRAINT_LHS_TABLES,
+    _CUSTOM_CONSTRAINT_RHS_TABLES,
+    _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
+    _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
+)
+
+
+def _combine_custom_constraints_tables(custom_constraint_tables: list[pd.DataFrame]):
+    """Combines a set of custom constraint data tables into a single data table,
+    renaming the columns so that they are consistent.
+
+    Args:
+        custom_constraint_tables: list of pd.DataFrames specifying custom constraint
+            details
+    Returns: pd.DataFrame
+    """
+    combined_data = []
+    for table in custom_constraint_tables:
+        table = table.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+        cols_to_keep = [
+            col
+            for col in table.columns
+            if col in _CUSTOM_CONSTRAINT_ATTRIBUTES.values()
+        ]
+        table = table.loc[:, cols_to_keep]
+        combined_data.append(table)
+    combined_data = pd.concat(combined_data)
+    return combined_data
+
+
+def _translate_custom_constraints_generators(
+    custom_constraint_generators: list[pd.DataFrame],
+    expansion_on: bool,
+    wacc: float,
+    asset_lifetime: int,
+) -> pd.DataFrame:
+    """Combines all tables specifying the expansion costs of custom constraint
+    rhs values into a single pd.Dataframe formatting the data so the rhs
+    can be represented by PyPSA generator components. PyPSA can then invest in
+    additional capacity for the generators which is used in the custom constraints
+    to represent additional transmission capacity.
+
+    Args:
+        custom_constraint_generators: list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraint generator expansion costs.
+        expansion_on: bool indicating if transmission line expansion is considered.
+        wacc: float, as fraction, indicating the weighted average coast of capital for
+            transmission line investment, for the purposes of annuitising capital
+            costs.
+        asset_lifetime: int specifying the nominal asset lifetime in years or the
+            purposes of annuitising capital costs.
+
+    Returns: pd.DataFrame
+    """
+    custom_constraint_generators = _combine_custom_constraints_tables(
+        custom_constraint_generators
+    )
+
+    custom_constraint_generators = custom_constraint_generators.rename(
+        columns={"variable_name": "name"}
+    )
+
+    custom_constraint_generators["bus"] = "bus_for_custom_constraint_gens"
+    custom_constraint_generators["p_nom"] = 0.0
+
+    # The generator size is only used for additional transmission capacity, so it
+    # initial size is 0.0.
+    custom_constraint_generators["capital_cost"] = custom_constraint_generators[
+        "capital_cost"
+    ].apply(lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime))
+
+    # not extendable by default
+    custom_constraint_generators["p_nom_extendable"] = False
+    mask = ~custom_constraint_generators["capital_cost"].isna()
+    custom_constraint_generators.loc[mask, "p_nom_extendable"] = expansion_on
+
+    return custom_constraint_generators
+
+
+def _translate_custom_constraint_rhs(
+    custom_constraint_rhs_tables: list[pd.DataFrame],
+) -> pd.DataFrame:
+    """Combines all tables specifying the rhs values of custom constraints into a single
+    pd.Dataframe.
+
+    Args:
+        custom_constraint_rhs_tables:  list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraints rhs values.
+
+    Returns: pd.DataFrame
+    """
+    custom_constraint_rhs_values = _combine_custom_constraints_tables(
+        custom_constraint_rhs_tables
+    )
+    return custom_constraint_rhs_values
+
+
+def _translate_custom_constraint_lhs(
+    custom_constraint_lhs_tables: list[pd.DataFrame],
+) -> pd.DataFrame:
+    """Combines all tables specifying the lhs values of custom constraints into a single
+    pd.Dataframe.
+
+    Args:
+        custom_constraint_lhs_tables: list of pd.DataFrames in `ISPyPSA` detailing
+            custom constraints lhs values.
+
+    Returns: pd.DataFrame
+    """
+    custom_constraint_lhs_values = _combine_custom_constraints_tables(
+        custom_constraint_lhs_tables
+    )
+
+    custom_constraint_lhs_values["component"] = custom_constraint_lhs_values[
+        "term_type"
+    ].map(_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE)
+
+    custom_constraint_lhs_values["attribute"] = custom_constraint_lhs_values[
+        "term_type"
+    ].map(_CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE)
+
+    custom_constraint_lhs_values = custom_constraint_lhs_values.drop(
+        columns="term_type"
+    )
+    return custom_constraint_lhs_values
+````
+
+## File: tests/test_config/test_pydantic_model_config.py
+````python
+import pytest
+from pydantic import ValidationError
+
+from ispypsa.config.validators import ModelConfig
+
+
+@pytest.mark.parametrize(
+    "scenario", ["Step Change", "Progressive Change", "Green Energy Exports"]
+)
+@pytest.mark.parametrize(
+    "regional_granularity", ["sub_regions", "nem_regions", "single_region"]
+)
+@pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
+@pytest.mark.parametrize("year_type", ["fy", "calendar"])
+@pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
+def test_valid_config(
+    scenario, regional_granularity, nodes_rezs, year_type, representative_weeks
+):
+    config = get_valid_config()
+
+    # Update the config with the parameterized values
+    config["scenario"] = scenario
+    config["network"]["nodes"]["regional_granularity"] = regional_granularity
+    config["network"]["nodes"]["rezs"] = nodes_rezs
+    config["temporal"]["year_type"] = year_type
+    config["temporal"]["capacity_expansion"]["aggregation"]["representative_weeks"] = (
+        representative_weeks
+    )
+    config["temporal"]["operational"]["aggregation"]["representative_weeks"] = (
+        representative_weeks
+    )
+
+    ModelConfig(**config)
+
+
+def get_valid_config():
+    """Return a valid config dictionary that can be modified for tests.
+
+    This function serves as a single source of truth for a valid configuration
+    and is used by both test_valid_config and test_invalid_config.
+    """
+    return {
+        "ispypsa_run_name": "test",
+        "scenario": "Step Change",
+        "wacc": 0.07,
+        "discount_rate": 0.05,
+        "network": {
+            "transmission_expansion": True,
+            "rez_transmission_expansion": True,
+            "annuitisation_lifetime": 30,
+            "nodes": {
+                "regional_granularity": "sub_regions",
+                "rezs": "discrete_nodes",
+            },
+            "rez_to_sub_region_transmission_default_limit": 1e6,
+        },
+        "temporal": {
+            "path_to_parsed_traces": "tests/test_traces",
+            "year_type": "fy",
+            "range": {
+                "start_year": 2025,
+                "end_year": 2026,
+            },
+            "capacity_expansion": {
+                "resolution_min": 30,
+                "reference_year_cycle": [2018],
+                "investment_periods": [2025],
+                "aggregation": {
+                    "representative_weeks": [0],
+                },
+            },
+            "operational": {
+                "resolution_min": 30,
+                "reference_year_cycle": [2018],
+                "horizon": 336,
+                "overlap": 48,
+                "aggregation": {
+                    "representative_weeks": [0],
+                },
+            },
+        },
+        "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
+        "solver": "highs",
+        "iasr_workbook_version": "6.0",
+    }
+
+
+# Test case modifiers
+def invalid_scenario(config):
+    config["scenario"] = "BAU"
+    return config, ValidationError
+
+
+def invalid_wacc(config):
+    config["wacc"] = "7%"
+    return config, ValidationError
+
+
+def invalid_discount_rate(config):
+    config["discount_rate"] = "5%"
+    return config, ValidationError
+
+
+def invalid_iasr_workbook_version(config):
+    config["iasr_workbook_version"] = 6.0
+    return config, ValidationError
+
+
+def invalid_solver(config):
+    config["solver"] = "invalid_solver"
+    return config, ValidationError
+
+
+def invalid_regional_granularity(config):
+    config["network"]["nodes"]["regional_granularity"] = "wastelands"
+    return config, ValidationError
+
+
+def invalid_nodes_rezs(config):
+    config["network"]["nodes"]["rezs"] = "attached_to_regions"
+    return config, ValidationError
+
+
+def invalid_annuitisation_lifetime(config):
+    config["network"]["annuitisation_lifetime"] = "years"
+    return config, ValidationError
+
+
+def invalid_transmission_expansion(config):
+    config["network"]["transmission_expansion"] = "help"
+    return config, ValidationError
+
+
+def invalid_rez_transmission_expansion(config):
+    config["network"]["rez_transmission_expansion"] = "help"
+    return config, ValidationError
+
+
+def invalid_rez_transmission_limit(config):
+    config["network"]["rez_to_sub_region_transmission_default_limit"] = "help"
+    return config, ValidationError
+
+
+def invalid_end_year(config):
+    config["temporal"]["range"]["end_year"] = 2024
+    return config, ValueError
+
+
+def invalid_path_not_directory(config):
+    config["temporal"]["path_to_parsed_traces"] = "tests/wrong_traces"
+    return config, NotADirectoryError
+
+
+def invalid_path_wrong_structure(config):
+    config["temporal"]["path_to_parsed_traces"] = "ispypsa_runs"
+    return config, ValueError
+
+
+def invalid_resolution_min_not_30(config):
+    config["temporal"]["capacity_expansion"]["resolution_min"] = 60
+    return config, ValueError
+
+
+def invalid_resolution_min_less_than_30(config):
+    config["temporal"]["capacity_expansion"]["resolution_min"] = 20
+    return config, ValueError
+
+
+def invalid_resolution_min_not_multiple_of_30(config):
+    config["temporal"]["capacity_expansion"]["resolution_min"] = 45
+    return config, ValueError
+
+
+def invalid_representative_weeks(config):
+    config["temporal"]["capacity_expansion"]["aggregation"]["representative_weeks"] = 0
+    return config, ValidationError
+
+
+def invalid_reference_year_cycle(config):
+    config["temporal"]["capacity_expansion"]["reference_year_cycle"] = (
+        "2018"  # Should be a list
+    )
+    return config, ValidationError
+
+
+def invalid_first_investment_period_after_start_year(config):
+    config["temporal"]["capacity_expansion"]["investment_periods"] = [2026]
+    return config, ValueError
+
+
+def invalid_first_investment_period_before_start_year(config):
+    config["temporal"]["capacity_expansion"]["investment_periods"] = [2024]
+    return config, ValueError
+
+
+def invalid_investment_periods_not_unique(config):
+    config["temporal"]["capacity_expansion"]["investment_periods"] = [2025, 2025]
+    return config, ValueError
+
+
+def invalid_investment_periods_not_sorted(config):
+    config["temporal"]["capacity_expansion"]["investment_periods"] = [2026, 2025]
+    return config, ValueError
+
+
+def invalid_horizon(config):
+    config["temporal"]["operational"]["horizon"] = "wrong"
+    return config, ValidationError
+
+
+def invalid_overlap(config):
+    config["temporal"]["operational"]["overlap"] = "wrong"
+    return config, ValidationError
+
+
+def invalid_unserved_energy_cost(config):
+    config["unserved_energy"] = {"cost": "expensive"}  # Should be a float
+    return config, ValidationError
+
+
+def invalid_unserved_energy_generator_size(config):
+    config["unserved_energy"] = {"generator_size_mw": "large"}  # Should be a float
+    return config, ValidationError
+
+
+@pytest.mark.parametrize(
+    "modifier_func",
+    [
+        invalid_scenario,
+        invalid_wacc,
+        invalid_discount_rate,
+        invalid_iasr_workbook_version,
+        invalid_solver,
+        invalid_regional_granularity,
+        invalid_nodes_rezs,
+        invalid_annuitisation_lifetime,
+        invalid_transmission_expansion,
+        invalid_rez_transmission_expansion,
+        invalid_rez_transmission_limit,
+        invalid_end_year,
+        invalid_path_not_directory,
+        invalid_path_wrong_structure,
+        invalid_resolution_min_not_30,
+        invalid_resolution_min_less_than_30,
+        invalid_resolution_min_not_multiple_of_30,
+        invalid_representative_weeks,
+        invalid_reference_year_cycle,
+        invalid_first_investment_period_after_start_year,
+        invalid_first_investment_period_before_start_year,
+        invalid_investment_periods_not_unique,
+        invalid_investment_periods_not_sorted,
+        invalid_horizon,
+        invalid_overlap,
+        invalid_unserved_energy_cost,
+        invalid_unserved_energy_generator_size,
+    ],
+    ids=lambda f: f.__name__,  # Use function name as test ID
+)
+def test_invalid_config(modifier_func):
+    """
+    Test invalid configurations using modifier functions.
+
+    Args:
+        modifier_func: A function that modifies a valid config and returns
+                      the modified config and expected error type
+    """
+    config = get_valid_config()
+    try:
+        modified_config, expected_error = modifier_func(config)
+
+        with pytest.raises(expected_error) as excinfo:
+            ModelConfig(**modified_config)
+
+    except Exception as e:
+        # If the test itself fails (not the validation), make it clear which test case failed
+        pytest.fail(f"Test case '{modifier_func.__name__}' failed with error: {str(e)}")
+
+
+def test_operational_is_optional():
+    """Test that the operational field is optional in TemporalConfig."""
+    config = get_valid_config()
+    # Remove operational field
+    del config["temporal"]["operational"]
+    # This should not raise an error
+    ModelConfig(**config)
+
+
+def test_unserved_energy_defaults():
+    """Test that UnservedEnergyConfig uses default values when not provided."""
+    config = get_valid_config()
+    # Remove unserved_energy fields entirely
+    del config["unserved_energy"]["cost"]
+    del config["unserved_energy"]["generator_size_mw"]
+    # This should not raise an error and use defaults
+    model = ModelConfig(**config)
+    # Verify default values are used
+    assert model.unserved_energy.generator_size_mw == 1e5
+    assert model.unserved_energy.cost is None
+
+
+def test_path_to_parsed_traces_not_set_for_testing():
+    """Test that NOT_SET_FOR_TESTING is accepted for path_to_parsed_traces."""
+    config = get_valid_config()
+    config["temporal"]["path_to_parsed_traces"] = "NOT_SET_FOR_TESTING"
+    # This should not raise an error
+    ModelConfig(**config)
+````
+
+## File: tests/test_model/test_initialise.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.model.initialise import _initialise_network
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
+
+
+def test_network_initialisation(tmp_path):
+    snapshots = _create_complete_snapshots_index(
+        start_year=2020,
+        end_year=2020,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+    snapshots = _add_investment_periods(snapshots, [2020], "fy")
+    network = _initialise_network(snapshots)
+    snapshots = snapshots.rename(
+        columns={"investment_periods": "period", "snapshots": "timestep"}
+    )
+    pd.testing.assert_index_equal(
+        network.snapshots,
+        pd.MultiIndex.from_arrays([snapshots["period"], snapshots["timestep"]]),
+    )
+    assert network.investment_periods == [2020]
+````
+
+## File: tests/test_translator/ispypsa_config.yaml
+````yaml
+# The name of the ISPyPSA model run
+# This name is used to select the output folder within `ispypsa_runs`
+ispypsa_run_name: development
+# The ISP scenario for which to generate ISPyPSA inputs
+# Options (descriptions lifted from the 2024 ISP):
+#   "Progressive Change": Reflects slower economic growth and energy investment with
+#       economic and international factors placing industrial demands at greater risk and slower
+#       decarbonisation action beyond current commitments
+#   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
+#   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
+scenario: Step Change
+# Weighted average cost of capital for annuitisation of generation and transmission
+# costs, as a fraction, i.e. 0.07 is 7%.
+wacc: 0.07
+# Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
+discount_rate: 0.05
+# Unserved energy configuration
+unserved_energy:
+  # Cost of unserved energy in $/MWh. Set to None to disable unserved energy generators.
+  cost: 10000.0
+  # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
+  generator_size_mw: 50000.0
+network:
+  # Does the model consider the expansion of sub-region to sub-region transmission
+  # capacity
+  transmission_expansion: True
+  # Does the model consider the expansion of renewable energy zone transmission
+  # capacity
+  rez_transmission_expansion: True
+  # Years to annuitise transmission project capital costs over.
+  annuitisation_lifetime: 30
+  nodes:
+    # The regional granularity of the nodes in the modelled network
+    # Options:
+    #   "sub_regions": ISP sub-regions are added as network nodes (12 nodes)
+    #   "nem_regions": NEM regions are added as network nodes (5 nodes)
+    #   "single_region": A single node, the Victorian sub-region, is added as a network node (1 node)
+    #   TODO: Clarify `single_region`/`copper_plate` implementation
+    regional_granularity: sub_regions
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
+    # Options:
+    #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
+    #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
+    rezs: discrete_nodes
+  # Line capacity limit for rez to node connections that have their limit's modelled
+  # through custom constraint (MW).
+  rez_to_sub_region_transmission_default_limit: 1e5
+temporal:
+  # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
+  # from the environment variable "PATH_TO_PARSED_TRACES"
+  path_to_parsed_traces: NOT_SET_FOR_TESTING
+  year_type: fy
+  range:
+    start_year: 2025
+    end_year: 2025
+  capacity_expansion:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    # List of investment period start years. An investment period runs until the next the
+    # periods begins.
+    investment_periods: [2025]
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [ 1, 12, 25, 38 ]
+  operational:
+    resolution_min: 30
+    reference_year_cycle: [ 2018 ]
+    horizon: 336
+    overlap: 48
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [ 1, 2, 12, 25, 38 ]
+
+# External solver to use
+# Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
+#   Free, and by default, installed with ISPyPSA:
+#     "highs"
+#   Free, but must be installed by the user:
+#     "cbc"
+#     "glpk"
+#     "scip"
+#   Not free and must be installed by the user:
+#     "cplex"
+#     "gurobi"
+#     "xpress"
+#     "mosek"
+#     "copt"
+#     "mindopt"
+#     "pips"
+solver: highs
+# The version of IASR workbook that the template inputs are generated from.
+iasr_workbook_version: "6.0"
+````
+
+## File: tests/test_translator/test_buses.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.translator.buses import (
+    _create_single_region_bus,
+    _translate_isp_sub_regions_to_buses,
+    _translate_nem_regions_to_buses,
+    _translate_rezs_to_buses,
+    create_pypsa_friendly_bus_demand_timeseries,
+)
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
+
+
+def test_translate_isp_sub_regions_to_buses():
+    isp_sub_regions = pd.DataFrame(
+        columns=["isp_sub_region_id", "nem_region_id"],
+        data=[["CNSW", "NSW"], ["SNSW", "NSW"]],
+    )
+    expected_buses = pd.DataFrame(columns=["name"], data=[["CNSW"], ["SNSW"]])
+    buses = _translate_isp_sub_regions_to_buses(isp_sub_regions)
+    pd.testing.assert_frame_equal(buses, expected_buses)
+
+
+def test_translate_nem_regions_to_buses():
+    nem_regions = pd.DataFrame(
+        columns=["nem_region_id", "isp_sub_region_id"],
+        data=[["NSW", "CNSW"], ["VIC", "VIC"]],
+    )
+    expected_buses = pd.DataFrame(columns=["name"], data=[["NSW"], ["VIC"]])
+    buses = _translate_nem_regions_to_buses(nem_regions)
+    pd.testing.assert_frame_equal(buses, expected_buses)
+
+
+def test_create_single_region_bus():
+    expected_buses = pd.DataFrame(columns=["name"], data=[["NEM"]])
+    buses = _create_single_region_bus()
+    pd.testing.assert_frame_equal(buses, expected_buses)
+
+
+def test_translate_rezs_to_buses():
+    rezs = pd.DataFrame(
+        columns=["rez_id", "isp_sub_region_id"], data=[["X", "CNSW"], ["Y", "SNSW"]]
+    )
+    expected_buses = pd.DataFrame(columns=["name"], data=[["X"], ["Y"]])
+    buses = _translate_rezs_to_buses(rezs)
+    pd.testing.assert_frame_equal(buses, expected_buses)
+
+
+def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+
+    sub_regions_ispypsa = pd.DataFrame(
+        {
+            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
+            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+        }
+    )
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    create_pypsa_friendly_bus_demand_timeseries(
+        sub_regions_ispypsa,
+        parsed_trace_path,
+        tmp_path,
+        scenario="Step Change",
+        regional_granularity="sub_regions",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+        snapshots=snapshots,
+    )
+
+    files = [
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+    ]
+
+    files = [parsed_trace_path / Path(file) for file in files]
+
+    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
+    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_set"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    expected_trace = expected_trace.reset_index(drop=True)
+
+    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/CNSW.parquet"))
+
+    pd.testing.assert_frame_equal(expected_trace, got_trace)
+
+
+def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+
+    sub_regions_ispypsa = pd.DataFrame(
+        {
+            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
+            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+        }
+    )
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    create_pypsa_friendly_bus_demand_timeseries(
+        sub_regions_ispypsa,
+        parsed_trace_path,
+        tmp_path,
+        scenario="Step Change",
+        regional_granularity="nem_regions",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+        snapshots=snapshots,
+    )
+
+    files = [
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+    ]
+
+    files = [parsed_trace_path / Path(file) for file in files]
+
+    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
+
+    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+
+    expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
+        {"Value": "sum"}
+    )
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_set"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    expected_trace = expected_trace.reset_index(drop=True)
+
+    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NSW.parquet"))
+
+    pd.testing.assert_frame_equal(expected_trace, got_trace)
+
+
+def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+
+    sub_regions_ispypsa = pd.DataFrame(
+        {
+            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
+            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+        }
+    )
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=2025,
+        end_year=2026,
+        temporal_resolution_min=30,
+        year_type="fy",
+    )
+
+    snapshots = _add_investment_periods(snapshots, [2025], "fy")
+
+    create_pypsa_friendly_bus_demand_timeseries(
+        sub_regions_ispypsa,
+        parsed_trace_path,
+        tmp_path,
+        scenario="Step Change",
+        regional_granularity="single_region",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+        snapshots=snapshots,
+    )
+
+    files = [
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+    ]
+
+    files = [parsed_trace_path / Path(file) for file in files]
+
+    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
+
+    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+
+    expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
+        {"Value": "sum"}
+    )
+    expected_trace = expected_trace.rename(
+        columns={"Datetime": "snapshots", "Value": "p_set"}
+    )
+    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
+    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    expected_trace = expected_trace.reset_index(drop=True)
+
+    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NEM.parquet"))
+
+    pd.testing.assert_frame_equal(expected_trace, got_trace)
+````
+
+## File: example_workflow.py
+````python
+from pathlib import Path
+
+from ispypsa.config import load_config
+from ispypsa.data_fetch import read_csvs, write_csvs
+from ispypsa.logging import configure_logging
+from ispypsa.model import build_pypsa_network, save_results, update_network_timeseries
+from ispypsa.templater import (
+    create_ispypsa_inputs_template,
+    load_manually_extracted_tables,
+)
+from ispypsa.translator import (
+    create_pypsa_friendly_inputs,
+    create_pypsa_friendly_snapshots,
+    create_pypsa_friendly_timeseries_inputs,
+)
+
+# Define root folder for modelling files.
+root_folder = Path("ispypsa_runs")
+
+# Load model config.
+config_path = root_folder / Path("development/ispypsa_inputs/ispypsa_config.yaml")
+config = load_config(config_path)
+
+# Define input/output data storage directories.
+run_folder = Path(root_folder, config.ispypsa_run_name)
+parsed_workbook_cache = root_folder / Path("workbook_table_cache")
+parsed_traces_directory = Path(config.temporal.path_to_parsed_traces)
+ispypsa_input_tables_directory = Path(run_folder, "ispypsa_inputs", "tables")
+pypsa_friendly_inputs_location = Path(run_folder, "pypsa_friendly")
+capacity_expansion_timeseries_location = Path(
+    pypsa_friendly_inputs_location, "capacity_expansion_timeseries"
+)
+operational_timeseries_location = Path(
+    pypsa_friendly_inputs_location, "operational_timeseries"
+)
+pypsa_outputs_directory = Path(run_folder, "outputs")
+
+configure_logging()
+
+# Load ISP IASR data tables.
+iasr_tables = read_csvs(parsed_workbook_cache)
+manually_extracted_tables = load_manually_extracted_tables(config.iasr_workbook_version)
+
+# Create ISPyPSA inputs from IASR tables.
+ispypsa_tables = create_ispypsa_inputs_template(
+    config.scenario,
+    config.network.nodes.regional_granularity,
+    iasr_tables,
+    manually_extracted_tables,
+)
+write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
+
+# Suggested stage of user interaction:
+# At this stage of the workflow the user can modify ispypsa input files, either
+# manually or programmatically, to run alternative scenarios using the template
+# generated from the chosen ISP scenario.
+
+# Translate ISPyPSA format to a PyPSA friendly format.
+pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
+write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
+
+create_pypsa_friendly_timeseries_inputs(
+    config,
+    "capacity_expansion",
+    ispypsa_tables,
+    pypsa_friendly_input_tables["snapshots"],
+    parsed_traces_directory,
+    capacity_expansion_timeseries_location,
+)
+
+# Build a PyPSA network object.
+network = build_pypsa_network(
+    pypsa_friendly_input_tables,
+    path_to_pypsa_friendly_timeseries_data=capacity_expansion_timeseries_location,
+)
+
+# Solve for least cost operation/expansion
+# Never use network.optimize() as this will remove custom constraints.
+network.optimize.solve_model(solver_name=config.solver)
+
+# Save results.
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
+
+# Operational modelling extension
+operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
+
+create_pypsa_friendly_timeseries_inputs(
+    config,
+    "operational",
+    ispypsa_tables,
+    operational_snapshots,
+    parsed_traces_directory,
+    operational_timeseries_location,
+)
+
+update_network_timeseries(
+    network,
+    pypsa_friendly_input_tables,
+    operational_snapshots,
+    operational_timeseries_location,
+)
+
+
+network.optimize.fix_optimal_capacities()
+
+# Never use network.optimize() as this will remove custom constraints.
+network.optimize.optimize_with_rolling_horizon(
+    horizon=config.temporal.operational.horizon,
+    overlap=config.temporal.operational.overlap,
+)
+
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")
+````
+
+## File: ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml
+````yaml
+# The name of the ISPyPSA model run
+# This name is used to select the output folder within `ispypsa_runs`
+ispypsa_run_name: development
+# The ISP scenario for which to generate ISPyPSA inputs
+# Options (descriptions lifted from the 2024 ISP):
+#   "Progressive Change": Reflects slower economic growth and energy investment with
+#       economic and international factors placing industrial demands at greater risk and slower
+#       decarbonisation action beyond current commitments
+#   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
+#   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
+scenario: Step Change
+# Weighted average cost of capital for annuitisation of generation and transmission
+# costs, as a fraction, i.e. 0.07 is 7%.
+wacc: 0.07
+# Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
+discount_rate: 0.05
+# Unserved energy configuration
+unserved_energy:
+  # Cost of unserved energy in $/MWh. Set to 'None' to disable unserved energy generators.
+  cost: 10000.0
+  # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
+  generator_size_mw: 100000.0
+network:
+  # Does the model consider the expansion of sub-region to sub-region transmission
+  # capacity
+  transmission_expansion: True
+  # Does the model consider the expansion of renewable energy zone transmission
+  # capacity
+  rez_transmission_expansion: True
+  # Years to annuitise transmission project capital costs over.
+  annuitisation_lifetime: 30
+  nodes:
+    # The regional granularity of the nodes in the modelled network
+    # Options:
+    #   "sub_regions": ISP sub-regions are added as network nodes (12 nodes)
+    #   "nem_regions": NEM regions are added as network nodes (5 nodes)
+    #   "single_region": A single node, the Victorian sub-region, is added as a network node (1 node)
+    #   TODO: Clarify `single_region`/`copper_plate` implementation
+    regional_granularity: sub_regions
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
+    # Options:
+    #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
+    #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
+    rezs: discrete_nodes
+  # Line capacity limit for rez to node connections that have their limit's modelled
+  # through custom constraint (MW).
+  rez_to_sub_region_transmission_default_limit: 1e5
+temporal:
+  # The path to the folder containing parsed demand, wind and solar traces. If set to ENV the path will be retrieved
+  # from the environment variable "PATH_TO_PARSED_TRACES"
+  path_to_parsed_traces: ENV
+  year_type: fy
+  range:
+    start_year: 2025
+    end_year: 2028
+  capacity_expansion:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    # List of investment period start years. An investment period runs until the next the
+    # period begins.
+    investment_periods: [2025, 2026]
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [1, 12, 25, 38]
+  operational:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    horizon: 336
+    overlap: 48
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: [1, 2, 12, 25, 38]
+
+# External solver to use
+# Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
+#   Free, and by default, installed with ISPyPSA:
+#     "highs"
+#   Free, but must be installed by the user:
+#     "cbc"
+#     "glpk"
+#     "scip"
+#   Not free and must be installed by the user:
+#     "cplex"
+#     "gurobi"
+#     "xpress"
+#     "mosek"
+#     "copt"
+#     "mindopt"
+#     "pips"
+solver: highs
+# The version of IASR workbook that the template inputs are generated from.
+iasr_workbook_version: "6.0"
+````
+
+## File: src/ispypsa/model/__init__.py
+````python
+from ispypsa.model.build import build_pypsa_network
+from ispypsa.model.save import save_results
+from ispypsa.model.update import update_network_timeseries
+
+__all__ = ["build_pypsa_network", "save_results", "update_network_timeseries"]
+````
+
+## File: src/ispypsa/model/build.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.model.buses import _add_bus_for_custom_constraints, _add_buses_to_network
+from ispypsa.model.carriers import _add_carriers_to_network
+from ispypsa.model.custom_constraints import _add_custom_constraints
+from ispypsa.model.generators import (
+    _add_custom_constraint_generators_to_network,
+    _add_generators_to_network,
+)
+from ispypsa.model.initialise import _initialise_network
+from ispypsa.model.investment_period_weights import _add_investment_period_weights
+from ispypsa.model.lines import _add_lines_to_network
+
+
+def build_pypsa_network(
+    pypsa_friendly_tables: dict[str : pd.DataFrame],
+    path_to_pypsa_friendly_timeseries_data: Path,
+):
+    """Creates a `pypsa.Network` based on set of pypsa friendly input tables.
+
+    Examples:
+
+    # Peform required imports.
+    >>> from pathlib import Path
+    >>> from ispypsa.data_fetch import read_csvs, write_csvs
+    >>> from ispypsa.model import build_pypsa_network
+
+    # Read in PyPSA friendly tables from CSV.
+    >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))
+
+    >>> pypsa_friendly_inputs = build_pypsa_network(
+    ... pypsa_friendly_tables=pypsa_input_tables,
+    ... path_to_pypsa_friendly_timeseries_data=Path("pypsa_friendly_timeseries_data")
+    ... )
+
+    # Then the model can be run in PyPSA
+    >>> network.optimize.solve_model(solver_name="highs")
+
+    # And the results saved to disk.
+    >>> network.export_to_hdf5(Path("model_results.hdf5"))
+
+    Args:
+        pypsa_friendly_tables: dictionary of dataframes in the `PyPSA` friendly format.
+            (add link to pypsa friendly format table docs)
+        path_to_pypsa_friendly_timeseries_data: `Path` to `PyPSA` friendly time series
+            data (add link to timeseries data docs.
+
+    """
+    network = _initialise_network(pypsa_friendly_tables["snapshots"])
+
+    _add_investment_period_weights(
+        network, pypsa_friendly_tables["investment_period_weights"]
+    )
+
+    _add_carriers_to_network(network, pypsa_friendly_tables["generators"])
+
+    _add_buses_to_network(
+        network, pypsa_friendly_tables["buses"], path_to_pypsa_friendly_timeseries_data
+    )
+
+    if not pypsa_friendly_tables["custom_constraints_generators"].empty:
+        _add_bus_for_custom_constraints(network)
+
+    _add_lines_to_network(network, pypsa_friendly_tables["lines"])
+
+    _add_custom_constraint_generators_to_network(
+        network, pypsa_friendly_tables["custom_constraints_generators"]
+    )
+
+    _add_generators_to_network(
+        network,
+        pypsa_friendly_tables["generators"],
+        path_to_pypsa_friendly_timeseries_data,
+    )
+
+    # The underlying linopy model needs to get built so we can add custom constraints.
+    network.optimize.create_model()
+
+    _add_custom_constraints(
+        network,
+        pypsa_friendly_tables["custom_constraints_rhs"],
+        pypsa_friendly_tables["custom_constraints_lhs"],
+    )
+
+    return network
+````
+
+## File: src/ispypsa/model/buses.py
+````python
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+
+def _add_bus_to_network(
+    bus_name: str, network: pypsa.Network, path_to_demand_traces: Path
+) -> None:
+    """
+    Adds a Bus to the network and if a demand trace for the Bus exists, also adds the
+    trace to a Load attached to the Bus.
+
+    Args:
+        bus_name: String defining the bus name
+        network: The `pypsa.Network` object
+        path_to_demand_traces: `pathlib.Path` that points to the
+            directory containing demand traces
+
+    Returns: None
+    """
+    network.add(class_name="Bus", name=bus_name)
+
+    demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
+    if demand_trace_path.exists():
+        demand = pd.read_parquet(demand_trace_path)
+        demand = demand.set_index(["investment_periods", "snapshots"])
+        network.add(
+            class_name="Load",
+            name=f"load_{bus_name}",
+            bus=bus_name,
+            p_set=demand["p_set"],
+        )
+
+
+def _add_buses_to_network(
+    network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
+) -> None:
+    """Adds buses and demand traces to the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        buses: `pd.DataFrame` with `PyPSA` style `Bus` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+
+    Returns: None
+    """
+    path_to_demand_traces = path_to_timeseries_data / Path("demand_traces")
+    buses["name"].apply(
+        lambda x: _add_bus_to_network(x, network, path_to_demand_traces)
+    )
+
+
+def _add_bus_for_custom_constraints(network: pypsa.Network) -> None:
+    """Adds a bus called bus_for_custom_constraint_gens for generators being used to model constraint violation to
+    the network.
+
+    Args:
+        network: The `pypsa.Network` object
+
+    Returns: None
+    """
+    network.add(class_name="Bus", name="bus_for_custom_constraint_gens")
+
+
+def _update_bus_demand_timeseries(
+    bus_name: str, network: pypsa.Network, path_to_demand_traces: Path
+) -> None:
+    """
+    Update a Bus's demand timeseries data in the pypsa.Network.
+
+    Args:
+        bus_name: String defining the bus name
+        network: The `pypsa.Network` object
+        path_to_demand_traces: `pathlib.Path` that points to the
+            directory containing demand traces
+
+    Returns: None
+    """
+
+    demand_trace_path = path_to_demand_traces / Path(f"{bus_name}.parquet")
+    if demand_trace_path.exists():
+        demand = pd.read_parquet(demand_trace_path)
+        demand = demand.set_index(["investment_periods", "snapshots"])
+        network.loads_t.p_set[f"load_{bus_name}"] = demand.loc[:, ["p_set"]]
+
+
+def _update_buses_demand_timeseries(
+    network: pypsa.Network, buses: pd.DataFrame, path_to_timeseries_data: Path
+) -> None:
+    """Update buses a demand timeseries in the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        buses: `pd.DataFrame` with `PyPSA` style `Bus` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+
+    Returns: None
+    """
+    path_to_demand_traces = path_to_timeseries_data / Path("demand_traces")
+    buses["name"].apply(
+        lambda x: _update_bus_demand_timeseries(x, network, path_to_demand_traces)
+    )
+````
+
+## File: src/ispypsa/templater/renewable_energy_zones.py
+````python
+import logging
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from .helpers import _snakecase_string
+
+
+def _template_rez_build_limits(
+    rez_build_limits: pd.DataFrame,
+) -> pd.DataFrame:
+    """Create a template for renewable energy zones that contains data on resource and
+    transmission limits and transmission expansion costs.
+
+    Args:
+        rez_build_limits: pd.DataFrame IASR table specifying the renewable energy
+            zone build limits
+
+    Returns:
+        `pd.DataFrame`: `ISPyPSA` formatted REZ table resource and transmission limits
+            table
+    """
+    logging.info("Creating a rez_build_limits template")
+    rez_build_limits.columns = [
+        _snakecase_string(col) for col in rez_build_limits.columns
+    ]
+    rez_build_limits = rez_build_limits.rename(
+        columns={
+            "isp_sub_region": "isp_sub_region_id",
+        }
+    )
+    cols_to_pass_to_float = [
+        col
+        for col in rez_build_limits.columns
+        if col not in ["rez_id", "isp_sub_region_id"]
+    ]
+    for col in cols_to_pass_to_float:
+        rez_build_limits[col] = pd.to_numeric(rez_build_limits[col], errors="coerce")
+    cols_where_zero_goes_to_nan = [
+        "rez_resource_limit_violation_penalty_factor_$m/mw",
+        "indicative_transmission_expansion_cost_$m/mw",
+        "indicative_transmission_expansion_cost_$m/mw_tranche_2",
+        "indicative_transmission_expansion_cost_$m/mw_tranche_3",
+    ]
+    for col in cols_where_zero_goes_to_nan:
+        rez_build_limits.loc[rez_build_limits[col] == 0.0, col] = np.nan
+    rez_build_limits = _combine_transmission_expansion_cost_to_one_column(
+        rez_build_limits
+    )
+    rez_build_limits = _process_transmission_limit(rez_build_limits)
+    cols_where_nan_goes_to_zero = [
+        "wind_generation_total_limits_mw_high",
+        "wind_generation_total_limits_mw_medium",
+        "wind_generation_total_limits_mw_offshore_floating",
+        "wind_generation_total_limits_mw_offshore_fixed",
+        "solar_pv_plus_solar_thermal_limits_mw_solar",
+    ]
+    for col in cols_where_nan_goes_to_zero:
+        rez_build_limits[col] = rez_build_limits[col].fillna(0.0)
+    rez_build_limits = _convert_cost_units(
+        rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
+    )
+    rez_build_limits = _convert_cost_units(
+        rez_build_limits, "indicative_transmission_expansion_cost_$m/mw"
+    )
+    rez_build_limits = rez_build_limits.rename(
+        columns={
+            "indicative_transmission_expansion_cost_$m/mw": "indicative_transmission_expansion_cost_$/mw",
+            "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_solar_resource_limit_violation_penalty_factor_$/mw",
+        }
+    )
+    rez_build_limits = rez_build_limits.loc[
+        :,
+        [
+            "rez_id",
+            "isp_sub_region_id",
+            "wind_generation_total_limits_mw_high",
+            "wind_generation_total_limits_mw_medium",
+            "wind_generation_total_limits_mw_offshore_floating",
+            "wind_generation_total_limits_mw_offshore_fixed",
+            "solar_pv_plus_solar_thermal_limits_mw_solar",
+            "rez_solar_resource_limit_violation_penalty_factor_$/mw",
+            # Remove while not being used.
+            # "rez_transmission_network_limit_peak_demand",
+            "rez_transmission_network_limit_summer_typical",
+            # Remove while not being used.
+            # "rez_transmission_network_limit_winter_reference",
+            "indicative_transmission_expansion_cost_$/mw",
+        ],
+    ]
+    return rez_build_limits
+
+
+def _process_transmission_limit(data):
+    """Replace 0.0 MW Transmission limits with nan if there is not a cost given for
+    expansion.
+    """
+    cols = [
+        "rez_transmission_network_limit_peak_demand",
+        "rez_transmission_network_limit_summer_typical",
+        "rez_transmission_network_limit_winter_reference",
+    ]
+    for col in cols:
+        replacement_check = data[
+            "indicative_transmission_expansion_cost_$m/mw"
+        ].isna() & (data[col] == 0.0)
+        data.loc[replacement_check, col] = np.nan
+    return data
+
+
+def _combine_transmission_expansion_cost_to_one_column(data):
+    """The model can only utilise a single transmission expansion cost. If the tranche
+    1 column is nan then this function adopts the tranche 2 cost if it is not
+    nan. The process is repeated with tranche 3 if the cost is still nan.
+    """
+    tranche_one = "indicative_transmission_expansion_cost_$m/mw"
+    tranche_two = "indicative_transmission_expansion_cost_$m/mw_tranche_2"
+    tranche_three = "indicative_transmission_expansion_cost_$m/mw_tranche_3"
+
+    first_replacement_check = data[tranche_one].isna() & ~data[tranche_two].isna()
+    data.loc[first_replacement_check, tranche_one] = data.loc[
+        first_replacement_check, tranche_two
+    ]
+    second_replacement_check = data[tranche_one].isna() & ~data[tranche_three].isna()
+    data.loc[second_replacement_check, tranche_one] = data.loc[
+        second_replacement_check, tranche_three
+    ]
+    return data
+
+
+def _convert_cost_units(data, column):
+    """Convert cost from millions of dollars per MW to $/MW"""
+    data[column] = data[column] * 1e6
+    return data
+````
+
+## File: src/ispypsa/translator/lines.py
+````python
+from typing import Dict, List
+
+import numpy as np
+import pandas as pd
+
+from ispypsa.config import ModelConfig
+from ispypsa.translator.helpers import _annuitised_investment_costs
+from ispypsa.translator.mappings import _LINE_ATTRIBUTES
+
+
+def _translate_flow_paths_to_lines(
+    ispypsa_tables: Dict[str, pd.DataFrame],
+    config: ModelConfig,
+) -> pd.DataFrame:
+    """Process network line data into a format aligned with PyPSA inputs.
+
+    Separates existing capacity from expansion options and handles financial year costs.
+
+    Args:
+        ispypsa_tables: Dictionary of ISPyPSA DataFrames, expecting "flow_paths"
+                        and "flow_path_expansion_costs".
+        config: Configuration object with temporal, WACC, and network lifetime settings.
+
+    Returns:
+        pd.DataFrame: PyPSA style line attributes in tabular format, including both
+                      existing lines and potential expansion lines.
+    """
+    existing_flow_paths_df = ispypsa_tables["flow_paths"]
+    existing_lines = _translate_existing_flow_path_capacity_to_lines(
+        existing_flow_paths_df
+    )
+
+    if config.network.transmission_expansion:
+        expansion_lines = _translate_expansion_costs_to_lines(
+            ispypsa_tables["flow_path_expansion_costs"],
+            existing_lines.copy(),
+            config.temporal.capacity_expansion.investment_periods,
+            config.temporal.year_type,
+            config.wacc,
+            config.network.annuitisation_lifetime,
+        )
+    else:
+        expansion_lines = pd.DataFrame()
+
+    all_lines = pd.concat(
+        [existing_lines, expansion_lines], ignore_index=True, sort=False
+    )
+
+    return all_lines
+
+
+def _translate_existing_flow_path_capacity_to_lines(
+    existing_flow_paths: pd.DataFrame,
+) -> pd.DataFrame:
+    """Translates existing flow path capacities to PyPSA line components.
+
+    Args:
+        existing_flow_paths: DataFrame from ispypsa_tables["flow_paths"].
+
+    Returns:
+        `pd.DataFrame`: PyPSA style line attributes in tabular format.
+    """
+    lines_df = existing_flow_paths.loc[:, list(_LINE_ATTRIBUTES.keys())].copy()
+    lines_df = lines_df.rename(columns=_LINE_ATTRIBUTES)
+
+    lines_df["name"] = lines_df["name"] + "_existing"
+
+    lines_df["s_nom_extendable"] = False
+    lines_df["capital_cost"] = np.nan
+
+    return lines_df
+
+
+def _translate_expansion_costs_to_lines(
+        expansion_costs: pd.DataFrame,
+        existing_lines_df: pd.DataFrame,
+        investment_periods: List[int],
+        year_type: str,
+        wacc: float,
+        asset_lifetime: int,
+        id_column: str = "flow_path",
+        match_column: str = "name",
+) -> pd.DataFrame:
+    """Generic function to translate expansion costs to PyPSA line components.
+
+    This function can be used for both flow path and REZ expansion costs.
+
+    Args:
+        expansion_costs: `ISPyPSA` formatted pd.DataFrame detailing
+            the expansion costs with financial year columns.
+        existing_lines_df: `PyPSA` style line attributes in tabular format.
+            Used to source bus/carrier data.
+        investment_periods: List of investment years (e.g., [2025, 2030]).
+        year_type: Temporal configuration, e.g., "fy" or "calendar".
+        wacc: Weighted average cost of capital.
+        asset_lifetime: Nominal asset lifetime in years.
+        id_column: Column name in expansion_costs containing the identifier.
+        match_column: Column name in existing_lines_df to match with id_column.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style line attributes in tabular format.
+    """
+    if expansion_costs.empty:
+        return pd.DataFrame()
+
+    # Extract cost columns (those ending with _$/mw)
+    cost_cols = [
+        col for col in expansion_costs.columns if col.endswith("_$/mw")
+    ]
+    id_vars = [col for col in expansion_costs.columns if col not in cost_cols]
+
+    # Melt the dataframe to convert from wide to long format
+    df_melted = expansion_costs.melt(
+        id_vars=id_vars,
+        value_vars=cost_cols,
+        var_name="cost_year_raw_with_suffix",
+        value_name="cost_per_mw",
+    )
+
+    # Drop rows with NaN costs
+    df_melted = df_melted.dropna(subset=["cost_per_mw"])
+    if df_melted.empty:
+        return pd.DataFrame()
+
+    # Parse financial year from cost column names
+    def parse_cost_year(cost_year_raw: str) -> int:
+        year_part = cost_year_raw.split("_$/mw")[0]  # e.g., "2025_26"
+        if year_type == 'fy':
+            # For financial year format like "2025_26"
+            yy_part = year_part.split("_")[1]  # e.g., "26"
+            return 2000 + int(yy_part)  # e.g., 2026, as per spec
+        elif year_type == 'calendar':
+            # For calendar year format (simple year)
+            return int(year_part)
+        else:
+            raise ValueError(f"Unknown year_type: {year_type}")
+
+    df_melted["model_year_for_cost"] = df_melted["cost_year_raw_with_suffix"].apply(
+        parse_cost_year
+    )
+
+    # Filter to only include costs relevant to our investment periods
+    df_melted = df_melted[df_melted["model_year_for_cost"].isin(investment_periods)]
+    if df_melted.empty:
+        return pd.DataFrame()
+
+    # Prepare for merging with existing lines data
+    pypsa_attributes_to_carry = ["bus0", "bus1", "carrier"]
+
+    # For merging, we need to handle the case where match_column might need cleaning
+    existing_lines_copy = existing_lines_df.copy()
+    if "_existing" in existing_lines_copy[match_column].iloc[0]:
+        existing_lines_copy[match_column] = existing_lines_copy[
+            match_column].str.replace("_existing", "")
+
+    # Merge with existing lines to get attributes like bus0, bus1, carrier
+    df_merged = pd.merge(
+        df_melted,
+        existing_lines_copy[[match_column] + pypsa_attributes_to_carry],
+        left_on=id_column,
+        right_on=match_column,
+    )
+
+    # Create expansion lines dataframe
+    expansion_lines = pd.DataFrame()
+
+    # Generate appropriate names for the expansion lines
+    expansion_lines["name"] = (
+            df_merged["bus0"] + "-" + df_merged["bus1"] + "_exp_" + df_merged[
+        "model_year_for_cost"].astype(str)
+    )
+
+    # Copy over needed attributes
+    for attr in pypsa_attributes_to_carry:
+        expansion_lines[attr] = df_merged[attr]
+
+    # Set expansion line properties
+    expansion_lines["s_nom"] = 0.0
+    expansion_lines["s_nom_extendable"] = True
+    expansion_lines["build_year"] = df_merged["model_year_for_cost"]
+    expansion_lines["lifetime"] = asset_lifetime
+    expansion_lines["capital_cost"] = df_merged["cost_per_mw"].apply(
+        lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime)
+    )
+
+    return expansion_lines
+````
+
+## File: src/ispypsa/translator/mappings.py
+````python
+_GENERATOR_ATTRIBUTES = {
+    "generator": "name",
+    "maximum_capacity_mw": "p_nom",
+    "fuel_type": "carrier",
+}
+
+_BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
+
+_LINE_ATTRIBUTES = {
+    "flow_path": "name",
+    "carrier": "carrier",
+    "node_from": "bus0",
+    "node_to": "bus1",
+    "forward_direction_mw_summer_typical": "s_nom",
+    # TODO: implement reverse direction limit
+    # "reverse_direction_mw_summer_typical": ""
+}
+
+_REZ_LINE_ATTRIBUTES = {
+    "rez_id": "bus0",
+    "isp_sub_region_id": "bus1",
+    "rez_transmission_network_limit_summer_typical": "s_nom",
+    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
+}
+
+_CUSTOM_CONSTRAINT_ATTRIBUTES = {
+    "term_id": "variable_name",
+    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
+    "constraint_id": "constraint_name",
+    "summer_typical": "rhs",
+    "term_type": "term_type",
+    "coefficient": "coefficient",
+}
+
+_CUSTOM_CONSTRAINT_EXPANSION_COSTS = [
+    "rez_group_constraints_expansion_costs",
+    "rez_transmission_limit_constraints_expansion_costs",
+]
+
+_CUSTOM_CONSTRAINT_RHS_TABLES = [
+    "rez_group_constraints_rhs",
+    "rez_transmission_limit_constraints_rhs",
+]
+
+_CUSTOM_CONSTRAINT_LHS_TABLES = [
+    "rez_group_constraints_lhs",
+    "rez_transmission_limit_constraints_lhs",
+]
+
+_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {
+    "line_flow": "Line",
+    "generator_capacity": "Generator",
+    "generator_output": "Generator",
+    "load_consumption": "Load",
+    "storage_output": "Storage",
+}
+
+_CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE = {
+    "line_flow": "s",
+    "generator_capacity": "p_nom",
+    "generator_output": "p",
+    "load_consumption": "p",
+    "storage_output": "p",
+}
+````
+
+## File: src/ispypsa/translator/renewable_energy_zones.py
+````python
+import pandas as pd
+
+from ispypsa.config import ModelConfig
+from ispypsa.translator.lines import _translate_expansion_costs_to_lines
+from ispypsa.translator.mappings import _REZ_LINE_ATTRIBUTES
+
+
+def _translate_renewable_energy_zone_build_limits_to_flow_paths(
+        renewable_energy_zone_build_limits: pd.DataFrame,
+        rez_expansion_costs: pd.DataFrame,
+        config: ModelConfig,
+) -> pd.DataFrame:
+    """Process renewable energy zone build limit data to format aligned with PyPSA
+    inputs, incorporating time-varying expansion costs.
+
+    Args:
+        renewable_energy_zone_build_limits: `ISPyPSA` formatted pd.DataFrame detailing
+            Renewable Energy Zone transmission limits.
+        rez_expansion_costs: `ISPyPSA` formatted pd.DataFrame detailing Renewable Energy
+            Zone expansion costs by year.
+        config: ModelConfig object containing wacc, investment periods, etc.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style line attributes in tabular format.
+    """
+    # Create existing lines from renewable energy zone build limits
+    existing_lines = _translate_existing_rez_connections_to_lines(
+        renewable_energy_zone_build_limits,
+        config.network.rez_to_sub_region_transmission_default_limit
+    )
+
+    # Create expansion lines from rez expansion costs if expansion is enabled
+    if config.network.rez_transmission_expansion and not rez_expansion_costs.empty:
+        expansion_lines = _translate_expansion_costs_to_lines(
+            expansion_costs=rez_expansion_costs,
+            existing_lines_df=existing_lines.copy(),
+            investment_periods=config.temporal.capacity_expansion.investment_periods,
+            year_type=config.temporal.year_type,
+            wacc=config.wacc,
+            asset_lifetime=config.network.annuitisation_lifetime,
+            id_column="rez_constraint_id",
+            match_column="name"
+        )
+        # Combine existing and expansion lines
+        all_lines = pd.concat([existing_lines, expansion_lines], ignore_index=True,
+                              sort=False)
+    else:
+        all_lines = existing_lines
+
+    return all_lines
+
+
+def _translate_existing_rez_connections_to_lines(
+        renewable_energy_zone_build_limits: pd.DataFrame,
+        rez_to_sub_region_transmission_default_limit: float,
+) -> pd.DataFrame:
+    """Process existing REZ connection limits to PyPSA lines.
+
+    Args:
+        renewable_energy_zone_build_limits: `ISPyPSA` formatted pd.DataFrame detailing
+            Renewable Energy Zone transmission limits.
+        rez_to_sub_region_transmission_default_limit: float specifying the transmission
+            limit to use for rez to subregion connections when an explicit limit
+            is not given in the inputs.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style line attributes in tabular format.
+    """
+    lines = renewable_energy_zone_build_limits.loc[:, _REZ_LINE_ATTRIBUTES.keys()]
+    lines = lines.rename(columns=_REZ_LINE_ATTRIBUTES)
+    lines["name"] = lines["bus0"] + "-" + lines["bus1"] + "_existing"
+
+    # Lines without an explicit limit because their limits are modelled through
+    # custom constraints are given a very large capacity
+    lines["s_nom"] = lines["s_nom"].fillna(rez_to_sub_region_transmission_default_limit)
+
+    # Not extendable for existing lines
+    lines["s_nom_extendable"] = False
+
+    return lines
+````
+
+## File: tests/test_translator/test_snapshot.py
+````python
+from datetime import datetime
+
+import pandas as pd
+import pytest
+from pandas.testing import assert_frame_equal
+
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+)
+
+
+@pytest.mark.parametrize(
+    "start_year,end_year, year_type, temporal_resolution_min, expected_first_datetime, expected_last_datetime, expected_length",
+    [
+        # One financial year with half hour resolution
+        (
+            2021,
+            2021,
+            "fy",
+            30,
+            datetime(year=2020, month=7, day=1, minute=30),
+            datetime(year=2021, month=7, day=1, minute=0),
+            8760 * 2,
+        ),
+        # One financial year with hourly resolution
+        (
+            2021,
+            2021,
+            "fy",
+            60,
+            datetime(year=2020, month=7, day=1, hour=1, minute=0),
+            datetime(year=2021, month=7, day=1, minute=0),
+            8760,
+        ),
+        # One financial year with four hourly resolution
+        (
+            2021,
+            2021,
+            "fy",
+            240,
+            datetime(year=2020, month=7, day=1, hour=4, minute=0),
+            datetime(year=2021, month=7, day=1, minute=0),
+            8760 / 4,
+        ),
+        # One financial year with fifteen minute resolution
+        (
+            2021,
+            2021,
+            "fy",
+            15,
+            datetime(year=2020, month=7, day=1, hour=0, minute=15),
+            datetime(year=2021, month=7, day=1, minute=0),
+            8760 * 4,
+        ),
+        # Three financial years with half hour resolution
+        (
+            2021,
+            2023,
+            "fy",
+            30,
+            datetime(year=2020, month=7, day=1, minute=30),
+            datetime(year=2023, month=7, day=1, minute=0),
+            8760 * 2 * 3,
+        ),
+        # One calendar year with half hour resolution
+        (
+            2021,
+            2021,
+            "calendar",
+            30,
+            datetime(year=2021, month=1, day=1, minute=30),
+            datetime(year=2022, month=1, day=1, minute=0),
+            8760 * 2,
+        ),
+        # One calendar year with hourly resolution
+        (
+            2021,
+            2021,
+            "calendar",
+            60,
+            datetime(year=2021, month=1, day=1, hour=1, minute=0),
+            datetime(year=2022, month=1, day=1, minute=0),
+            8760,
+        ),
+        # One calendar year with four hourly resolution
+        (
+            2021,
+            2021,
+            "calendar",
+            240,
+            datetime(year=2021, month=1, day=1, hour=4, minute=0),
+            datetime(year=2022, month=1, day=1, minute=0),
+            8760 / 4,
+        ),
+        # One calendar year with fifteen minute resolution
+        (
+            2021,
+            2021,
+            "calendar",
+            15,
+            datetime(year=2021, month=1, day=1, hour=0, minute=15),
+            datetime(year=2022, month=1, day=1, minute=0),
+            8760 * 4,
+        ),
+        # Three calendar year with half hour resolution
+        (
+            2021,
+            2023,
+            "calendar",
+            30,
+            datetime(year=2021, month=1, day=1, minute=30),
+            datetime(year=2024, month=1, day=1, minute=0),
+            8760 * 2 * 3,
+        ),
+    ],
+)
+def test_snapshot_creation(
+    start_year: int,
+    end_year: int,
+    year_type: str,
+    temporal_resolution_min: int,
+    expected_first_datetime: datetime,
+    expected_last_datetime: datetime,
+    expected_length: int,
+):
+    snapshot = _create_complete_snapshots_index(
+        start_year=start_year,
+        end_year=end_year,
+        year_type=year_type,
+        temporal_resolution_min=temporal_resolution_min,
+    )
+    assert snapshot["snapshots"].iloc[0] == expected_first_datetime
+    assert snapshot["snapshots"].iloc[-1] == expected_last_datetime
+    assert len(snapshot) == expected_length
+
+
+def test_add_investment_periods_calendar_year_mapping():
+    """Test basic calendar year mapping."""
+    # Setup test data
+    timestamps = ["2015-03-15", "2018-11-20", "2022-05-10"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2015, 2020]
+
+    # Expected result (2015-03-15 -> 2015, 2018-11-20 -> 2015, 2022-05-10 -> 2020)
+    expected = pd.DataFrame(
+        {
+            "investment_periods": [2015, 2015, 2020],
+            "snapshots": pd.to_datetime(timestamps),
+        }
+    )
+
+    # Call function
+    result = _add_investment_periods(df, investment_periods, "calendar")
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_add_investment_periods_financial_year_mapping():
+    """Test financial year mapping (FY starts in July)."""
+    # Setup test data - mixing dates before and after July
+    timestamps = ["2016-05-10", "2016-08-15", "2019-12-01"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2015, 2017, 2020]
+
+    # Expected result:
+    # 2016-05-10 -> FY2016 (maps to 2015)
+    # 2016-08-15 -> FY2017 (maps to 2017)
+    # 2019-12-01 -> FY2020 (maps to 2020)
+    expected = pd.DataFrame(
+        {
+            "investment_periods": [2015, 2017, 2020],
+            "snapshots": pd.to_datetime(timestamps),
+        }
+    )
+
+    # Call function
+    result = _add_investment_periods(df, investment_periods, "fy")
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_add_investment_periods_financial_year_boundary():
+    """Test timestamps exactly at the financial year boundary."""
+    # Setup test data - dates exactly on July 1st
+    timestamps = ["2017-06-30", "2017-07-01"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2016, 2018]
+
+    # Expected result:
+    # 2017-06-30 -> FY2017 (maps to 2016)
+    # 2017-07-01 -> FY2018 (maps to 2018)
+    expected = pd.DataFrame(
+        {"investment_periods": [2016, 2018], "snapshots": pd.to_datetime(timestamps)}
+    )
+
+    # Call function
+    result = _add_investment_periods(df, investment_periods, "fy")
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_add_investment_periods_non_sequential_investment_periods():
+    """Test with non-sequential investment periods."""
+    timestamps = ["2014-05-10", "2018-03-15", "2022-11-20"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2010, 2015, 2022]  # Note the gap between 2015 and 2022
+
+    # Expected result:
+    # 2014-05-10 -> 2010
+    # 2018-03-15 -> 2015
+    # 2022-11-20 -> 2022
+    expected = pd.DataFrame(
+        {
+            "investment_periods": [2010, 2015, 2022],
+            "snapshots": pd.to_datetime(timestamps),
+        }
+    )
+
+    # Call function
+    result = _add_investment_periods(df, investment_periods, "calendar")
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_add_investment_periods_unmapped_timestamps_error():
+    """Test error is raised when timestamps can't be mapped."""
+    # Setup test data with a timestamp before the earliest investment period
+    timestamps = ["2005-01-15", "2016-05-10"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2010, 2015]
+
+    # Test for ValueError
+    with pytest.raises(ValueError) as excinfo:
+        _add_investment_periods(df, investment_periods, "calendar")
+
+    # Verify error message contains useful information
+    assert "Investment periods not compatible with modelling time window." in str(
+        excinfo.value
+    )
+    assert "2005-01-15" in str(excinfo.value)
+    assert "2010" in str(excinfo.value)
+````
+
+## File: src/ispypsa/config/validators.py
+````python
+import os
+from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, field_validator, model_validator
+
+from ..templater.lists import _ISP_SCENARIOS
+
+
+class NodesConfig(BaseModel):
+    regional_granularity: Literal["sub_regions", "nem_regions", "single_region"]
+    rezs: Literal["discrete_nodes", "attached_to_parent_node"]
+
+
+class NetworkConfig(BaseModel):
+    nodes: NodesConfig
+    annuitisation_lifetime: int
+    transmission_expansion: bool
+    rez_transmission_expansion: bool
+    rez_to_sub_region_transmission_default_limit: float
+
+
+class TemporalAggregationConfig(BaseModel):
+    representative_weeks: list[int] | None
+
+
+class TemporalRangeConfig(BaseModel):
+    start_year: int
+    end_year: int
+
+    @model_validator(mode="after")
+    def validate_end_year(self):
+        if self.end_year < self.start_year:
+            raise ValueError(
+                "config end_year must be greater than or equal to start_year"
+            )
+        return self
+
+
+class TemporalDetailedConfig(BaseModel):
+    reference_year_cycle: list[int]
+    resolution_min: int
+    aggregation: TemporalAggregationConfig
+
+    @field_validator("resolution_min")
+    @classmethod
+    def validate_temporal_resolution_min(cls, operational_temporal_resolution_min: int):
+        # TODO properly implement temporal aggregation so this first check can be removed.
+        if operational_temporal_resolution_min != 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must equal 30 min"
+            )
+        if operational_temporal_resolution_min < 30:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be greater than or equal to 30 min"
+            )
+        if (operational_temporal_resolution_min % 30) != 0:
+            raise ValueError(
+                "config operational_temporal_resolution_min must be multiple of 30 min"
+            )
+        return operational_temporal_resolution_min
+
+
+class TemporalOperationalConfig(TemporalDetailedConfig):
+    horizon: int
+    overlap: int
+
+
+class TemporalCapacityInvestmentConfig(TemporalDetailedConfig):
+    investment_periods: list[int]
+
+
+class TemporalConfig(BaseModel):
+    path_to_parsed_traces: str
+    year_type: Literal["fy", "calendar"]
+    range: TemporalRangeConfig
+    capacity_expansion: TemporalCapacityInvestmentConfig
+    operational: TemporalOperationalConfig = None
+
+    @field_validator("path_to_parsed_traces")
+    @classmethod
+    def validate_path_to_parsed_traces(cls, path_to_parsed_traces: str):
+        if path_to_parsed_traces == "NOT_SET_FOR_TESTING":
+            return path_to_parsed_traces
+
+        if path_to_parsed_traces == "ENV":
+            path_to_parsed_traces = os.environ.get("PATH_TO_PARSED_TRACES")
+            if path_to_parsed_traces is None:
+                raise ValueError("Environment variable PATH_TO_PARSED_TRACES not set")
+
+        trace_path = Path(path_to_parsed_traces)
+        if not trace_path.exists():
+            raise NotADirectoryError(
+                f"The parsed traces directory specified in the config ({trace_path})"
+                + " does not exist"
+            )
+        # check this folder contains sub-folders named solar, wind and demand
+        child_folders = set([folder.parts[-1] for folder in trace_path.iterdir()])
+        if child_folders != set(("demand", "wind", "solar")):
+            raise ValueError(
+                "The parsed traces directory must contain the following sub-folders"
+                + " with parsed trace data: 'demand', 'solar', 'wind'"
+            )
+        return path_to_parsed_traces
+
+    @model_validator(mode="after")
+    def validate_investment_periods(self):
+        if min(self.capacity_expansion.investment_periods) != self.range.start_year:
+            raise ValueError(
+                "config first investment period must be equal to start_year"
+            )
+        if len(self.capacity_expansion.investment_periods) != len(
+            set(self.capacity_expansion.investment_periods)
+        ):
+            raise ValueError("config all years in investment_periods must be unique")
+        if (
+            sorted(self.capacity_expansion.investment_periods)
+            != self.capacity_expansion.investment_periods
+        ):
+            raise ValueError(
+                "config investment_periods must be provided in sequential order"
+            )
+        return self
+
+
+class UnservedEnergyConfig(BaseModel):
+    cost: float = None
+    generator_size_mw: float = 1e5  # Default to a very large value (100,000 MW)
+
+
+class ModelConfig(BaseModel):
+    ispypsa_run_name: str
+    scenario: Literal[tuple(_ISP_SCENARIOS)]
+    wacc: float
+    discount_rate: float
+    network: NetworkConfig
+    temporal: TemporalConfig
+    iasr_workbook_version: str
+    unserved_energy: UnservedEnergyConfig
+    solver: Literal[
+        "highs",
+        "cbc",
+        "glpk",
+        "scip",
+        "cplex",
+        "gurobi",
+        "xpress",
+        "mosek",
+        "copt",
+        "mindopt",
+        "pips",
+    ]
+````
+
+## File: src/ispypsa/model/generators.py
+````python
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+
+def _get_trace_data(generator_name: str, path_to_traces: Path):
+    """Fetches trace data for a generator from directories containing traces.
+
+    Args:
+        generator_name: String defining the generator's name
+        path_to_traces: `pathlib.Path` for directory containing traces
+
+    Returns:
+        DataFrame with resource trace data.
+    """
+    filename = Path(f"{generator_name}.parquet")
+    trace_filepath = path_to_traces / filename
+    trace_data = pd.read_parquet(trace_filepath)
+    return trace_data
+
+
+def _add_generator_to_network(
+    generator_definition: dict,
+    network: pypsa.Network,
+    path_to_solar_traces: Path,
+    path_to_wind_traces: Path,
+) -> None:
+    """Adds a generator to a pypsa.Network based on a dict containing PyPSA Generator
+    attributes.
+
+    If the carrier of a generator is Wind or Solar then a dynamic maximum availability
+    for the generator is applied (via `p_max_pu`). Otherwise, the nominal capacity of the
+    generator is used to apply a static maximum availability.
+
+    Args:
+        generator_definition: dict containing pypsa Generator parameters
+        network: The `pypsa.Network` object
+        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
+        path_to_wind_traces: `pathlib.Path` for directory containing wind traces
+
+    Returns: None
+    """
+    generator_definition["class_name"] = "Generator"
+
+    if generator_definition["carrier"] == "Wind":
+        trace_data = _get_trace_data(generator_definition["name"], path_to_wind_traces)
+    elif generator_definition["carrier"] == "Solar":
+        trace_data = _get_trace_data(generator_definition["name"], path_to_solar_traces)
+    else:
+        trace_data = None
+
+    if trace_data is not None:
+        trace_data = trace_data.set_index(["investment_periods", "snapshots"])
+        generator_definition["p_max_pu"] = trace_data["p_max_pu"]
+
+    network.add(**generator_definition)
+
+
+def _add_generators_to_network(
+    network: pypsa.Network,
+    generators: pd.DataFrame,
+    path_to_timeseries_data: Path,
+) -> None:
+    """Adds the generators in a pypsa-friendly `pd.DataFrame` to the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+    Returns: None
+    """
+    path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
+    path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
+    generators.apply(
+        lambda row: _add_generator_to_network(
+            row.to_dict(), network, path_to_solar_traces, path_to_wind_traces
+        ),
+        axis=1,
+    )
+
+
+def _add_custom_constraint_generators_to_network(
+    network: pypsa.Network, generators: pd.DataFrame
+) -> None:
+    """Adds the Generators defined in `custom_constraint_generators.csv` in the `path_pypsa_inputs` directory to the
+    `pypsa.Network` object. These are generators that connect to a dummy bus, not part of the rest of the network,
+    the generators are used to model custom constraint investment by referencing the p_nom of the generators in the
+    custom constraints.
+
+    Args:
+        network: The `pypsa.Network` object
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+
+    Returns: None
+    """
+    generators["class_name"] = "Generator"
+    generators.apply(lambda row: network.add(**row.to_dict()), axis=1)
+
+
+def _update_generator_availability_timeseries(
+    name: str,
+    carrier: str,
+    network: pypsa.Network,
+    path_to_solar_traces: Path,
+    path_to_wind_traces: Path,
+) -> None:
+    """Updates the timeseries availability of the generator in the `pypsa.Network`.
+
+    Args:
+        name: str specifying the generators name
+        carrier: the generator fuel type
+        network: The `pypsa.Network` object
+        path_to_solar_traces: `pathlib.Path` for directory containing solar traces
+        path_to_wind_traces: `pathlib.Path` for directory containing wind traces
+
+    Returns: None
+    """
+
+    if carrier == "Wind":
+        trace_data = _get_trace_data(name, path_to_wind_traces)
+    elif carrier == "Solar":
+        trace_data = _get_trace_data(name, path_to_solar_traces)
+    else:
+        trace_data = None
+
+    if trace_data is not None:
+        trace_data = trace_data.set_index(["investment_periods", "snapshots"])
+        network.generators_t.p_max_pu[name] = trace_data.loc[:, ["p_max_pu"]]
+
+
+def _update_generators_availability_timeseries(
+    network: pypsa.Network,
+    generators: pd.DataFrame,
+    path_to_timeseries_data: Path,
+) -> None:
+    """Updates the timeseries availability of the generators in the pypsa-friendly `
+    pd.DataFrame` in the `pypsa.Network`.
+
+    Args:
+        network: The `pypsa.Network` object
+        generators:  `pd.DataFrame` with `PyPSA` style `Generator` attributes.
+        path_to_timeseries_data: `pathlib.Path` that points to the directory containing
+            timeseries data
+    Returns: None
+    """
+    path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
+    path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
+    generators.apply(
+        lambda row: _update_generator_availability_timeseries(
+            row["name"],
+            row["carrier"],
+            network,
+            path_to_solar_traces,
+            path_to_wind_traces,
+        ),
+        axis=1,
+    )
+````
+
+## File: src/ispypsa/translator/buses.py
+````python
+from pathlib import Path
+from typing import Literal
+
+import pandas as pd
+from isp_trace_parser import get_data
+
+from ispypsa.translator.mappings import _BUS_ATTRIBUTES
+from ispypsa.translator.temporal_filters import _time_series_filter
+from ispypsa.translator.time_series_checker import _check_time_series
+
+
+def _translate_isp_sub_regions_to_buses(isp_sub_regions: pd.DataFrame) -> pd.DataFrame:
+    """Process ISP sub region data into the PyPSA format for buses.
+
+    Args:
+        isp_sub_regions: `ISPyPSA` formatted pd.DataFrame detailing ISP sub regions.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = isp_sub_regions.loc[:, ["isp_sub_region_id"]]
+    buses = buses.rename(columns={"isp_sub_region_id": "name"})
+    return buses
+
+
+def _translate_nem_regions_to_buses(nem_regions: pd.DataFrame) -> pd.DataFrame:
+    """Process NEM region data into the PyPSA format for buses.
+
+    Args:
+        nem_regions: `ISPyPSA` formatted pd.DataFrame detailing NEM regions.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = nem_regions.loc[:, ["nem_region_id"]]
+    buses = buses.rename(columns={"nem_region_id": "name"})
+    return buses
+
+
+def _create_single_region_bus() -> pd.DataFrame:
+    """Create table specifying the name of single region in the PyPSA format.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = pd.DataFrame({"name": ["NEM"]})
+    return buses
+
+
+def _translate_rezs_to_buses(renewable_energy_zones: pd.DataFrame) -> pd.DataFrame:
+    """Process ISP Renewable Energy Zone location data into the PyPSA format for buses.
+
+    Args:
+        nem_regions: `ISPyPSA` formatted pd.DataFrame detailing Renewable Energy Zone
+            locations.
+
+    Returns:
+        `pd.DataFrame`: PyPSA style bus attributes in tabular format.
+    """
+    buses = renewable_energy_zones.loc[:, ["rez_id"]]
+    buses = buses.rename(columns={"rez_id": "name"})
+    return buses
+
+
+def create_pypsa_friendly_bus_demand_timeseries(
+    isp_sub_regions: pd.DataFrame,
+    trace_data_path: Path | str,
+    pypsa_inputs_path: Path | str,
+    scenario: str,
+    regional_granularity: str,
+    reference_year_mapping: dict[int:int],
+    year_type: Literal["fy", "calendar"],
+    snapshots: pd.DataFrame,
+) -> None:
+    """Gets trace data for operational demand by constructing a timeseries from the
+    start to end year using the reference year cycle provided.
+
+    Trace data is then saved as a parquet file to `pypsa_inputs_path`.
+
+    Args:
+        isp_sub_regions: isp_sub_regions: `ISPyPSA` formatted pd.DataFrame detailing ISP
+            sub regions.
+        trace_data_path: Path to directory containing trace data parsed by
+            isp-trace-parser
+        pypsa_inputs_path: Path to director where input translated to pypsa format will
+            be saved
+        scenario: str, ISP scenario to use demand traces from
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
+        reference_year_mapping: dict[int: int], mapping model years to trace data
+            reference years
+        year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial
+            year with start_year and end_year specifiying the financial year to return
+            data for, using year ending nomenclature (2016 ->FY2015/2016). If
+            'calendar', then filtering is by calendar year.
+        snapshots: pd.DataFrame containing the expected time series values.
+
+    Returns:
+        None
+    """
+    trace_data_path = trace_data_path / Path("demand")
+    output_trace_path = Path(pypsa_inputs_path, "demand_traces")
+    if not output_trace_path.exists():
+        output_trace_path.mkdir(parents=True)
+
+    # remove "s" unless single_region for for type filtering
+    if regional_granularity == "single_region":
+        isp_sub_regions["demand_nodes"] = "NEM"
+    elif regional_granularity == "nem_regions":
+        isp_sub_regions["demand_nodes"] = isp_sub_regions["nem_region_id"]
+    elif regional_granularity == "sub_regions":
+        isp_sub_regions["demand_nodes"] = isp_sub_regions["isp_sub_region_id"]
+
+    demand_nodes = list(isp_sub_regions["demand_nodes"].unique())
+
+    for demand_node in demand_nodes:
+        mask = isp_sub_regions["demand_nodes"] == demand_node
+        sub_regions_to_aggregate = list(isp_sub_regions.loc[mask, "isp_sub_region_id"])
+
+        node_traces = []
+        for sub_regions in sub_regions_to_aggregate:
+            trace = get_data.demand_multiple_reference_years(
+                reference_years=reference_year_mapping,
+                directory=trace_data_path,
+                subregion=sub_regions,
+                scenario=scenario,
+                year_type=year_type,
+                demand_type="OPSO_MODELLING",
+                poe="POE50",
+            )
+            node_traces.append(trace)
+
+        node_traces = pd.concat(node_traces)
+        node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
+        # datetime in nanoseconds required by PyPSA
+        node_trace["Datetime"] = node_trace["Datetime"].astype("datetime64[ns]")
+        node_trace = node_trace.rename(
+            columns={"Datetime": "snapshots", "Value": "p_set"}
+        )
+        node_trace = _time_series_filter(node_trace, snapshots)
+        _check_time_series(
+            node_trace["snapshots"],
+            snapshots["snapshots"],
+            "demand data",
+            demand_node,
+        )
+        node_trace = pd.merge(node_trace, snapshots, on="snapshots")
+        node_trace = node_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+        node_trace.to_parquet(
+            Path(output_trace_path, f"{demand_node}.parquet"), index=False
+        )
+````
+
+## File: src/ispypsa/model/lines.py
+````python
+from pathlib import Path
+
+import pandas as pd
+import pypsa
+
+
+def _add_lines_to_network(network: pypsa.Network, lines: pd.DataFrame) -> None:
+    """Adds the Lines defined in a pypsa-friendly input table called `"lines"` to the
+    `pypsa.Network` object.
+
+    Args:
+        network: The `pypsa.Network` object
+        lines: `pd.DataFrame` with `PyPSA` style `Line` attributes.
+
+    Returns: None
+    """
+    lines["class_name"] = "Line"
+    lines["x"] = 1
+    lines["r"] = 1
+    lines.apply(lambda row: network.add(**row.to_dict()), axis=1)
+````
+
+## File: src/ispypsa/templater/flow_paths.py
+````python
+import logging
+import re
+from pathlib import Path
+
+import pandas as pd
+
+from .helpers import (
+    _fuzzy_match_names,
+    _snakecase_string,
+    _strip_all_text_after_numeric_value,
+)
+from .mappings import (
+    _FLOW_PATH_CONFIG,
+    _HVDC_FLOW_PATHS,
+    _REZ_CONFIG,
+)
+
+
+def _template_sub_regional_flow_paths(
+    flow_path_capabilities: pd.DataFrame
+) -> pd.DataFrame:
+    """Processes the 'Flow path transfer capability' table into an ISPyPSA template
+    format.
+
+    Args:
+        flow_path_capabilities: pd.DataFrame IASR table specifying the flow path
+            transfer capabilities between subregions
+        transmission_expansion_costs: pd.DataFrame deprecated parameter, kept for
+            backward compatibility.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA sub-regional flow path template
+    """
+    from_to_carrier = _get_flow_path_name_from_to_carrier(
+        flow_path_capabilities.iloc[:, 0], regional_granularity="sub_regions"
+    )
+    capability_columns = _clean_capability_column_names(flow_path_capabilities)
+    sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
+    # Only keep forward_direction_mw_summer_typical limit col as that all that's
+    # being used for now.
+    cols = [
+        "flow_path",
+        "node_from",
+        "node_to",
+        "carrier",
+        "forward_direction_mw_summer_typical",
+    ]
+    sub_regional_capabilities = sub_regional_capabilities.loc[:, cols]
+
+    return sub_regional_capabilities
+
+
+def _template_regional_interconnectors(
+    interconnector_capabilities: pd.DataFrame,
+) -> pd.DataFrame:
+    """Processes the IASR table 'Interconnector transfer capability' into an
+    ISPyPSA template format
+
+    Args:
+        interconnector_transfer_capability: pd.DataFrame IASR table specifying the
+            interconnector transfer capabilities between nem regions
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA regional flow path template
+    """
+    from_to_carrier = _get_flow_path_name_from_to_carrier(
+        interconnector_capabilities.iloc[:, 0], regional_granularity="nem_regions"
+    )
+    capability_columns = _clean_capability_column_names(interconnector_capabilities)
+    regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
+    # Only keep forward_direction_mw_summer_typical limit col as that all that's
+    # being used for now.
+    cols = [
+        "flow_path",
+        "node_from",
+        "node_to",
+        "carrier",
+        "forward_direction_mw_summer_typical",
+    ]
+    regional_capabilities = regional_capabilities.loc[:, cols]
+    return regional_capabilities
+
+
+def _get_flow_path_name_from_to_carrier(
+    flow_path_name_series: pd.Series, regional_granularity: str
+) -> pd.DataFrame:
+    """
+    Capture the name, from-node ID, the to-node ID and determines a name
+    for a flow path using regular expressions on a string `pandas.Series`
+    that contains the flow path name in the forward power flow direction.
+
+    A carrier ('AC' or 'DC') is determined based on whether the flow path descriptor
+    is in _HVDC_FLOW_PATHS or goes from TAS to VIC.
+    """
+
+    from_to_desc = flow_path_name_series.str.strip().str.extract(
+        # capture 2-4 capital letter code that is the from-node
+        r"^(?P<node_from>[A-Z]{2,4})"
+        # match em or en dashes, or hyphens and soft hyphens surrounded by spaces
+        + r"\s*[\u2014\u2013\-\u00ad]+\s*"
+        # capture 2-4 captial letter code that is the to-node
+        + r"(?P<node_to>[A-Z]{2,4})"
+        # capture optional descriptor (e.g. '("Heywood")')
+        + r"\s*(?P<descriptor>.*)"
+    )
+    from_to_desc["carrier"] = from_to_desc.apply(
+        lambda row: "DC"
+        if any(
+            [dc_line in row["descriptor"] for dc_line in _HVDC_FLOW_PATHS["flow_path"]]
+        )
+        # manually detect Basslink since the name is not in the descriptor
+        or (row["node_from"] == "TAS" and row["node_to"] == "VIC")
+        else "AC",
+        axis=1,
+    )
+    from_to_desc["flow_path"] = from_to_desc.apply(
+        lambda row: _determine_flow_path_name(
+            row.node_from,
+            row.node_to,
+            row.descriptor,
+            row.carrier,
+            regional_granularity,
+        ),
+        axis=1,
+    )
+    return from_to_desc.drop(columns=["descriptor"])
+
+
+def _determine_flow_path_name(
+    node_from: str,
+    node_to: str,
+    descriptor: str,
+    carrier: str,
+    regional_granularity: str,
+) -> str:
+    """
+    Constructs flow path name
+        - If the carrier is `DC`, looks for the name in `ispypsa.templater.mappings._HVDC_FLOW_PATHS`
+        - Else if there is a descriptor, uses a regular expression to extract the name
+        - Else constructs a name using typical NEM naming conventing based on `regional_granularity`
+            - First letter of `node_from`, first of `node_to` followed by "I" (interconnector)
+                if `regional_granularity` is `nem_regions`
+            - `<node_from>-<node_to> if `regional_granularity` is `sub_regions`
+    """
+    if carrier == "DC":
+        name = _HVDC_FLOW_PATHS.loc[
+            (_HVDC_FLOW_PATHS.node_from == node_from)
+            & (_HVDC_FLOW_PATHS.node_to == node_to),
+            "flow_path",
+        ].iat[0]
+    elif descriptor and (
+        match := re.search(
+            # unicode characters here refer to quotation mark and left/right
+            # quotation marks
+            r"\(([\w\u0022\u201c\u201d]+)\)",
+            descriptor,
+        )
+    ):
+        name = match.group(1).strip('"').lstrip("\u201c").rstrip("\u201d")
+    else:
+        if regional_granularity == "nem_regions":
+            name = node_from[0] + node_to[0] + "I"
+        elif regional_granularity == "sub_regions":
+            name = node_from + "-" + node_to
+    return name
+
+
+def _clean_capability_column_names(capability_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Cleans and simplifies flow path capability column names (e.g. drops references to
+    notes)
+    """
+    capability_columns = []
+    for direction in ("Forward direction", "Reverse direction"):
+        direction_cols = [
+            col for col in capability_df.columns if direction in col and "(MW)" in col
+        ]
+        for col in direction_cols:
+            qualifier = re.search(r".*_([A-Za-z\s]+)$", col).group(1)
+            col_name = _snakecase_string(direction + " (MW) " + qualifier)
+            capability_columns.append(capability_df[col].rename(col_name))
+    return pd.concat(capability_columns, axis=1)
+
+
+def _template_sub_regional_flow_path_costs(
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """
+    Process flow path augmentation options and cost forecasts to find least cost options for each flow path.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames include:
+            - Augmentation tables: columns include 'flow_path', 'option_name', 'transfer_increase_forward_direction_mw', 'transfer_increase_reverse_direction_mw', etc.
+            - Cost tables: columns include 'flow_path', 'option_name', and financial year columns
+            - Preparatory activities: columns include 'flow_path', and financial year columns
+            - Actionable projects: columns include 'flow_path', and financial year columns
+
+    Returns:
+        pd.DataFrame containing the least cost option for each flow path. Columns:
+            - flow_path
+            - option_name
+            - nominal_flow_limit_increase_mw
+            - <financial year>_$/mw (one column per year, e.g., '2024_25_$/mw')
+    """
+    return process_transmission_costs(
+        iasr_tables=iasr_tables, scenario=scenario, config=_FLOW_PATH_CONFIG
+    )
+
+
+def _template_rez_transmission_costs(
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """
+    Process REZ augmentation options and cost forecasts to find least cost options for each REZ.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames include:
+            - Augmentation tables: columns include 'rez_constraint_id', 'option', 'additional_network_capacity_mw', etc.
+            - Cost tables: columns include 'rez_constraint_id', 'option', and columns for each financial year (e.g., '2024-25', '2025-26', ...)
+        scenario: str specifying the scenario name (e.g., "Step Change", "Progressive Change").
+
+    Returns:
+        pd.DataFrame containing the least cost option for each REZ. Columns:
+            - rez_constraint_id
+            - option
+            - additional_network_capacity_mw
+            - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
+    """
+    return process_transmission_costs(
+        iasr_tables=iasr_tables, scenario=scenario, config=_REZ_CONFIG
+    )
+
+
+def process_transmission_costs(
+    iasr_tables: dict[str, pd.DataFrame], scenario: str, config: dict
+) -> pd.DataFrame:
+    """
+    Generic function to process transmission costs (flow path or REZ).
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables
+        scenario: str specifying the scenario name
+        config: dict with processing configuration containing:
+            - transmission_type: str, either "flow_path" or "rez"
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - table_names: dict with augmentation and cost table lists
+            - mappings: dict with mappings for preparatory activities and other data
+
+    Returns:
+        pd.DataFrame containing the least cost options with standardized column structure
+    """
+    cost_scenario = _determine_cost_scenario(scenario)
+
+    # Get and process augmentation table
+    aug_table = _get_augmentation_table(iasr_tables=iasr_tables, config=config)
+
+    # Get and process cost table
+    cost_table = _get_cost_table(
+        iasr_tables=iasr_tables, cost_scenario=cost_scenario, config=config
+    )
+
+    # Find least cost options
+    final_costs = _get_least_cost_options(
+        aug_table=aug_table, cost_table=cost_table, config=config
+    )
+
+    return final_costs
+
+
+def _get_augmentation_table(
+    iasr_tables: dict[str, pd.DataFrame], config: dict
+) -> pd.DataFrame:
+    """
+    Concatenate and clean all augmentation tables for a given transmission type.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant tables must contain columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+        config: dict with processing configuration containing:
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - table_names: dict with augmentation table lists
+
+    Returns:
+        pd.DataFrame containing the concatenated augmentation table. Columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+    """
+    table_names = config["table_names"]["augmentation"]
+    missing = [t for t in table_names if t not in iasr_tables]
+    if missing:
+        logging.warning(f"Missing augmentation tables: {missing}")
+    aug_tables = [
+        iasr_tables[table_name]
+        for table_name in table_names
+        if table_name in iasr_tables
+    ]
+    if not aug_tables:
+        raise ValueError("No augmentation tables found in iasr_tables.")
+    aug_table = pd.concat(aug_tables, ignore_index=True)
+    aug_table = _clean_augmentation_table_column_names(aug_table, config)
+    aug_table = _clean_augmentation_table_column_values(aug_table, config)
+    return aug_table
+
+
+def _get_cost_table(
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
+) -> pd.DataFrame:
+    """
+    Combine all cost tables, preparatory activities, and actionable projects for a given scenario into a single DataFrame.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Cost tables must have columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024-25', ...)
+        flow_path_scenario: str specifying the internal scenario key.
+        config: dict with processing configuration containing:
+            - transmission_type: str, either "flow_path" or "rez"
+            - column_mappings: dict mapping standard column names to type-specific names
+            - table_names: dict with cost table lists
+            - mappings: dict with mappings for preparatory activities and other data
+
+    Returns:
+        pd.DataFrame containing the combined cost table. Columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024_25', ...)
+    """
+    cost_table_names = config["table_names"]["cost"][cost_scenario]
+    cost_table = _get_cleaned_cost_tables(iasr_tables, cost_table_names, config)
+    prep_activities = _get_prep_activities_table(iasr_tables, cost_scenario, config)
+    actionable_projects = _get_actionable_projects_table(
+        iasr_tables, cost_scenario, config
+    )
+    return _combine_cost_tables(
+        cost_table, prep_activities, actionable_projects, config
+    )
+
+
+def _get_least_cost_options(
+    aug_table: pd.DataFrame, cost_table: pd.DataFrame, config: dict
+) -> pd.DataFrame:
+    """
+    For each transmission, select the augmentation option with the lowest cost per MW of increased capacity,
+    using the first year with complete costs for all options. The selected option and its cost per MW
+    (from that year) are used for all years.
+
+    Args:
+        aug_table: pd.DataFrame containing columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+        cost_table: pd.DataFrame containing columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024_25', ...)
+        config: dict with processing configuration containing:
+            - transmission_type: str, either "flow_path" or "rez"
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
+    Returns:
+        pd.DataFrame containing columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+            - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
+    """
+    year_cols = _get_year_columns(cost_table)
+    valid_costs_df = _find_first_year_with_complete_costs(cost_table, year_cols)
+    valid_costs_df["option"] = _fuzzy_match_names(
+        valid_costs_df["option"],
+        aug_table["option"],
+        "matching transmission augmentation options and costs",
+        not_match="existing",
+        threshold=80,
+    )
+    transmission_analysis = pd.merge(
+        aug_table, valid_costs_df, on=["id", "option"], how="inner"
+    )
+    _log_unmatched_transmission_options(
+        aug_table, valid_costs_df, transmission_analysis
+    )
+    transmission_analysis["cost_per_mw"] = (
+        transmission_analysis["cost"]
+        / transmission_analysis["nominal_capacity_increase"]
+    )
+    least_cost_options = transmission_analysis.loc[
+        transmission_analysis.groupby("id")["cost_per_mw"].idxmin()
+    ]
+    final_costs = pd.merge(
+        cost_table,
+        least_cost_options[["id", "option", "nominal_capacity_increase"]],
+        on=["id", "option"],
+        how="inner",
+    )
+    # Divide each financial year column by capacity and rename with _$/mw suffix
+    for year_col in year_cols:
+        new_col = f"{year_col}_$/mw"
+        final_costs[new_col] = (
+            final_costs[year_col] / final_costs["nominal_capacity_increase"]
+        )
+        final_costs.drop(columns=year_col, inplace=True)
+    final_costs = final_costs.rename(columns=config["out_going_column_mappings"])
+    return final_costs
+
+
+def _determine_cost_scenario(scenario: str) -> str:
+    """
+    Map scenario string to internal scenario key used for table lookups.
+
+    Args:
+        scenario: str specifying the scenario name. Must be one of "Step Change", "Green Energy Exports", or "Progressive Change".
+
+    Returns:
+        str specifying the internal scenario key (e.g., "step_change_and_green_energy_exports" or "progressive_change").
+    """
+    if scenario in ["Step Change", "Green Energy Exports"]:
+        return "step_change_and_green_energy_exports"
+    elif scenario == "Progressive Change":
+        return "progressive_change"
+    else:
+        raise ValueError(f"scenario: {scenario} not recognised.")
+
+
+def _clean_augmentation_table_column_names(
+    aug_table: pd.DataFrame, config: dict
+) -> pd.DataFrame:
+    """
+    Clean and rename columns in the augmentation table.
+
+    Args:
+        aug_table: pd.DataFrame specifying the augmentation table.
+        config: dict with processing configuration containing:
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
+    Returns:
+        pd.DataFrame containing the cleaned and renamed augmentation table.
+    """
+    # Map specific columns to standardized names
+    # Reverse the in_coming_column_mappings dict to go from specific -> generic
+    aug_table = aug_table.rename(columns=config["in_coming_column_mappings"])
+    cols_to_keep = list(
+        set(
+            [
+                col
+                for col in config["in_coming_column_mappings"].values()
+                if col in aug_table.columns
+            ]
+        )
+    )
+    return aug_table.loc[:, cols_to_keep]
+
+
+def _clean_augmentation_table_column_values(
+    aug_table: pd.DataFrame, config: dict
+) -> pd.DataFrame:
+    """
+    Prepare and typecast augmentation table columns for analysis.
+
+    Args:
+        aug_table: pd.DataFrame containing transmission-specific columns
+        config: dict with processing configuration containing:
+            - transmission_type: str specifying the type of transmission
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
+    Returns:
+        pd.DataFrame containing standardized columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+    """
+    transmission_type = config["transmission_type"]
+
+    # Handle flow path special case: calculate capacity as max of forward and reverse
+    if transmission_type == "flow_path":
+        aug_table["forward_capacity_increase"] = pd.to_numeric(
+            _strip_all_text_after_numeric_value(aug_table["forward_capacity_increase"]),
+            errors="coerce",
+        )
+        aug_table["reverse_capacity_increase"] = pd.to_numeric(
+            _strip_all_text_after_numeric_value(aug_table["reverse_capacity_increase"]),
+            errors="coerce",
+        )
+        aug_table["nominal_capacity_increase"] = aug_table[
+            ["forward_capacity_increase", "reverse_capacity_increase"]
+        ].max(axis=1)
+    else:
+        aug_table["nominal_capacity_increase"] = pd.to_numeric(
+            _strip_all_text_after_numeric_value(aug_table["nominal_capacity_increase"]),
+            errors="coerce",
+        )
+    return aug_table
+
+
+def _get_cleaned_cost_tables(
+    iasr_tables: dict[str, pd.DataFrame], cost_table_names: list, config: dict
+) -> pd.DataFrame:
+    """
+    Retrieve, clean, concatenate, and filter all cost tables for a scenario and transmission type.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Each table is a DataFrame with columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024-25', ...)
+        cost_table_names: list of str specifying the names of cost tables to extract and clean.
+        config: dict with processing configuration containing:
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
+    Returns:
+        pd.DataFrame containing the concatenated and filtered cost tables. Columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024_25', ...)
+    """
+    missing = [t for t in cost_table_names if t not in iasr_tables]
+    if missing:
+        logging.warning(f"Missing cost tables: {missing}")
+    cost_tables = []
+    for table_name in cost_table_names:
+        if table_name not in iasr_tables:
+            continue
+        table = iasr_tables[table_name].copy()
+        table = table.rename(columns=config["in_coming_column_mappings"])
+        cost_tables.append(table)
+    if not cost_tables:
+        raise ValueError("No cost tables found in iasr_tables.")
+    cost_table = pd.concat(cost_tables, ignore_index=True)
+    cost_table.columns = [_snakecase_string(col) for col in cost_table.columns]
+    forecast_year_cols = [
+        col for col in cost_table.columns if re.match(r"^\d{4}_\d{2}$", col)
+    ]
+    cost_table[forecast_year_cols[0]] = pd.to_numeric(
+        cost_table[forecast_year_cols[0]], errors="coerce"
+    )
+    cost_table = cost_table.dropna(subset=forecast_year_cols, how="all")
+    return cost_table
+
+
+def _get_prep_activities_table(
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
+) -> pd.DataFrame:
+    """
+    Process the preparatory activities table for a given transmission type.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Table must have columns:
+            - id (flow_path or rez_constraint_id)
+            - <financial year> (e.g., '2024-25', ...)
+        cost_scenario: str specifying the internal scenario key.
+        config: dict with processing configuration containing:
+            - mappings: dict with mappings for preparatory activities and other data
+
+    Returns:
+        pd.DataFrame containing the aggregated preparatory activities. Columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024_25', '2025_26', ...)
+    """
+    transmission_type = config["transmission_type"]
+    if transmission_type == "flow_path":
+        prep_activities_table_name = (
+            f"flow_path_augmentation_costs_{cost_scenario}_preparatory_activities"
+        )
+    elif transmission_type == "rez":
+        prep_activities_table_name = (
+            f"rez_augmentation_costs_{cost_scenario}_preparatory_activities"
+        )
+
+    if prep_activities_table_name not in iasr_tables:
+        logging.warning(
+            f"Missing preparatory activities table: {prep_activities_table_name}"
+        )
+        # Return empty DataFrame with expected columns
+        return pd.DataFrame(columns=["id", "option"])
+
+    prep_activities = iasr_tables[prep_activities_table_name].copy()
+    prep_activities = prep_activities.rename(
+        columns=config["in_coming_column_mappings"]
+    )
+    prep_activities.columns = [
+        _snakecase_string(col) for col in prep_activities.columns
+    ]
+    prep_activities = prep_activities.drop(
+        columns=[col for col in prep_activities.columns if "unnamed" in col]
+    )
+
+    if transmission_type == "flow_path":
+        # Flow path preparatory activities processing
+        # Validate 'flow_path' values
+        invalid_flow_paths = set(prep_activities["id"]) - set(
+            config["mappings"]["prep_activities_name_to_option"].keys()
+        )
+        if invalid_flow_paths:
+            raise ValueError(
+                f"Missing mapping values for the flow paths provided: {sorted(invalid_flow_paths)}. "
+                f"Please ensure these are present in templater/mappings.py."
+            )
+        prep_activities["option"] = prep_activities["id"].map(
+            config["mappings"]["prep_activities_name_to_option"]
+        )
+
+        # Validate 'option_name' values
+        invalid_option_names = set(prep_activities["option"]) - set(
+            config["mappings"]["option_to_id"].keys()
+        )
+        if invalid_option_names:
+            raise ValueError(
+                f"Missing mapping values for the option names provided: {sorted(invalid_option_names)}. "
+                f"Please ensure these are present in templater/mappings.py."
+            )
+        prep_activities = prep_activities.groupby("option").sum().reset_index()
+        prep_activities["id"] = prep_activities["option"].map(
+            config["mappings"]["option_to_id"]
+        )
+
+    elif transmission_type == "rez":
+        # Validate REZ names/IDs
+        invalid_rez_names = set(prep_activities["rez"]) - set(
+            config["prep_activities_mapping"].keys()
+        )
+        if invalid_rez_names:
+            raise ValueError(
+                f"Missing mapping values for the REZ names provided: {sorted(invalid_rez_names)}. "
+                f"Please ensure these are present in templater/mappings.py."
+            )
+
+        prep_activities["option"] = prep_activities["rez"].apply(
+            lambda x: config["prep_activities_mapping"][x][1]
+        )
+        prep_activities["id"] = prep_activities["rez"].apply(
+            lambda x: config["prep_activities_mapping"][x][0]
+        )
+    return _sort_cols(prep_activities, ["id", "option"])
+
+
+def _get_actionable_projects_table(
+    iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
+) -> pd.DataFrame:
+    """
+    Process the actionable ISP projects table for flow paths.
+
+    Args:
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Table must have columns:
+            - id (flow_path)
+            - <financial year> (e.g., '2024-25', ...)
+        cost_scenario: str specifying the internal scenario key.
+        config: dict with processing configuration containing:
+            - mappings: dict with mappings for actionable projects and other data
+
+    Returns:
+        pd.DataFrame containing the actionable projects table. Columns:
+            - id (flow_path)
+            - option (option_name)
+            - <financial year> (e.g., '2024_25', '2025_26', ...)
+    """
+    transmission_type = config["transmission_type"]
+
+    # REZ has no actionable projects, return empty DataFrame
+    if transmission_type == "rez":
+        return pd.DataFrame(columns=["id", "option"])
+
+    # Process flow path actionable projects
+    actionable_projects_table_name = (
+        f"flow_path_augmentation_costs_{cost_scenario}_actionable_isp_projects"
+    )
+
+    if actionable_projects_table_name not in iasr_tables:
+        logging.warning(
+            f"Missing actionable ISP projects table: {actionable_projects_table_name}"
+        )
+        # Return empty DataFrame with expected columns
+        return pd.DataFrame(columns=["id", "option"])
+
+    actionable_projects = iasr_tables[actionable_projects_table_name].copy()
+    actionable_projects = actionable_projects.rename(
+        columns=config["in_coming_column_mappings"]
+    )
+    actionable_projects.columns = [
+        _snakecase_string(col) for col in actionable_projects.columns
+    ]
+    actionable_projects = actionable_projects.drop(
+        columns=[col for col in actionable_projects.columns if "unnamed" in col]
+    )
+
+    # Validate 'flow_path' values
+    invalid_flow_paths = set(actionable_projects["id"]) - set(
+        config["mappings"]["actionable_name_to_option"].keys()
+    )
+    if invalid_flow_paths:
+        raise ValueError(
+            f"Missing mapping values for the flow paths provided: {sorted(invalid_flow_paths)}. "
+            f"Please ensure these are present in {config['mappings']['actionable_name_to_option']}."
+        )
+    actionable_projects["option"] = actionable_projects["id"].map(
+        config["mappings"]["actionable_name_to_option"]
+    )
+
+    # Validate 'option_name' values
+    invalid_option_names = set(actionable_projects["option"]) - set(
+        config["mappings"]["actionable_option_to_id"].keys()
+    )
+    if invalid_option_names:
+        raise ValueError(
+            f"Missing mapping values for the option names provided: {sorted(invalid_option_names)}. "
+            f"Please ensure these are present in {config['mappings']['actionable_option_to_id']}."
+        )
+    actionable_projects["id"] = actionable_projects["option"].map(
+        config["mappings"]["actionable_option_to_id"]
+    )
+
+    return _sort_cols(actionable_projects, ["id", "option"])
+
+
+def _combine_cost_tables(
+    cost_table: pd.DataFrame,
+    prep_activities: pd.DataFrame,
+    actionable_projects: pd.DataFrame,
+    config: dict,
+) -> pd.DataFrame:
+    """
+    Combine the cost table, preparatory activities table, and actionable projects table into a single DataFrame.
+
+    Args:
+        cost_table: pd.DataFrame specifying the cost table.
+        prep_activities: pd.DataFrame specifying the preparatory activities table.
+        actionable_projects: pd.DataFrame specifying the actionable projects table.
+        config: dict with processing configuration containing:
+            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+
+    Returns:
+        pd.DataFrame containing the combined cost table.
+    """
+    tables = [cost_table, prep_activities]
+
+    # Only include actionable_projects if it's not empty
+    if not actionable_projects.empty:
+        tables.append(actionable_projects)
+
+    return pd.concat(tables, ignore_index=True)
+
+
+def _get_year_columns(cost_table: pd.DataFrame) -> list:
+    """
+    Get the financial year columns from the cost table.
+
+    Args:
+        cost_table: pd.DataFrame specifying the cost table.
+
+    Returns:
+        list of str specifying the financial year columns.
+    """
+    year_cols = [col for col in cost_table.columns if re.match(r"\d{4}_\d{2}", col)]
+    if not year_cols:
+        raise ValueError("No financial year columns found in cost table")
+    return year_cols
+
+
+def _find_first_year_with_complete_costs(
+    cost_table: pd.DataFrame, year_cols: list
+) -> pd.DataFrame:
+    """
+    Find the first year with complete costs for each transmission.
+
+    Args:
+        cost_table: pd.DataFrame specifying the cost table with columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - <financial year> (e.g., '2024_25', ...)
+        year_cols: list of str specifying the financial year column names.
+
+    Returns:
+        pd.DataFrame containing columns:
+            - id (flow_path or rez_constraint_id)
+            - option (option_name or option)
+            - cost
+            - first_valid_year_col
+    """
+    valid_cost_rows = []
+    missing_full_year_transmissions = []
+    for transmission, group in cost_table.groupby("id"):
+        found = False
+        # Iterate through years (sort years based of first int in year string)
+        for year in sorted(year_cols, key=lambda y: int(y.split("_")[0])):
+            costs = pd.to_numeric(group[year], errors="coerce")
+            if not costs.isna().any():
+                for idx, row in group.iterrows():
+                    entry = row[["id", "option"]].to_dict()
+                    entry["cost"] = costs.loc[idx]
+                    entry["first_valid_year_col"] = year
+                    valid_cost_rows.append(entry)
+                found = True
+                break
+        if not found:
+            missing_full_year_transmissions.append(transmission)
+    if missing_full_year_transmissions:
+        raise ValueError(
+            f"No year found with all non-NA costs for transmissions: {missing_full_year_transmissions}"
+        )
+    return pd.DataFrame(valid_cost_rows)
+
+
+def _log_unmatched_transmission_options(
+    aug_table: pd.DataFrame, valid_costs_df: pd.DataFrame, merged_df: pd.DataFrame
+):
+    """
+    Logs (id, option) pairs that were dropped from each side during the merge.
+    """
+    left_keys = set(tuple(x) for x in aug_table[["id", "option"]].values)
+    right_keys = set(tuple(x) for x in valid_costs_df[["id", "option"]].values)
+    merged_keys = set(tuple(x) for x in merged_df[["id", "option"]].values)
+
+    dropped_from_left = left_keys - merged_keys
+    dropped_from_right = right_keys - merged_keys
+
+    if dropped_from_left:
+        logging.info(
+            f"Dropped options from augmentation table: {sorted(dropped_from_left)}"
+        )
+    if dropped_from_right:
+        logging.info(f"Dropped options from cost table: {sorted(dropped_from_right)}")
+
+
+def _sort_cols(table: pd.DataFrame, start_cols: list[str]) -> pd.DataFrame:
+    """
+    Reorder a pd.DataFrame's column using the fixed order provided in start_cols and
+    then sorting the remaining columns alphabetically.
+    """
+    remaining_cols = list(set(table.columns) - set(start_cols))
+    sorted_remaining_columns = sorted(remaining_cols)
+    return table.loc[:, start_cols + sorted_remaining_columns]
+````
+
+## File: src/ispypsa/templater/nodes.py
+````python
+import logging
+from pathlib import Path
+
+import pandas as pd
+import requests
+import xmltodict
+from thefuzz import process
+
+from ispypsa.templater.mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
+
+from .helpers import (
+    _fuzzy_match_names,
+    _snakecase_string,
+)
+
+
+def _get_reference_node_locations(reference_nodes):
+    # request and merge in substation coordinates for reference nodes
+    # substation_coordinates = _request_transmission_substation_coordinates()
+    substation_coordinates = pd.DataFrame()
+    if not substation_coordinates.empty:
+        reference_node_col = process.extractOne(
+            "reference_node", reference_nodes.columns
+        )[0]
+        matched_subs = _fuzzy_match_names(
+            reference_nodes[reference_node_col],
+            substation_coordinates.index,
+            "merging in substation coordinate data",
+            threshold=85,
+        )
+        reference_node_coordinates = pd.merge(
+            matched_subs,
+            substation_coordinates,
+            how="left",
+            left_on=reference_node_col,
+            right_index=True,
+        )
+        reference_nodes = pd.concat(
+            [
+                reference_nodes,
+                reference_node_coordinates["substation_latitude"],
+                reference_node_coordinates["substation_longitude"],
+            ],
+            axis=1,
+        )
+    return reference_nodes
+
+
+def _template_sub_regions(
+    sub_regional_reference_nodes: pd.DataFrame, mapping_only: bool = False
+) -> pd.DataFrame:
+    """Processes the 'Sub-regional network representation' table into an ISPyPSA template format
+
+    Args:
+        sub_regional_reference_nodes: pd.DataFrame specifying the NEM subregional
+            reference nodes.
+        mapping_only: boolean, when doing single region or region modelling this input
+            is set to True so unnecessary information such sub_region_reference_node
+            are latitude and longitude are not returned.
+    Returns:
+        `pd.DataFrame`: ISPyPSA sub-regional node template
+
+    """
+    sub_regional_df = sub_regional_reference_nodes
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(sub_regional_df)
+    node_voltage_col = "Sub-region Reference Node"
+    split_node_voltage = _extract_voltage(sub_regional_df, node_voltage_col)
+    sub_regions = pd.concat(
+        [
+            sub_region_name_and_id,
+            split_node_voltage,
+            sub_regional_df["NEM Region"].rename("nem_region"),
+        ],
+        axis=1,
+    )
+    sub_regions = _match_region_name_and_id(sub_regions)
+
+    if mapping_only:
+        sub_regions = sub_regions[["isp_sub_region_id", "nem_region_id"]]
+    else:
+        sub_regions = sub_regions[
+            [
+                "isp_sub_region_id",
+                "nem_region_id",
+                "sub_region_reference_node",
+                "sub_region_reference_node_voltage_kv",
+            ]
+        ]
+        sub_regions = _get_reference_node_locations(sub_regions)
+    return sub_regions
+
+
+def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
+    """Processes the 'Regional reference nodes' table into an ISPyPSA template format
+
+    Args:
+        regional_reference_nodes: pd.DataFrame iasr workbook table specifying the NEM
+            regional reference nodes
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA regional node template
+
+    """
+    regional_df = regional_reference_nodes
+    node_voltage_col = "Regional Reference Node"
+    split_node_voltage = _extract_voltage(regional_df, node_voltage_col)
+    sub_region_name_and_id = _split_out_sub_region_name_and_id(regional_df)
+    regions = pd.concat(
+        [
+            regional_df["NEM Region"].rename("nem_region"),
+            split_node_voltage,
+            sub_region_name_and_id["isp_sub_region_id"],
+        ],
+        axis=1,
+    )
+    regions = _match_region_name_and_id(regions)
+
+    regions = regions[
+        [
+            "nem_region_id",
+            "isp_sub_region_id",
+            "regional_reference_node",
+            "regional_reference_node_voltage_kv",
+        ]
+    ]
+    regions = _get_reference_node_locations(regions)
+    return regions
+
+
+def _split_out_sub_region_name_and_id(data: pd.DataFrame):
+    name_id_col = "ISP Sub-region"
+    sub_region_name_and_id = _capture_just_name(data[name_id_col])
+    sub_region_name_and_id["name"] = _fuzzy_match_names(
+        sub_region_name_and_id["name"],
+        _NEM_SUB_REGION_IDS.keys(),
+        "determining the NEM subregion region",
+    )
+    sub_region_name_and_id.columns = [_snakecase_string(name_id_col)]
+    sub_region_name_and_id[_snakecase_string(name_id_col + " ID")] = (
+        sub_region_name_and_id[_snakecase_string(name_id_col)].replace(
+            _NEM_SUB_REGION_IDS
+        )
+    )
+    return sub_region_name_and_id
+
+
+def _match_region_name_and_id(data: pd.DataFrame):
+    data["nem_region"] = _fuzzy_match_names(
+        data["nem_region"],
+        _NEM_REGION_IDS.keys(),
+        "determining the NEM region",
+    )
+    data["nem_region_id"] = data["nem_region"].replace(_NEM_REGION_IDS)
+    return data
+
+
+def _extract_voltage(data: pd.DataFrame, column: str):
+    split_node_voltage = _split_node_voltage(data[column])
+    split_node_voltage.columns = [
+        _snakecase_string(column),
+        _snakecase_string(column + " Voltage (kV)"),
+    ]
+    split_node_voltage[_snakecase_string(column + " Voltage (kV)")] = (
+        split_node_voltage[_snakecase_string(column + " Voltage (kV)")].astype(int)
+    )
+    return split_node_voltage
+
+
+def _request_transmission_substation_coordinates() -> pd.DataFrame:
+    """
+    Obtains transmission substation coordinates from a Web Feature Service (WFS)
+    source hosted as a dataset within the Australian Government's National Map:
+
+    https://www.nationalmap.gov.au/#share=s-403jqUldEkbj6CwWcPZHefSgYeA
+
+    The requested data is in Geography Markup Language (GML) format, which can be parsed
+    using the same tools that are used to parse XML.
+
+    Returns:
+        Substation names, latitude and longitude within a :class:`pandas.DataFrame`.
+        If request error is encountered or the HTTP status of the request is not OK,
+        then an empty DataFrame will be returned with a warning that network node data
+        will be templated without coordinate data
+
+    """
+    params = dict(
+        service="WFS",
+        version="2.0.0",
+        request="GetFeature",
+        typeNames="Foundation_Electricity_Infrastructure:Transmission_Substations",
+        maxFeatures=10000,
+    )
+    url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
+    substation_coordinates = {}
+    try:
+        r = requests.get(url, params=params, timeout=60)
+        if r.status_code == 200:
+            data = xmltodict.parse(r.content)
+            features = data["wfs:FeatureCollection"]["wfs:member"]
+            for feature in features:
+                substation = feature["esri:Transmission_Substations"]
+                name = substation.get("esri:NAME")
+                coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
+                lat, long = coordinates.split(" ")
+                substation_coordinates[name] = {
+                    "substation_latitude": lat,
+                    "substation_longitude": long,
+                }
+        else:
+            logging.warning(
+                f"Failed to fetch substation coordinates. HTTP Status code: {r.status_code}."
+            )
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error requesting substation coordinate data:\n{e}.")
+    if not substation_coordinates:
+        logging.warning(
+            "Could not get substation coordinate data. "
+            + "Network node data will be templated without coordinate data."
+        )
+    substation_coordinates = pd.DataFrame(substation_coordinates).T
+    substation_coordinates = substation_coordinates[
+        substation_coordinates.index.notna()
+    ]
+    return substation_coordinates
+
+
+def _capture_just_name(series: pd.Series) -> pd.DataFrame:
+    """
+    Capture the name (plain English) and not the ID in parentheses (capitalised letters)
+    using a regular expression on a string `pandas.Series`.
+    """
+    split_name_id = series.str.strip().str.extract(
+        r"(?P<name>[A-Za-z\s,]+)(?=\s\([A-Z]+\))"
+    )
+    return split_name_id
+
+
+def _split_node_voltage(series: pd.Series) -> pd.DataFrame:
+    """
+    Capture the node name (plain English) and 2-3 digit voltage in kV using a regular
+    expression on a string `pandas.Series`.
+    """
+    split_node_voltage = series.str.strip().str.extract(
+        r"(?P<name>[A-Za-z\s]+)\s(?P<voltage>[0-9]{2,3})\skV"
+    )
+    return split_node_voltage
+````
+
+## File: src/ispypsa/translator/generators.py
+````python
+from pathlib import Path
+from typing import List, Literal
+
+import pandas as pd
+from isp_trace_parser import get_data
+
+from ispypsa.translator.mappings import _GENERATOR_ATTRIBUTES
+from ispypsa.translator.temporal_filters import _time_series_filter
+from ispypsa.translator.time_series_checker import _check_time_series
+
+
+def _translate_ecaa_generators(
+    ecaa_generators: pd.DataFrame, regional_granularity: str = "sub_regions"
+) -> pd.DataFrame:
+    """Process data on existing, committed, anticipated, and additional (ECAA) generators
+    into a format aligned with PyPSA inputs.
+
+    Args:
+        ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
+        regional_granularity: Regional granularity of the nodes obtained from the model
+            configuration. Defaults to "sub_regions".
+
+    Returns:
+        `pd.DataFrame`: `PyPSA` style generator attributes in tabular format.
+    """
+
+    gen_attributes = _GENERATOR_ATTRIBUTES.copy()
+
+    if regional_granularity == "sub_regions":
+        gen_attributes["sub_region_id"] = "bus"
+    elif regional_granularity == "nem_regions":
+        gen_attributes["region_id"] = "bus"
+
+    ecaa_generators_pypsa_format = ecaa_generators.loc[:, gen_attributes.keys()]
+    ecaa_generators_pypsa_format = ecaa_generators_pypsa_format.rename(
+        columns=gen_attributes
+    )
+
+    if regional_granularity == "single_region":
+        ecaa_generators_pypsa_format["bus"] = "NEM"
+
+    marginal_costs = {
+        "Black Coal": 50.0,
+        "Brown Coal": 30.0,
+        "Gas": 300.0,
+        "Liquid Fuel": 400.0,
+        "Water": 300.0,
+        "Solar": 10.0,
+        "Wind": 10.0,
+        "Hyblend": 400.0,
+    }
+
+    ecaa_generators_pypsa_format["marginal_cost"] = ecaa_generators_pypsa_format[
+        "carrier"
+    ].map(marginal_costs)
+
+    return ecaa_generators_pypsa_format
+
+
+def _create_unserved_energy_generators(
+    buses: pd.DataFrame, cost: float, generator_size_mw: float
+) -> pd.DataFrame:
+    """Create unserved energy generators for each bus in the network.
+
+    These generators allow the model to opt for unserved energy at a very high cost
+    when other options are exhausted or infeasible, preventing model infeasibility.
+
+    Args:
+        buses: DataFrame containing bus information with a 'name' column
+        cost: Marginal cost of unserved energy ($/MWh)
+        generator_size_mw: Size of unserved energy generators (MW)
+
+    Returns:
+        DataFrame containing unserved energy generators in PyPSA format
+    """
+
+    generators = pd.DataFrame(
+        {
+            "name": "unserved_energy_" + buses["name"],
+            "carrier": "Unserved Energy",
+            "bus": buses["name"],
+            "p_nom": generator_size_mw,
+            "p_nom_extendable": False,
+            "marginal_cost": cost,
+        }
+    )
+
+    return generators
+
+
+def create_pypsa_friendly_existing_generator_timeseries(
+    ecaa_generators: pd.DataFrame,
+    trace_data_path: Path | str,
+    pypsa_timeseries_inputs_path: Path | str,
+    generator_types: List[Literal["solar", "wind"]],
+    reference_year_mapping: dict[int:int],
+    year_type: Literal["fy", "calendar"],
+    snapshots: pd.DataFrame,
+) -> None:
+    """Gets trace data for generators by constructing a timeseries from the start to end
+    year using the reference year cycle provided. Trace data is then saved as a parquet
+    file to subdirectories labeled with their generator type.
+
+    Args:
+        ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
+        trace_data_path: Path to directory containing trace data parsed by
+            isp-trace-parser
+        pypsa_timeseries_inputs_path: Path to director where timeseries inputs
+            translated to pypsa format will be saved
+        reference_year_mapping: dict[int: int], mapping model years to trace data
+            reference years
+        generator_types: List[Literal['solar', 'wind']], which types of generator to
+            translate trace data for.
+        year_type: str, 'fy' or 'calendar', if 'fy' then time filtering is by financial
+            year with start_year and end_year specifiying the financial year to return
+            data for, using year ending nomenclature (2016 ->FY2015/2016). If
+            'calendar', then filtering is by calendar year.
+        snapshots: pd.DataFrame containing the expected time series values.
+
+    Returns:
+        None
+    """
+
+    trace_data_paths = {
+        gen_type: trace_data_path / Path(gen_type) for gen_type in generator_types
+    }
+
+    output_paths = {
+        gen_type: Path(pypsa_timeseries_inputs_path, f"{gen_type}_traces")
+        for gen_type in generator_types
+    }
+
+    for output_trace_path in output_paths.values():
+        if not output_trace_path.exists():
+            output_trace_path.mkdir(parents=True)
+
+    generator_types_caps = [gen_type.capitalize() for gen_type in generator_types]
+
+    generators = ecaa_generators[
+        ecaa_generators["fuel_type"].isin(generator_types_caps)
+    ].copy()
+
+    generators = list(generators["generator"])
+
+    query_functions = {
+        "solar": get_data.solar_project_multiple_reference_years,
+        "wind": get_data.wind_project_multiple_reference_years,
+    }
+
+    gen_to_type = dict(zip(ecaa_generators["generator"], ecaa_generators["fuel_type"]))
+
+    for gen in generators:
+        gen_type = gen_to_type[gen].lower()
+        trace = query_functions[gen_type](
+            reference_years=reference_year_mapping,
+            project=gen,
+            directory=trace_data_paths[gen_type],
+            year_type=year_type,
+        )
+        # datetime in nanoseconds required by PyPSA
+        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
+        trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
+        trace = _time_series_filter(trace, snapshots)
+        _check_time_series(
+            trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
+        )
+        trace = pd.merge(trace, snapshots, on="snapshots")
+        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
+        trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)
+````
+
+## File: src/ispypsa/templater/energy_policy_targets.py
+````python
+import logging
+import re
+from pathlib import Path
+
+import pandas as pd
+
+from .mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
+
+
+def _template_energy_policy_targets(
+    iasr_tables: dict[str : pd.DataFrame], scenario: str
+) -> dict[str, pd.DataFrame]:
+    """Creates ISPyPSA templates for energy policy targets including NEM-wide and state-level policies.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `dict[pd.DataFrame]`: Templates for renewable share targets, powering australia share targets (by scenario)
+            renewable generation targets, and technology capacity targets
+    """
+    logging.info("Creating templates for energy policy targets")
+
+    # Create templates for energy policy targets
+    renewable_share_targets = _template_renewable_share_targets(iasr_tables)
+
+    power_aus_plan = iasr_tables["powering_australia_plan_trajectory"]
+    power_aus_plan = _template_powering_australia_plan(power_aus_plan, scenario)
+
+    renewable_generation_targets = _template_renewable_generation_targets(iasr_tables)
+
+    technology_capacity_targets = _template_technology_capacity_targets(iasr_tables)
+
+    return {
+        "renewable_share_targets": renewable_share_targets,
+        "powering_australia_plan": power_aus_plan,
+        "renewable_generation_targets": renewable_generation_targets,
+        "technology_capacity_targets": technology_capacity_targets,
+    }
+
+
+def _template_renewable_share_targets(
+    iasr_tables: dict[str : pd.DataFrame],
+) -> pd.DataFrame:
+    """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their
+        corresponding regions.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: Template containing renewable share targets with columns for
+            financial year, region_id, policy_id, and percentage values in decimal form
+    """
+    logging.info("Creating template for renewable share targets")
+    state_renewable_share_targets = []
+
+    # Get mapping for this function
+    target_files = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
+        "template_renewable_share_targets"
+    ]
+
+    for target in target_files:
+        df = iasr_tables[target["csv"]]
+
+        df = df.melt(id_vars=df.columns[0], var_name="FY", value_name="pct")
+        df = df[df[df.columns[0]].str.contains("share", case=False)]
+        df["region_id"] = target["region_id"]
+        df["policy_id"] = target["policy_id"]
+        df["pct"] = df["pct"].astype(float)
+
+        state_renewable_share_targets.append(
+            df[["FY", "region_id", "policy_id", "pct"]]
+        )
+
+    merged_state_renewable_share_targets = pd.concat(
+        state_renewable_share_targets, ignore_index=True
+    )
+    merged_state_renewable_share_targets["FY"] = merged_state_renewable_share_targets[
+        "FY"
+    ].str.replace("-", "_")
+
+    return merged_state_renewable_share_targets
+
+
+def _template_powering_australia_plan(
+    power_aus_plan: Path | str, scenario: str
+) -> pd.DataFrame:
+    """Creates ISPyPSA template for the Powering Australia Plan renewable share
+    trajectories for selected scenarios.
+
+    Args:
+        powering_aus: pd.DataFrame table from IASR workbook specifying Powering Australia Plan renewable share targets.
+        scenario: Scenario obtained from the model configuration
+
+    Returns:
+        `pd.DataFrame`: Template containing Powering Australia Plan targets
+            with columns for financial year, policy_id and percentage values in
+            decimal form for the selected scenario
+    """
+    logging.info("Creating template for Powering Australia Plan")
+
+    # Remove rows containing "Notes" in the first column
+    power_aus_plan = power_aus_plan[
+        ~power_aus_plan.iloc[:, 0].str.contains("Notes", case=False, na=False)
+    ]
+
+    # Filter for rows where the first column matches the specified scenario
+    power_aus_plan = power_aus_plan[power_aus_plan.iloc[:, 0].eq(scenario)]
+
+    # Drop the first column (scenario name) to keep only year values
+    power_aus_plan = power_aus_plan.iloc[:, 1:].reset_index(drop=True)
+
+    # Melt the dataframe, excluding the first column from id_vars
+    power_aus_plan = power_aus_plan.melt(var_name="FY", value_name="pct").dropna(
+        subset=["pct"]
+    )
+
+    # Convert percentage to decimal if needed
+    power_aus_plan["pct"] = power_aus_plan["pct"].astype(float)
+
+    power_aus_plan["FY"] = power_aus_plan["FY"].str.replace("-", "_")
+
+    # append new column which is the policy_id
+    power_aus_plan["policy_id"] = "power_aus"
+    return power_aus_plan
+
+
+def _template_technology_capacity_targets(
+    iasr_tables: dict[str : pd.DataFrame],
+) -> pd.DataFrame:
+    """Creates ISPyPSA templates for technology capacity targets including
+    CIS renewable target and storage and offshore wind trajectories.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify
+    files and their corresponding regions.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+    Returns:
+        `pd.DataFrame`: Template containing technology capacity trajectories
+            with columns for financial year, region_id and capacity in MW
+    """
+    logging.info("Creating template for technology capacity targets")
+
+    technology_capacity_targets = []
+    target_files = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
+        "template_technology_capacity_targets"
+    ]
+
+    for target in target_files:
+        df = iasr_tables[target["csv"]]
+        # Extract technology type from the row containing "target (MW)"
+        target_row_mask = df.iloc[:, 0].str.contains("target", case=False) & df.iloc[
+            :, 0
+        ].str.contains("MW", case=False)
+
+        target_row_idx = df.index[target_row_mask][0]
+        # Create a new dataframe with just FY and capacity
+        values_df = pd.DataFrame(
+            {"FY": df.columns[1:], "capacity_mw": df.iloc[target_row_idx, 1:]}
+        )
+
+        values_df["capacity_mw"] = values_df["capacity_mw"].astype(float)
+        values_df["region_id"] = target["region_id"]
+        values_df["policy_id"] = target["policy_id"]
+
+        technology_capacity_targets.append(values_df)
+
+    merged_technology_capacity_targets = pd.concat(
+        technology_capacity_targets, ignore_index=True
+    )
+    merged_technology_capacity_targets["FY"] = merged_technology_capacity_targets[
+        "FY"
+    ].str.replace("-", "_")
+
+    merged_technology_capacity_targets = merged_technology_capacity_targets.sort_values(
+        ["region_id", "policy_id", "FY"]
+    ).reset_index(drop=True)
+
+    return merged_technology_capacity_targets
+
+
+def _template_renewable_generation_targets(
+    iasr_tables: dict[str : pd.DataFrame],
+) -> pd.DataFrame:
+    """Creates ISPyPSA templates for renewable generation targets.
+    Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: Template containing renewable capacity trajectories with columns for
+            financial year, region_id and capacity in MW (converted from GWh)
+
+    """
+    logging.info("Creating template for renewable generation trajectories")
+
+    renewable_generation_targets = []
+    target_files = _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP[
+        "template_renewable_generation_targets"
+    ]
+
+    for target in target_files:
+        df = iasr_tables[target["csv"]]
+        # Check for GWh in row indices
+        if not df.iloc[:, 0].str.contains("GWh", case=False).any():
+            raise ValueError(f"No GWh values found in {target['csv']}.csv")
+
+        # if exists, remove the "Notes" row
+        df = df[~df.iloc[:, 0].str.contains("Notes", case=False)]
+
+        renewable_gen_target = df.melt(
+            id_vars=df.columns[0], var_name="FY", value_name="capacity_gwh"
+        )
+
+        # Convert GWh to MWh
+        renewable_gen_target["capacity_mwh"] = (
+            renewable_gen_target["capacity_gwh"].astype(float) * 1000
+        )
+        renewable_gen_target["region_id"] = target["region_id"]
+        renewable_gen_target["policy_id"] = target["policy_id"]
+        renewable_generation_targets.append(
+            renewable_gen_target[["FY", "region_id", "policy_id", "capacity_mwh"]]
+        )
+
+    # Combine all dataframes
+    merged_renewable_generation_targets = pd.concat(
+        renewable_generation_targets, ignore_index=True
+    )
+    merged_renewable_generation_targets["FY"] = merged_renewable_generation_targets[
+        "FY"
+    ].str.replace("-", "_")
+
+    return merged_renewable_generation_targets
+````
+
+## File: src/ispypsa/templater/create_template.py
+````python
+from pathlib import Path
+
+import pandas as pd
+
+from ispypsa.templater.dynamic_generator_properties import (
+    _template_generator_dynamic_properties,
+)
+from ispypsa.templater.energy_policy_targets import (
+    _template_energy_policy_targets,
+)
+from ispypsa.templater.flow_paths import (
+    _template_regional_interconnectors,
+    _template_rez_transmission_costs,
+    _template_sub_regional_flow_path_costs,
+    _template_sub_regional_flow_paths,
+)
+from ispypsa.templater.nodes import (
+    _template_regions,
+    _template_sub_regions,
+)
+from ispypsa.templater.renewable_energy_zones import (
+    _template_rez_build_limits,
+)
+from ispypsa.templater.static_ecaa_generator_properties import (
+    _template_ecaa_generators_static_properties,
+)
+from ispypsa.templater.static_new_generator_properties import (
+    _template_new_generators_static_properties,
+)
+
+_BASE_TEMPLATE_OUTPUTS = [
+    "sub_regions",
+    "nem_regions",
+    "renewable_energy_zones",
+    "flow_paths",
+    "ecaa_generators",
+    "new_entrant_generators",
+    "coal_prices",
+    "gas_prices",
+    "liquid_fuel_prices",
+    "full_outage_forecasts",
+    "partial_outage_forecasts",
+    "seasonal_ratings",
+    "closure_years",
+    "rez_group_constraints_expansion_costs",
+    "rez_group_constraints_lhs",
+    "rez_group_constraints_rhs",
+    "rez_transmission_limit_constraints_expansion_costs",
+    "rez_transmission_limit_constraints_lhs",
+    "rez_transmission_limit_constraints_rhs",
+]
+
+
+def create_ispypsa_inputs_template(
+    scenario: str,
+    regional_granularity: str,
+    iasr_tables: dict[str : pd.DataFrame],
+    manually_extracted_tables: dict[str : pd.DataFrame],
+) -> dict[str : pd.DataFrame]:
+    """Creates a template set of `ISPyPSA` input tables based on IASR tables.
+
+    Examples:
+
+    # Peform required imports.
+    >>> from pathlib import Path
+    >>> from ispypsa.config import load_config
+    >>> from ispypsa.data_fetch import read_csvs, write_csvs
+    >>> from ispypsa.templater import load_manually_extracted_tables
+    >>> from ispypsa.templater import create_ispypsa_inputs_template
+
+    # Tables previously extracted from IASR workbook using isp_workbook_parser are
+    # loaded.
+    >>> iasr_tables = read_csvs(Path("iasr_directory"))
+
+    # Some tables can't be handled by isp_workbook_parser so ISPyPSA ships with the
+    # missing data.
+    >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
+
+    # Now a template can be created by specifying the ISP scenario to use and the
+    # spacial granularity of model.
+    >>> ispypsa_inputs_template = create_ispypsa_inputs_template(
+    ... scenario="Step Change",
+    ... regional_granularity="sub_regions",
+    ... iasr_tables=iasr_tables,
+    ... manually_extracted_tables=manually_extracted_tables
+    ... )
+
+    # Write the template tables to a directory as CSVs.
+    >>> write_csvs(ispypsa_inputs_template)
+
+    Args:
+        scenario: ISP scenario to generate template inputs based on.
+        regional_granularity: the spatial granularity of the model template,
+            "sub_regions", "nem_regions", or "single_region".
+        iasr_tables: dictionary of dataframes providing the IASR input tables
+            extracted using the `isp_workbook_parser`.
+        manually_extracted_tables: dictionary of dataframes providing additional
+            IASR tables that can't be parsed using `isp_workbook_parser`
+
+    Returns: dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa
+        table docs)
+    """
+
+    template = {}
+
+    # Remove popping transmission_expansion_costs as it's no longer needed
+    template.update(manually_extracted_tables)
+
+    if regional_granularity == "sub_regions":
+        template["sub_regions"] = _template_sub_regions(
+            iasr_tables["sub_regional_reference_nodes"], mapping_only=False
+        )
+
+        template["flow_paths"] = _template_sub_regional_flow_paths(
+            iasr_tables["flow_path_transfer_capability"]
+        )
+
+        template["flow_path_expansion_costs"] = _template_sub_regional_flow_path_costs(
+            iasr_tables, scenario
+        )
+
+    elif regional_granularity == "nem_regions":
+        template["sub_regions"] = _template_sub_regions(
+            iasr_tables["sub_regional_reference_nodes"], mapping_only=True
+        )
+
+        template["nem_regions"] = _template_regions(
+            iasr_tables["regional_reference_nodes"]
+        )
+
+        template["flow_paths"] = _template_regional_interconnectors(
+            iasr_tables["interconnector_transfer_capability"]
+        )
+
+    else:
+        template["sub_regions"] = _template_sub_regions(
+            iasr_tables["sub_regional_reference_nodes"], mapping_only=True
+        )
+
+    template["renewable_energy_zones"] = _template_rez_build_limits(
+        iasr_tables["initial_build_limits"]
+    )
+
+    template["rez_transmission_expansion_costs"] = _template_rez_transmission_costs(
+        iasr_tables, scenario
+    )
+
+    template["ecaa_generators"] = _template_ecaa_generators_static_properties(
+        iasr_tables
+    )
+
+    template["new_entrant_generators"] = _template_new_generators_static_properties(
+        iasr_tables
+    )
+
+    dynamic_generator_property_templates = _template_generator_dynamic_properties(
+        iasr_tables, scenario
+    )
+
+    template.update(dynamic_generator_property_templates)
+
+    energy_policy_targets = _template_energy_policy_targets(iasr_tables, scenario)
+
+    template.update(energy_policy_targets)
+
+    return template
+
+
+def list_templater_output_files(regional_granularity, output_path=None):
+    files = _BASE_TEMPLATE_OUTPUTS.copy()
+    if regional_granularity in ["sub_regions", "single_region"]:
+        files.remove("nem_regions")
+    if regional_granularity == "single_region":
+        files.remove("flow_paths")
+    if output_path is not None:
+        files = [output_path / Path(file + ".csv") for file in files]
+    return files
+````
+
+## File: src/ispypsa/templater/mappings.py
+````python
+import pandas as pd
+
+from .helpers import _snakecase_string
+from .lists import (
+    _ALL_GENERATOR_STORAGE_TYPES,
+    _CONDENSED_GENERATOR_TYPES,
+    _ECAA_GENERATOR_TYPES,
+    _ISP_SCENARIOS,
+    _NEW_GENERATOR_TYPES,
+)
+
+_NEM_REGION_IDS = pd.Series(
+    {
+        "Queensland": "QLD",
+        "New South Wales": "NSW",
+        "Victoria": "VIC",
+        "South Australia": "SA",
+        "Tasmania": "TAS",
+    },
+    name="nem_region_id_mapping",
+)
+
+_NEM_SUB_REGION_IDS = pd.Series(
+    {
+        "Northern Queensland": "NQ",
+        "Central Queensland": "CQ",
+        "Gladstone Grid": "GG",
+        "Southern Queensland": "SQ",
+        "Northern New South Wales": "NNSW",
+        "Central New South Wales": "CNSW",
+        "Southern New South Wales": "SNSW",
+        "Sydney, Newcastle, Wollongong": "SNW",
+        "Victoria": "VIC",
+        "Central South Australia": "CSA",
+        "South East South Australia": "SESA",
+        "Tasmania": "TAS",
+    },
+    name="nem_region_id_mapping",
+)
+
+_HVDC_FLOW_PATHS = pd.DataFrame(
+    {
+        "node_from": ["NNSW", "VIC", "TAS"],
+        "node_to": ["SQ", "CSA", "VIC"],
+        "flow_path": ["Terranora", "Murraylink", "Basslink"],
+    }
+)
+
+_GENERATOR_PROPERTIES = {
+    "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,
+    "seasonal_ratings": _ALL_GENERATOR_STORAGE_TYPES,
+    "maintenance": ["existing_generators", "new_entrants"],
+    "fixed_opex": _CONDENSED_GENERATOR_TYPES,
+    "variable_opex": _CONDENSED_GENERATOR_TYPES,
+    "marginal_loss_factors": _ALL_GENERATOR_STORAGE_TYPES,
+    "auxiliary_load": _CONDENSED_GENERATOR_TYPES,
+    "heat_rates": _CONDENSED_GENERATOR_TYPES,
+    "outages_2023-2024": ["existing_generators"],
+    "long_duration_outages": ["existing_generators"],
+    "outages": ["new_entrants"],
+    "full_outages_forecast": ["existing_generators"],
+    "partial_outages_forecast": ["existing_generators"],
+    "gpg_min_stable_level": ["existing_generators", "new_entrants"],
+    "coal_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
+    "gas_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
+}
+
+_ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
+    "maximum_capacity_mw": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
+        table_lookup="Generator",
+        alternative_lookups=["Project"],
+        table_value="Installed capacity (MW)",
+    ),
+    "maintenance_duration_%": dict(
+        table="maintenance_existing_generators",
+        table_lookup="Generator type",
+        table_value="Proportion of time out (%)",
+    ),
+    "minimum_load_mw": dict(
+        table="coal_minimum_stable_level",
+        table_lookup="Generating unit",
+        table_value="Minimum Stable Level (MW)",
+    ),
+    "fom_$/kw/annum": dict(
+        table="fixed_opex_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Fixed OPEX ($/kW/year)",
+    ),
+    "vom_$/mwh_sent_out": dict(
+        table="variable_opex_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Variable OPEX ($/MWh sent out)",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Heat rate (GJ/MWh)",
+        new_col_name="heat_rate_gj/mwh",
+    ),
+    "mlf": dict(
+        table=[
+            f"marginal_loss_factors_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES
+        ],
+        table_lookup="Generator",
+        alternative_lookups=["Project"],
+        table_value="MLF",
+        alternative_values=["MLF - Generation"],
+    ),
+    "auxiliary_load_%": dict(
+        table="auxiliary_load_existing_committed_anticipated_additional_generators",
+        table_lookup="Fuel/Technology type",
+        table_value="Auxiliary load (% of nameplate capacity)",
+    ),
+    "partial_outage_derating_factor_%": dict(
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Partial Outage Derating Factor (%)",
+        generator_status="Existing",
+    ),
+    "mean_time_to_repair_full_outage": dict(
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Full outage",
+        generator_status="Existing",
+    ),
+    "mean_time_to_repair_partial_outage": dict(
+        table="outages_2023-2024_existing_generators",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Partial outage",
+        generator_status="Existing",
+    ),
+}
+"""
+Existing, committed, anticipated and additional summary table columns mapped to
+corresponding IASR tables and lookup information that can be used to retrieve values.
+
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
+    `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
+        alternative to  "Generator" in the additional projects table. If a lookup value
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
+    `alternative_values`: As for `alternative_lookups`, but for the data values in the
+        table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
+    `new_col_name`: The name that will be used to rename the column in the summary table
+"""
+
+_NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
+    "summer_peak_rating_%": dict(
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Summer Peak (% of nameplate)",
+    ),
+    "summer_rating_mw": dict(
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Summer Typical (% of nameplate)",
+        new_col_name="summer_typical_rating_%",
+    ),
+    "winter_rating_mw": dict(
+        table="seasonal_ratings_new_entrants",
+        table_lookup="Generator type",
+        table_value="Winter (% of nameplate)",
+        new_col_name="winter_rating_%",
+    ),
+    "maximum_capacity_mw": dict(
+        table="maximum_capacity_new_entrants",
+        table_lookup="Generator type",
+        table_value="Total plant size (MW)",
+    ),
+    "maintenance_duration_%": dict(
+        table="maintenance_new_entrants",
+        table_lookup="Generator type",
+        table_value="Proportion of time out (%)",
+    ),
+    "fom_$/kw/annum": dict(
+        table="fixed_opex_new_entrants",
+        table_lookup="Generator",
+        table_col_prefix="Fixed OPEX ($/kW sent out/year)",
+    ),
+    "vom_$/mwh_sent_out": dict(
+        table="variable_opex_new_entrants",
+        table_lookup="Generator",
+        table_col_prefix="Variable OPEX ($/MWh sent out)",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_new_entrants",
+        table_lookup="Technology",
+        table_value="Heat rate (GJ/MWh)",
+        new_col_name="heat_rate_gj/mwh",
+    ),
+    "mlf": dict(
+        table="marginal_loss_factors_new_entrants",
+        table_lookup="Generator",
+        table_value="MLF",
+    ),
+    "auxiliary_load_%": dict(
+        table="auxiliary_load_new_entrants",
+        table_lookup="Generator",
+        table_value="Auxiliary load (% of nameplate capacity)",
+    ),
+    "partial_outage_derating_factor_%": dict(
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Partial Outage Derating Factor (%)",
+    ),
+    "mean_time_to_repair_full_outage": dict(
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Full outage",
+    ),
+    "mean_time_to_repair_partial_outage": dict(
+        table="outages_new_entrants",
+        table_lookup="Fuel type",
+        table_value="Mean time to repair (hrs)_Partial outage",
+    ),
+    "lifetime": dict(
+        table="lead_time_and_project_life",
+        table_lookup="Technology",
+        table_value="Technical life (years) 6",
+    ),
+    "total_lead_time": dict(
+        table="lead_time_and_project_life",
+        table_lookup="Technology",
+        table_value="Total lead time (years)",
+    ),
+}
+"""
+New entrant generators summary table columns mapped to corresponding IASR table and
+lookup information that can be used to retrieve values.
+
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
+    `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
+        alternative to  "Generator" in the additional projects table. If a lookup value
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
+    `alternative_values`: As for `alternative_lookups`, but for the data values in the
+        table
+    `new_col_name`: The name that will be used to rename the column in the summary table
+    `table_col_prefix`: The string that is present at the start of each column name
+        in the table as a result of row merging in isp-workbook-parser, to be used
+        for opex mapping to rename columns in the table.
+"""
+
+
+"""
+ _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to
+ lists of dictionaries containing the CSV file name, region_id and policy_id for each
+ parsed table.
+     `csv`: A single CSV file name (excluding file extension)
+     `region_id`: region corresponding to that parsed table, to be inputted
+         into templated table
+     `policy_id`: policy corresponding to that parsed table, to be inputted
+         into templated table links with the manually_extracted_table
+         `policy_generator_types`
+ """
+_TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP = {
+    "template_renewable_share_targets": [
+        {
+            "csv": "vic_renewable_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vret",
+        },
+        {
+            "csv": "qld_renewable_target_trajectory",
+            "region_id": "QLD",
+            "policy_id": "qret",
+        },
+    ],
+    "template_powering_australia_plan": [
+        {
+            "csv": "powering_australia_plan_trajectory",
+            "region_id": "NEM",
+            "policy_id": "power_aus",
+        },
+    ],
+    "template_technology_capacity_targets": [
+        {
+            "csv": "capacity_investment_scheme_renewable_trajectory",
+            "region_id": "NEM",
+            "policy_id": "cis_generator",
+        },
+        {
+            "csv": "capacity_investment_scheme_storage_trajectory",
+            "region_id": "NEM",
+            "policy_id": "cis_storage",
+        },
+        {
+            "csv": "nsw_roadmap_storage_trajectory",
+            "region_id": "NSW",
+            "policy_id": "nsw_eir_sto",
+        },
+        {
+            "csv": "vic_storage_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vic_storage",
+        },
+        {
+            "csv": "vic_offshore_wind_target_trajectory",
+            "region_id": "VIC",
+            "policy_id": "vic_offshore_wind",
+        },
+    ],
+    "template_renewable_generation_targets": [
+        {
+            "csv": "nsw_roadmap_renewable_trajectory",
+            "region_id": "NSW",
+            "policy_id": "nsw_eir_gen",
+        },
+        {
+            "csv": "tas_renewable_target_trajectory",
+            "region_id": "TAS",
+            "policy_id": "tret",
+        },
+    ],
+}
+
+
+# Subregion flow paths
+_SUBREGION_FLOW_PATHS = [
+    "CQ-NQ",
+    "CQ-GG",
+    "SQ-CQ",
+    "NNSW-SQ",
+    "CNSW-NNSW",
+    "CNSW-SNW",
+    "SNSW-CNSW",
+    "VIC-SNSW",
+    "TAS-VIC",
+    "VIC-SESA",
+    "SESA-CSA",
+]
+
+_FLOW_PATH_AGUMENTATION_TABLES = [
+    "flow_path_augmentation_options_" + fp for fp in _SUBREGION_FLOW_PATHS
+]
+
+_REZ_CONNECTION_AGUMENTATION_TABLES = [
+    "rez_augmentation_options_" + region for region in list(_NEM_REGION_IDS)
+]
+
+_FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE = [
+    "flow_path_augmentation_costs_progressive_change_" + fp
+    for fp in _SUBREGION_FLOW_PATHS
+]
+
+_FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS = [
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_" + fp
+    for fp in _SUBREGION_FLOW_PATHS
+]
+
+_FLOW_PATH_AUGMENTATION_COST_TABLES = (
+    _FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE
+    + _FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS
+)
+
+_REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE = [
+    "rez_augmentation_costs_progressive_change_" + region
+    for region in list(_NEM_REGION_IDS)
+]
+
+_REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS = [
+    "rez_augmentation_costs_step_change_and_green_energy_exports_" + region
+    for region in list(_NEM_REGION_IDS)
+]
+
+_REZ_AUGMENTATION_COST_TABLES = (
+    _REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE
+    + _REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS
+)
+
+_FLOW_PATH_AGUMENTATION_NAME_ADJUSTMENTS = {
+    "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Forward direction": "transfer_increase_forward_direction_MW",
+    "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction": "transfer_increase_reverse_direction_MW",
+}
+
+_PREPATORY_ACTIVITIES_TABLES = [
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_preparatory_activities",
+    "flow_path_augmentation_costs_progressive_change_preparatory_activities",
+]
+
+_REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES = [
+    "rez_augmentation_costs_step_change_and_green_energy_exports_preparatory_activities",
+    "rez_augmentation_costs_progressive_change_preparatory_activities",
+]
+
+_ACTIONABLE_ISP_PROJECTS_TABLES = [
+    "flow_path_augmentation_costs_step_change_and_green_energy_exports_actionable_isp_projects",
+    "flow_path_augmentation_costs_progressive_change_actionable_isp_projects",
+]
+
+_PREPATORY_ACTIVITIES_NAME_TO_OPTION_NAME = {
+    "500kV QNI Connect (NSW works)": "NNSW–SQ Option 5",
+    "500kV QNI Connect (QLD works)": "NNSW–SQ Option 5",
+    "330kV QNI single circuit (NSW works)": "NNSW–SQ Option 1",
+    "330kV QNI single circuit (QLD works)": "NNSW–SQ Option 1",
+    "330kV QNI double circuit (NSW works)": "NNSW–SQ Option 2",
+    "330kV QNI double circuit (QLD works)": "NNSW–SQ Option 2",
+    "CQ-GG": "CQ-GG Option 1",
+    "Sydney Southern Ring": "CNSW-SNW Option 2",
+}
+
+_REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME = {
+    "Darling Downs REZ Expansion(Stage 1)": ["SWQLD1", "Option 1"],
+    "South East SA REZ": ["S1-TBMO", "Option 1"],
+    "South West Victoria REZ Option 1": ["SWV1", "Option 1"],
+    "South West Victoria REZ Option 1A": ["SWV1", "Option 1A"],
+    "South West Victoria REZ Option 1B": ["SWV1", "Option 1B"],
+    "South West Victoria REZ Option 1C": ["SWV1", "Option 1C"],
+    "South West Victoria REZ Option 2A": ["SWV1", "Option 2A"],
+    "South West Victoria REZ Option 2B": ["SWV1", "Option 2B"],
+    "South West Victoria REZ Option 3A": ["SWV1", "Option 3A"],
+    "South West Victoria REZ Option 3B": ["SWV1", "Option 3B"],
+}
+
+_PREPATORY_ACTIVITIES_OPTION_NAME_TO_FLOW_PATH = {
+    "NNSW–SQ Option 5": "NNSW-SQ",
+    "NNSW–SQ Option 1": "NNSW-SQ",
+    "NNSW–SQ Option 2": "NNSW-SQ",
+    "CNSW-SNW Option 2": "CNSW-SNW",
+    "CQ-GG Option 1": "CQ-GG",
+}
+
+_ACTIONABLE_ISP_PROJECTS_NAME_TO_OPTION_NAME = {
+    "Humelink": "SNSW-CNSW Option 1 (HumeLink)",
+    "VNI West": "VIC-SNSW Option 1 - VNI West (Kerang)",
+    "Project Marinus Stage 1": "TAS-VIC Option 1 (Project Marinus Stage 1)",
+    "Project Marinus Stage 2": "TAS-VIC Option 2 (Project Marinus Stage 2)",
+}
+
+_ACTIONABLE_ISP_PROJECTS_OPTION_NAME_TO_FLOW_PATH = {
+    "SNSW-CNSW Option 1 (HumeLink)": "SNSW-CNSW",
+    "VIC-SNSW Option 1 - VNI West (Kerang)": "VIC-SNSW",
+    "TAS-VIC Option 1 (Project Marinus Stage 1)": "TAS-VIC",
+    "TAS-VIC Option 2 (Project Marinus Stage 2)": "TAS-VIC",
+}
+
+# Transmission cost processing configurations
+_FLOW_PATH_CONFIG = {
+    "transmission_type": "flow_path",
+    "in_coming_column_mappings": {
+        "Flow path": "id",
+        "Flow Path": "id",
+        "Option Name": "option",
+        "Option": "option",
+        "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Forward direction": "forward_capacity_increase",
+        "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction": "reverse_capacity_increase",
+    },
+    "out_going_column_mappings": {
+        "id": "flow_path",
+        "nominal_capacity_increase": "additional_network_capacity_mw",
+    },
+    "table_names": {
+        "augmentation": _FLOW_PATH_AGUMENTATION_TABLES,
+        "cost": {
+            "progressive_change": _FLOW_PATH_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE,
+            "step_change_and_green_energy_exports": _FLOW_PATH_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS,
+        },
+        "prep_activities": _PREPATORY_ACTIVITIES_TABLES,
+        "actionable_projects": _ACTIONABLE_ISP_PROJECTS_TABLES,
+    },
+    "mappings": {
+        "prep_activities_name_to_option": _PREPATORY_ACTIVITIES_NAME_TO_OPTION_NAME,
+        "option_to_id": _PREPATORY_ACTIVITIES_OPTION_NAME_TO_FLOW_PATH,
+        "actionable_name_to_option": _ACTIONABLE_ISP_PROJECTS_NAME_TO_OPTION_NAME,
+        "actionable_option_to_id": _ACTIONABLE_ISP_PROJECTS_OPTION_NAME_TO_FLOW_PATH,
+    },
+}
+
+_REZ_CONFIG = {
+    "transmission_type": "rez",
+    "in_coming_column_mappings": {
+        "REZ constraint ID": "id",
+        "REZ / Constraint ID": "id",
+        "Option": "option",
+        "REZ": "rez",
+        "REZ Name": "rez",
+        "Additional network capacity (MW)": "nominal_capacity_increase",
+    },
+    "out_going_column_mappings": {
+        "id": "rez_constraint_id",
+        "nominal_capacity_increase": "additional_network_capacity_mw",
+    },
+    "table_names": {
+        "augmentation": _REZ_CONNECTION_AGUMENTATION_TABLES,
+        "cost": {
+            "progressive_change": _REZ_AUGMENTATION_COST_TABLES_PROGRESSIVE_CHANGE,
+            "step_change_and_green_energy_exports": _REZ_AUGMENTATION_COST_TABLES_STEP_CHANGE_AND_GREEN_ENERGY_EXPORTS,
+        },
+        "prep_activities": _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES,
+    },
+    "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
+}
+````
+
+## File: src/ispypsa/templater/static_new_generator_properties.py
+````python
+import logging
+import re
+from pathlib import Path
+
+import ipdb
+import pandas as pd
+
+from .helpers import (
+    _fuzzy_match_names,
+    _one_to_one_priority_based_fuzzy_matching,
+    _snakecase_string,
+    _where_any_substring_appears,
+)
+from .lists import _NEW_GENERATOR_TYPES
+from .mappings import _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+
+_OBSOLETE_COLUMNS = [
+    "Maximum capacity factor (%)",
+]
+
+
+def _template_new_generators_static_properties(
+    iasr_tables: dict[pd.DataFrame],
+) -> pd.DataFrame:
+    """Processes the new entrant generators summary tables into an ISPyPSA
+    template format
+
+    Args:
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: ISPyPSA new entrant generators template
+    """
+    logging.info("Creating a new entrant generators template")
+
+    new_generator_summaries = []
+    for gen_type in _NEW_GENERATOR_TYPES:
+        df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
+        df.columns = ["Generator", *df.columns[1:]]
+        new_generator_summaries.append(df)
+    new_generator_summaries = pd.concat(new_generator_summaries, axis=0).reset_index(
+        drop=True
+    )
+    cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
+    merged_cleaned_new_generator_summaries = (
+        _merge_and_set_new_generators_static_properties(
+            cleaned_new_generator_summaries, iasr_tables
+        )
+    )
+    return merged_cleaned_new_generator_summaries
+
+
+def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Cleans generator summary tables
+
+    1. Converts column names to snakecase
+    2. Adds "_id" to the end of region/sub-region ID columns
+    3. Removes redundant outage columns
+    4. Enforces consistent formatting of "storage" str instances
+    4. Adds the following columns with appropriate mappings:
+            - `partial_outage_derating_factor_%`
+            - `maximum_capacity_mw`
+            - `lifetime`
+            - `summer_peak_rating_%`
+            - `technology_specific_lcf_%`
+            - `minimum_stable_level_%`
+
+    Args:
+        df: Generator summary `pd.DataFrame`
+
+    Returns:
+        `pd.DataFrame`: Cleaned generator summary DataFrame
+    """
+
+    def _fix_forced_outage_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Removes until/post 2022 distinction in columns if it exists"""
+        if (
+            any(until_cols := [col for col in df.columns if "until" in col])
+            and any(post_cols := [col for col in df.columns if "post" in col])
+            and len(until_cols) == len(post_cols)
+        ):
+            df = df.rename(
+                columns={col: col.replace("_until_2022", "") for col in until_cols}
+            )
+            df = df.drop(columns=post_cols)
+        return df
+
+    df = df.drop(columns=_OBSOLETE_COLUMNS)
+    df.columns = [_snakecase_string(col_name) for col_name in df.columns]
+    df = df.rename(
+        columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
+    )
+    # enforces capitalisation structure for instances of str "storage" in generator col
+    df["generator"] = df["generator"].replace(
+        [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
+    )
+    df = _fix_forced_outage_columns(df)
+
+    # adds extra necessary columns taking appropriate mapping values
+    # NOTE: this could be done more efficiently in future if needed, potentially
+    # adding a `new_mapping` field to relevant table map dicts?
+    df["partial_outage_derating_factor_%"] = df[
+        "forced_outage_rate_partial_outage_%_of_time"
+    ]
+    df["maximum_capacity_mw"] = df["generator"]
+    df["lifetime"] = df["generator"]
+    df["minimum_stable_level_%"] = df["technology_type"]
+    df["summer_peak_rating_%"] = df["summer_rating_mw"]
+    df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
+    return df
+
+
+def _merge_and_set_new_generators_static_properties(
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+) -> pd.DataFrame:
+    """Merges into and sets static (i.e. not time-varying) generator properties in the
+    "New entrants summary" template, and renames columns if this is specified
+    in the mapping.
+
+    Uses `ispypsa.templater.mappings._NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    as the mapping.
+
+    Args:
+        df: Existing generator summary DataFrame
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+
+    Returns:
+        `pd.DataFrame`: Existing generator template with static properties filled in
+    """
+    # merge in static properties using the static property mapping
+    merged_static_cols = []
+    for col, table_attrs in _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP.items():
+        # if col is an opex column, use separate function to handle merging in:
+        if re.search("^[fv]om_", col):
+            data = iasr_tables[table_attrs["table"]]
+            df, col = _process_and_merge_opex(df, data, col, table_attrs)
+        else:
+            if type(table_attrs["table"]) is list:
+                data = [
+                    iasr_tables[table_attrs["table"]] for table in table_attrs["table"]
+                ]
+                data = pd.concat(data, axis=0)
+            else:
+                data = iasr_tables[table_attrs["table"]]
+            df, col = _merge_table_data(df, col, data, table_attrs)
+        merged_static_cols.append(col)
+
+    gpg_min_stable_level_new_entrants = iasr_tables["gpg_min_stable_level_new_entrants"]
+    df = _process_and_merge_new_gpg_min_stable_lvl(
+        df, gpg_min_stable_level_new_entrants, "minimum_stable_level_%"
+    )
+    df = _calculate_and_merge_tech_specific_lcfs(
+        df, iasr_tables, "technology_specific_lcf_%"
+    )
+    df = _zero_renewable_heat_rates(df, "heat_rate_gj/mwh")
+    df = _zero_solar_wind_battery_partial_outage_derating_factor(
+        df, "partial_outage_derating_factor_%"
+    )
+    df = _add_technology_rez_subregion_column(df, "technology_location_id")
+    # replace remaining string values in static property columns
+    df = df.infer_objects()
+    for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
+        df[col] = df[col].apply(lambda x: pd.NA if isinstance(x, str) else x)
+    return df
+
+
+def _merge_table_data(
+    df: pd.DataFrame, col: str, table_data: pd.DataFrame, table_attrs: dict
+) -> tuple[pd.DataFrame, str]:
+    """Replace values in the provided column of the summary mapping with those
+    in the table data using the provided attributes in
+    `_NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP`
+    """
+    # handle alternative lookup and value columns
+    for alt_attr in ("lookup", "value"):
+        if f"alternative_{alt_attr}s" in table_attrs.keys():
+            table_col = table_attrs[f"table_{alt_attr}"]
+            for alt_col in table_attrs[f"alternative_{alt_attr}s"]:
+                table_data[table_col] = table_data[table_col].where(
+                    pd.notna, table_data[alt_col]
+                )
+    replacement_dict = (
+        table_data.loc[:, [table_attrs["table_lookup"], table_attrs["table_value"]]]
+        .set_index(table_attrs["table_lookup"])
+        .squeeze()
+        .to_dict()
+    )
+    # handles slight difference in capitalisation e.g. Bogong/Mackay vs Bogong/MacKay
+    where_str = df[col].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, col] = _fuzzy_match_names(
+        df.loc[where_str, col],
+        replacement_dict.keys(),
+        f"merging in the new entrant generator static property {col}",
+        not_match="existing",
+        threshold=90,
+    )
+    df[col] = df[col].replace(replacement_dict)
+    if "new_col_name" in table_attrs.keys():
+        df = df.rename(columns={col: table_attrs["new_col_name"]})
+        col = table_attrs["new_col_name"]
+    return df, col
+
+
+def _process_and_merge_opex(
+    df: pd.DataFrame,
+    table_data: pd.DataFrame,
+    col_name: str,
+    table_attrs: dict,
+) -> tuple[pd.DataFrame, str]:
+    """Processes and merges in fixed or variable OPEX values for new entrant generators.
+
+    In v6.0 of the IASR workbook the base values for all OPEX are found in
+    the column "NSW Low" or the relevant table, all other values are calculated
+    from this base value multiplied by the O&M locational cost factor. This function
+    merges in the post-LCF calculated values provided in the IASR workbook.
+    """
+    # update the mapping in this column to include generator name and the
+    # cost region initially given
+    df[col_name] = df["generator"] + " " + df[col_name]
+    # renames columns by removing the specified table_col_prefix (the string present
+    # at the start of all variable col names due to row merging from isp-workbook-parser)
+    table_data = table_data.rename(
+        columns={
+            col: col.replace(f"{table_attrs['table_col_prefix']}_", "")
+            for col in table_data.columns
+        }
+    )
+    opex_table = table_data.melt(
+        id_vars=[table_attrs["table_lookup"]],
+        var_name="Cost region",
+        value_name="OPEX value",
+    )
+    # add column with same generator + cost region mapping as df[col_name]:
+    opex_table["Mapping"] = (
+        opex_table[table_attrs["table_lookup"]] + " " + opex_table["Cost region"]
+    )
+    opex_replacement_dict = (
+        opex_table[["Mapping", "OPEX value"]].set_index("Mapping").squeeze().to_dict()
+    )
+    # use fuzzy matching in case of slight differences in generator names:
+    where_str = df[col_name].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, col_name] = _fuzzy_match_names(
+        df.loc[where_str, col_name],
+        opex_replacement_dict.keys(),
+        f"merging in the new entrant generator static property {col_name}",
+        not_match="existing",
+        threshold=90,
+    )
+    df[col_name] = df[col_name].replace(opex_replacement_dict)
+    return df, col_name
+
+
+def _calculate_and_merge_tech_specific_lcfs(
+    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], tech_lcf_col: str
+) -> pd.DataFrame:
+    """Calculates the technology-specific locational cost factor as a percentage
+    for each new entrant generator and merges into summary mapping table.
+    """
+    # loads in the three tables needed
+    breakdown_ratios = iasr_tables["technology_cost_breakdown_ratios"]
+    technology_specific_lcfs = iasr_tables["technology_specific_lcfs"]
+    # loads all cols unless the str "O&M" is in col name
+    locational_cost_factors = iasr_tables["locational_cost_factors"]
+    locational_cost_factors = locational_cost_factors.set_index(
+        locational_cost_factors.columns[0]
+    )
+    cols = [col for col in locational_cost_factors.columns if "O&M" not in col]
+    locational_cost_factors = locational_cost_factors.loc[:, cols]
+
+    # reshape technology_specific_lcfs and name columns manually:
+    technology_specific_lcfs = technology_specific_lcfs.melt(
+        id_vars="Cost zones / Sub-region", value_name="LCF", var_name="Technology"
+    ).dropna(axis=0, how="any")
+    technology_specific_lcfs.rename(
+        columns={"Cost zones / Sub-region": "Location"}, inplace=True
+    )
+    # ensures generator names in LCF tables match those in the summary table
+    for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
+        df_to_match_gen_names["Technology"] = _fuzzy_match_names(
+            df_to_match_gen_names["Technology"],
+            df["generator"].unique(),
+            "calculating and merging in LCFs to static new entrant gen summary",
+            not_match="existing",
+            threshold=90,
+        )
+        df_to_match_gen_names.set_index("Technology", inplace=True)
+    # use fuzzy matching to ensure that col names in tables to combine match up:
+    fuzzy_column_renaming = _one_to_one_priority_based_fuzzy_matching(
+        set(locational_cost_factors.columns.to_list()),
+        set(breakdown_ratios.columns.to_list()),
+        not_match="existing",
+        threshold=90,
+    )
+    locational_cost_factors.rename(columns=fuzzy_column_renaming, inplace=True)
+    # loops over rows and use existing LCF for all pumped hydro gens, calculates for others
+    # values are all converted to a percentage as needed
+    for tech, row in technology_specific_lcfs.iterrows():
+        if re.search(r"^(Pump|BOTN)", tech):
+            calculated_or_given_lcf = row["LCF"] * 100
+        else:
+            calculated_or_given_lcf = breakdown_ratios.loc[tech, :].dot(
+                locational_cost_factors.loc[row["Location"], :]
+            )
+            calculated_or_given_lcf /= 100
+        df.loc[
+            ((df["generator"] == tech) & (df[tech_lcf_col] == row["Location"])),
+            tech_lcf_col,
+        ] = calculated_or_given_lcf
+    # fills rows with no LCF (some PHES REZs) with pd.NA
+    df[tech_lcf_col] = df[tech_lcf_col].apply(
+        lambda x: pd.NA if isinstance(x, str) else x
+    )
+    return df
+
+
+def _process_and_merge_new_gpg_min_stable_lvl(
+    df: pd.DataFrame, new_gpg_min_stable_lvls: pd.DataFrame, min_level_col: str
+) -> pd.DataFrame:
+    """Processes and merges in gas-fired generation minimum stable level data (%)
+
+    Minimum stable level is given as a percentage of nameplate capacity, and set
+    to zero for renewable generators (wind, solar, hydro), storage, OCGT, and
+    hydrogen reciprocating engines.
+
+    NOTE: v6 IASR workbook does not specify a minimum stable level for hydrogen
+    reciprocating engines.
+    """
+    new_gpg_min_stable_lvls = new_gpg_min_stable_lvls.set_index("Technology")
+    # manually maps percentages to the new min stable level column
+    for tech, row in new_gpg_min_stable_lvls.iterrows():
+        df.loc[df["technology_type"] == tech, min_level_col] = row[
+            "Min Stable Level (% of nameplate)"
+        ]
+    # fills renewable generators, storage, hydrogen reciprocating engines and OCGT with 0.0
+    df.loc[
+        _where_any_substring_appears(
+            df[min_level_col],
+            ["solar", "wind", "pumped hydro", "battery", "ocgt", "hydrogen"],
+        ),
+        min_level_col,
+    ] = 0.0
+    # replace any remaining cells containing str (tech type) with pd.NA
+    df[min_level_col] = df[min_level_col].apply(
+        lambda x: pd.NA if isinstance(x, str) else x
+    )
+    return df
+
+
+def _zero_renewable_heat_rates(df: pd.DataFrame, heat_rate_col: str) -> pd.DataFrame:
+    """
+    Fill any empty heat rate values with the technology type, and then set
+    renewable energy (solar, solar thermal, wind, hydro) and battery storage
+    heat rates to 0.0. Ensure "pumped hydro" used (not just "hydro") to avoid
+    including hydrogen reciprocating engines.
+    """
+    df[heat_rate_col] = df[heat_rate_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(
+            df[heat_rate_col], ["solar", "wind", "pumped hydro", "battery"]
+        ),
+        heat_rate_col,
+    ] = 0.0
+    return df
+
+
+def _zero_solar_wind_battery_partial_outage_derating_factor(
+    df: pd.DataFrame, po_derating_col: str
+) -> pd.DataFrame:
+    """
+    Fill any empty partial outage derating factor values with the technology type, and
+    then set values for solar, wind and batteries to 0
+    """
+    df[po_derating_col] = df[po_derating_col].where(pd.notna, df["technology_type"])
+    df.loc[
+        _where_any_substring_appears(df[po_derating_col], ["solar", "wind", "battery"]),
+        po_derating_col,
+    ] = 0.0
+    return df
+
+
+def _add_technology_rez_subregion_column(
+    df: pd.DataFrame, new_col_name: str
+) -> pd.DataFrame:
+    """Adds an extra column holding the technology type and either REZ or ISP
+    subregion ID."""
+    # adds new column filled with REZ zone to start
+    df[new_col_name] = df["rez_location"]
+    # fills rows that don't have a REZ value with ISP subregion
+    df[new_col_name] = df[new_col_name].where(pd.notna, df["sub_region_id"])
+
+    # adds together the generator name and REZ/subregion separated by a space.
+    # NOTE: this currently uses full generator names and full REZ names
+    # directly from the summary table to ensure each row has a unique value.
+    df[new_col_name] = df["generator"] + " " + df[new_col_name]
+
+    return df
+````
+
+## File: src/ispypsa/translator/create_pypsa_friendly_inputs.py
+````python
+from pathlib import Path
+from typing import Literal
+
+import pandas as pd
+from isp_trace_parser import construct_reference_year_mapping
+
+from ispypsa.config import (
+    ModelConfig,
+)
+from ispypsa.translator.buses import (
+    _create_single_region_bus,
+    _translate_isp_sub_regions_to_buses,
+    _translate_nem_regions_to_buses,
+    _translate_rezs_to_buses,
+    create_pypsa_friendly_bus_demand_timeseries,
+)
+from ispypsa.translator.custom_constraints import (
+    _translate_custom_constraint_lhs,
+    _translate_custom_constraint_rhs,
+    _translate_custom_constraints_generators,
+)
+from ispypsa.translator.generators import (
+    _create_unserved_energy_generators,
+    _translate_ecaa_generators,
+    create_pypsa_friendly_existing_generator_timeseries,
+)
+from ispypsa.translator.lines import _translate_flow_paths_to_lines
+from ispypsa.translator.mappings import (
+    _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
+    _CUSTOM_CONSTRAINT_LHS_TABLES,
+    _CUSTOM_CONSTRAINT_RHS_TABLES,
+)
+from ispypsa.translator.renewable_energy_zones import (
+    _translate_renewable_energy_zone_build_limits_to_flow_paths,
+)
+from ispypsa.translator.snapshots import (
+    _add_investment_periods,
+    _create_complete_snapshots_index,
+    _create_investment_period_weightings,
+)
+from ispypsa.translator.temporal_filters import _filter_snapshots
+
+_BASE_TRANSLATOR_OUPUTS = [
+    "snapshots",
+    "investment_period_weights",
+    "buses",
+    "lines",
+    "generators",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+    "custom_constraints_generators",
+]
+
+
+def create_pypsa_friendly_snapshots(
+    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
+) -> pd.DataFrame:
+    """
+    Creates a pd.DataFrame defining the modelled time intervals and corresponding
+    investment periods.
+
+    If the model_phase 'operational' is provieded then a single investment period is
+    used for all snapshots (labelled as the model start year). Investment periods
+    are provided even for operational modelling because this allows the snapshots of
+    PyPSA.network which have been used for capacity expansion modelling to be directly
+    overwritten with the new snapshots/investment_periods data, PyPSA throws an error
+    if you try and overwrite with just snaphots.
+
+    Examples:
+
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        ...     create_pypsa_friendly_snapshots
+        ... )
+
+        Get a ISPyPSA ModelConfig instance
+
+        >>> config = load_config(Path("path/to/config/file.yaml"))
+
+        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        sub_regions tables).
+
+        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
+
+        Define which phase of the modelling we need the time series data for.
+
+        >>> model_phase = "capacity_expansion"
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+
+    Args:
+        config: ispypsa.ModelConfig instance
+        model_phase: string defining whether the snapshots are for the operational or
+            capacity expansion phase of the modelling. This allows the correct temporal
+            config inputs to be used from the ModelConfig instance.
+
+    Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
+        the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
+        each time interval modelled. 'investment_periods' periods are refered to by the
+        year (financial or calander) in which they begin.
+    """
+    if model_phase == "capacity_expansion":
+        resolution_min = config.temporal.capacity_expansion.resolution_min
+        aggregation = config.temporal.capacity_expansion.aggregation
+        investment_periods = config.temporal.capacity_expansion.investment_periods
+    else:
+        resolution_min = config.temporal.operational.resolution_min
+        aggregation = config.temporal.operational.aggregation
+        investment_periods = [config.temporal.range.start_year]
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        temporal_resolution_min=resolution_min,
+        year_type=config.temporal.year_type,
+    )
+
+    snapshots = _filter_snapshots(
+        config.temporal.year_type,
+        config.temporal.range,
+        aggregation,
+        snapshots,
+    )
+
+    snapshots = _add_investment_periods(
+        snapshots, investment_periods, config.temporal.year_type
+    )
+
+    return snapshots
+
+
+def create_pypsa_friendly_inputs(
+    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
+) -> dict[str, pd.DataFrame]:
+    """Creates a set of tables for defining a `PyPSA` network from a set `ISPyPSA` tables.
+
+    Examples:
+
+    # Perform requried imports.
+    >>> from pathlib import Path
+    >>> from ispypsa.config import load_config
+    >>> from ispypsa.data_fetch import read_csvs, write_csvs
+    >>> from ispypsa.translator import create_pypsa_friendly_inputs
+
+    # Load ISPyPSA model config file and input tables.
+    >>> config = load_config(Path("ispypsa_config.yaml"))
+    >>> ispypsa_input_tables = read_csvs(Path("ispypsa_inputs_directory"))
+
+    # Make the PyPSA friendly inputs!
+    >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(
+    ... config=config,
+    ... ispypsa_tables=ispypsa_input_tables
+    ... )
+
+    # Write the resulting dataframes to CSVs.
+    >>> write_csvs(pypsa_friendly_inputs)
+
+    Args:
+        config: `ISPyPSA` `ispypsa.config.ModelConfig` object (add link to config docs).
+        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
+            (add link to ispypsa input tables docs).
+
+    Returns: dictionary of dataframes in the `PyPSA` friendly format. (add link to
+        pypsa friendly format table docs)
+    """
+    pypsa_inputs = {}
+
+    pypsa_inputs["snapshots"] = create_pypsa_friendly_snapshots(
+        config, "capacity_expansion"
+    )
+
+    pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
+        config.temporal.capacity_expansion.investment_periods,
+        config.temporal.range.end_year,
+        config.discount_rate,
+    )
+
+    pypsa_inputs["generators"] = _translate_ecaa_generators(
+        ispypsa_tables["ecaa_generators"], config.network.nodes.regional_granularity
+    )
+
+    buses = []
+    lines = []
+
+    if config.network.nodes.regional_granularity == "sub_regions":
+        buses.append(_translate_isp_sub_regions_to_buses(ispypsa_tables["sub_regions"]))
+    elif config.network.nodes.regional_granularity == "nem_regions":
+        buses.append(_translate_nem_regions_to_buses(ispypsa_tables["nem_regions"]))
+    elif config.network.nodes.regional_granularity == "single_region":
+        buses.append(_create_single_region_bus())
+
+    if config.unserved_energy.cost is not None:
+        unserved_energy_generators = _create_unserved_energy_generators(
+            buses[0],  # create generators for just demand buses not rez buses too.
+            config.unserved_energy.cost,
+            config.unserved_energy.generator_size_mw,
+        )
+        pypsa_inputs["generators"] = pd.concat(
+            [pypsa_inputs["generators"], unserved_energy_generators]
+        )
+
+    if config.network.nodes.rezs == "discrete_nodes":
+        buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
+        lines.append(
+            _translate_renewable_energy_zone_build_limits_to_flow_paths(
+                ispypsa_tables["renewable_energy_zones"],
+                config.network.rez_transmission_expansion,
+                config.wacc,
+                config.network.annuitisation_lifetime,
+                config.network.rez_to_sub_region_transmission_default_limit,
+            )
+        )
+
+    if config.network.nodes.regional_granularity != "single_region":
+        lines.append(
+            _translate_flow_paths_to_lines(
+                ispypsa_tables,
+                config
+            )
+        )
+
+    pypsa_inputs["buses"] = pd.concat(buses)
+
+    if len(lines) > 0:
+        pypsa_inputs["lines"] = pd.concat(lines)
+    else:
+        pypsa_inputs["lines"] = pd.DataFrame()
+
+    custom_constraint_lhs_tables = [
+        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_LHS_TABLES
+    ]
+    pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
+        custom_constraint_lhs_tables
+    )
+    custom_constraint_rhs_tables = [
+        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_RHS_TABLES
+    ]
+    pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
+        custom_constraint_rhs_tables
+    )
+    custom_constraint_generators = [
+        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_EXPANSION_COSTS
+    ]
+    pypsa_inputs["custom_constraints_generators"] = (
+        _translate_custom_constraints_generators(
+            custom_constraint_generators,
+            config.network.rez_transmission_expansion,
+            config.wacc,
+            config.network.annuitisation_lifetime,
+        )
+    )
+
+    return pypsa_inputs
+
+
+def create_pypsa_friendly_timeseries_inputs(
+    config: ModelConfig,
+    model_phase: Literal["capacity_expansion", "operational"],
+    ispypsa_tables: dict[str, pd.DataFrame],
+    snapshots: pd.DataFrame,
+    parsed_traces_directory: Path,
+    pypsa_friendly_timeseries_inputs_location: Path,
+) -> None:
+    """Creates on disk the timeseries data files in PyPSA friendly format for generation
+    and demand.
+
+    - a time series file is created for each wind and solar generator in the
+    ecaa_generators table (table in ispypsa_tables dict). The time series data is saved
+    in parquet files in the 'solar_traces' and 'wind_traces' directories with the
+    columns "snapshots" (datetime) and "p_max_pu" (float specifying availability in MW).
+
+    - a time series file is created for each model region specifying the load in that
+    region (regions set by config.network.nodes.regional_granularity). The time series
+    data is saved in parquet files in the 'demand_traces' directory with the columns
+    "snapshots" (datetime) and "p_set" (float specifying load in MW).
+
+    Examples:
+
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        ...     create_pypsa_friendly_snapshots,
+        ...     create_pypsa_friendly_timeseries_inputs
+        ... )
+
+        Get a ISPyPSA ModelConfig instance
+
+        >>> config = load_config(Path("path/to/config/file.yaml"))
+
+        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        sub_regions tables).
+
+        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
+
+        Define which phase of the modelling we need the time series data for.
+
+        >>> model_phase = "capacity_expansion"
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+
+        Now the complete set of time series files needed to run the PyPSA model can
+        be created.
+
+        >>> create_pypsa_friendly_timeseries_inputs(
+        ...     config,
+        ...     model_phase,
+        ...     ispypsa_tables
+        ...     snapshots
+        ...     Path("path/to/parsed/isp/traces"),
+        ...     Path("path/to/write/time/series/inputs/to")
+        ... )
+
+    Args:
+        config: ispypsa.ModelConfig instance
+        model_phase: string defining whether the snapshots are for the operational or
+            capacity expansion phase of the modelling. This allows the correct temporal
+            config inputs to be used from the ModelConfig instance.
+        ispypsa_tables: dict of pd.DataFrames defining the ISPyPSA input tables.
+            Inparticular the dict needs to contain the ecaa_generators and
+            sub_regions tables, the other tables aren't required for the time series
+            data creation. The ecaa_generators table needs the columns 'generator' (name
+            or generator as str) and 'fuel_type' (str with 'Wind' and 'Solar' fuel types
+            as appropraite). The sub_regions table needs to have the columns
+            'isp_sub_region_id' (str) and 'nem_region_id' (str) if a 'regional'
+            granuality is used.
+        snapshots: a pd.DataFrame with the columns 'period' (int) and 'snapshots'
+            (datetime) defining the time intervals and coresponding investment periods
+            to be modelled.
+        parsed_traces_directory: a pathlib.Path defining where the trace data which
+            has been parsed using isp-trace-parser is located.
+        pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
+            time series data which is to be created should be saved.
+
+    Returns: None
+    """
+
+    if model_phase == "capacity_expansion":
+        reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
+    else:
+        reference_year_cycle = config.temporal.operational.reference_year_cycle
+
+    reference_year_mapping = construct_reference_year_mapping(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        reference_years=reference_year_cycle,
+    )
+    create_pypsa_friendly_existing_generator_timeseries(
+        ispypsa_tables["ecaa_generators"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        generator_types=["solar", "wind"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
+    create_pypsa_friendly_bus_demand_timeseries(
+        ispypsa_tables["sub_regions"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        scenario=config.scenario,
+        regional_granularity=config.network.nodes.regional_granularity,
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
+
+
+def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
+    files = _BASE_TRANSLATOR_OUPUTS
+    if output_path is not None:
+        files = [output_path / Path(file + ".csv") for file in files]
+    return files
+````
+
+## File: pyproject.toml
+````toml
+[project]
+name = "ISPyPSA"
+version = "0.1.0"
+description = "An open-source capacity expansion model based on the methodology and datasets used by the Australian Energy Market Operator (AEMO) in their Integrated System Plan (ISP)."
+authors = [
+    { name = "prakaa", email = "abiprakash007@gmail.com" },
+    { name = "nick-gorman", email = "n.gorman305@gmail.com" },
+    { name = "dylanjmcconnell", email = "dylan.mcconnell@unsw.edu.au" }
+]
+dependencies = [
+    "pandas>=2.2.2",
+    "pypsa>=0.31.1",
+    "pyyaml>=6.0.2",
+    "doit>=0.36.0",
+    "xmltodict>=0.13.0",
+    "thefuzz>=0.22.1",
+    "pyarrow>=18.0.0",
+    "tables>=3.10.1",
+    "isp-trace-parser>=1.0.3",
+    "isp-workbook-parser",
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[project.optional-dependencies]
+solvers = [
+    "linopy>=0.4.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+dev-dependencies = [
+    "pytest>=8.3.2",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "requests-mock>=1.12.1",
+    "ipython>=8.0",
+    "ipdb>=0.13.13",
+    "pre-commit>=3.8.0",
+    "sphinx>=6.0",
+    "myst-parser>=3.0.1",
+    "myst-nb>=1.1.1",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-book-theme>=1.1.3",
+    "sphinx-togglebutton>=0.3.2",
+    "sphinx-autobuild>=2024.9.3",
+]
+
+[tool.uv.sources]
+isp-workbook-parser = { path = "../isp-workbook-parser", editable = true }
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ispypsa"]
+
+[tool.pytest.ini_options]
+# path to tests for pytest
+testpaths = ["src", "tests"]
+# addopts = add options
+# --cov points pytest-cov to the src/ dir
+# --cov-branch runs branch coverage
+addopts = "-ra --cov=src/ --cov-branch --cov-report xml:tests/coverage.xml --cov-report html:tests/htmlcov"
+
+[tool.ruff.lint]
+select = [
+    # isort
+    "I",
+]
+````

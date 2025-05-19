@@ -173,3 +173,8 @@ ispypsa_runs/**/*.hdf5
 
 # ignore doit database
 .doit*
+
+# repomix for ai coding
+.repomixignore
+.repomix-output.md
+.repomix.config.json
