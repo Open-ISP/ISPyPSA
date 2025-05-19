@@ -17,7 +17,7 @@ from .mappings import (
 
 
 def _template_sub_regional_flow_paths(
-    flow_path_capabilities: pd.DataFrame, transmission_expansion_costs: pd.DataFrame
+    flow_path_capabilities: pd.DataFrame,
 ) -> pd.DataFrame:
     """Processes the 'Flow path transfer capability' table into an ISPyPSA template
     format.
@@ -25,8 +25,8 @@ def _template_sub_regional_flow_paths(
     Args:
         flow_path_capabilities: pd.DataFrame IASR table specifying the flow path
             transfer capabilities between subregions
-        transmission_expansion_costs: pd.DataFrame specifying the transmission
-            expansion costs for each flow path.
+        transmission_expansion_costs: pd.DataFrame deprecated parameter, kept for
+            backward compatibility.
 
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional flow path template
@@ -46,13 +46,6 @@ def _template_sub_regional_flow_paths(
         "forward_direction_mw_summer_typical",
     ]
     sub_regional_capabilities = sub_regional_capabilities.loc[:, cols]
-
-    sub_regional_capabilities = pd.merge(
-        sub_regional_capabilities,
-        transmission_expansion_costs,
-        how="left",
-        on="flow_path",
-    )
 
     return sub_regional_capabilities
 
