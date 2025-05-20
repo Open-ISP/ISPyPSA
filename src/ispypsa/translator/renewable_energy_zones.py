@@ -5,7 +5,7 @@ from ispypsa.translator.lines import _translate_expansion_costs_to_lines
 from ispypsa.translator.mappings import _REZ_LINE_ATTRIBUTES
 
 
-def _translate_renewable_energy_zone_build_limits_to_flow_paths(
+def _translate_renewable_energy_zone_build_limits_lines(
     renewable_energy_zone_build_limits: pd.DataFrame,
     rez_expansion_costs: pd.DataFrame,
     config: ModelConfig,

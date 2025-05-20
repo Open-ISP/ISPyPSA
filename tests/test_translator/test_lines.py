@@ -6,7 +6,7 @@ import pytest
 
 from ispypsa.translator.lines import (
     _translate_existing_flow_path_capacity_to_lines,
-    _translate_flow_path_expansion_costs_to_lines,
+    _translate_expansion_costs_to_lines,
     _translate_flow_paths_to_lines,
 )
 
@@ -41,20 +41,20 @@ def test_translate_existing_flow_path_capacity_to_lines(csv_str_to_df):
     )
 
 
-def test_translate_flow_path_expansion_costs_to_lines(csv_str_to_df):
+def test_translate_expansion_costs_to_lines(csv_str_to_df):
     """Test that flow path expansion costs are correctly translated to lines."""
     # Create sample data for testing
     flow_path_expansion_costs_csv = """
     flow_path,     additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw
-    PathA-PathB,   500,                             ,          1200
-    PathB-PathC,   800,                             1500,          1800
+    NodeA-NodeB,   500,                             ,          1200
+    NodeB-NodeC,   800,                             1500,          1800
     """
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_lines_csv = """
-    name,        carrier,  bus0,    bus1,    s_nom
-    PathA-PathB, AC,       NodeA,   NodeB,   1000
-    PathB-PathC, AC,       NodeB,   NodeC,   2000
+    name,                 carrier,  bus0,    bus1,    s_nom
+    NodeA-NodeB_existing, AC,       NodeA,   NodeB,   1000
+    NodeB-NodeC_existing, AC,       NodeB,   NodeC,   2000
     """
     existing_lines_df = csv_str_to_df(existing_lines_csv)
 
@@ -63,29 +63,34 @@ def test_translate_flow_path_expansion_costs_to_lines(csv_str_to_df):
     wacc = 0.07
     asset_lifetime = 30
 
-    # Call the function
-    result = _translate_flow_path_expansion_costs_to_lines(
+    result = _translate_expansion_costs_to_lines(
         flow_path_expansion_costs,
         existing_lines_df,
         investment_periods,
         year_type,
         wacc,
         asset_lifetime,
+        id_column="flow_path",
+        match_column="name",
     )
 
     # Expected result structure - use a fixed capital_cost for assertion purposes
     # The actual values depend on the annuitization formula
     expected_result_csv = """
-    name,                 carrier,  bus0,    bus1,    s_nom,  s_nom_extendable,  s_nom_max,  build_year,  lifetime
-    PathB-PathC_exp_2026, AC,       NodeB,   NodeC,   0.0,    True,              800,        2026,        30
-    PathA-PathB_exp_2027, AC,       NodeA,   NodeB,   0.0,    True,              500,        2027,        30
-    PathB-PathC_exp_2027, AC,       NodeB,   NodeC,   0.0,    True,              800,        2027,        30
+    name,                 bus0,   bus1,  carrier, s_nom,  s_nom_extendable,  build_year,  lifetime
+    NodeB-NodeC_exp_2026, NodeB, NodeC,  AC,      0.0,    True,              2026,        30
+    NodeA-NodeB_exp_2027, NodeA, NodeB,  AC,      0.0,    True,              2027,        30
+    NodeB-NodeC_exp_2027, NodeB, NodeC,  AC,      0.0,    True,              2027,        30
     """
     expected_result = csv_str_to_df(expected_result_csv)
 
     # Sort both result and expected result for comparison
     result = result.sort_values(["name"]).reset_index(drop=True)
     expected_result = expected_result.sort_values(["name"]).reset_index(drop=True)
+
+    # Check capital costs separately - should be greater than 0
+    assert all(result["capital_cost"] > 0)
+    result = result.drop(columns="capital_cost")
 
     # Check that column names match
     assert set(expected_result.columns).issubset(set(result.columns))
@@ -99,11 +104,8 @@ def test_translate_flow_path_expansion_costs_to_lines(csv_str_to_df):
             check_names=False,  # Ignore index names
         )
 
-    # Check capital costs separately - should be greater than 0
-    assert all(result["capital_cost"] > 0)
 
-
-def test_translate_flow_path_expansion_costs_to_lines_empty(csv_str_to_df):
+def test_translate_expansion_costs_to_lines_empty(csv_str_to_df):
     """Test that empty flow path expansion costs result in empty DataFrame."""
     # Create empty DataFrame
     flow_path_expansion_costs_csv = """
@@ -112,26 +114,27 @@ def test_translate_flow_path_expansion_costs_to_lines_empty(csv_str_to_df):
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_lines_csv = """
-    name,        carrier,  bus0,    bus1,    s_nom
-    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    name,                 carrier,  bus0,    bus1,    s_nom
+    PathA-PathB_existing, AC,       NodeA,   NodeB,   1000
     """
     existing_lines_df = csv_str_to_df(existing_lines_csv)
 
-    # Call the function with empty data
-    result = _translate_flow_path_expansion_costs_to_lines(
+    result = _translate_expansion_costs_to_lines(
         flow_path_expansion_costs,
         existing_lines_df,
         [2026],
         "fy",
         0.07,
         30,
+        id_column="flow_path",
+        match_column="name",
     )
 
     # The result should be an empty DataFrame
     assert result.empty
 
 
-def test_translate_flow_path_expansion_costs_to_lines_no_matching_years(csv_str_to_df):
+def test_translate_expansion_costs_to_lines_no_matching_years(csv_str_to_df):
     """Test when none of the expansion costs match the investment periods."""
     # Create sample data for testing
     flow_path_expansion_costs_csv = """
@@ -141,8 +144,8 @@ def test_translate_flow_path_expansion_costs_to_lines_no_matching_years(csv_str_
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_lines_csv = """
-    name,        carrier,  bus0,    bus1,    s_nom
-    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    name,                 carrier,  bus0,    bus1,    s_nom
+    PathA-PathB_existing, AC,       NodeA,   NodeB,   1000
     """
     existing_lines_df = csv_str_to_df(existing_lines_csv)
 
@@ -152,14 +155,16 @@ def test_translate_flow_path_expansion_costs_to_lines_no_matching_years(csv_str_
     wacc = 0.07
     asset_lifetime = 30
 
-    # Call the function
-    result = _translate_flow_path_expansion_costs_to_lines(
+    # Call the function with updated parameters
+    result = _translate_expansion_costs_to_lines(
         flow_path_expansion_costs,
         existing_lines_df,
         investment_periods,
         year_type,
         wacc,
         asset_lifetime,
+        id_column="flow_path",
+        match_column="name",
     )
 
     # The result should be an empty DataFrame since no years match
@@ -283,9 +288,7 @@ def test_translate_flow_paths_to_lines_without_expansion(csv_str_to_df):
         )
 
 
-def test_translate_flow_path_expansion_costs_to_lines_calendar_year_error(
-    csv_str_to_df,
-):
+def test_translate_expansion_costs_to_lines_calendar_year_error(csv_str_to_df):
     """Test that calendar year type raises a NotImplementedError."""
     # Create sample data
     flow_path_expansion_costs_csv = """
@@ -295,8 +298,8 @@ def test_translate_flow_path_expansion_costs_to_lines_calendar_year_error(
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_lines_csv = """
-    name,        carrier,  bus0,    bus1,    s_nom
-    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    name,                 carrier,  bus0,    bus1,    s_nom
+    PathA-PathB_existing, AC,       NodeA,   NodeB,   1000
     """
     existing_lines_df = csv_str_to_df(existing_lines_csv)
 
@@ -307,19 +310,21 @@ def test_translate_flow_path_expansion_costs_to_lines_calendar_year_error(
 
     # Check that the correct error is raised
     with pytest.raises(
-        NotImplementedError, match="Calendar year cost mapping not yet implemented"
+        NotImplementedError, match="Calendar years not implement for transmission costs"
     ):
-        _translate_flow_path_expansion_costs_to_lines(
+        _translate_expansion_costs_to_lines(
             flow_path_expansion_costs,
             existing_lines_df,
             investment_periods,
             year_type,
             wacc,
             asset_lifetime,
+            id_column="flow_path",
+            match_column="name",
         )
 
 
-def test_translate_flow_path_expansion_costs_to_lines_invalid_year_type(csv_str_to_df):
+def test_translate_expansion_costs_to_lines_invalid_year_type(csv_str_to_df):
     """Test that an invalid year type raises a ValueError."""
     # Create sample data
     flow_path_expansion_costs_csv = """
@@ -329,8 +334,8 @@ def test_translate_flow_path_expansion_costs_to_lines_invalid_year_type(csv_str_
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_lines_csv = """
-    name,        carrier,  bus0,    bus1,    s_nom
-    PathA-PathB, AC,       NodeA,   NodeB,   1000
+    name,                 carrier,  bus0,    bus1,    s_nom
+    PathA-PathB_existing, AC,       NodeA,   NodeB,   1000
     """
     existing_lines_df = csv_str_to_df(existing_lines_csv)
 
@@ -341,11 +346,13 @@ def test_translate_flow_path_expansion_costs_to_lines_invalid_year_type(csv_str_
 
     # Check that the correct error is raised
     with pytest.raises(ValueError, match="Unknown year_type"):
-        _translate_flow_path_expansion_costs_to_lines(
+        _translate_expansion_costs_to_lines(
             flow_path_expansion_costs,
             existing_lines_df,
             investment_periods,
             year_type,
             wacc,
             asset_lifetime,
+            id_column="flow_path",
+            match_column="name",
         )
