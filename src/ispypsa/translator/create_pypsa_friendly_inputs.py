@@ -31,7 +31,7 @@ from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_RHS_TABLES,
 )
 from ispypsa.translator.renewable_energy_zones import (
-    _translate_renewable_energy_zone_build_limits_to_flow_paths,
+    _translate_renewable_energy_zone_build_limits_lines,
 )
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
@@ -205,12 +205,10 @@ def create_pypsa_friendly_inputs(
     if config.network.nodes.rezs == "discrete_nodes":
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
         lines.append(
-            _translate_renewable_energy_zone_build_limits_to_flow_paths(
+            _translate_renewable_energy_zone_build_limits_lines(
                 ispypsa_tables["renewable_energy_zones"],
-                config.network.rez_transmission_expansion,
-                config.wacc,
-                config.network.annuitisation_lifetime,
-                config.network.rez_to_sub_region_transmission_default_limit,
+                ispypsa_tables["rez_transmission_expansion_costs"],
+                config,
             )
         )
 
