@@ -128,8 +128,9 @@ def _translate_expansion_costs_to_lines(
             yy_part = year_part.split("_")[1]  # e.g., "26"
             return 2000 + int(yy_part)  # e.g., 2026, as per spec
         elif year_type == "calendar":
-            # For calendar year format (simple year)
-            return int(year_part)
+            raise NotImplementedError(
+                f"Calendar years not implement for transmission costs"
+            )
         else:
             raise ValueError(f"Unknown year_type: {year_type}")
 

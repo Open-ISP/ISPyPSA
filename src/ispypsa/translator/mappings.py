@@ -19,6 +19,7 @@ _LINE_ATTRIBUTES = {
 _REZ_LINE_ATTRIBUTES = {
     "rez_id": "bus0",
     "isp_sub_region_id": "bus1",
+    "carrier": "carrier",
     "rez_transmission_network_limit_summer_typical": "s_nom",
     "indicative_transmission_expansion_cost_$/mw": "capital_cost",
 }
