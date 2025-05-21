@@ -310,7 +310,8 @@ def test_translate_expansion_costs_to_lines_calendar_year_error(csv_str_to_df):
 
     # Check that the correct error is raised
     with pytest.raises(
-        NotImplementedError, match="Calendar years not implement for transmission costs"
+        NotImplementedError,
+        match="Calendar years not implemented for transmission costs",
     ):
         _translate_expansion_costs_to_lines(
             flow_path_expansion_costs,

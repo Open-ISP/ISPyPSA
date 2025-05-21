@@ -33,11 +33,6 @@ _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "coefficient": "coefficient",
 }
 
-_CUSTOM_CONSTRAINT_EXPANSION_COSTS = [
-    "rez_group_constraints_expansion_costs",
-    "rez_transmission_limit_constraints_expansion_costs",
-]
-
 _CUSTOM_CONSTRAINT_RHS_TABLES = [
     "rez_group_constraints_rhs",
     "rez_transmission_limit_constraints_rhs",
