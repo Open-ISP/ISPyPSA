@@ -77,7 +77,7 @@ def test_template_rez_transmission_costs_simple_least_cost_option():
     }
     scenario = "Progressive Change"
     # Run function
-    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    result = _template_rez_transmission_costs(iasr_tables, scenario, ["SWV1", "SWQLD1"])
     # Check least cost options are chosen for SWQLD1 and SWV1
     swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
     swv_row = result[result["rez_constraint_id"] == "SWV1"]
@@ -163,7 +163,7 @@ def test_template_rez_transmission_costs_prep_activities_chosen():
     }
     scenario = "Progressive Change"
     # Run function
-    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    result = _template_rez_transmission_costs(iasr_tables, scenario, ["SWV1", "SWQLD1"])
     # Check that the prep activity is chosen for SWQLD1 and SWV1
     swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
     swv_row = result[result["rez_constraint_id"] == "SWV1"]
@@ -224,7 +224,7 @@ def test_template_rez_transmission_costs_use_first_year_with_valid_costs():
         "rez_augmentation_costs_progressive_change_VIC": cost_table_swv,
     }
     scenario = "Progressive Change"
-    result = _template_rez_transmission_costs(iasr_tables, scenario)
+    result = _template_rez_transmission_costs(iasr_tables, scenario, ["SWV1", "SWQLD1"])
     # SWQLD1: Only 2025_26 has all non-nan costs, so selection is based on that year for all years
     swqld_row = result[result["rez_constraint_id"] == "SWQLD1"]
     assert swqld_row["option"].iloc[0] == "Option 1"

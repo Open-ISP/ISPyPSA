@@ -208,7 +208,9 @@ def _template_sub_regional_flow_path_costs(
 
 
 def _template_rez_transmission_costs(
-    iasr_tables: dict[str, pd.DataFrame], scenario: str
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
+    possible_rez_or_constraint_names,
 ) -> pd.DataFrame:
     """
     Process REZ augmentation options and cost forecasts to find least cost options for each REZ.
@@ -218,6 +220,9 @@ def _template_rez_transmission_costs(
             - Augmentation tables: columns include 'rez_constraint_id', 'option', 'additional_network_capacity_mw', etc.
             - Cost tables: columns include 'rez_constraint_id', 'option', and columns for each financial year (e.g., '2024-25', '2025-26', ...)
         scenario: str specifying the scenario name (e.g., "Step Change", "Progressive Change").
+        possible_rez_or_constraint_names: list of possible names that cost data should
+            map to. The cost data is known to contain typos so the names in the cost
+            data are fuzzy match to the names provided in this input variable.
 
     Returns:
         pd.DataFrame containing the least cost option for each REZ. Columns:
@@ -226,9 +231,15 @@ def _template_rez_transmission_costs(
             - additional_network_capacity_mw
             - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
     """
-    return process_transmission_costs(
+    rez_costs = process_transmission_costs(
         iasr_tables=iasr_tables, scenario=scenario, config=_REZ_CONFIG
     )
+    rez_costs["rez_constraint_id"] = _fuzzy_match_names(
+        rez_costs["rez_constraint_id"],
+        possible_rez_or_constraint_names,
+        task_desc="Processing rez transmission costs",
+    )
+    return rez_costs
 
 
 def process_transmission_costs(
