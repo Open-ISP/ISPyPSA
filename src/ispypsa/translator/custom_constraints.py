@@ -1,16 +1,78 @@
-from pathlib import Path
-
 import pandas as pd
 
-from ispypsa.translator.helpers import _annuitised_investment_costs
+from ispypsa.translator.lines import _translate_time_varying_expansion_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
-    _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
-    _CUSTOM_CONSTRAINT_LHS_TABLES,
-    _CUSTOM_CONSTRAINT_RHS_TABLES,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
 )
+
+
+def _translate_custom_constraints_generators(
+    custom_constraints: list[int],
+    rez_expansion_costs: pd.DataFrame,
+    wacc: float,
+    asset_lifetime: int,
+    investment_periods: list[int],
+    year_type: str,
+) -> pd.DataFrame:
+    """Translates REZ network expansion data into custom generators for modelling
+    rez constraint relaxation.
+
+    Args:
+        custom_constraints: list of custom constraints to create expansion generators
+            for.
+        rez_expansion_costs: pd.DataFrame with time-varying expansion costs.
+        wacc: float indicating the weighted average coast of capital.
+        asset_lifetime: int specifying the nominal asset lifetime in years.
+        investment_periods: list of investment years for time-varying costs.
+        year_type: temporal configuration ("fy" or "calendar") for time-varying costs.
+
+    Returns: pd.DataFrame
+    """
+    rez_expansion_costs = rez_expansion_costs[
+        rez_expansion_costs["rez_constraint_id"].isin(custom_constraints)
+    ]
+
+    expansion_generators = _translate_time_varying_expansion_costs(
+        expansion_costs=rez_expansion_costs,
+        cost_column_suffix="_$/mw",
+        investment_periods=investment_periods,
+        year_type=year_type,
+        wacc=wacc,
+        asset_lifetime=asset_lifetime,
+    )
+
+    expansion_generators = expansion_generators.rename(
+        columns={
+            "rez_constraint_id": "constraint_name",
+            "investment_year": "build_year",
+        }
+    )
+
+    expansion_generators["name"] = (
+        expansion_generators["constraint_name"]
+        + "_exp_"
+        + expansion_generators["build_year"].astype(str)
+    )
+    expansion_generators["bus"] = "bus_for_custom_constraint_gens"
+    expansion_generators["p_nom"] = 0.0
+    expansion_generators["p_nom_extendable"] = True
+    expansion_generators["lifetime"] = asset_lifetime
+
+    # Keep only the columns needed for PyPSA generators
+    expansion_cols = [
+        "name",
+        "constraint_name",
+        "bus",
+        "p_nom",
+        "p_nom_extendable",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+    ]
+    expansion_generators = expansion_generators[expansion_cols]
+    return expansion_generators.reset_index(drop=True)
 
 
 def _combine_custom_constraints_tables(custom_constraint_tables: list[pd.DataFrame]):
@@ -34,55 +96,6 @@ def _combine_custom_constraints_tables(custom_constraint_tables: list[pd.DataFra
         combined_data.append(table)
     combined_data = pd.concat(combined_data)
     return combined_data
-
-
-def _translate_custom_constraints_generators(
-    custom_constraint_generators: list[pd.DataFrame],
-    expansion_on: bool,
-    wacc: float,
-    asset_lifetime: int,
-) -> pd.DataFrame:
-    """Combines all tables specifying the expansion costs of custom constraint
-    rhs values into a single pd.Dataframe formatting the data so the rhs
-    can be represented by PyPSA generator components. PyPSA can then invest in
-    additional capacity for the generators which is used in the custom constraints
-    to represent additional transmission capacity.
-
-    Args:
-        custom_constraint_generators: list of pd.DataFrames in `ISPyPSA` detailing
-            custom constraint generator expansion costs.
-        expansion_on: bool indicating if transmission line expansion is considered.
-        wacc: float, as fraction, indicating the weighted average coast of capital for
-            transmission line investment, for the purposes of annuitising capital
-            costs.
-        asset_lifetime: int specifying the nominal asset lifetime in years or the
-            purposes of annuitising capital costs.
-
-    Returns: pd.DataFrame
-    """
-    custom_constraint_generators = _combine_custom_constraints_tables(
-        custom_constraint_generators
-    )
-
-    custom_constraint_generators = custom_constraint_generators.rename(
-        columns={"variable_name": "name"}
-    )
-
-    custom_constraint_generators["bus"] = "bus_for_custom_constraint_gens"
-    custom_constraint_generators["p_nom"] = 0.0
-
-    # The generator size is only used for additional transmission capacity, so it
-    # initial size is 0.0.
-    custom_constraint_generators["capital_cost"] = custom_constraint_generators[
-        "capital_cost"
-    ].apply(lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime))
-
-    # not extendable by default
-    custom_constraint_generators["p_nom_extendable"] = False
-    mask = ~custom_constraint_generators["capital_cost"].isna()
-    custom_constraint_generators.loc[mask, "p_nom_extendable"] = expansion_on
-
-    return custom_constraint_generators
 
 
 def _translate_custom_constraint_rhs(
@@ -131,3 +144,24 @@ def _translate_custom_constraint_lhs(
         columns="term_type"
     )
     return custom_constraint_lhs_values
+
+
+def _translate_custom_constraint_generators_to_lhs(
+    custom_constraint_generators: pd.DataFrame,
+) -> pd.DataFrame:
+    """Create the lhs definitions to match the generators used to relax custom
+    constraints
+
+    Args:
+        custom_constraint_generators: pd.DataFrames detailing the
+            custom constraint generators
+
+    Returns: pd.DataFrame
+    """
+    custom_constraint_generators = custom_constraint_generators.rename(
+        columns={"constraint_name": "constraint_id", "name": "term_id"}
+    )
+    custom_constraint_generators["term_type"] = "generator_capacity"
+    custom_constraint_generators["coefficient"] = -1.0
+    col_order = ["constraint_id", "term_type", "term_id", "coefficient"]
+    return custom_constraint_generators.loc[:, col_order]

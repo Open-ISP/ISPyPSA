@@ -141,8 +141,18 @@ def create_ispypsa_inputs_template(
         iasr_tables["initial_build_limits"]
     )
 
+    possible_rez_or_constraint_names = list(
+        set(
+            list(template["renewable_energy_zones"]["rez_id"])
+            + list(template["rez_group_constraints_rhs"]["constraint_id"])
+            + list(template["rez_transmission_limit_constraints_rhs"]["constraint_id"])
+        )
+    )
+
     template["rez_transmission_expansion_costs"] = _template_rez_transmission_costs(
-        iasr_tables, scenario
+        iasr_tables,
+        scenario,
+        possible_rez_or_constraint_names,
     )
 
     template["ecaa_generators"] = _template_ecaa_generators_static_properties(

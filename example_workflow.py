@@ -100,7 +100,6 @@ update_network_timeseries(
     operational_timeseries_location,
 )
 
-
 network.optimize.fix_optimal_capacities()
 
 # Never use network.optimize() as this will remove custom constraints.
