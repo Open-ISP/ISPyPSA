@@ -33,14 +33,14 @@ _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "coefficient": "coefficient",
 }
 
-_CUSTOM_CONSTRAINT_RHS_TABLES = [
+_CUSTOM_GROUP_CONSTRAINTS = [
     "rez_group_constraints_rhs",
-    "rez_transmission_limit_constraints_rhs",
+    "rez_group_constraints_lhs",
 ]
 
-_CUSTOM_CONSTRAINT_LHS_TABLES = [
-    "rez_group_constraints_lhs",
+_CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS = [
     "rez_transmission_limit_constraints_lhs",
+    "rez_transmission_limit_constraints_rhs",
 ]
 
 _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {

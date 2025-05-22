@@ -15,10 +15,7 @@ from ispypsa.translator.buses import (
     create_pypsa_friendly_bus_demand_timeseries,
 )
 from ispypsa.translator.custom_constraints import (
-    _translate_custom_constraint_generators_to_lhs,
-    _translate_custom_constraint_lhs,
-    _translate_custom_constraint_rhs,
-    _translate_custom_constraints_generators,
+    _translate_custom_constraints,
 )
 from ispypsa.translator.generators import (
     _create_unserved_energy_generators,
@@ -26,10 +23,6 @@ from ispypsa.translator.generators import (
     create_pypsa_friendly_existing_generator_timeseries,
 )
 from ispypsa.translator.lines import _translate_flow_paths_to_lines
-from ispypsa.translator.mappings import (
-    _CUSTOM_CONSTRAINT_LHS_TABLES,
-    _CUSTOM_CONSTRAINT_RHS_TABLES,
-)
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_lines,
 )
@@ -40,7 +33,7 @@ from ispypsa.translator.snapshots import (
 )
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
-_BASE_TRANSLATOR_OUPUTS = [
+_BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
     "investment_period_weights",
     "buses",
@@ -222,35 +215,7 @@ def create_pypsa_friendly_inputs(
     else:
         pypsa_inputs["lines"] = pd.DataFrame()
 
-    custom_constraint_rhs_tables = [
-        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_RHS_TABLES
-    ]
-    pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
-        custom_constraint_rhs_tables
-    )
-
-    if config.network.rez_transmission_expansion:
-        pypsa_inputs["custom_constraints_generators"] = (
-            _translate_custom_constraints_generators(
-                list(pypsa_inputs["custom_constraints_rhs"]["constraint_name"]),
-                ispypsa_tables["rez_transmission_expansion_costs"],
-                config.wacc,
-                config.network.annuitisation_lifetime,
-                config.temporal.capacity_expansion.investment_periods,
-                config.temporal.year_type,
-            )
-        )
-
-    custom_constraint_generators_lhs = _translate_custom_constraint_generators_to_lhs(
-        pypsa_inputs["custom_constraints_generators"]
-    )
-
-    custom_constraint_lhs_tables = [
-        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_LHS_TABLES
-    ]
-    pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
-        custom_constraint_lhs_tables + [custom_constraint_generators_lhs]
-    )
+    pypsa_inputs.update(_translate_custom_constraints(config, ispypsa_tables))
 
     return pypsa_inputs
 
@@ -371,7 +336,7 @@ def create_pypsa_friendly_timeseries_inputs(
 
 
 def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
-    files = _BASE_TRANSLATOR_OUPUTS
+    files = _BASE_TRANSLATOR_OUTPUTS
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files
