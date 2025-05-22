@@ -1,11 +1,115 @@
 import pandas as pd
 
+from ispypsa.config import (
+    ModelConfig,
+)
 from ispypsa.translator.lines import _translate_time_varying_expansion_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
+    _CUSTOM_GROUP_CONSTRAINTS,
+    _CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS,
 )
+
+
+def _translate_custom_constraints(
+    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
+):
+    """Translate custom constrain tables into a PyPSA friendly format.
+
+    Args:
+        config: `ISPyPSA` `ispypsa.config.ModelConfig` object
+        ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
+            The relevant tables for this function are:
+                - rez_group_constraints_rhs
+                - rez_group_constraints_lhs
+                - rez_transmission_limit_constraints_lhs
+                - rez_transmission_limit_constraints_rhs
+            Not all of these tables need to be present but if one of the tables in
+            pair is present an error will be raised if the other is missing.
+
+    Returns: dictionary of dataframes in the `PyPSA` friendly format, with the relevant
+        tables for custom constraint.
+    """
+    _check_custom_constraint_table_sets_are_complete(ispypsa_tables)
+
+    pypsa_inputs = {}
+
+    all_custom_constraint_tables = (
+        _CUSTOM_GROUP_CONSTRAINTS + _CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS
+    )
+
+    present_custom_constraint_tables = [
+        table for table in all_custom_constraint_tables if table in pypsa_inputs
+    ]
+
+    if len(present_custom_constraint_tables) != 0:
+        custom_constraint_rhs_tables = [
+            ispypsa_tables[table]
+            for table in all_custom_constraint_tables
+            if "_rhs" in table
+        ]
+        pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
+            custom_constraint_rhs_tables
+        )
+
+        custom_constraint_lhs_tables = [
+            ispypsa_tables[table]
+            for table in all_custom_constraint_tables
+            if "_lhs" in table
+        ]
+
+        if config.network.rez_transmission_expansion:
+            pypsa_inputs["custom_constraints_generators"] = (
+                _translate_custom_constraints_generators(
+                    list(pypsa_inputs["custom_constraints_rhs"]["constraint_name"]),
+                    ispypsa_tables["rez_transmission_expansion_costs"],
+                    config.wacc,
+                    config.network.annuitisation_lifetime,
+                    config.temporal.capacity_expansion.investment_periods,
+                    config.temporal.year_type,
+                )
+            )
+
+            custom_constraint_generators_lhs = (
+                _translate_custom_constraint_generators_to_lhs(
+                    pypsa_inputs["custom_constraints_generators"]
+                )
+            )
+
+            custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
+
+        pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
+            custom_constraint_lhs_tables
+        )
+
+    return pypsa_inputs
+
+
+def _check_custom_constraint_table_sets_are_complete(
+    ispypsa_tables: dict[str, pd.DataFrame],
+):
+    """Raise an error if a partially complete set of input tables has been provided
+    for a set of custom constraints.
+    """
+
+    def check_for_partially_complete_inputs(input_table_list, input_set_name):
+        tables_present = sum(
+            table in ispypsa_tables.keys() for table in input_table_list
+        )
+        if tables_present != len(input_table_list) and tables_present > 0:
+            raise ValueError(
+                f"An incomplete set of inputs have been provided for {input_set_name}"
+            )
+
+    check_for_partially_complete_inputs(
+        _CUSTOM_GROUP_CONSTRAINTS, "custom group constraints"
+    )
+
+    check_for_partially_complete_inputs(
+        _CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS, "custom transmission limit constraints"
+    )
 
 
 def _translate_custom_constraints_generators(

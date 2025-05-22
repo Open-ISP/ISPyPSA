@@ -15,7 +15,7 @@ def csv_str_to_df():
     def func(csv_str, **kwargs):
         """Helper function to convert a CSV string to a DataFrame."""
         # Remove spaces and tabs that have been included for readability.
-        csv_str = csv_str.replace(" ", "").replace("\t", "")
+        csv_str = csv_str.replace(" ", "").replace("\t", "").replace("__", " ")
         return pd.read_csv(io.StringIO(csv_str), **kwargs)
 
     return func
