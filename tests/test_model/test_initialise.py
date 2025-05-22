@@ -13,7 +13,7 @@ def test_network_initialisation(tmp_path):
     snapshots = _create_complete_snapshots_index(
         start_year=2020,
         end_year=2020,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
     snapshots = _add_investment_periods(snapshots, [2020], "fy")

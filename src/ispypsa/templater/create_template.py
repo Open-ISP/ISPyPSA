@@ -10,6 +10,8 @@ from ispypsa.templater.energy_policy_targets import (
 )
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
+    _template_rez_transmission_costs,
+    _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
 from ispypsa.templater.nodes import (
@@ -101,9 +103,7 @@ def create_ispypsa_inputs_template(
 
     template = {}
 
-    transmission_expansion_costs = manually_extracted_tables.pop(
-        "transmission_expansion_costs"
-    )
+    # Remove popping transmission_expansion_costs as it's no longer needed
     template.update(manually_extracted_tables)
 
     if regional_granularity == "sub_regions":
@@ -112,7 +112,11 @@ def create_ispypsa_inputs_template(
         )
 
         template["flow_paths"] = _template_sub_regional_flow_paths(
-            iasr_tables["flow_path_transfer_capability"], transmission_expansion_costs
+            iasr_tables["flow_path_transfer_capability"]
+        )
+
+        template["flow_path_expansion_costs"] = _template_sub_regional_flow_path_costs(
+            iasr_tables, scenario
         )
 
     elif regional_granularity == "nem_regions":
@@ -135,6 +139,20 @@ def create_ispypsa_inputs_template(
 
     template["renewable_energy_zones"] = _template_rez_build_limits(
         iasr_tables["initial_build_limits"]
+    )
+
+    possible_rez_or_constraint_names = list(
+        set(
+            list(template["renewable_energy_zones"]["rez_id"])
+            + list(template["rez_group_constraints_rhs"]["constraint_id"])
+            + list(template["rez_transmission_limit_constraints_rhs"]["constraint_id"])
+        )
+    )
+
+    template["rez_transmission_expansion_costs"] = _template_rez_transmission_costs(
+        iasr_tables,
+        scenario,
+        possible_rez_or_constraint_names,
     )
 
     template["ecaa_generators"] = _template_ecaa_generators_static_properties(
