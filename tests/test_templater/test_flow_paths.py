@@ -5,6 +5,7 @@ import pandas as pd
 from ispypsa.templater import load_manually_extracted_tables
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
+    _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
 
@@ -38,7 +39,7 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path_name
+            if name in flow_paths_template.flow_path
         ]
     )
     assert len(flow_paths_template) == 6
@@ -50,9 +51,8 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         "flow_path_transfer_capability.csv"
     )
     flow_path_transfer_capability = pd.read_csv(filepath)
-    manual_tables = load_manually_extracted_tables("6.0")
     flow_paths_template = _template_sub_regional_flow_paths(
-        flow_path_transfer_capability, manual_tables["transmission_expansion_costs"]
+        flow_path_transfer_capability
     )
     assert all(
         [
@@ -75,8 +75,8 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         [
             True
             for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path_name
+            if name in flow_paths_template.flow_path
         ]
     )
     assert len(flow_paths_template) == 14
-    assert len(flow_paths_template.columns) == 6
+    assert len(flow_paths_template.columns) == 5

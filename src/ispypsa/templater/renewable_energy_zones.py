@@ -70,11 +70,13 @@ def _template_rez_build_limits(
             "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_solar_resource_limit_violation_penalty_factor_$/mw",
         }
     )
+    rez_build_limits["carrier"] = "AC"
     rez_build_limits = rez_build_limits.loc[
         :,
         [
             "rez_id",
             "isp_sub_region_id",
+            "carrier",
             "wind_generation_total_limits_mw_high",
             "wind_generation_total_limits_mw_medium",
             "wind_generation_total_limits_mw_offshore_floating",

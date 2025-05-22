@@ -7,11 +7,11 @@ _GENERATOR_ATTRIBUTES = {
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
 _LINE_ATTRIBUTES = {
-    "flow_path_name": "name",
+    "flow_path": "name",
+    "carrier": "carrier",
     "node_from": "bus0",
     "node_to": "bus1",
     "forward_direction_mw_summer_typical": "s_nom",
-    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
     # TODO: implement reverse direction limit
     # "reverse_direction_mw_summer_typical": ""
 }
@@ -19,6 +19,7 @@ _LINE_ATTRIBUTES = {
 _REZ_LINE_ATTRIBUTES = {
     "rez_id": "bus0",
     "isp_sub_region_id": "bus1",
+    "carrier": "carrier",
     "rez_transmission_network_limit_summer_typical": "s_nom",
     "indicative_transmission_expansion_cost_$/mw": "capital_cost",
 }
@@ -32,19 +33,14 @@ _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "coefficient": "coefficient",
 }
 
-_CUSTOM_CONSTRAINT_EXPANSION_COSTS = [
-    "rez_group_constraints_expansion_costs",
-    "rez_transmission_limit_constraints_expansion_costs",
-]
-
-_CUSTOM_CONSTRAINT_RHS_TABLES = [
+_CUSTOM_GROUP_CONSTRAINTS = [
     "rez_group_constraints_rhs",
-    "rez_transmission_limit_constraints_rhs",
+    "rez_group_constraints_lhs",
 ]
 
-_CUSTOM_CONSTRAINT_LHS_TABLES = [
-    "rez_group_constraints_lhs",
+_CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS = [
     "rez_transmission_limit_constraints_lhs",
+    "rez_transmission_limit_constraints_rhs",
 ]
 
 _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {

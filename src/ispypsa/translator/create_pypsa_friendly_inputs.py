@@ -15,9 +15,7 @@ from ispypsa.translator.buses import (
     create_pypsa_friendly_bus_demand_timeseries,
 )
 from ispypsa.translator.custom_constraints import (
-    _translate_custom_constraint_lhs,
-    _translate_custom_constraint_rhs,
-    _translate_custom_constraints_generators,
+    _translate_custom_constraints,
 )
 from ispypsa.translator.generators import (
     _create_unserved_energy_generators,
@@ -25,13 +23,8 @@ from ispypsa.translator.generators import (
     create_pypsa_friendly_existing_generator_timeseries,
 )
 from ispypsa.translator.lines import _translate_flow_paths_to_lines
-from ispypsa.translator.mappings import (
-    _CUSTOM_CONSTRAINT_EXPANSION_COSTS,
-    _CUSTOM_CONSTRAINT_LHS_TABLES,
-    _CUSTOM_CONSTRAINT_RHS_TABLES,
-)
 from ispypsa.translator.renewable_energy_zones import (
-    _translate_renewable_energy_zone_build_limits_to_flow_paths,
+    _translate_renewable_energy_zone_build_limits_lines,
 )
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
@@ -40,7 +33,7 @@ from ispypsa.translator.snapshots import (
 )
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
-_BASE_TRANSLATOR_OUPUTS = [
+_BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
     "investment_period_weights",
     "buses",
@@ -205,24 +198,15 @@ def create_pypsa_friendly_inputs(
     if config.network.nodes.rezs == "discrete_nodes":
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
         lines.append(
-            _translate_renewable_energy_zone_build_limits_to_flow_paths(
+            _translate_renewable_energy_zone_build_limits_lines(
                 ispypsa_tables["renewable_energy_zones"],
-                config.network.rez_transmission_expansion,
-                config.wacc,
-                config.network.annuitisation_lifetime,
-                config.network.rez_to_sub_region_transmission_default_limit,
+                ispypsa_tables["rez_transmission_expansion_costs"],
+                config,
             )
         )
 
     if config.network.nodes.regional_granularity != "single_region":
-        lines.append(
-            _translate_flow_paths_to_lines(
-                ispypsa_tables["flow_paths"],
-                config.network.transmission_expansion,
-                config.wacc,
-                config.network.annuitisation_lifetime,
-            )
-        )
+        lines.append(_translate_flow_paths_to_lines(ispypsa_tables, config))
 
     pypsa_inputs["buses"] = pd.concat(buses)
 
@@ -231,29 +215,7 @@ def create_pypsa_friendly_inputs(
     else:
         pypsa_inputs["lines"] = pd.DataFrame()
 
-    custom_constraint_lhs_tables = [
-        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_LHS_TABLES
-    ]
-    pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
-        custom_constraint_lhs_tables
-    )
-    custom_constraint_rhs_tables = [
-        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_RHS_TABLES
-    ]
-    pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
-        custom_constraint_rhs_tables
-    )
-    custom_constraint_generators = [
-        ispypsa_tables[table] for table in _CUSTOM_CONSTRAINT_EXPANSION_COSTS
-    ]
-    pypsa_inputs["custom_constraints_generators"] = (
-        _translate_custom_constraints_generators(
-            custom_constraint_generators,
-            config.network.rez_transmission_expansion,
-            config.wacc,
-            config.network.annuitisation_lifetime,
-        )
-    )
+    pypsa_inputs.update(_translate_custom_constraints(config, ispypsa_tables))
 
     return pypsa_inputs
 
@@ -374,7 +336,7 @@ def create_pypsa_friendly_timeseries_inputs(
 
 
 def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
-    files = _BASE_TRANSLATOR_OUPUTS
+    files = _BASE_TRANSLATOR_OUTPUTS
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files
