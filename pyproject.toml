@@ -17,7 +17,7 @@ dependencies = [
     "pyarrow>=18.0.0",
     "tables>=3.10.1",
     "isp-trace-parser>=1.0.3",
-    "isp-workbook-parser",
+    "isp-workbook-parser>=2.5.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -49,9 +49,6 @@ dev-dependencies = [
     "sphinx-togglebutton>=0.3.2",
     "sphinx-autobuild>=2024.9.3",
 ]
-
-[tool.uv.sources]
-isp-workbook-parser = { path = "../isp-workbook-parser", editable = true }
 
 [tool.hatch.metadata]
 allow-direct-references = true

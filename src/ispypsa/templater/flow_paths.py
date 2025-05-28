@@ -1,6 +1,5 @@
 import logging
 import re
-from pathlib import Path
 
 import pandas as pd
 
@@ -25,8 +24,6 @@ def _template_sub_regional_flow_paths(
     Args:
         flow_path_capabilities: pd.DataFrame IASR table specifying the flow path
             transfer capabilities between subregions
-        transmission_expansion_costs: pd.DataFrame deprecated parameter, kept for
-            backward compatibility.
 
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional flow path template
@@ -186,14 +183,21 @@ def _template_sub_regional_flow_path_costs(
     iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> pd.DataFrame:
     """
-    Process flow path augmentation options and cost forecasts to find least cost options for each flow path.
+    Process flow path augmentation options and cost forecasts to find the least cost
+    options for each flow path, return results in `ISPyPSA` format.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames include:
-            - Augmentation tables: columns include 'flow_path', 'option_name', 'transfer_increase_forward_direction_mw', 'transfer_increase_reverse_direction_mw', etc.
-            - Cost tables: columns include 'flow_path', 'option_name', and financial year columns
-            - Preparatory activities: columns include 'flow_path', and financial year columns
-            - Actionable projects: columns include 'flow_path', and financial year columns
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames
+            include:
+                - Augmentation tables: columns include 'flow_path', 'option_name',
+                 'transfer_increase_forward_direction_mw', and
+                 'transfer_increase_reverse_direction_mw'
+                - Cost tables: columns include 'flow_path', 'option_name', and
+                  financial year columns
+                - Preparatory activities: columns include 'flow_path', and financial
+                  year columns
+                - Actionable projects: columns include 'flow_path', and financial year
+                  columns
 
     Returns:
         pd.DataFrame containing the least cost option for each flow path. Columns:
@@ -213,13 +217,18 @@ def _template_rez_transmission_costs(
     possible_rez_or_constraint_names,
 ) -> pd.DataFrame:
     """
-    Process REZ augmentation options and cost forecasts to find least cost options for each REZ.
+    Process REZ augmentation options and cost forecasts to find least cost options for
+    each REZ, return results in `ISPyPSA` format.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames include:
-            - Augmentation tables: columns include 'rez_constraint_id', 'option', 'additional_network_capacity_mw', etc.
-            - Cost tables: columns include 'rez_constraint_id', 'option', and columns for each financial year (e.g., '2024-25', '2025-26', ...)
-        scenario: str specifying the scenario name (e.g., "Step Change", "Progressive Change").
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant DataFrames
+            include:
+                - Augmentation tables: columns include 'rez_constraint_id', 'option',
+                  and 'additional_network_capacity_mw'
+                - Cost tables: columns include 'rez_constraint_id', 'option', and
+                  columns for each financial year (e.g., '2024-25', '2025-26', ...)
+        scenario: str specifying the scenario name (e.g., "Step Change",
+            "Progressive Change").
         possible_rez_or_constraint_names: list of possible names that cost data should
             map to. The cost data is known to contain typos so the names in the cost
             data are fuzzy match to the names provided in this input variable.
@@ -253,12 +262,14 @@ def process_transmission_costs(
         scenario: str specifying the scenario name
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
-            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to
+              rez or flow path specific names
             - table_names: dict with augmentation and cost table lists
             - mappings: dict with mappings for preparatory activities and other data
 
     Returns:
-        pd.DataFrame containing the least cost options with standardized column structure
+        pd.DataFrame containing the least cost options with standardized column
+        structure
     """
     cost_scenario = _determine_cost_scenario(scenario)
 
@@ -270,12 +281,32 @@ def process_transmission_costs(
         iasr_tables=iasr_tables, cost_scenario=cost_scenario, config=config
     )
 
-    # Find least cost options
+    # Find the least cost options
     final_costs = _get_least_cost_options(
         aug_table=aug_table, cost_table=cost_table, config=config
     )
 
     return final_costs
+
+
+def _determine_cost_scenario(scenario: str) -> str:
+    """
+    Map ISP scenario to flow path/rez cost scenario.
+
+    Args:
+        scenario: str specifying the scenario name. Must be one of "Step Change",
+        "Green Energy Exports", or "Progressive Change".
+
+    Returns:
+        str specifying the internal scenario key (e.g.,
+        "step_change_and_green_energy_exports" or "progressive_change").
+    """
+    if scenario in ["Step Change", "Green Energy Exports"]:
+        return "step_change_and_green_energy_exports"
+    elif scenario == "Progressive Change":
+        return "progressive_change"
+    else:
+        raise ValueError(f"scenario: {scenario} not recognised.")
 
 
 def _get_augmentation_table(
@@ -285,10 +316,12 @@ def _get_augmentation_table(
     Concatenate and clean all augmentation tables for a given transmission type.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant tables must contain columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
-            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Relevant tables
+            must contain columns:
+                - id (flow_path or rez_constraint_id)
+                - option (option_name or option)
+                - capacity (nominal_flow_limit_increase_mw or
+                  additional_network_capacity_mw)
         config: dict with processing configuration containing:
             - in_coming_column_mappings: dict mapping standard column names to type-specific names
             - table_names: dict with augmentation table lists
@@ -309,7 +342,9 @@ def _get_augmentation_table(
         if table_name in iasr_tables
     ]
     if not aug_tables:
-        raise ValueError("No augmentation tables found in iasr_tables.")
+        raise ValueError(
+            f"No {config['transmission_tye']} augmentation tables found in iasr_tables."
+        )
     aug_table = pd.concat(aug_tables, ignore_index=True)
     aug_table = _clean_augmentation_table_column_names(aug_table, config)
     aug_table = _clean_augmentation_table_column_values(aug_table, config)
@@ -320,19 +355,22 @@ def _get_cost_table(
     iasr_tables: dict[str, pd.DataFrame], cost_scenario: str, config: dict
 ) -> pd.DataFrame:
     """
-    Combine all cost tables, preparatory activities, and actionable projects for a given scenario into a single DataFrame.
+    Combine all cost tables, preparatory activities, and actionable projects for a given
+    scenario into a single DataFrame.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Cost tables must have columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
-            - <financial year> (e.g., '2024-25', ...)
-        flow_path_scenario: str specifying the internal scenario key.
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Cost tables must
+            have columns:
+                - id (flow_path or rez_constraint_id)
+                - option (Option Name or Option)
+                - <financial year> (e.g., '2024-25', ...)
+        flow_path_scenario: str specifying the cost scenario name.
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
-            - column_mappings: dict mapping standard column names to type-specific names
+            - column_mappings: dict mapping standard column names to rez/flow path names
             - table_names: dict with cost table lists
-            - mappings: dict with mappings for preparatory activities and other data
+            - mappings: dict with option name mappings for preparatory activities and
+                actionable isp data
 
     Returns:
         pd.DataFrame containing the combined cost table. Columns:
@@ -346,18 +384,16 @@ def _get_cost_table(
     actionable_projects = _get_actionable_projects_table(
         iasr_tables, cost_scenario, config
     )
-    return _combine_cost_tables(
-        cost_table, prep_activities, actionable_projects, config
-    )
+    return _combine_cost_tables(cost_table, prep_activities, actionable_projects)
 
 
 def _get_least_cost_options(
     aug_table: pd.DataFrame, cost_table: pd.DataFrame, config: dict
 ) -> pd.DataFrame:
     """
-    For each transmission, select the augmentation option with the lowest cost per MW of increased capacity,
-    using the first year with complete costs for all options. The selected option and its cost per MW
-    (from that year) are used for all years.
+    For each transmission, select the augmentation option with the lowest cost per MW of
+    increased capacity, using the first year with complete costs for all options. The
+    selected option and its costs per MW are used for all years.
 
     Args:
         aug_table: pd.DataFrame containing columns:
@@ -370,7 +406,8 @@ def _get_least_cost_options(
             - <financial year> (e.g., '2024_25', ...)
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
-            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to
+            type-specific names
 
     Returns:
         pd.DataFrame containing columns:
@@ -418,24 +455,6 @@ def _get_least_cost_options(
     return final_costs
 
 
-def _determine_cost_scenario(scenario: str) -> str:
-    """
-    Map scenario string to internal scenario key used for table lookups.
-
-    Args:
-        scenario: str specifying the scenario name. Must be one of "Step Change", "Green Energy Exports", or "Progressive Change".
-
-    Returns:
-        str specifying the internal scenario key (e.g., "step_change_and_green_energy_exports" or "progressive_change").
-    """
-    if scenario in ["Step Change", "Green Energy Exports"]:
-        return "step_change_and_green_energy_exports"
-    elif scenario == "Progressive Change":
-        return "progressive_change"
-    else:
-        raise ValueError(f"scenario: {scenario} not recognised.")
-
-
 def _clean_augmentation_table_column_names(
     aug_table: pd.DataFrame, config: dict
 ) -> pd.DataFrame:
@@ -475,13 +494,14 @@ def _clean_augmentation_table_column_values(
         aug_table: pd.DataFrame containing transmission-specific columns
         config: dict with processing configuration containing:
             - transmission_type: str specifying the type of transmission
-            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to
+              flow path/rez names
 
     Returns:
         pd.DataFrame containing standardized columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
-            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+            - id
+            - option
+            - nominal_capacity_increase
     """
     transmission_type = config["transmission_type"]
 
@@ -510,21 +530,21 @@ def _get_cleaned_cost_tables(
     iasr_tables: dict[str, pd.DataFrame], cost_table_names: list, config: dict
 ) -> pd.DataFrame:
     """
-    Retrieve, clean, concatenate, and filter all cost tables for a scenario and transmission type.
+    Retrieve, clean, concatenate, and filter all cost tables for a scenario and
+    transmission type.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Each table is a DataFrame with columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
-            - <financial year> (e.g., '2024-25', ...)
-        cost_table_names: list of str specifying the names of cost tables to extract and clean.
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables.
+        cost_table_names: list of str specifying the names of cost tables to extract
+            and clean.
         config: dict with processing configuration containing:
-            - in_coming_column_mappings: dict mapping standard column names to type-specific names
+            - in_coming_column_mappings: dict mapping standard column names to
+              flow path / rez names
 
     Returns:
         pd.DataFrame containing the concatenated and filtered cost tables. Columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
+            - id
+            - option
             - <financial year> (e.g., '2024_25', ...)
     """
     missing = [t for t in cost_table_names if t not in iasr_tables]
@@ -558,17 +578,15 @@ def _get_prep_activities_table(
     Process the preparatory activities table for a given transmission type.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Table must have columns:
-            - id (flow_path or rez_constraint_id)
-            - <financial year> (e.g., '2024-25', ...)
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables.
         cost_scenario: str specifying the internal scenario key.
         config: dict with processing configuration containing:
             - mappings: dict with mappings for preparatory activities and other data
 
     Returns:
         pd.DataFrame containing the aggregated preparatory activities. Columns:
-            - id (flow_path or rez_constraint_id)
-            - option (option_name or option)
+            - id
+            - option
             - <financial year> (e.g., '2024_25', '2025_26', ...)
     """
     transmission_type = config["transmission_type"]
@@ -576,7 +594,7 @@ def _get_prep_activities_table(
         prep_activities_table_name = (
             f"flow_path_augmentation_costs_{cost_scenario}_preparatory_activities"
         )
-    elif transmission_type == "rez":
+    else:
         prep_activities_table_name = (
             f"rez_augmentation_costs_{cost_scenario}_preparatory_activities"
         )
@@ -655,12 +673,13 @@ def _get_actionable_projects_table(
     Process the actionable ISP projects table for flow paths.
 
     Args:
-        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Table must have columns:
-            - id (flow_path)
-            - <financial year> (e.g., '2024-25', ...)
+        iasr_tables: dict[str, pd.DataFrame] specifying IASR tables. Table must have
+            columns:
+                - id (flow_path)
+                - <financial year> (e.g., '2024-25', ...)
         cost_scenario: str specifying the internal scenario key.
         config: dict with processing configuration containing:
-            - mappings: dict with mappings for actionable projects and other data
+            - mappings: dict with mappings for actionable projects
 
     Returns:
         pd.DataFrame containing the actionable projects table. Columns:
@@ -730,17 +749,15 @@ def _combine_cost_tables(
     cost_table: pd.DataFrame,
     prep_activities: pd.DataFrame,
     actionable_projects: pd.DataFrame,
-    config: dict,
 ) -> pd.DataFrame:
     """
-    Combine the cost table, preparatory activities table, and actionable projects table into a single DataFrame.
+    Combine the cost table, preparatory activities table, and actionable projects table
+    into a single DataFrame.
 
     Args:
         cost_table: pd.DataFrame specifying the cost table.
         prep_activities: pd.DataFrame specifying the preparatory activities table.
         actionable_projects: pd.DataFrame specifying the actionable projects table.
-        config: dict with processing configuration containing:
-            - in_coming_column_mappings: dict mapping standard column names to type-specific names
 
     Returns:
         pd.DataFrame containing the combined cost table.

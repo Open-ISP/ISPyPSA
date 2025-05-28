@@ -17,7 +17,7 @@ from .helpers import (
 def _get_reference_node_locations(reference_nodes):
     # request and merge in substation coordinates for reference nodes
     # substation_coordinates = _request_transmission_substation_coordinates()
-    substation_coordinates = pd.DataFrame()
+    # substation_coordinates = pd.DataFrame()
     if not substation_coordinates.empty:
         reference_node_col = process.extractOne(
             "reference_node", reference_nodes.columns

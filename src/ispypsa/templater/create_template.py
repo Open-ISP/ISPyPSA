@@ -100,10 +100,8 @@ def create_ispypsa_inputs_template(
     Returns: dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa
         table docs)
     """
-
     template = {}
 
-    # Remove popping transmission_expansion_costs as it's no longer needed
     template.update(manually_extracted_tables)
 
     if regional_granularity == "sub_regions":
