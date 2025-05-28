@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 import numpy as np
 import pandas as pd
 
@@ -9,12 +7,10 @@ from ispypsa.translator.mappings import _LINE_ATTRIBUTES
 
 
 def _translate_flow_paths_to_lines(
-    ispypsa_tables: Dict[str, pd.DataFrame],
+    ispypsa_tables: dict[str, pd.DataFrame],
     config: ModelConfig,
 ) -> pd.DataFrame:
-    """Process network line data into a format aligned with PyPSA inputs.
-
-    Separates existing capacity from expansion options and handles financial year costs.
+    """Process network line data into the PyPSA friendly format.
 
     Args:
         ispypsa_tables: Dictionary of ISPyPSA DataFrames, expecting "flow_paths"
@@ -117,12 +113,12 @@ def _translate_expansion_costs_to_lines(
     # Prepare for merging with existing lines data
     pypsa_attributes_to_carry = ["bus0", "bus1", "carrier"]
 
-    # For merging, we need to handle the case where match_column might need cleaning
+    # remove "_existing" suffix from line names so we can match on the eixtsing line
+    # data.
     existing_lines_copy = existing_lines_df.copy()
-    if "_existing" in existing_lines_copy[match_column].iloc[0]:
-        existing_lines_copy[match_column] = existing_lines_copy[
-            match_column
-        ].str.replace("_existing", "")
+    existing_lines_copy[match_column] = existing_lines_copy[match_column].str.replace(
+        "_existing", ""
+    )
 
     # Merge with existing lines to get attributes like bus0, bus1, carrier
     df_merged = pd.merge(
@@ -170,9 +166,10 @@ def _translate_time_varying_expansion_costs(
     wacc: float,
     asset_lifetime: int,
 ) -> pd.DataFrame:
-    """Generic function to process time-varying expansion costs.
+    """Process time-varying expansion costs for flow paths and rezs.
 
-    This function handles the common processing logic for both line and generator expansion costs.
+    Converts from years as columns to years as rows, extracts model year from column
+    name, and annuitises expansion costs.
 
     Args:
         expansion_costs: DataFrame containing expansion cost data with time-varying costs.
