@@ -62,18 +62,18 @@ def build_pypsa_network(
 
     _add_lines_to_network(network, pypsa_friendly_tables["lines"])
 
+    _add_generators_to_network(
+        network,
+        pypsa_friendly_tables["generators"],
+        path_to_pypsa_friendly_timeseries_data,
+    )
+
     if "custom_constraints_generators" in pypsa_friendly_tables.keys():
         _add_bus_for_custom_constraints(network)
 
         _add_custom_constraint_generators_to_network(
             network, pypsa_friendly_tables["custom_constraints_generators"]
         )
-
-    _add_generators_to_network(
-        network,
-        pypsa_friendly_tables["generators"],
-        path_to_pypsa_friendly_timeseries_data,
-    )
 
     # The underlying linopy model needs to get built so we can add custom constraints.
     network.optimize.create_model()

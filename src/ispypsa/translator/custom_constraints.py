@@ -16,10 +16,10 @@ from ispypsa.translator.mappings import (
 def _translate_custom_constraints(
     config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
 ):
-    """Translate custom constrain tables into a PyPSA friendly format.
+    """Translate custom constraint tables into a PyPSA friendly format.
 
     Args:
-        config: `ISPyPSA` `ispypsa.config.ModelConfig` object
+        config: `ispypsa.config.ModelConfig` object
         ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
             The relevant tables for this function are:
                 - rez_group_constraints_rhs
