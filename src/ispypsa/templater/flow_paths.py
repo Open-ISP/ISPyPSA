@@ -33,14 +33,13 @@ def _template_sub_regional_flow_paths(
     )
     capability_columns = _clean_capability_column_names(flow_path_capabilities)
     sub_regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
-    # Only keep forward_direction_mw_summer_typical limit col as that all that's
-    # being used for now.
     cols = [
         "flow_path",
         "node_from",
         "node_to",
         "carrier",
         "forward_direction_mw_summer_typical",
+        "reverse_direction_mw_summer_typical",
     ]
     sub_regional_capabilities = sub_regional_capabilities.loc[:, cols]
 

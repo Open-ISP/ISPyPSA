@@ -79,4 +79,4 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
         ]
     )
     assert len(flow_paths_template) == 14
-    assert len(flow_paths_template.columns) == 5
+    assert len(flow_paths_template.columns) == 6

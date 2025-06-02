@@ -22,9 +22,9 @@ from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     create_pypsa_friendly_existing_generator_timeseries,
 )
-from ispypsa.translator.lines import _translate_flow_paths_to_lines
+from ispypsa.translator.links import _translate_flow_paths_to_links
 from ispypsa.translator.renewable_energy_zones import (
-    _translate_renewable_energy_zone_build_limits_to_lines,
+    _translate_renewable_energy_zone_build_limits_to_links,
 )
 from ispypsa.translator.snapshots import (
     _create_investment_period_weightings,
@@ -35,7 +35,7 @@ _BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
     "investment_period_weights",
     "buses",
-    "lines",
+    "links",
     "generators",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
@@ -94,7 +94,7 @@ def create_pypsa_friendly_inputs(
     )
 
     buses = []
-    lines = []
+    links = []
 
     if config.network.nodes.regional_granularity == "sub_regions":
         buses.append(_translate_isp_sub_regions_to_buses(ispypsa_tables["sub_regions"]))
@@ -115,8 +115,8 @@ def create_pypsa_friendly_inputs(
 
     if config.network.nodes.rezs == "discrete_nodes":
         buses.append(_translate_rezs_to_buses(ispypsa_tables["renewable_energy_zones"]))
-        lines.append(
-            _translate_renewable_energy_zone_build_limits_to_lines(
+        links.append(
+            _translate_renewable_energy_zone_build_limits_to_links(
                 ispypsa_tables["renewable_energy_zones"],
                 ispypsa_tables["rez_transmission_expansion_costs"],
                 config,
@@ -124,14 +124,14 @@ def create_pypsa_friendly_inputs(
         )
 
     if config.network.nodes.regional_granularity != "single_region":
-        lines.append(_translate_flow_paths_to_lines(ispypsa_tables, config))
+        links.append(_translate_flow_paths_to_links(ispypsa_tables, config))
 
     pypsa_inputs["buses"] = pd.concat(buses)
 
-    if len(lines) > 0:
-        pypsa_inputs["lines"] = pd.concat(lines)
+    if len(links) > 0:
+        pypsa_inputs["links"] = pd.concat(links)
     else:
-        pypsa_inputs["lines"] = pd.DataFrame()
+        pypsa_inputs["links"] = pd.DataFrame()
 
     pypsa_inputs.update(_translate_custom_constraints(config, ispypsa_tables))
 

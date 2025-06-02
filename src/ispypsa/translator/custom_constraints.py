@@ -3,7 +3,7 @@ import pandas as pd
 from ispypsa.config import (
     ModelConfig,
 )
-from ispypsa.translator.lines import _translate_time_varying_expansion_costs
+from ispypsa.translator.links import _translate_time_varying_expansion_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
@@ -41,7 +41,7 @@ def _translate_custom_constraints(
     )
 
     present_custom_constraint_tables = [
-        table for table in all_custom_constraint_tables if table in pypsa_inputs
+        table for table in all_custom_constraint_tables if table in ispypsa_tables
     ]
 
     if len(present_custom_constraint_tables) != 0:
