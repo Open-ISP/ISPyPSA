@@ -1,27 +1,24 @@
 from pathlib import Path
 
 import pandas as pd
-import pypsa
-import pytest
 from isp_trace_parser.demand_traces import write_new_demand_filepath
 
 from ispypsa.config import ModelConfig
 from ispypsa.model.build import build_pypsa_network
 from ispypsa.translator.create_pypsa_friendly_inputs import (
     create_pypsa_friendly_inputs,
-    create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
 )
 
 
-def test_line_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
-    """Test that line expansion occurs when it becomes economically viable.
+def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
+    """Test that link expansion occurs when it becomes economically viable.
 
     This test creates a simple two-region network (A and B) where:
     - Region A has an expensive generator and fixed demand of 100 MW
     - Region B has a cheap generator and no demand
-    - The existing transmission line can only carry 50 MW (half the demand)
-    - Line expansion costs change between years, making expansion economic in year 2
+    - The existing transmission link can only carry 50 MW (half the demand)
+    - Link expansion costs change between years, making expansion economic in year 2
 
     The test uses the translator to convert ISPyPSA format tables to PyPSA format.
     """
@@ -177,11 +174,6 @@ def test_line_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     # Override the longer snapshots that would have auto generated.
     pypsa_tables["snapshots"] = snapshots
 
-    # l = pypsa_tables["lines"].copy()
-    # l["name"] = "copy"
-    # l = pd.concat(([pypsa_tables["lines"], l]))
-    # pypsa_tables["lines"] = l
-
     # Create timeseries data directory structure for PyPSA inputs
     pypsa_timeseries_dir = pypsa_dir / "timeseries"
     pypsa_timeseries_dir.mkdir(parents=True)
@@ -203,25 +195,29 @@ def test_line_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     )
 
     # Solve the optimization problem
-    network.optimize()
-    network.optimize.solve_model(solver_name=config.solver)
+    network.optimize.solve_model(
+        solver_name=config.solver,
+    )
 
-    # Get expansion line names from the network
-    expansion_lines = [line for line in network.lines.index if "_exp_" in line]
+    # Check that nominal link capacities are as expected.
+    links = network.links.reset_index().loc[:, ["Link", "p_nom_opt"]]
+    expected_links = """
+    Link,          p_nom_opt
+    A-B_existing,       50.0
+    A-B_exp_2025,        0.0
+    A-B_exp_2026,      150.0
+    """
+    expected_links = csv_str_to_df(expected_links)
+    pd.testing.assert_frame_equal(links, expected_links)
 
-    # Extract year from line name
-    line_years = {line: int(line.split("_exp_")[1]) for line in expansion_lines}
-
-    # Check line expansion results
-    for line, year in line_years.items():
-        capacity = network.lines.loc[line, "s_nom_opt"]
-        if year == 2025:
-            # In 2025, expansion is too expensive, so it should be 0
-            assert capacity == 0, f"Line expansion in 2025 should be 0, got {capacity}"
-        elif year == 2026:
-            # In 2026, expansion is cheaper, so it should be > 0
-            assert capacity > 0, f"Line expansion in 2026 should be > 0, got {capacity}"
-            # The expansion should be approximately 50 MW (to meet the remaining demand)
-            assert 45 <= capacity <= 55, (
-                f"Line expansion in 2026 should be ~50 MW, got {capacity} MW"
-            )
+    # Check that link dispatch is as expected. In particular that A-B_exp_2026 is only
+    # dispatch in the second time interval.
+    links_t = network.links_t.p0.reset_index(drop=True)
+    links_t.columns.name = None
+    expected_links_t = """
+    A-B_existing,     A-B_exp_2025,   A-B_exp_2026
+    -50.0,          0.0,                     0.0
+    -50.0,          0.0,                  -150.0
+    """
+    expected_links_t = csv_str_to_df(expected_links_t)
+    pd.testing.assert_frame_equal(links_t, expected_links_t)

@@ -75,7 +75,7 @@ def test_translate_custom_constraints_lhs():
             "variable_name": ["X", "Y", "Z", "W", "F"],
             "constraint_id": ["A", "B", "A", "B", "A"],
             "term_type": [
-                "line_flow",
+                "link_flow",
                 "generator_capacity",
                 "generator_output",
                 "load_consumption",
@@ -89,8 +89,8 @@ def test_translate_custom_constraints_lhs():
             "variable_name": ["X", "Y", "Z", "W", "F"],
             "constraint_name": ["A", "B", "A", "B", "A"],
             "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
-            "component": ["Line", "Generator", "Generator", "Load", "Storage"],
-            "attribute": ["s", "p_nom", "p", "p", "p"],
+            "component": ["Link", "Generator", "Generator", "Load", "Storage"],
+            "attribute": ["p", "p_nom", "p", "p", "p"],
         }
     )
     pypsa_custom_constraint_lhs = _translate_custom_constraint_lhs(

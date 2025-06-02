@@ -15,11 +15,11 @@ def test_create_investment_period_weightings_basic():
     expected = pd.DataFrame(
         {
             "period": [2020, 2030, 2040],
-            "years": [10, 10, 10],
+            "years": [10, 10, 11],
             "objective": [
                 sum([(1 / (1 + 0.05) ** t) for t in range(0, 10)]),
                 sum([(1 / (1 + 0.05) ** t) for t in range(10, 20)]),
-                sum([(1 / (1 + 0.05) ** t) for t in range(20, 30)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(20, 31)]),
             ],
         }
     )
@@ -44,11 +44,11 @@ def test_create_investment_period_weightings_variable_length():
     expected = pd.DataFrame(
         {
             "period": [2020, 2025, 2035],
-            "years": [5, 10, 15],
+            "years": [5, 10, 16],
             "objective": [
                 sum([(1 / (1 + 0.05) ** t) for t in range(0, 5)]),
                 sum([(1 / (1 + 0.05) ** t) for t in range(5, 15)]),
-                sum([(1 / (1 + 0.05) ** t) for t in range(15, 30)]),
+                sum([(1 / (1 + 0.05) ** t) for t in range(15, 31)]),
             ],
         }
     )
@@ -73,8 +73,8 @@ def test_create_investment_period_weightings_zero_discount():
     expected = pd.DataFrame(
         {
             "period": [2020, 2030],
-            "years": [10, 10],
-            "objective": [10.0, 10.0],  # Weight equals years with no discounting
+            "years": [10, 11],
+            "objective": [10.0, 11.0],  # Weight equals years with no discounting
         }
     )
 
@@ -98,8 +98,8 @@ def test_create_investment_period_weightings_single_period():
     expected = pd.DataFrame(
         {
             "period": [2020],
-            "years": [10],
-            "objective": [sum([(1 / (1 + 0.05) ** t) for t in range(0, 10)])],
+            "years": [11],
+            "objective": [sum([(1 / (1 + 0.05) ** t) for t in range(0, 11)])],
         }
     )
 
@@ -123,10 +123,10 @@ def test_create_investment_period_weightings_alternative_discount():
     expected = pd.DataFrame(
         {
             "period": [2020, 2025],
-            "years": [5, 5],
+            "years": [5, 6],
             "objective": [
                 sum([(1 / (1 + 0.10) ** t) for t in range(0, 5)]),
-                sum([(1 / (1 + 0.10) ** t) for t in range(5, 10)]),
+                sum([(1 / (1 + 0.10) ** t) for t in range(5, 11)]),
             ],
         }
     )
@@ -159,14 +159,14 @@ def test_create_investment_period_weightings_trivial_discount():
 
     # With r = 1.0, the discounted weights are:
     # Period 1 (2020-2022): [1, 0.5] = 1.5
-    # Period 2 (2022-2024): [0.25, 0.125] = 0.375
+    # Period 2 (2022-2024): [0.25, 0.125, 0.0625] = 0.4375
 
     # Expected result with manually calculated values
     expected = pd.DataFrame(
         {
             "period": [2020, 2022],
-            "years": [2, 2],
-            "objective": [1.5, 0.375],  # Manually verified
+            "years": [2, 3],
+            "objective": [1.5, 0.4375],  # Manually verified
         }
     )
 

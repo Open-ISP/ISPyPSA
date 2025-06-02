@@ -1,7 +1,7 @@
 ﻿constraint_id,term_type,term_id,coefficient
-SEVIC1,line_flow,V5-VIC,1
-SEVIC1,line_flow,V7-VIC,1
-SEVIC1,line_flow,Basslink,1
+SEVIC1,link_flow,V5-VIC,1
+SEVIC1,link_flow,V7-VIC,1
+SEVIC1,link_flow,Basslink,1
 SEVIC1,generator_output,Loy Yang A Power Station,1
 SEVIC1,generator_output,Loy Yang B,1
 SEVIC1,generator_output,Yallourn W,1
@@ -10,9 +10,9 @@ SEVIC1,generator_output,Jeeralang B,1
 SEVIC1,generator_output,Bairnsdale,1
 SEVIC1,generator_output,Valley Power,1
 SEVIC1,generator_capacity,SEVIC1-EXPANSION,-1
-SWQLD1,line_flow,Q8-SQ,1
-SWQLD1,line_flow,NNSW-SQ,1.5
-SWQLD1,line_flow,SQ-CQ,-0.3
+SWQLD1,link_flow,Q8-SQ,1
+SWQLD1,link_flow,NNSW-SQ,1.5
+SWQLD1,link_flow,SQ-CQ,-0.3
 SWQLD1,generator_output,Tarong,0.6
 SWQLD1,generator_output,Tarong North,0.6
 SWQLD1,generator_output,Kogan Creek,0.6
@@ -22,8 +22,8 @@ SWQLD1,generator_output,Braemar 2 Power Station,0.6
 SWQLD1,generator_output,Millmerran,1.5
 SWQLD1,generator_output,Borumba,0.5
 SWQLD1,generator_capacity,SWQLD1-EXPANSION,-1
-S1-TBMO,line_flow,SESA-CSA,0.3
-S1-TBMO,line_flow,S1-SESA,1
+S1-TBMO,link_flow,SESA-CSA,0.3
+S1-TBMO,link_flow,S1-SESA,1
 S1-TBMO,generator_output,Tailem Bend Solar Farm,1
 S1-TBMO,generator_output,Tailem Bend Solar Farm - stage 2,1
 S1-TBMO,storage_output,Tailem Bend Battery Project,1
