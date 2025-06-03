@@ -100,7 +100,7 @@ def create_pypsa_friendly_snapshots(
     Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
         the investment a modelled interval belongs to and 'snapshots' (datetime) defining
         each time interval modelled. 'investment_periods' periods are refered to by the
-        year (financial or calander) in which they begin.
+        year (financial or calendar) in which they begin.
     """
     if model_phase == "capacity_expansion":
         resolution_min = config.temporal.capacity_expansion.resolution_min
