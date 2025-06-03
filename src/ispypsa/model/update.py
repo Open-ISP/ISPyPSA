@@ -18,7 +18,7 @@ def update_network_timeseries(
     Update the time series data in a pypsa.Network instance.
 
     Designed to help convert capacity expansion network models into operational models
-    but may also be useful in other circumstances, such when running a capacity
+    but may also be useful in other circumstances, such as when running a capacity
     expansion model with different reference year cycles.
 
     Examples:
