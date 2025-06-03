@@ -7,6 +7,7 @@ from isp_trace_parser import construct_reference_year_mapping
 from ispypsa.config import (
     ModelConfig,
 )
+from ispypsa.translator import create_pypsa_friendly_snapshots
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
@@ -34,11 +35,8 @@ from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_flow_paths,
 )
 from ispypsa.translator.snapshots import (
-    _add_investment_periods,
-    _create_complete_snapshots_index,
     _create_investment_period_weightings,
 )
-from ispypsa.translator.temporal_filters import _filter_snapshots
 
 _BASE_TRANSLATOR_OUPUTS = [
     "snapshots",
@@ -50,86 +48,6 @@ _BASE_TRANSLATOR_OUPUTS = [
     "custom_constraints_rhs",
     "custom_constraints_generators",
 ]
-
-
-def create_pypsa_friendly_snapshots(
-    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
-) -> pd.DataFrame:
-    """
-    Creates a pd.DataFrame defining the modelled time intervals and corresponding
-    investment periods.
-
-    If the model_phase 'operational' is provieded then a single investment period is
-    used for all snapshots (labelled as the model start year). Investment periods
-    are provided even for operational modelling because this allows the snapshots of
-    PyPSA.network which have been used for capacity expansion modelling to be directly
-    overwritten with the new snapshots/investment_periods data, PyPSA throws an error
-    if you try and overwrite with just snaphots.
-
-    Examples:
-
-        >>> from ispypsa.config import load_config
-        >>> from ispypsa.data_fetch import read_csvs
-        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
-        ...     create_pypsa_friendly_snapshots
-        ... )
-
-        Get a ISPyPSA ModelConfig instance
-
-        >>> config = load_config(Path("path/to/config/file.yaml"))
-
-        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
-        sub_regions tables).
-
-        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
-
-        Define which phase of the modelling we need the time series data for.
-
-        >>> model_phase = "capacity_expansion"
-
-        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
-
-        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
-
-    Args:
-        config: ispypsa.ModelConfig instance
-        model_phase: string defining whether the snapshots are for the operational or
-            capacity expansion phase of the modelling. This allows the correct temporal
-            config inputs to be used from the ModelConfig instance.
-
-    Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
-        the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
-        each time interval modelled. 'investment_periods' periods are refered to by the
-        year (financial or calander) in which they begin.
-    """
-    if model_phase == "capacity_expansion":
-        resolution_min = config.temporal.capacity_expansion.resolution_min
-        aggregation = config.temporal.capacity_expansion.aggregation
-        investment_periods = config.temporal.capacity_expansion.investment_periods
-    else:
-        resolution_min = config.temporal.operational.resolution_min
-        aggregation = config.temporal.operational.aggregation
-        investment_periods = [config.temporal.range.start_year]
-
-    snapshots = _create_complete_snapshots_index(
-        start_year=config.temporal.range.start_year,
-        end_year=config.temporal.range.end_year,
-        temporal_resolution_min=resolution_min,
-        year_type=config.temporal.year_type,
-    )
-
-    snapshots = _filter_snapshots(
-        config.temporal.year_type,
-        config.temporal.range,
-        aggregation,
-        snapshots,
-    )
-
-    snapshots = _add_investment_periods(
-        snapshots, investment_periods, config.temporal.year_type
-    )
-
-    return snapshots
 
 
 def create_pypsa_friendly_inputs(
@@ -281,12 +199,11 @@ def create_pypsa_friendly_timeseries_inputs(
 
     Examples:
 
-        >>> from pathlib import Path
+        >>> from ispypsa.translator import create_pypsa_friendly_snapshots        >>> from pathlib import Path
         >>> from ispypsa.config import load_config
         >>> from ispypsa.data_fetch import read_csvs
         >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
-        ...     create_pypsa_friendly_snapshots,
-        ...     create_pypsa_friendly_timeseries_inputs
+        ...      create_pypsa_friendly_timeseries_inputs
         ... )
 
         Get a ISPyPSA ModelConfig instance

@@ -70,6 +70,10 @@ def _update_bus_demand_timeseries(
     """
     Update a Bus's demand timeseries data in the pypsa.Network.
 
+    The function is used to set up the model for operational modelling following
+    capacity expansion optimisation. Once the model snapshots are updated then the
+    demand timeseries also need to be updated to match.
+
     Args:
         bus_name: String defining the bus name
         network: The `pypsa.Network` object

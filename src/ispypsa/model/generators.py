@@ -108,6 +108,10 @@ def _update_generator_availability_timeseries(
 ) -> None:
     """Updates the timeseries availability of the generator in the `pypsa.Network`.
 
+    The function is used to set up the model for operational modelling following
+    capacity expansion optimisation. Once the model snapshots are updated then the
+    generator time series also need to be updated to match.
+
     Args:
         name: str specifying the generators name
         carrier: the generator fuel type
