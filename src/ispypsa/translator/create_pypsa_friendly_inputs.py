@@ -210,7 +210,7 @@ def create_pypsa_friendly_timeseries_inputs(
 
         >>> config = load_config(Path("path/to/config/file.yaml"))
 
-        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        Get ISPyPSA inputs (in particular these need to contain the ecaa_generators and
         sub_regions tables).
 
         >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
