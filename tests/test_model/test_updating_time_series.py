@@ -9,7 +9,7 @@ from ispypsa.model import build_pypsa_network, update_network_timeseries
 
 def test_expand_then_operate():
     """
-    Test expanding the network with two snapshots per year for two one year investment
+    Test expanding the network with two snapshots per year for two single-year investment
     periods and then operating the two years with five snapshot in each year.
 
     The example uses:
