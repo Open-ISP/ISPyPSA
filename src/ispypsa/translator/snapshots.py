@@ -1,15 +1,97 @@
 from datetime import datetime
+from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
+from ispypsa.config import ModelConfig, load_config
+from ispypsa.data_fetch import read_csvs
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
+from ispypsa.translator.temporal_filters import _filter_snapshots
+
+
+def create_pypsa_friendly_snapshots(
+    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
+) -> pd.DataFrame:
+    """
+    Create a pd.DataFrame of PyPSA-compatible snapshots and associated investment
+    periods for either the 'capacity_expansion' or 'operational' model phase.
+
+    This function also includes investment_periods for the 'operational' phase
+    (even though they are not strictly required), because PyPSA expects both 'snapshots'
+    and 'investment_periods' when overwriting an existing network.
+
+    Examples:
+
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        ...     create_pypsa_friendly_snapshots
+        ... )
+
+        Get a ISPyPSA ModelConfig instance
+
+        >>> config = load_config(Path("path/to/config/file.yaml"))
+
+        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
+        sub_regions tables).
+
+        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
+
+        Define which phase of the modelling we need the time series data for.
+
+        >>> model_phase = "capacity_expansion"
+
+        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+
+        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+
+    Args:
+        config: ispypsa.ModelConfig instance
+        model_phase: string defining whether the snapshots are for the operational or
+            capacity expansion phase of the modelling. This allows the correct temporal
+            config inputs to be used from the ModelConfig instance.
+
+    Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
+        the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
+        each time interval modelled. 'investment_periods' periods are refered to by the
+        year (financial or calander) in which they begin.
+    """
+    if model_phase == "capacity_expansion":
+        resolution_min = config.temporal.capacity_expansion.resolution_min
+        aggregation = config.temporal.capacity_expansion.aggregation
+        investment_periods = config.temporal.capacity_expansion.investment_periods
+    else:
+        resolution_min = config.temporal.operational.resolution_min
+        aggregation = config.temporal.operational.aggregation
+        investment_periods = [config.temporal.range.start_year]
+
+    snapshots = _create_complete_snapshots_index(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        temporal_resolution_min=resolution_min,
+        year_type=config.temporal.year_type,
+    )
+
+    snapshots = _filter_snapshots(
+        config.temporal.year_type,
+        config.temporal.range,
+        aggregation,
+        snapshots,
+    )
+
+    snapshots = _add_investment_periods(
+        snapshots, investment_periods, config.temporal.year_type
+    )
+
+    return snapshots
 
 
 def _create_complete_snapshots_index(
     start_year: int,
     end_year: int,
-    operational_temporal_resolution_min: int,
+    temporal_resolution_min: int,
     year_type: str,
 ) -> pd.DataFrame:
     """Creates a DatetimeIndex, stored in DataFrame, defining the snapshots for the model before temporal aggregation.
@@ -20,7 +102,7 @@ def _create_complete_snapshots_index(
     Args:
         start_year: int specifying the start year
         end_year: int specifying the end year
-        operational_temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
+        temporal_resolution_min: int specifying the snapshot temporal resolution in minutes
         year_type: str specifying the year type. 'fy' for financial year means that start_year and end_year refer to
             the financial year ending in the given year, and calendar means start_year and end_year refer to
             standard calendar years.
@@ -32,12 +114,12 @@ def _create_complete_snapshots_index(
         year_type, start_year, end_year
     )
 
-    if operational_temporal_resolution_min < 60:
+    if temporal_resolution_min < 60:
         hour = 0
-        minute = operational_temporal_resolution_min
+        minute = temporal_resolution_min
     else:
-        hour = operational_temporal_resolution_min // 60
-        minute = operational_temporal_resolution_min % 60
+        hour = temporal_resolution_min // 60
+        minute = temporal_resolution_min % 60
 
     start_date = datetime(year=start_year, month=month, day=1, hour=hour, minute=minute)
     end_date = datetime(year=end_year, month=month, day=1, hour=0, minute=0)
@@ -45,7 +127,7 @@ def _create_complete_snapshots_index(
     time_index = pd.date_range(
         start=start_date,
         end=end_date,
-        freq=str(operational_temporal_resolution_min) + "min",
+        freq=str(temporal_resolution_min) + "min",
         name="snapshots",
     )
     return pd.DataFrame(time_index).reset_index(drop=False)

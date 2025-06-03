@@ -12,7 +12,7 @@ def test_create_representative_weeks_filter_one_week_start_of_fy():
     snapshot = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2025,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
     snapshots = _filter_snapshots_for_representative_weeks(
@@ -33,7 +33,7 @@ def test_create_representative_weeks_filter_one_week_start_of_calendar_year():
     snapshots = _create_complete_snapshots_index(
         start_year=2024,
         end_year=2024,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="calendar",
     )
     snapshots = _filter_snapshots_for_representative_weeks(
@@ -54,7 +54,7 @@ def test_create_representative_weeks_filter_two_weeks_three_year_snapshot():
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2027,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
     snapshots = _filter_snapshots_for_representative_weeks(
@@ -75,7 +75,7 @@ def test_create_representative_weeks_filter_two_weeks_of_calendar_year_three_yea
     snapshots = _create_complete_snapshots_index(
         start_year=2024,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="calendar",
     )
     snapshots = _filter_snapshots_for_representative_weeks(
@@ -96,7 +96,7 @@ def test_create_representative_weeks_filter_fail_with_out_of_range_week_number()
     snapshots = _create_complete_snapshots_index(
         start_year=2024,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="calendar",
     )
     with pytest.raises(ValueError):
