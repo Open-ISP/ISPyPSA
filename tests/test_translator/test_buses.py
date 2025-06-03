@@ -63,7 +63,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
 
@@ -116,7 +116,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
 
@@ -178,7 +178,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
         end_year=2026,
-        operational_temporal_resolution_min=30,
+        temporal_resolution_min=30,
         year_type="fy",
     )
 
