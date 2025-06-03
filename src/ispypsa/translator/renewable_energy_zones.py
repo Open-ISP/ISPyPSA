@@ -39,7 +39,7 @@ def _translate_renewable_energy_zone_build_limits_to_links(
             wacc=config.wacc,
             asset_lifetime=config.network.annuitisation_lifetime,
             id_column="rez_constraint_id",
-            match_column="name",
+            match_column="bus0",
         )
         # Combine existing and expansion links
         all_links = pd.concat(
@@ -69,11 +69,14 @@ def _translate_existing_rez_connections_to_links(
     """
     links = renewable_energy_zone_build_limits.loc[:, _REZ_LINK_ATTRIBUTES.keys()]
     links = links.rename(columns=_REZ_LINK_ATTRIBUTES)
-    links["name"] = links["bus0"] + "-" + links["bus1"] + "_existing"
+    links["isp_name"] = links["bus0"] + "-" + links["bus1"]
+    links["name"] = links["isp_name"] + "_existing"
 
     # Links without an explicit limit because their limits are modelled through
     # custom constraints are given a very large capacity
     links["p_nom"] = links["p_nom"].fillna(rez_to_sub_region_transmission_default_limit)
+
+    links["p_min_pu"] = -1.0
 
     # Not extendable for existing links
     links["p_nom_extendable"] = False

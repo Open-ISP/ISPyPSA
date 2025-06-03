@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from ispypsa.config import (
@@ -14,7 +15,9 @@ from ispypsa.translator.mappings import (
 
 
 def _translate_custom_constraints(
-    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
+    config: ModelConfig,
+    ispypsa_tables: dict[str, pd.DataFrame],
+    links: pd.DataFrame,
 ):
     """Translate custom constraint tables into a PyPSA friendly format.
 
@@ -28,6 +31,7 @@ def _translate_custom_constraints(
                 - rez_transmission_limit_constraints_rhs
             Not all of these tables need to be present but if one of the tables in
             pair is present an error will be raised if the other is missing.
+        links: pd.DataFrame specifying the Link components to be used in the PyPSA model
 
     Returns: dictionary of dataframes in the `PyPSA` friendly format, with the relevant
         tables for custom constraint.
@@ -81,7 +85,7 @@ def _translate_custom_constraints(
             custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
 
         pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
-            custom_constraint_lhs_tables
+            custom_constraint_lhs_tables, links
         )
 
     return pypsa_inputs
@@ -162,7 +166,7 @@ def _translate_custom_constraints_generators(
     expansion_generators["bus"] = "bus_for_custom_constraint_gens"
     expansion_generators["p_nom"] = 0.0
     expansion_generators["p_nom_extendable"] = True
-    expansion_generators["lifetime"] = asset_lifetime
+    expansion_generators["lifetime"] = np.inf
 
     # Keep only the columns needed for PyPSA generators
     expansion_cols = [
@@ -222,6 +226,7 @@ def _translate_custom_constraint_rhs(
 
 def _translate_custom_constraint_lhs(
     custom_constraint_lhs_tables: list[pd.DataFrame],
+    links: pd.DataFrame,
 ) -> pd.DataFrame:
     """Combines all tables specifying the lhs values of custom constraints into a single
     pd.Dataframe.
@@ -229,13 +234,18 @@ def _translate_custom_constraint_lhs(
     Args:
         custom_constraint_lhs_tables: list of pd.DataFrames in `ISPyPSA` detailing
             custom constraints lhs values.
+        links: pd.DataFrame specifying the Link components to be used in the PyPSA
+            model.
 
     Returns: pd.DataFrame
     """
     custom_constraint_lhs_values = _combine_custom_constraints_tables(
         custom_constraint_lhs_tables
     )
-
+    if not links.empty:
+        custom_constraint_lhs_values = _expand_link_flow_lhs_terms(
+            custom_constraint_lhs_values, links
+        )
     custom_constraint_lhs_values["component"] = custom_constraint_lhs_values[
         "term_type"
     ].map(_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE)
@@ -269,3 +279,37 @@ def _translate_custom_constraint_generators_to_lhs(
     custom_constraint_generators["coefficient"] = -1.0
     col_order = ["constraint_id", "term_type", "term_id", "coefficient"]
     return custom_constraint_generators.loc[:, col_order]
+
+
+def _expand_link_flow_lhs_terms(
+    custom_constraint_lhs: pd.DataFrame,
+    links: pd.DataFrame,
+) -> pd.DataFrame:
+    """Create lhs terms for each existing link component and each expansion option
+    link component.
+
+    Args:
+        custom_constraint_lhs: pd.DataFrame specifying lhs terms of custom
+            constraints in PyPSA friendly format.
+        links: pd.DataFrame detailing the PyPSA links to be included in the model.
+
+    Returns: pd.DataFrame specifying lhs terms of custom
+        constraints in PyPSA friendly format.
+    """
+    link_flow_terms = custom_constraint_lhs[
+        custom_constraint_lhs["term_type"] == "link_flow"
+    ]
+    non_link_flow_terms = custom_constraint_lhs[
+        ~(custom_constraint_lhs["term_type"] == "link_flow")
+    ]
+    all_lhs_terms = [non_link_flow_terms]
+    link_flow_terms = pd.merge(
+        link_flow_terms,
+        links.loc[:, ["isp_name", "name"]],
+        left_on="variable_name",
+        right_on="isp_name",
+    )
+    link_flow_terms = link_flow_terms.drop(columns=["isp_name", "variable_name"])
+    link_flow_terms = link_flow_terms.rename(columns={"name": "variable_name"})
+    all_lhs_terms.append(link_flow_terms)
+    return pd.concat(all_lhs_terms)

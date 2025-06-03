@@ -133,7 +133,9 @@ def create_pypsa_friendly_inputs(
     else:
         pypsa_inputs["links"] = pd.DataFrame()
 
-    pypsa_inputs.update(_translate_custom_constraints(config, ispypsa_tables))
+    pypsa_inputs.update(
+        _translate_custom_constraints(config, ispypsa_tables, pypsa_inputs["links"])
+    )
 
     return pypsa_inputs
 
