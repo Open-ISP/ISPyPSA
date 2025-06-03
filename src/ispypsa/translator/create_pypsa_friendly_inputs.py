@@ -59,7 +59,7 @@ def create_pypsa_friendly_snapshots(
     Creates a pd.DataFrame defining the modelled time intervals and corresponding
     investment periods.
 
-    If the model_phase 'operational' is provieded then a single investment period is
+    If the model_phase 'operational' is provided then a single investment period is
     used for all snapshots (labelled as the model start year). Investment periods
     are provided even for operational modelling because this allows the snapshots of
     PyPSA.network which have been used for capacity expansion modelling to be directly
