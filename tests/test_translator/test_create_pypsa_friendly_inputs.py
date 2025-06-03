@@ -120,8 +120,8 @@ def test_create_pypsa_friendly_snapshots_operational():
     assert (timestamps.iloc[1] - timestamps.iloc[0]).seconds == 30 * 60
 
     # 2. Check that 2 representative weeks were used
-    # 2 week per year × 2 years at 60-min intervals:
-    # = 4 weeks × 7 days × 48 intervals = 336 snapshots
+    # 2 week per year × 2 years at 30-min intervals:
+    # = 4 weeks × 7 days × 48 intervals = 1344 snapshots
     assert len(snapshots) == 1344
 
 
