@@ -20,7 +20,6 @@ _REZ_LINK_ATTRIBUTES = {
     "isp_sub_region_id": "bus1",
     "carrier": "carrier",
     "rez_transmission_network_limit_summer_typical": "p_nom",
-    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
 }
 
 _CUSTOM_CONSTRAINT_ATTRIBUTES = {

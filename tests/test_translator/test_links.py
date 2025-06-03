@@ -23,9 +23,9 @@ def test_translate_existing_flow_path_capacity_to_links(csv_str_to_df):
 
     # Expected result
     expected_links_csv = """
-    name,                 carrier,  bus0,     bus1,     p_nom,     p_min_pu,  capital_cost,  p_nom_extendable
-    PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,      ,              False
-    PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,      ,              False
+    isp_name,    name,                 carrier,  bus0,     bus1,     p_nom,     p_min_pu,  capital_cost,  p_nom_extendable
+    PathA-PathB, PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,      ,              False
+    PathB-PathC, PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,      ,              False
     """
     expected_links = csv_str_to_df(expected_links_csv)
     expected_links["capital_cost"] = pd.to_numeric(
@@ -52,9 +52,9 @@ def test_translate_expansion_costs_to_links(csv_str_to_df):
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     existing_links_csv = """
-    name,                 carrier,  bus0,    bus1,    p_nom
-    NodeA-NodeB_existing, AC,       NodeA,   NodeB,   1000
-    NodeB-NodeC_existing, AC,       NodeB,   NodeC,   2000
+    isp_name,    name,                 carrier,  bus0,    bus1,    p_nom
+    NodeA-NodeB, NodeA-NodeB_existing, AC,       NodeA,   NodeB,   1000
+    NodeB-NodeC, NodeB-NodeC_existing, AC,       NodeB,   NodeC,   2000
     """
     existing_links_df = csv_str_to_df(existing_links_csv)
 
@@ -71,16 +71,16 @@ def test_translate_expansion_costs_to_links(csv_str_to_df):
         wacc,
         asset_lifetime,
         id_column="flow_path",
-        match_column="name",
+        match_column="isp_name",
     )
 
     # Expected result structure - use a fixed capital_cost for assertion purposes
     # The actual values depend on the annuitization formula
     expected_result_csv = """
-    name,                 bus0,   bus1,  carrier, p_nom,  p_nom_extendable,  build_year,  lifetime
-    NodeB-NodeC_exp_2026, NodeB, NodeC,  AC,      0.0,    True,              2026,        30
-    NodeA-NodeB_exp_2027, NodeA, NodeB,  AC,      0.0,    True,              2027,        30
-    NodeB-NodeC_exp_2027, NodeB, NodeC,  AC,      0.0,    True,              2027,        30
+    isp_name,    name,                 bus0,   bus1,  carrier, p_nom,  p_nom_extendable,  build_year,  lifetime
+    NodeB-NodeC, NodeB-NodeC_exp_2026, NodeB, NodeC,  AC,      0.0,    True,              2026,        INF
+    NodeA-NodeB, NodeA-NodeB_exp_2027, NodeA, NodeB,  AC,      0.0,    True,              2027,        INF
+    NodeB-NodeC, NodeB-NodeC_exp_2027, NodeB, NodeC,  AC,      0.0,    True,              2027,        INF
     """
     expected_result = csv_str_to_df(expected_result_csv)
 

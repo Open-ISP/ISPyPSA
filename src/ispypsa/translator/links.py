@@ -34,6 +34,8 @@ def _translate_flow_paths_to_links(
             config.temporal.year_type,
             config.wacc,
             config.network.annuitisation_lifetime,
+            "flow_path",
+            "isp_name",
         )
     else:
         expansion_links = pd.DataFrame()
@@ -59,6 +61,8 @@ def _translate_existing_flow_path_capacity_to_links(
     links_df = existing_flow_paths.loc[:, list(_LINK_ATTRIBUTES.keys())].copy()
     links_df = links_df.rename(columns=_LINK_ATTRIBUTES)
 
+    links_df["isp_name"] = links_df["name"].copy()
+
     links_df["name"] = links_df["name"] + "_existing"
 
     links_df["p_nom_extendable"] = False
@@ -66,10 +70,22 @@ def _translate_existing_flow_path_capacity_to_links(
     links_df = links_df.drop(columns=["p_nom_reverse"])
     links_df["capital_cost"] = np.nan
 
-    return links_df
+    col_order = [
+        "isp_name",
+        "name",
+        "carrier",
+        "bus0",
+        "bus1",
+        "p_nom",
+        "p_min_pu",
+        "capital_cost",
+        "p_nom_extendable",
+    ]
+
+    return links_df.loc[:, col_order]
 
 
-def _translate_expansion_costs_to_links(  # Changed function name
+def _translate_expansion_costs_to_links(
     expansion_costs: pd.DataFrame,
     existing_links_df: pd.DataFrame,
     investment_periods: list[int],
@@ -79,7 +95,7 @@ def _translate_expansion_costs_to_links(  # Changed function name
     id_column: str = "flow_path",
     match_column: str = "name",
 ) -> pd.DataFrame:
-    """Translates expansion costs to PyPSA link components.  # Changed from line
+    """Translates expansion costs to PyPSA link components.
 
     This function uses the generic _translate_time_varying_expansion_costs function
     to process the expansion costs, then creates appropriate link components.
@@ -113,39 +129,31 @@ def _translate_expansion_costs_to_links(  # Changed function name
         return pd.DataFrame()
 
     # Prepare for merging with existing links data
-    pypsa_attributes_to_carry = ["bus0", "bus1", "carrier"]
-
-    # remove "_existing" suffix from link names so we can match on the existing link
-    # data.
-    existing_links_copy = existing_links_df.copy()
-    existing_links_copy[match_column] = existing_links_copy[match_column].str.replace(
-        "_existing", ""
-    )
+    attributes_to_carry = ["isp_name", "bus0", "bus1", "carrier"]
+    if match_column not in attributes_to_carry:
+        attributes_to_carry += [match_column]
 
     # Merge with existing links to get attributes like bus0, bus1, carrier
     df_merged = pd.merge(
         processed_costs,
-        existing_links_copy[[match_column] + pypsa_attributes_to_carry],
+        existing_links_df.loc[:, attributes_to_carry],
         left_on=id_column,
         right_on=match_column,
     )
 
     # Directly modify df_merged to create the expansion links
     df_merged["name"] = (
-        df_merged["bus0"]
-        + "-"
-        + df_merged["bus1"]
-        + "_exp_"
-        + df_merged["investment_year"].astype(str)
+        df_merged["isp_name"] + "_exp_" + df_merged["investment_year"].astype(str)
     )
     df_merged["p_nom"] = 0.0
     df_merged["p_nom_extendable"] = True
     df_merged["p_min_pu"] = -1.0
     df_merged["build_year"] = df_merged["investment_year"]
-    df_merged["lifetime"] = asset_lifetime
+    df_merged["lifetime"] = np.inf
 
     # Keep only the columns needed for PyPSA links
     expansion_cols = [
+        "isp_name",
         "name",
         "bus0",
         "bus1",

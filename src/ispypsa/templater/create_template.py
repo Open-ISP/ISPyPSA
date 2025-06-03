@@ -42,10 +42,8 @@ _BASE_TEMPLATE_OUTPUTS = [
     "partial_outage_forecasts",
     "seasonal_ratings",
     "closure_years",
-    "rez_group_constraints_expansion_costs",
     "rez_group_constraints_lhs",
     "rez_group_constraints_rhs",
-    "rez_transmission_limit_constraints_expansion_costs",
     "rez_transmission_limit_constraints_lhs",
     "rez_transmission_limit_constraints_rhs",
 ]

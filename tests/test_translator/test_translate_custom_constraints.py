@@ -25,7 +25,7 @@ def test_translate_custom_constraints_generators():
             "p_nom": [0.0, 0.0, 0.0],
             "p_nom_extendable": [True, True, True],
             "build_year": [2026, 2027, 2027],
-            "lifetime": 10,
+            "lifetime": np.inf,
         }
     )
     pypsa_custom_constraint_gens = _translate_custom_constraints_generators(
@@ -84,9 +84,15 @@ def test_translate_custom_constraints_lhs():
             "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
         }
     )
+    pypsa_links = pd.DataFrame(
+        {
+            "isp_name": ["X"],
+            "name": ["X_existing"],
+        }
+    )
     expected_pypsa_custom_constraint_lhs = pd.DataFrame(
         {
-            "variable_name": ["X", "Y", "Z", "W", "F"],
+            "variable_name": ["X_existing", "Y", "Z", "W", "F"],
             "constraint_name": ["A", "B", "A", "B", "A"],
             "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
             "component": ["Link", "Generator", "Generator", "Load", "Storage"],
@@ -94,10 +100,13 @@ def test_translate_custom_constraints_lhs():
         }
     )
     pypsa_custom_constraint_lhs = _translate_custom_constraint_lhs(
-        [ispypsa_custom_constraint_lhs]
+        [ispypsa_custom_constraint_lhs], pypsa_links
     )
     pd.testing.assert_frame_equal(
-        expected_pypsa_custom_constraint_lhs, pypsa_custom_constraint_lhs
+        expected_pypsa_custom_constraint_lhs.sort_values("variable_name").reset_index(
+            drop=True
+        ),
+        pypsa_custom_constraint_lhs.sort_values("variable_name").reset_index(drop=True),
     )
 
 
