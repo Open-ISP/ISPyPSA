@@ -7,7 +7,6 @@ from isp_trace_parser import construct_reference_year_mapping
 from ispypsa.config import (
     ModelConfig,
 )
-from ispypsa.translator import create_pypsa_friendly_snapshots
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
@@ -36,6 +35,7 @@ from ispypsa.translator.renewable_energy_zones import (
 )
 from ispypsa.translator.snapshots import (
     _create_investment_period_weightings,
+    create_pypsa_friendly_snapshots,
 )
 
 _BASE_TRANSLATOR_OUPUTS = [
