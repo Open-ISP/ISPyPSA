@@ -17,9 +17,9 @@ def _get_variables(
         component_name: str, the name given to the component when added by ISPyPSA to
             the `pypsa.Network`.
         component_type: str, the type of variable, should be one of
-            'Generator', 'Line', 'Load', or 'Storage'
+            'Generator', 'Link', 'Load', or 'Storage
         attribute_type: str, the type of variable, should be one of
-            'p', 'p_nom', or 's'
+            'p' or 'p_nom'
 
     Returns: linopy.variables.Variable
 
@@ -27,8 +27,8 @@ def _get_variables(
     var = None
     if component_type == "Generator" and attribute_type == "p_nom":
         var = model.variables.Generator_p_nom.at[f"{component_name}"]
-    elif component_type == "Line" and attribute_type == "s":
-        var = model.variables.Line_s.loc[:, f"{component_name}"]
+    elif component_type == "Link" and attribute_type == "p":
+        var = model.variables.Link_p.loc[:, f"{component_name}"]
     elif component_type == "Generator" and attribute_type == "p":
         var = model.variables.Generator_p.loc[:, f"{component_name}"]
     elif component_type == "Load" and attribute_type == "p":
@@ -62,7 +62,7 @@ def _add_custom_constraints(
         custom_constraints_lhs: `pd.DataFrame` specifying custom constraint LHS values.
             The DataFrame has five columns 'constraint_name', 'variable_name',
             'component', 'attribute', and 'coefficient'. The 'component' specifies
-            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Line',
+            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Link',
             etc. The 'variable_name' specifies the name of the `PyPSA` component, and
             the 'attribute' specifies the attribute of the component that the variable
             belongs to i.e. 'p_nom', 's_nom', etc.

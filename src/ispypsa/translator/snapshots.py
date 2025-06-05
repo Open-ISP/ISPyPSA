@@ -207,7 +207,7 @@ def _create_investment_period_weightings(
         objective function in each investment period.
     """
     # Add model_end_year to calculate final period length
-    all_years = investment_periods + [model_end_year]
+    all_years = investment_periods + [model_end_year + 1]
 
     # Calculate period lengths
     investment_period_lengths = np.diff(all_years).astype("int64")
