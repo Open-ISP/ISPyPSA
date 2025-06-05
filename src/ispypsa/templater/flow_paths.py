@@ -342,7 +342,7 @@ def _get_augmentation_table(
     ]
     if not aug_tables:
         raise ValueError(
-            f"No {config['transmission_tye']} augmentation tables found in iasr_tables."
+            f"No {config['transmission_type']} augmentation tables found in iasr_tables."
         )
     aug_table = pd.concat(aug_tables, ignore_index=True)
     aug_table = _clean_augmentation_table_column_names(aug_table, config)
@@ -563,6 +563,8 @@ def _get_cleaned_cost_tables(
     forecast_year_cols = [
         col for col in cost_table.columns if re.match(r"^\d{4}_\d{2}$", col)
     ]
+    if not forecast_year_cols:
+        raise ValueError("No financial year columns found in cost table")
     cost_table[forecast_year_cols[0]] = pd.to_numeric(
         cost_table[forecast_year_cols[0]], errors="coerce"
     )
@@ -781,8 +783,6 @@ def _get_year_columns(cost_table: pd.DataFrame) -> list:
         list of str specifying the financial year columns.
     """
     year_cols = [col for col in cost_table.columns if re.match(r"\d{4}_\d{2}", col)]
-    if not year_cols:
-        raise ValueError("No financial year columns found in cost table")
     return year_cols
 
 

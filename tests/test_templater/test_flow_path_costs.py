@@ -3,9 +3,11 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.flow_paths import (
+    _get_actionable_projects_table,
     _get_augmentation_table,
     _get_cost_table,
     _get_least_cost_options,
+    _get_prep_activities_table,
     _template_sub_regional_flow_path_costs,
     process_transmission_costs,
 )
@@ -335,3 +337,200 @@ def test_get_cleaned_flow_path_cost_tables_logs_missing_tables(caplog):
         _get_cost_table(iasr_tables, cost_scenario, _FLOW_PATH_CONFIG)
     # Check that the warning about missing tables is logged
     assert f"Missing cost tables: {missing}" in caplog.text
+
+
+def test_template_sub_regional_flow_path_costs_invalid_scenario():
+    """Test that an invalid scenario raises a ValueError."""
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": pd.DataFrame(
+            {
+                "Flow path": ["NNSW-SQ"],
+                "Option Name": ["Option 1"],
+                "forward_capacity_increase": [100],
+                "reverse_capacity_increase": [100],
+            }
+        )
+    }
+
+    # Test with invalid scenario
+    with pytest.raises(ValueError, match="scenario: Invalid Scenario not recognised"):
+        _template_sub_regional_flow_path_costs(iasr_tables, "Invalid Scenario")
+
+
+def test_template_sub_regional_flow_path_costs_no_augmentation_tables():
+    """Test that missing all augmentation tables raises a ValueError."""
+    iasr_tables = {}  # No tables at all
+
+    with pytest.raises(ValueError, match="No flow_path augmentation tables found"):
+        _template_sub_regional_flow_path_costs(iasr_tables, "Step Change")
+
+
+def test_template_sub_regional_flow_path_costs_no_cost_tables():
+    """Test that missing all cost tables raises a ValueError."""
+    # Only augmentation tables, no cost tables
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": pd.DataFrame(
+            {
+                "Flow path": ["NNSW-SQ"],
+                "Option Name": ["Option 1"],
+                "forward_capacity_increase": [100],
+                "reverse_capacity_increase": [100],
+            }
+        )
+    }
+
+    with pytest.raises(ValueError, match="No cost tables found"):
+        _template_sub_regional_flow_path_costs(iasr_tables, "Step Change")
+
+
+def test_template_sub_regional_flow_path_costs_no_year_columns():
+    """Test that cost tables without year columns raise a ValueError."""
+    iasr_tables = {
+        "flow_path_augmentation_options_NNSW-SQ": pd.DataFrame(
+            {
+                "Flow path": ["NNSW-SQ"],
+                "Option Name": ["Option 1"],
+                "forward_capacity_increase": [100],
+                "reverse_capacity_increase": [100],
+            }
+        ),
+        "flow_path_augmentation_costs_step_change_and_green_energy_exports_NNSW-SQ": pd.DataFrame(
+            {
+                "Flow path": ["NNSW-SQ"],
+                "Option Name": ["Option 1"],
+                # No year columns, only metadata
+            }
+        ),
+    }
+
+    with pytest.raises(ValueError, match="No financial year columns found"):
+        _template_sub_regional_flow_path_costs(iasr_tables, "Step Change")
+
+
+def test_get_prep_activities_missing_flow_path_mapping(csv_str_to_df):
+    """Test that missing flow path mapping in preparatory activities raises ValueError."""
+    # Create preparatory activities with an unmapped flow path
+    prep_acts_csv = """
+    Flow__path,              2024-25,    2025-26
+    Unknown__Flow__Path,      100,        110
+    """
+    prep_acts = csv_str_to_df(prep_acts_csv)
+
+    iasr_tables = {
+        "flow_path_augmentation_costs_progressive_change_preparatory_activities": prep_acts
+    }
+
+    # This should raise ValueError about missing mapping
+    with pytest.raises(
+        ValueError,
+        match="Missing mapping values for the flow paths provided: \\['Unknown Flow Path'\\]",
+    ):
+        _get_prep_activities_table(iasr_tables, "progressive_change", _FLOW_PATH_CONFIG)
+
+
+def test_get_prep_activities_missing_option_name_mapping(csv_str_to_df):
+    """Test that missing option name mapping in preparatory activities raises ValueError."""
+    # Create a custom config with incomplete mappings
+    custom_config = _FLOW_PATH_CONFIG.copy()
+    custom_config["mappings"] = {
+        "prep_activities_name_to_option": {
+            "Test Flow Path": "Test Option"  # This will map fine
+        },
+        "option_to_id": {
+            # Missing "Test Option" mapping - this will cause the error
+        },
+    }
+
+    prep_acts_csv = """
+    Flow__path,          2024-25,    2025-26
+    Test__Flow__Path,     100,        110
+    """
+    prep_acts = csv_str_to_df(prep_acts_csv)
+
+    iasr_tables = {
+        "flow_path_augmentation_costs_progressive_change_preparatory_activities": prep_acts
+    }
+
+    # This should raise ValueError about missing option name mapping
+    with pytest.raises(
+        ValueError,
+        match="Missing mapping values for the option names provided: \\['Test Option'\\]",
+    ):
+        _get_prep_activities_table(iasr_tables, "progressive_change", custom_config)
+
+
+def test_get_actionable_projects_missing_flow_path_mapping(csv_str_to_df):
+    """Test that missing flow path mapping in actionable projects raises ValueError."""
+    # Create actionable projects with an unmapped flow path
+    actionable_csv = """
+    Flow__path,              2024-25,    2025-26
+    Unknown__Project,        999,        999
+    """
+    actionable = csv_str_to_df(actionable_csv)
+
+    iasr_tables = {
+        "flow_path_augmentation_costs_progressive_change_actionable_isp_projects": actionable
+    }
+
+    # This should raise ValueError about missing mapping
+    with pytest.raises(
+        ValueError,
+        match="Missing mapping values for the flow paths provided: \\['Unknown Project'\\]",
+    ):
+        _get_actionable_projects_table(
+            iasr_tables, "progressive_change", _FLOW_PATH_CONFIG
+        )
+
+
+def test_get_actionable_projects_missing_option_name_mapping(csv_str_to_df):
+    """Test that missing option name mapping in actionable projects raises ValueError."""
+    # Create a custom config with incomplete mappings
+    custom_config = _FLOW_PATH_CONFIG.copy()
+    custom_config["mappings"] = {
+        "actionable_name_to_option": {
+            "Test Project": "Test Option"  # This will map fine
+        },
+        "actionable_option_to_id": {
+            # Missing "Test Option" mapping - this will cause the error
+        },
+    }
+
+    actionable_csv = """
+    Flow__path,       2024-25,    2025-26
+    Test__Project,    999,        999
+    """
+    actionable = csv_str_to_df(actionable_csv)
+
+    iasr_tables = {
+        "flow_path_augmentation_costs_progressive_change_actionable_isp_projects": actionable
+    }
+
+    # This should raise ValueError about missing option name mapping
+    with pytest.raises(
+        ValueError,
+        match="Missing mapping values for the option names provided: \\['Test Option'\\]",
+    ):
+        _get_actionable_projects_table(iasr_tables, "progressive_change", custom_config)
+
+
+def test_template_rez_transmission_costs_missing_rez_mapping(csv_str_to_df):
+    """Test that missing REZ mapping in preparatory activities raises ValueError for REZ config."""
+    from ispypsa.templater.mappings import _REZ_CONFIG
+
+    # Create REZ preparatory activities with an unmapped REZ
+    prep_acts_csv = """
+    REZ__Name,            Option,      2024-25,    2025-26
+    Unknown__REZ,         Option 1,    100,        110
+    """
+    prep_acts = csv_str_to_df(prep_acts_csv)
+
+    iasr_tables = {
+        "rez_augmentation_costs_progressive_change_preparatory_activities": prep_acts
+    }
+
+    # This should raise ValueError about missing REZ mapping
+    with pytest.raises(
+        ValueError,
+        match="Missing mapping values for the REZ names provided: \\['Unknown REZ'\\]",
+    ):
+        _get_prep_activities_table(iasr_tables, "progressive_change", _REZ_CONFIG)
