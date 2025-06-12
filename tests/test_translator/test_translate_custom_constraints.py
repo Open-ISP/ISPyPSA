@@ -1,12 +1,45 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from ispypsa.translator.custom_constraints import (
+    _check_custom_constraint_table_sets_are_complete,
     _translate_custom_constraint_generators_to_lhs,
     _translate_custom_constraint_lhs,
     _translate_custom_constraint_rhs,
     _translate_custom_constraints_generators,
 )
+
+
+def test_check_custom_constraint_table_sets_are_complete():
+    # Test no error with complete set of tables.
+    _check_custom_constraint_table_sets_are_complete(
+        {
+            "rez_group_constraints_rhs": pd.DataFrame(),
+            "rez_group_constraints_lhs": pd.DataFrame(),
+            "rez_transmission_limit_constraints_lhs": pd.DataFrame(),
+            "rez_transmission_limit_constraints_rhs": pd.DataFrame(),
+        }
+    )
+
+    # Also should be fine if both tables from a set are missing.
+    _check_custom_constraint_table_sets_are_complete(
+        {
+            "rez_group_constraints_rhs": pd.DataFrame(),
+            "rez_group_constraints_lhs": pd.DataFrame(),
+        }
+    )
+
+    # Test error is raised when an incomplete set is given
+    with pytest.raises(
+        ValueError,
+        match=f"An incomplete set of inputs have been provided for custom group constraints",
+    ):
+        _check_custom_constraint_table_sets_are_complete(
+            {
+                "rez_group_constraints_rhs": pd.DataFrame(),
+            }
+        )
 
 
 def test_translate_custom_constraints_generators():

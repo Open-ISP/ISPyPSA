@@ -133,8 +133,6 @@ def _translate_expansion_costs_to_links(
 
     # Prepare for merging with existing links data
     attributes_to_carry = ["isp_name", "bus0", "bus1", "carrier"]
-    if match_column not in attributes_to_carry:
-        attributes_to_carry += [match_column]
 
     # Merge with existing links to get attributes like bus0, bus1, carrier
     df_merged = pd.merge(

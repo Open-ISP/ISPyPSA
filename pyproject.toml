@@ -62,7 +62,7 @@ testpaths = ["src", "tests"]
 # addopts = add options
 # --cov points pytest-cov to the src/ dir
 # --cov-branch runs branch coverage
-addopts = "-ra --cov=src/ --cov-branch --cov-report xml:tests/coverage.xml --cov-report html:tests/htmlcov"
+#addopts = "-ra --cov=src/ --cov-branch --cov-report xml:tests/coverage.xml --cov-report html:tests/htmlcov"
 
 [tool.ruff.lint]
 select = [

@@ -3,18 +3,15 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.flow_paths import (
+    _find_first_year_with_complete_costs,
     _get_actionable_projects_table,
     _get_augmentation_table,
     _get_cost_table,
     _get_least_cost_options,
     _get_prep_activities_table,
     _template_sub_regional_flow_path_costs,
-    process_transmission_costs,
 )
-from ispypsa.templater.mappings import (
-    _FLOW_PATH_AGUMENTATION_TABLES,
-    _FLOW_PATH_CONFIG,
-)
+from ispypsa.templater.mappings import _FLOW_PATH_CONFIG, _REZ_CONFIG
 
 
 def test_template_sub_regional_flow_path_costs_simple_least_cost_option():
@@ -515,7 +512,6 @@ def test_get_actionable_projects_missing_option_name_mapping(csv_str_to_df):
 
 def test_template_rez_transmission_costs_missing_rez_mapping(csv_str_to_df):
     """Test that missing REZ mapping in preparatory activities raises ValueError for REZ config."""
-    from ispypsa.templater.mappings import _REZ_CONFIG
 
     # Create REZ preparatory activities with an unmapped REZ
     prep_acts_csv = """
@@ -534,3 +530,26 @@ def test_template_rez_transmission_costs_missing_rez_mapping(csv_str_to_df):
         match="Missing mapping values for the REZ names provided: \\['Unknown REZ'\\]",
     ):
         _get_prep_activities_table(iasr_tables, "progressive_change", _REZ_CONFIG)
+
+
+def test_find_first_year_with_complete_costs_raises_error_when_no_year_all_non_na(
+    csv_str_to_df,
+):
+    # Create REZ preparatory activities with an unmapped REZ
+    prep_acts_csv = """
+    id,  option,      2024_25,    2025_26
+    A,   x,           100,        110
+    A,   y,           100,        110
+    B,   x,           100,
+    B,   y,           ,        110
+    """
+    cost_data = csv_str_to_df(prep_acts_csv)
+
+    year_cols = ["2024_25", "2025_26"]
+
+    # This should raise ValueError about missing REZ mapping
+    with pytest.raises(
+        ValueError,
+        match="No year found with all non-NA costs for transmissions: \\['B'\\]",
+    ):
+        _find_first_year_with_complete_costs(cost_data, year_cols)
