@@ -16,7 +16,9 @@ class NetworkConfig(BaseModel):
     nodes: NodesConfig
     annuitisation_lifetime: int
     transmission_expansion: bool
+    transmission_expansion_limit_override: float | None
     rez_transmission_expansion: bool
+    rez_connection_expansion_limit_override: float | None
     rez_to_sub_region_transmission_default_limit: float
 
 

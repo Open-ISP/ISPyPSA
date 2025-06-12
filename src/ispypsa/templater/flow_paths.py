@@ -42,7 +42,10 @@ def _template_sub_regional_flow_paths(
         "reverse_direction_mw_summer_typical",
     ]
     sub_regional_capabilities = sub_regional_capabilities.loc[:, cols]
-
+    # Combine flow paths which connect the same two regions.
+    sub_regional_capabilities = sub_regional_capabilities.groupby(
+        ["flow_path", "node_from", "node_to", "carrier"], as_index=False
+    ).sum()
     return sub_regional_capabilities
 
 
@@ -64,6 +67,16 @@ def _template_regional_interconnectors(
     )
     capability_columns = _clean_capability_column_names(interconnector_capabilities)
     regional_capabilities = pd.concat([from_to_carrier, capability_columns], axis=1)
+    regional_capabilities["forward_direction_mw_summer_typical"] = (
+        _strip_all_text_after_numeric_value(
+            regional_capabilities["forward_direction_mw_summer_typical"]
+        )
+    )
+    regional_capabilities["forward_direction_mw_summer_typical"] = pd.to_numeric(
+        regional_capabilities["forward_direction_mw_summer_typical"].str.replace(
+            ",", ""
+        )
+    )
     # Only keep forward_direction_mw_summer_typical limit col as that all that's
     # being used for now.
     cols = [
@@ -99,26 +112,10 @@ def _get_flow_path_name_from_to_carrier(
         # capture optional descriptor (e.g. '("Heywood")')
         + r"\s*(?P<descriptor>.*)"
     )
-    from_to_desc["carrier"] = from_to_desc.apply(
-        lambda row: "DC"
-        if any(
-            [dc_line in row["descriptor"] for dc_line in _HVDC_FLOW_PATHS["flow_path"]]
-        )
-        # manually detect Basslink since the name is not in the descriptor
-        or (row["node_from"] == "TAS" and row["node_to"] == "VIC")
-        else "AC",
-        axis=1,
+    from_to_desc["flow_path"] = (
+        from_to_desc["node_from"] + "-" + from_to_desc["node_to"]
     )
-    from_to_desc["flow_path"] = from_to_desc.apply(
-        lambda row: _determine_flow_path_name(
-            row.node_from,
-            row.node_to,
-            row.descriptor,
-            row.carrier,
-            regional_granularity,
-        ),
-        axis=1,
-    )
+    from_to_desc["carrier"] = "AC"
     return from_to_desc.drop(columns=["descriptor"])
 
 
@@ -251,7 +248,10 @@ def _template_rez_transmission_costs(
 
 
 def process_transmission_costs(
-    iasr_tables: dict[str, pd.DataFrame], scenario: str, config: dict
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
+    config: dict,
+    expansion_limit_override: float = None,
 ) -> pd.DataFrame:
     """
     Generic function to process transmission costs (flow path or REZ).
@@ -265,6 +265,8 @@ def process_transmission_costs(
               rez or flow path specific names
             - table_names: dict with augmentation and cost table lists
             - mappings: dict with mappings for preparatory activities and other data
+        expansion_limit_override: A float value to override all the transmission capacity
+            limits with if not None.
 
     Returns:
         pd.DataFrame containing the least cost options with standardized column
@@ -283,6 +285,11 @@ def process_transmission_costs(
     # Find the least cost options
     final_costs = _get_least_cost_options(
         aug_table=aug_table, cost_table=cost_table, config=config
+    )
+
+    # Override total expansion allowed if override value isn't None.
+    final_costs = _override_transmission_expansion_limits(
+        expansion_limit_override, final_costs
     )
 
     return final_costs
@@ -412,7 +419,7 @@ def _get_least_cost_options(
         pd.DataFrame containing columns:
             - id (flow_path or rez_constraint_id)
             - option (option_name or option)
-            - capacity (nominal_flow_limit_increase_mw or additional_network_capacity_mw)
+            - additional_network_capacity_mw
             - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
     """
     year_cols = _get_year_columns(cost_table)
@@ -859,3 +866,24 @@ def _sort_cols(table: pd.DataFrame, start_cols: list[str]) -> pd.DataFrame:
     remaining_cols = list(set(table.columns) - set(start_cols))
     sorted_remaining_columns = sorted(remaining_cols)
     return table.loc[:, start_cols + sorted_remaining_columns]
+
+
+def _override_transmission_expansion_limits(
+    expansion_limit_override: float | None,
+    transmission_costs: pd.DataFrame,
+):
+    """
+    Override the additional_network_capacity_mw column in the transmission_costs with
+    the expansion_limit_override value if it is not None.
+
+    Args:
+        expansion_limit_override: float value to override additional_network_capacity_mw
+            with.
+        transmission_costs: DataFrame with additional_network_capacity_mw column to
+            override.
+
+    Returns: cost DataFrame with additional_network_capacity_mw colum.
+    """
+    if expansion_limit_override is not None:
+        transmission_costs["additional_network_capacity_mw"] = expansion_limit_override
+    return transmission_costs

@@ -13,8 +13,16 @@ from ispypsa.config.validators import ModelConfig
 @pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
 @pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
+@pytest.mark.parametrize("transmission_expansion_limit_override", [None, 150.0])
+@pytest.mark.parametrize("rez_connection_expansion_limit_override", [None, 100.0])
 def test_valid_config(
-    scenario, regional_granularity, nodes_rezs, year_type, representative_weeks
+    scenario,
+    regional_granularity,
+    nodes_rezs,
+    year_type,
+    representative_weeks,
+    transmission_expansion_limit_override,
+    rez_connection_expansion_limit_override,
 ):
     config = get_valid_config()
 
@@ -28,6 +36,12 @@ def test_valid_config(
     )
     config["temporal"]["operational"]["aggregation"]["representative_weeks"] = (
         representative_weeks
+    )
+    config["network"]["transmission_expansion_limit_override"] = (
+        transmission_expansion_limit_override
+    )
+    config["network"]["rez_connection_expansion_limit_override"] = (
+        rez_connection_expansion_limit_override
     )
 
     ModelConfig(**config)
@@ -46,7 +60,9 @@ def get_valid_config():
         "discount_rate": 0.05,
         "network": {
             "transmission_expansion": True,
+            "transmission_expansion_limit_override": None,
             "rez_transmission_expansion": True,
+            "rez_connection_expansion_limit_override": None,
             "annuitisation_lifetime": 30,
             "nodes": {
                 "regional_granularity": "sub_regions",
@@ -133,6 +149,16 @@ def invalid_transmission_expansion(config):
 
 def invalid_rez_transmission_expansion(config):
     config["network"]["rez_transmission_expansion"] = "help"
+    return config, ValidationError
+
+
+def invalid_transmission_expansion_limit_override(config):
+    config["network"]["transmission_expansion_limit_override"] = "help"
+    return config, ValidationError
+
+
+def invalid_rez_connection_expansion_limit_override(config):
+    config["network"]["rez_connection_expansion_limit_override"] = "help"
     return config, ValidationError
 
 
@@ -237,6 +263,8 @@ def invalid_unserved_energy_generator_size(config):
         invalid_transmission_expansion,
         invalid_rez_transmission_expansion,
         invalid_rez_transmission_limit,
+        invalid_transmission_expansion_limit_override,
+        invalid_rez_connection_expansion_limit_override,
         invalid_end_year,
         invalid_path_not_directory,
         invalid_path_wrong_structure,
