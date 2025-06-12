@@ -39,15 +39,10 @@ def _template_rez_build_limits(
         rez_build_limits[col] = pd.to_numeric(rez_build_limits[col], errors="coerce")
     cols_where_zero_goes_to_nan = [
         "rez_resource_limit_violation_penalty_factor_$m/mw",
-        "indicative_transmission_expansion_cost_$m/mw",
-        "indicative_transmission_expansion_cost_$m/mw_tranche_2",
-        "indicative_transmission_expansion_cost_$m/mw_tranche_3",
     ]
     for col in cols_where_zero_goes_to_nan:
         rez_build_limits.loc[rez_build_limits[col] == 0.0, col] = np.nan
-    rez_build_limits = _combine_transmission_expansion_cost_to_one_column(
-        rez_build_limits
-    )
+
     rez_build_limits = _process_transmission_limit(rez_build_limits)
     cols_where_nan_goes_to_zero = [
         "wind_generation_total_limits_mw_high",
@@ -61,20 +56,18 @@ def _template_rez_build_limits(
     rez_build_limits = _convert_cost_units(
         rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
     )
-    rez_build_limits = _convert_cost_units(
-        rez_build_limits, "indicative_transmission_expansion_cost_$m/mw"
-    )
     rez_build_limits = rez_build_limits.rename(
         columns={
-            "indicative_transmission_expansion_cost_$m/mw": "indicative_transmission_expansion_cost_$/mw",
             "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_solar_resource_limit_violation_penalty_factor_$/mw",
         }
     )
+    rez_build_limits["carrier"] = "AC"
     rez_build_limits = rez_build_limits.loc[
         :,
         [
             "rez_id",
             "isp_sub_region_id",
+            "carrier",
             "wind_generation_total_limits_mw_high",
             "wind_generation_total_limits_mw_medium",
             "wind_generation_total_limits_mw_offshore_floating",
@@ -86,7 +79,6 @@ def _template_rez_build_limits(
             "rez_transmission_network_limit_summer_typical",
             # Remove while not being used.
             # "rez_transmission_network_limit_winter_reference",
-            "indicative_transmission_expansion_cost_$/mw",
         ],
     ]
     return rez_build_limits
