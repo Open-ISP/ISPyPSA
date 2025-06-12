@@ -29,6 +29,8 @@ def _get_variables(
         var = model.variables.Generator_p_nom.at[f"{component_name}"]
     elif component_type == "Link" and attribute_type == "p":
         var = model.variables.Link_p.loc[:, f"{component_name}"]
+    elif component_type == "Link" and attribute_type == "p_nom":
+        var = model.variables.Link_p_nom.at[f"{component_name}"]
     elif component_type == "Generator" and attribute_type == "p":
         var = model.variables.Generator_p.loc[:, f"{component_name}"]
     elif component_type == "Load" and attribute_type == "p":

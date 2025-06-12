@@ -64,9 +64,10 @@ def _translate_existing_flow_path_capacity_to_links(
     links_df["isp_name"] = links_df["name"].copy()
 
     links_df["name"] = links_df["name"] + "_existing"
-
     links_df["p_nom_extendable"] = False
     links_df["p_min_pu"] = -1.0 * (links_df["p_nom_reverse"] / links_df["p_nom"])
+    links_df["build_year"] = 0
+    links_df["lifetime"] = np.inf
     links_df = links_df.drop(columns=["p_nom_reverse"])
     links_df["capital_cost"] = np.nan
 
@@ -78,6 +79,8 @@ def _translate_existing_flow_path_capacity_to_links(
         "bus1",
         "p_nom",
         "p_min_pu",
+        "build_year",
+        "lifetime",
         "capital_cost",
         "p_nom_extendable",
     ]

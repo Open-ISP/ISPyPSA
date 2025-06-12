@@ -11,16 +11,20 @@ from ispypsa.translator.create_pypsa_friendly_inputs import (
 )
 
 
-def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
-    """Test that link expansion occurs when it becomes economically viable.
+def test_flow_path_expansion_limit_respected(csv_str_to_df, tmp_path, monkeypatch):
+    """Test that link expansion spanning multiple investment periods respects
+    total limit for flow path.
 
     This test creates a simple two-region network (A and B) where:
-    - Region A has an expensive generator and fixed demand of 100 MW
+    - Region A has an expensive generator and a demand of 100 MW and 200 MW in the two
+      investment periods.
     - Region B has a cheap generator and no demand
     - The existing transmission link can only carry 50 MW (half the demand)
-    - Link expansion costs change between years, making expansion economic in year 2
+    - Link expansion costs are cheap in both years
+    - the total allowable expansion for the flow path is 100 MW
 
-    The test uses the translator to convert ISPyPSA format tables to PyPSA format.
+    We would expect that in the first investment period 50 MW of expansion occurs and
+    in the second investment period another 50 MW of expansion occurs.
     """
     # Create directories
     ispypsa_dir = tmp_path / "ispypsa_inputs"
@@ -81,9 +85,9 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
 
     demand_data_to_write = [
         ("2024-08-01 00:00:00", 0.0, "A", "2024-2"),
-        ("2025-05-01 00:00:00", 250.0, "A", "2025-1"),
+        ("2025-05-01 00:00:00", 100.0, "A", "2025-1"),
         ("2025-08-01 00:00:00", 0.0, "A", "2025-2"),
-        ("2026-05-01 00:00:00", 250.0, "A", "2026-1"),
+        ("2026-05-01 00:00:00", 200.0, "A", "2026-1"),
         ("2024-08-01 00:00:00", 0.0, "B", "2024-2"),
         ("2025-05-01 00:00:00", 0.0, "B", "2025-1"),
         ("2025-08-01 00:00:00", 0.0, "B", "2025-2"),
@@ -127,7 +131,7 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     # Flow path expansion costs table
     flow_path_expansion_costs_csv = """
     flow_path, option, additional_network_capacity_mw, 2024_25_$/mw, 2025_26_$/mw
-    A-B,       Opt1,   150,                            1000000,               0.0
+    A-B,       Opt1,   100,                            1.0,          1.0
     """
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
@@ -206,8 +210,8 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     expected_links = """
     Link,          p_nom_opt
     A-B_existing,       50.0
-    A-B_exp_2025,        0.0
-    A-B_exp_2026,      150.0
+    A-B_exp_2025,       50.0
+    A-B_exp_2026,       50.0
     """
     expected_links = csv_str_to_df(expected_links)
     pd.testing.assert_frame_equal(links, expected_links)
@@ -218,8 +222,8 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     links_t.columns.name = None
     expected_links_t = """
     A-B_existing,     A-B_exp_2025,   A-B_exp_2026
-    -50.0,          0.0,                     0.0
-    -50.0,          0.0,                  -150.0
+    -50.0,            -50.0,          0.0
+    -50.0,            -50.0,          -50.0
     """
     expected_links_t = csv_str_to_df(expected_links_t)
     pd.testing.assert_frame_equal(links_t, expected_links_t)

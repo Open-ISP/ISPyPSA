@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ispypsa.templater import load_manually_extracted_tables
@@ -18,28 +19,13 @@ def test_flow_paths_templater_regional(workbook_table_cache_test_path: Path):
     flow_paths_template = _template_regional_interconnectors(
         interconnector_capabilities
     )
+    assert all([carrier == "AC" for carrier in flow_paths_template.carrier])
     assert all(
         [
-            True
-            for carrier in flow_paths_template.carrier
-            if (carrier == "AC" or carrier == "DC")
-        ]
-    )
-    assert len(flow_paths_template[flow_paths_template.carrier == "DC"]) == 3
-    assert all(
-        [
-            True
+            dtype == np.int64
             for dtype in flow_paths_template[
                 [col for col in flow_paths_template.columns if "mw" in col]
             ].dtypes
-            if dtype is int
-        ]
-    )
-    assert all(
-        [
-            True
-            for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path
         ]
     )
     assert len(flow_paths_template) == 6
@@ -54,29 +40,14 @@ def test_flow_paths_templater_sub_regional(workbook_table_cache_test_path: Path)
     flow_paths_template = _template_sub_regional_flow_paths(
         flow_path_transfer_capability
     )
+    assert all([carrier == "AC" for carrier in flow_paths_template.carrier])
     assert all(
         [
-            True
-            for carrier in flow_paths_template.carrier
-            if (carrier == "AC" or carrier == "DC")
-        ]
-    )
-    assert len(flow_paths_template[flow_paths_template.carrier == "DC"]) == 3
-    assert all(
-        [
-            True
+            dtype == np.int64
             for dtype in flow_paths_template[
                 [col for col in flow_paths_template.columns if "mw" in col]
             ].dtypes
-            if dtype is int
         ]
     )
-    assert all(
-        [
-            True
-            for name in ("QNI", "Terranora", "Heywood", "Murraylink", "Basslink")
-            if name in flow_paths_template.flow_path
-        ]
-    )
-    assert len(flow_paths_template) == 14
+    assert len(flow_paths_template) == 12
     assert len(flow_paths_template.columns) == 6

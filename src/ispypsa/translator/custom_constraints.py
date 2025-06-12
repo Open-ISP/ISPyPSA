@@ -19,7 +19,8 @@ def _translate_custom_constraints(
     ispypsa_tables: dict[str, pd.DataFrame],
     links: pd.DataFrame,
 ):
-    """Translate custom constraint tables into a PyPSA friendly format.
+    """Translate custom constraint tables into a PyPSA friendly format and define any
+    endogenous custom constraints.
 
     Args:
         config: `ispypsa.config.ModelConfig` object
@@ -34,7 +35,7 @@ def _translate_custom_constraints(
         links: pd.DataFrame specifying the Link components to be used in the PyPSA model
 
     Returns: dictionary of dataframes in the `PyPSA` friendly format, with the relevant
-        tables for custom constraint.
+        tables for custom constraints.
     """
     _check_custom_constraint_table_sets_are_complete(ispypsa_tables)
 
@@ -44,19 +45,27 @@ def _translate_custom_constraints(
         _CUSTOM_GROUP_CONSTRAINTS + _CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS
     )
 
+    # Get all custom constraint tables that have been given.
     present_custom_constraint_tables = [
         table for table in all_custom_constraint_tables if table in ispypsa_tables
     ]
 
+    lhs = []
+    rhs = []
+
+    # Translate custom constraints to PyPSA friendly format.
     if len(present_custom_constraint_tables) != 0:
         custom_constraint_rhs_tables = [
             ispypsa_tables[table]
             for table in all_custom_constraint_tables
             if "_rhs" in table
         ]
-        pypsa_inputs["custom_constraints_rhs"] = _translate_custom_constraint_rhs(
+
+        manually_specified_rhs = _translate_custom_constraint_rhs(
             custom_constraint_rhs_tables
         )
+
+        rhs.append(manually_specified_rhs)
 
         custom_constraint_lhs_tables = [
             ispypsa_tables[table]
@@ -64,10 +73,12 @@ def _translate_custom_constraints(
             if "_lhs" in table
         ]
 
+        # Create dummy generators to allow for expansion of rhs term limiting
+        # constraints for modelling rez transmission.
         if config.network.rez_transmission_expansion:
             pypsa_inputs["custom_constraints_generators"] = (
                 _translate_custom_constraints_generators(
-                    list(pypsa_inputs["custom_constraints_rhs"]["constraint_name"]),
+                    list(manually_specified_rhs["constraint_name"]),
                     ispypsa_tables["rez_transmission_expansion_costs"],
                     config.wacc,
                     config.network.annuitisation_lifetime,
@@ -76,17 +87,34 @@ def _translate_custom_constraints(
                 )
             )
 
-            custom_constraint_generators_lhs = (
-                _translate_custom_constraint_generators_to_lhs(
-                    pypsa_inputs["custom_constraints_generators"]
-                )
+        custom_constraint_generators_lhs = (
+            _translate_custom_constraint_generators_to_lhs(
+                pypsa_inputs["custom_constraints_generators"]
             )
-
-            custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
-
-        pypsa_inputs["custom_constraints_lhs"] = _translate_custom_constraint_lhs(
-            custom_constraint_lhs_tables, links
         )
+        custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
+
+        lhs.append(
+            _translate_custom_constraint_lhs(custom_constraint_lhs_tables, links)
+        )
+
+    if not links.empty:
+        # Create custom constraints that limit the total expansion of transmission
+        # across multiple links / investment years.
+        transmission_expansion_limit_lhs, transmission_expansion_limit_rhs = (
+            _create_flow_path_and_rez_transmission_expansion_limit_constraints(
+                links,
+                pypsa_inputs.get("custom_constraints_generators"),
+                ispypsa_tables.get("flow_path_expansion_costs"),
+                ispypsa_tables.get("rez_transmission_expansion_costs"),
+            )
+        )
+        lhs.append(transmission_expansion_limit_lhs)
+        rhs.append(transmission_expansion_limit_rhs)
+
+    if lhs and rhs:
+        pypsa_inputs["custom_constraints_lhs"] = pd.concat(lhs)
+        pypsa_inputs["custom_constraints_rhs"] = pd.concat(rhs)
 
     return pypsa_inputs
 
@@ -313,3 +341,94 @@ def _expand_link_flow_lhs_terms(
     link_flow_terms = link_flow_terms.rename(columns={"name": "variable_name"})
     all_lhs_terms.append(link_flow_terms)
     return pd.concat(all_lhs_terms)
+
+
+def _create_flow_path_and_rez_transmission_expansion_limit_constraints(
+    links,
+    constraint_generators,
+    flow_paths,
+    rez_connections,
+):
+    """Create custom constraint lhs and rhs definitions to limit the total expansion
+    on rez and flow links
+
+    Args:
+        links: DataFrame specifying the Link components to be added to the PyPSA model.
+        constraint_generators: DataFrame specifying the generators used to model
+            rez connection capacity.
+        flow_paths: DataFrame specifying the total additional
+            capacity allowed on flow paths.
+        rez_connections: DataFrame specifying the total
+            additional capacity allowed on flow paths.
+
+    Returns: Two DataFrames, the first specifying the lhs values of the custom
+        constraints created, and the second the rhs values.
+    """
+    lhs = []
+    rhs = []
+
+    if flow_paths is not None:
+        flow_path_cols = [
+            col for col in flow_paths if col in _CUSTOM_CONSTRAINT_ATTRIBUTES.keys()
+        ]
+        flow_paths = flow_paths.loc[:, flow_path_cols]
+        flow_paths = flow_paths.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+        rhs.append(flow_paths)
+
+    if rez_connections is not None:
+        # Merge in the isp flow path names.
+        rez_connections = pd.merge(
+            rez_connections,
+            links.groupby("isp_name", as_index=False).first(),
+            how="left",
+            left_on="rez_constraint_id",
+            right_on="bus0",
+        )
+        # If there aren't matching links that means the costs are for transmission
+        # constraints modelled with dummy generators and the rez_constraint_id name should
+        # be kept.
+        rez_connections.loc[rez_connections["isp_name"].isna(), "isp_name"] = (
+            rez_connections["rez_constraint_id"]
+        )
+        rez_connections = rez_connections.loc[
+            :, ["isp_name", "additional_network_capacity_mw"]
+        ]
+        rez_connections = rez_connections.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+        rhs.append(rez_connections)
+
+    rhs = pd.concat(rhs)
+    rhs["constraint_name"] = rhs["constraint_name"] + "_expansion_limit"
+    rhs["term_type"] = "<="
+
+    if constraint_generators is not None:
+        # Find extendable links whose capacity is not modelled using custom constraints
+        # and dummy generators.
+        link_mask = (
+            ~links["isp_name"].isin(constraint_generators["constraint_name"])
+            & links["p_nom_extendable"]
+        )
+    else:
+        link_mask = links["p_nom_extendable"]
+
+    # Convert link data to lhs definitions
+    links_lhs = links.loc[link_mask, ["isp_name", "name"]]
+    links_lhs = links_lhs.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+    links_lhs["component"] = "Link"
+    links_lhs["attribute"] = "p_nom"
+    links_lhs["coefficient"] = 1.0
+    lhs.append(links_lhs)
+
+    if constraint_generators is not None:
+        generators_lhs = constraint_generators.loc[:, ["constraint_name", "name"]]
+        generators_lhs = generators_lhs.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+        generators_lhs["component"] = "Generator"
+        generators_lhs["attribute"] = "p_nom"
+        generators_lhs["coefficient"] = 1.0
+        lhs.append(generators_lhs)
+
+    lhs = pd.concat(lhs)
+    lhs["constraint_name"] = lhs["constraint_name"] + "_expansion_limit"
+
+    rhs = rhs[rhs["constraint_name"].isin(lhs["constraint_name"])]
+
+    return lhs, rhs

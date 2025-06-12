@@ -24,9 +24,19 @@ network:
   # Does the model consider the expansion of sub-region to sub-region transmission
   # capacity
   transmission_expansion: True
+  # By default, the maximum a transmission flow path can be expanded is set by the
+  # capacity of the selected augmentation option during the templating process. If the
+  # transmission_expansion_limit_override is set to a value other than None, then this
+  # value replace the option specific limits at the templating.
+  transmission_expansion_limit_override: null
   # Does the model consider the expansion of renewable energy zone transmission
   # capacity
   rez_transmission_expansion: True
+  # By default, the maximum a rez connection can be expanded is set by the
+  # capacity of the selected augmentation option during the templating process. If the
+  # transmission_expansion_limit_override is set to a value other than None, then this
+  # value replace the option specific limits at the templating.
+  rez_connection_expansion_limit_override: null
   # Years to annuitise transmission project capital costs over.
   annuitisation_lifetime: 30
   nodes:

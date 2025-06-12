@@ -24,7 +24,10 @@ _REZ_LINK_ATTRIBUTES = {
 
 _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "term_id": "variable_name",
-    "indicative_transmission_expansion_cost_$/mw": "capital_cost",
+    "name": "variable_name",
+    "isp_name": "constraint_name",
+    "flow_path": "constraint_name",
+    "additional_network_capacity_mw": "rhs",
     "constraint_id": "constraint_name",
     "summer_typical": "rhs",
     "term_type": "term_type",
