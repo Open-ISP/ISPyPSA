@@ -176,7 +176,8 @@ def _clean_capability_column_names(capability_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _template_sub_regional_flow_path_costs(
-    iasr_tables: dict[str, pd.DataFrame], scenario: str
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
 ) -> pd.DataFrame:
     """
     Process flow path augmentation options and cost forecasts to find the least cost
@@ -194,6 +195,8 @@ def _template_sub_regional_flow_path_costs(
                   year columns
                 - Actionable projects: columns include 'flow_path', and financial year
                   columns
+        scenario: str specifying the scenario name (e.g., "Step Change",
+            "Progressive Change").
 
     Returns:
         pd.DataFrame containing the least cost option for each flow path. Columns:
@@ -203,7 +206,9 @@ def _template_sub_regional_flow_path_costs(
             - <financial year>_$/mw (one column per year, e.g., '2024_25_$/mw')
     """
     return process_transmission_costs(
-        iasr_tables=iasr_tables, scenario=scenario, config=_FLOW_PATH_CONFIG
+        iasr_tables=iasr_tables,
+        scenario=scenario,
+        config=_FLOW_PATH_CONFIG,
     )
 
 
@@ -237,7 +242,9 @@ def _template_rez_transmission_costs(
             - <financial year>_$/mw (cost per MW for each year, e.g., '2024_25_$/mw')
     """
     rez_costs = process_transmission_costs(
-        iasr_tables=iasr_tables, scenario=scenario, config=_REZ_CONFIG
+        iasr_tables=iasr_tables,
+        scenario=scenario,
+        config=_REZ_CONFIG,
     )
     rez_costs["rez_constraint_id"] = _fuzzy_match_names(
         rez_costs["rez_constraint_id"],
@@ -251,7 +258,6 @@ def process_transmission_costs(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
     config: dict,
-    expansion_limit_override: float = None,
 ) -> pd.DataFrame:
     """
     Generic function to process transmission costs (flow path or REZ).
@@ -265,8 +271,6 @@ def process_transmission_costs(
               rez or flow path specific names
             - table_names: dict with augmentation and cost table lists
             - mappings: dict with mappings for preparatory activities and other data
-        expansion_limit_override: A float value to override all the transmission capacity
-            limits with if not None.
 
     Returns:
         pd.DataFrame containing the least cost options with standardized column
@@ -285,11 +289,6 @@ def process_transmission_costs(
     # Find the least cost options
     final_costs = _get_least_cost_options(
         aug_table=aug_table, cost_table=cost_table, config=config
-    )
-
-    # Override total expansion allowed if override value isn't None.
-    final_costs = _override_transmission_expansion_limits(
-        expansion_limit_override, final_costs
     )
 
     return final_costs
@@ -866,24 +865,3 @@ def _sort_cols(table: pd.DataFrame, start_cols: list[str]) -> pd.DataFrame:
     remaining_cols = list(set(table.columns) - set(start_cols))
     sorted_remaining_columns = sorted(remaining_cols)
     return table.loc[:, start_cols + sorted_remaining_columns]
-
-
-def _override_transmission_expansion_limits(
-    expansion_limit_override: float | None,
-    transmission_costs: pd.DataFrame,
-):
-    """
-    Override the additional_network_capacity_mw column in the transmission_costs with
-    the expansion_limit_override value if it is not None.
-
-    Args:
-        expansion_limit_override: float value to override additional_network_capacity_mw
-            with.
-        transmission_costs: DataFrame with additional_network_capacity_mw column to
-            override.
-
-    Returns: cost DataFrame with additional_network_capacity_mw colum.
-    """
-    if expansion_limit_override is not None:
-        transmission_costs["additional_network_capacity_mw"] = expansion_limit_override
-    return transmission_costs

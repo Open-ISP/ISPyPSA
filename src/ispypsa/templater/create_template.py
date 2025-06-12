@@ -112,7 +112,8 @@ def create_ispypsa_inputs_template(
         )
 
         template["flow_path_expansion_costs"] = _template_sub_regional_flow_path_costs(
-            iasr_tables, scenario
+            iasr_tables,
+            scenario,
         )
 
     elif regional_granularity == "nem_regions":
