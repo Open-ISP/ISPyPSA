@@ -134,6 +134,36 @@ def test_translate_expansion_costs_to_links_empty(csv_str_to_df):
     assert result.empty
 
 
+def test_translate_expansion_costs_to_links_na_values(csv_str_to_df):
+    """Test that na flow path expansion costs result in empty DataFrame."""
+    # Create empty DataFrame
+    flow_path_expansion_costs_csv = """
+    flow_path, additional_network_capacity_mw, 2025_26_$/mw
+    A,         100.0,                        ,
+    """
+    flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
+
+    existing_links_csv = """
+    name,                 carrier,  bus0,    bus1,    p_nom
+    PathA-PathB_existing, AC,       NodeA,   NodeB,   1000
+    """
+    existing_links_df = csv_str_to_df(existing_links_csv)
+
+    result = _translate_expansion_costs_to_links(
+        flow_path_expansion_costs,
+        existing_links_df,
+        [2026],
+        "fy",
+        0.07,
+        30,
+        id_column="flow_path",
+        match_column="name",
+    )
+
+    # The result should be an empty DataFrame
+    assert result.empty
+
+
 def test_translate_expansion_costs_to_links_no_matching_years(csv_str_to_df):
     """Test when none of the expansion costs match the investment periods."""
     # Create sample data for testing

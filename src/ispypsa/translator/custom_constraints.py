@@ -57,7 +57,7 @@ def _translate_custom_constraints(
     if len(present_custom_constraint_tables) != 0:
         custom_constraint_rhs_tables = [
             ispypsa_tables[table]
-            for table in all_custom_constraint_tables
+            for table in present_custom_constraint_tables
             if "_rhs" in table
         ]
 
@@ -69,7 +69,7 @@ def _translate_custom_constraints(
 
         custom_constraint_lhs_tables = [
             ispypsa_tables[table]
-            for table in all_custom_constraint_tables
+            for table in present_custom_constraint_tables
             if "_lhs" in table
         ]
 
