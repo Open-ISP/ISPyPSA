@@ -186,7 +186,7 @@ def test_create_ispypsa_inputs_template_single_regions(
         assert table in pypsa_tables.keys()
 
     assert "NEM" in pypsa_tables["buses"]["name"].values
-    assert pypsa_tables["lines"].empty
+    assert pypsa_tables["links"].empty
 
 
 class DummyConfigTwo:
