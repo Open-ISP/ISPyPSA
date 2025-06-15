@@ -7,6 +7,7 @@ from ispypsa.translator.custom_constraints import (
     _translate_custom_constraint_generators_to_lhs,
     _translate_custom_constraint_lhs,
     _translate_custom_constraint_rhs,
+    _translate_custom_constraints,
     _translate_custom_constraints_generators,
 )
 
@@ -159,3 +160,91 @@ def test_translate_custom_constraint_generators_to_lhs(csv_str_to_df):
         custom_constraint_generators
     )
     pd.testing.assert_frame_equal(expected_lhs_definition, lhs_definition)
+
+
+def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df):
+    """Test translation of custom constraints when tables are present but REZ transmission expansion is disabled."""
+    # Create sample custom constraint tables
+    rez_group_constraints_rhs_csv = """
+    constraint_id,  summer_typical
+    REZ_NSW,        5000
+    REZ_VIC,        3000
+    """
+
+    rez_group_constraints_lhs_csv = """
+    constraint_id,  term_type,           variable_name,  coefficient
+    REZ_NSW,        generator_capacity,  GEN1,           1.0
+    REZ_NSW,        generator_capacity,  GEN2,           1.0
+    REZ_VIC,        generator_capacity,  GEN3,           1.0
+    """
+
+    # Create sample links DataFrame
+    links_csv = """
+    isp_name,    name,                 carrier,  bus0,    bus1,    p_nom,  p_nom_extendable
+    PathA-PathB, PathA-PathB_existing, AC,       NodeA,   NodeB,   1000,   False
+    """
+
+    ispypsa_tables = {
+        "rez_group_constraints_rhs": csv_str_to_df(rez_group_constraints_rhs_csv),
+        "rez_group_constraints_lhs": csv_str_to_df(rez_group_constraints_lhs_csv),
+    }
+
+    links = csv_str_to_df(links_csv)
+
+    # Mock config with REZ transmission expansion disabled
+    class MockNetworkConfig:
+        rez_transmission_expansion = False
+
+    class MockConfig:
+        network = MockNetworkConfig()
+
+    config = MockConfig()
+
+    # Call the function
+    result = _translate_custom_constraints(config, ispypsa_tables, links)
+
+    # Expected RHS result
+    expected_rhs_csv = """
+    constraint_name,  rhs
+    REZ_NSW,          5000
+    REZ_VIC,          3000
+    """
+    expected_rhs = csv_str_to_df(expected_rhs_csv)
+
+    # Expected LHS result
+    expected_lhs_csv = """
+    variable_name,  constraint_name,  coefficient,  component,  attribute
+    GEN1,           REZ_NSW,          1.0,          Generator,  p_nom
+    GEN2,           REZ_NSW,          1.0,          Generator,  p_nom
+    GEN3,           REZ_VIC,          1.0,          Generator,  p_nom
+    """
+    expected_lhs = csv_str_to_df(expected_lhs_csv)
+
+    # Assert results
+    assert "custom_constraints_rhs" in result
+    assert "custom_constraints_lhs" in result
+    assert (
+        "custom_constraints_generators" not in result
+    )  # Should not be present when REZ expansion is disabled
+
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"]
+        .sort_values("constraint_name")
+        .reset_index(drop=True),
+        expected_rhs.sort_values("constraint_name").reset_index(drop=True),
+    )
+
+    # Sort columns to match for comparison
+    result_lhs = (
+        result["custom_constraints_lhs"]
+        .sort_values(["constraint_name", "variable_name"])
+        .reset_index(drop=True)
+    )
+    expected_lhs = expected_lhs.sort_values(
+        ["constraint_name", "variable_name"]
+    ).reset_index(drop=True)
+
+    # Reorder columns to match
+    result_lhs = result_lhs[expected_lhs.columns]
+
+    pd.testing.assert_frame_equal(result_lhs, expected_lhs)

@@ -87,12 +87,12 @@ def _translate_custom_constraints(
                 )
             )
 
-        custom_constraint_generators_lhs = (
-            _translate_custom_constraint_generators_to_lhs(
-                pypsa_inputs["custom_constraints_generators"]
+            custom_constraint_generators_lhs = (
+                _translate_custom_constraint_generators_to_lhs(
+                    pypsa_inputs["custom_constraints_generators"]
+                )
             )
-        )
-        custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
+            custom_constraint_lhs_tables += [custom_constraint_generators_lhs]
 
         lhs.append(
             _translate_custom_constraint_lhs(custom_constraint_lhs_tables, links)
@@ -396,9 +396,14 @@ def _create_flow_path_and_rez_transmission_expansion_limit_constraints(
         rez_connections = rez_connections.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
         rhs.append(rez_connections)
 
-    rhs = pd.concat(rhs)
-    rhs["constraint_name"] = rhs["constraint_name"] + "_expansion_limit"
-    rhs["term_type"] = "<="
+    # Check if there are any rhs constraints to concatenate
+    if rhs:
+        rhs = pd.concat(rhs)
+        rhs["constraint_name"] = rhs["constraint_name"] + "_expansion_limit"
+        rhs["term_type"] = "<="
+    else:
+        # Return empty DataFrames if no expansion costs are provided
+        return pd.DataFrame(), pd.DataFrame()
 
     if constraint_generators is not None:
         # Find extendable links whose capacity is not modelled using custom constraints
