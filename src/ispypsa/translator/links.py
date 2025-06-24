@@ -227,7 +227,7 @@ def _translate_time_varying_expansion_costs(
             return 2000 + int(yy_part)  # e.g., 2026, as per spec
         elif year_type == "calendar":
             raise NotImplementedError(
-                f"Calendar years not implemented for transmission costs"
+                f"Calendar years are not implemented yet for transmission costs"
             )
         else:
             raise ValueError(f"Unknown year_type: {year_type}")

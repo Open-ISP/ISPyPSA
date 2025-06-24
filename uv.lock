@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version < '3.11'",
@@ -360,7 +361,7 @@ name = "click"
 version = "8.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
 wheels = [
@@ -917,7 +918,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "platform_system == 'Darwin'" },
+    { name = "appnope", marker = "sys_platform == 'darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -974,7 +975,7 @@ wheels = [
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.5.0"
+version = "2.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openpyxl" },
@@ -983,9 +984,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/4a/33590f8f545b468020f28a2a2bb8071d5979e9ffa37dc2ed57b1502f50c6/isp_workbook_parser-2.5.0.tar.gz", hash = "sha256:958e5fa1115a1c5dee1a8d2f14a825f5a86133d3c0bd46cc4a465007ac954d8b", size = 53786 }
+sdist = { url = "https://files.pythonhosted.org/packages/da/d3/c33976dccb3ba135f785d685d26d9a7c4479377e3d584afd628915bba96c/isp_workbook_parser-2.6.0.tar.gz", hash = "sha256:e35a756311f39e8b7327b8fd2e30e367f41400ac710106a1b42de383ade3cb1c", size = 53856 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/eb/bb3b6c8831f9e2dca80bc4b4e5163fa7ae1500c547d8794391064ba0a0be/isp_workbook_parser-2.5.0-py3-none-any.whl", hash = "sha256:d03b788ad305f93fb04f74924985e9325ba099498b99f24339c429dfd662df7c", size = 86361 },
+    { url = "https://files.pythonhosted.org/packages/2f/96/d30d8e0e633adf8376310e71f11309169b44271142219a0e289e306194f0/isp_workbook_parser-2.6.0-py3-none-any.whl", hash = "sha256:d20ab3c442aa0293019810b9edb7aaad86e1c12768bfb506a8ae98133f503324", size = 86466 },
 ]
 
 [[package]]
@@ -1032,7 +1033,7 @@ dev = [
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
     { name = "isp-trace-parser", specifier = ">=1.0.3" },
-    { name = "isp-workbook-parser", specifier = ">=2.5.0" },
+    { name = "isp-workbook-parser", specifier = ">=2.6.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
@@ -1042,6 +1043,7 @@ requires-dist = [
     { name = "thefuzz", specifier = ">=0.22.1" },
     { name = "xmltodict", specifier = ">=0.13.0" },
 ]
+provides-extras = ["solvers"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3093,7 +3095,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [

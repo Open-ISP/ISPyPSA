@@ -42,10 +42,8 @@ _BASE_TEMPLATE_OUTPUTS = [
     "partial_outage_forecasts",
     "seasonal_ratings",
     "closure_years",
-    "rez_group_constraints_lhs",
-    "rez_group_constraints_rhs",
-    "rez_transmission_limit_constraints_lhs",
-    "rez_transmission_limit_constraints_rhs",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
 ]
 
 
@@ -141,8 +139,7 @@ def create_ispypsa_inputs_template(
     possible_rez_or_constraint_names = list(
         set(
             list(template["renewable_energy_zones"]["rez_id"])
-            + list(template["rez_group_constraints_rhs"]["constraint_id"])
-            + list(template["rez_transmission_limit_constraints_rhs"]["constraint_id"])
+            + list(template["custom_constraints_rhs"]["constraint_id"])
         )
     )
 

@@ -75,37 +75,22 @@ def sample_ispypsa_tables(csv_str_to_df):
 
 
     # REZ group constraints LHS table
-    rez_group_constraints_lhs_csv = """
-    constraint_id,              term_type,           variable_name,                      coefficient
-    Central-West__Orana__REZ,   generator_capacity,  Central-West__Orana__REZ__Wind,     1.0
-    Central-West__Orana__REZ,   generator_capacity,  Central-West__Orana__REZ__Solar,    1.0
-    New__England__REZ,          generator_capacity,  New__England__REZ__Wind,            1.0
-    New__England__REZ,          generator_capacity,  New__England__REZ__Solar,           1.0
+    custom_constraints_lhs = """
+    constraint_id,                     term_type,           variable_name,                      coefficient
+    Central-West__Orana__REZ_Custom,   generator_capacity,  Central-West__Orana__REZ__Wind,     1.0
+    Central-West__Orana__REZ_Custom,   generator_capacity,  Central-West__Orana__REZ__Solar,    1.0
+    New__England__REZ_Custom,          generator_capacity,  New__England__REZ__Wind,            1.0
+    New__England__REZ_Custom,          generator_capacity,  New__England__REZ__Solar,           1.0
     """
-    tables["rez_group_constraints_lhs"] = csv_str_to_df(rez_group_constraints_lhs_csv)
+    tables["custom_constraints_lhs"] = csv_str_to_df(custom_constraints_lhs)
     
     # REZ group constraints RHS table
-    rez_group_constraints_rhs_csv = """
-    constraint_id,              summer_typical
-    Central-West__Orana__REZ,   4500
-    New__England__REZ,          6000
+    custom_constraints_rhs = """
+    constraint_id,                     summer_typical
+    Central-West__Orana__REZ_Custom,   4500
+    New__England__REZ_Custom,          6000
     """
-    tables["rez_group_constraints_rhs"] = csv_str_to_df(rez_group_constraints_rhs_csv)
-    
-    # REZ transmission limit constraints LHS table
-    rez_transmission_limit_constraints_lhs_csv = """
-    constraint_id,      term_type,   variable_name,              coefficient
-    NSW_REZ_LIMIT,      link_flow,   Central-West__Orana__REZ,   1.0
-    NSW_REZ_LIMIT,      link_flow,   New__England__REZ,          1.0
-    """
-    tables["rez_transmission_limit_constraints_lhs"] = csv_str_to_df(rez_transmission_limit_constraints_lhs_csv)
-    
-    # REZ transmission limit constraints RHS table
-    rez_transmission_limit_constraints_rhs_csv = """
-    constraint_id,   summer_typical
-    NSW_REZ_LIMIT,   10000
-    """
-    tables["rez_transmission_limit_constraints_rhs"] = csv_str_to_df(rez_transmission_limit_constraints_rhs_csv)
+    tables["custom_constraints_rhs"] = csv_str_to_df(custom_constraints_rhs)
     
     # Optional tables that might be needed for transmission expansion
     flow_path_expansion_costs_csv = """
@@ -115,9 +100,11 @@ def sample_ispypsa_tables(csv_str_to_df):
     tables["flow_path_expansion_costs"] = csv_str_to_df(flow_path_expansion_costs_csv)
     
     rez_transmission_expansion_costs_csv = """
-    rez_constraint_id,          additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw,  2027_28_$/mw
-    Central-West__Orana__REZ,   1000,                            2000,          2100,          2200
-    New__England__REZ,          1500,                            2500,          2600,          2700
+    rez_constraint_id,                 additional_network_capacity_mw,  2025_26_$/mw,  2026_27_$/mw,  2027_28_$/mw
+    Central-West__Orana__REZ,          1000,                            2000,          2100,          2200
+    New__England__REZ,                 1500,                            2500,          2600,          2700
+    Central-West__Orana__REZ_Custom,   1000,                            2000,          2100,          2200
+    New__England__REZ_Custom,          1500,                            2500,          2600,          2700
     """
     tables["rez_transmission_expansion_costs"] = csv_str_to_df(rez_transmission_expansion_costs_csv)
     
@@ -159,8 +146,8 @@ def sample_model_config():
             path_to_parsed_traces="NOT_SET_FOR_TESTING",
             year_type="fy",
             range=TemporalRangeConfig(
-                start_year=2024,
-                end_year=2030
+                start_year=2026,
+                end_year=2028
             ),
             capacity_expansion=TemporalCapacityInvestmentConfig(
                 reference_year_cycle=[2024],
@@ -168,7 +155,7 @@ def sample_model_config():
                 aggregation=TemporalAggregationConfig(
                     representative_weeks=None
                 ),
-                investment_periods=[2024, 2030]
+                investment_periods=[2026, 2028]
             ),
             operational=TemporalOperationalConfig(
                 reference_year_cycle=[2024],
@@ -187,7 +174,7 @@ def sample_model_config():
             ),
             annuitisation_lifetime=25,
             transmission_expansion=True,
-            rez_transmission_expansion=False,
+            rez_transmission_expansion=True,
             rez_to_sub_region_transmission_default_limit=1000000.0
         ),
         unserved_energy=UnservedEnergyConfig(

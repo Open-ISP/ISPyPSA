@@ -29,20 +29,11 @@ _CUSTOM_CONSTRAINT_ATTRIBUTES = {
     "flow_path": "constraint_name",
     "additional_network_capacity_mw": "rhs",
     "constraint_id": "constraint_name",
+    "rez_constraint_id": "constraint_name",
     "summer_typical": "rhs",
     "term_type": "term_type",
     "coefficient": "coefficient",
 }
-
-_CUSTOM_GROUP_CONSTRAINTS = [
-    "rez_group_constraints_rhs",
-    "rez_group_constraints_lhs",
-]
-
-_CUSTOM_TRANSMISSION_LIMIT_CONSTRAINTS = [
-    "rez_transmission_limit_constraints_lhs",
-    "rez_transmission_limit_constraints_rhs",
-]
 
 _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {
     "link_flow": "Link",
