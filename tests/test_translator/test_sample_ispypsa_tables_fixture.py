@@ -13,10 +13,8 @@ def test_sample_ispypsa_tables_fixture(sample_ispypsa_tables):
         "renewable_energy_zones",
         "flow_paths",
         "ecaa_generators",
-        "rez_group_constraints_lhs",
-        "rez_group_constraints_rhs",
-        "rez_transmission_limit_constraints_lhs",
-        "rez_transmission_limit_constraints_rhs",
+        "custom_constraints_lhs",
+        "custom_constraints_rhs",
     ]
     
     for table_name in expected_tables:

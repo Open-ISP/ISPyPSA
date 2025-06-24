@@ -96,6 +96,17 @@ def _add_custom_constraints(
 
         x = tuple(zip(coefficients, variables))
         linear_expression = network.model.linexpr(*x)
-        network.model.add_constraints(
-            linear_expression <= row["rhs"], name=constraint_name
-        )
+        if row["constraint_type"] == "<=":
+            network.model.add_constraints(
+                linear_expression <= row["rhs"], name=constraint_name
+            )
+        elif row["constraint_type"] == ">=":
+            network.model.add_constraints(
+                linear_expression >= row["rhs"], name=constraint_name
+            )
+        elif row["constraint_type"] == "==":
+            network.model.add_constraints(
+                linear_expression == row["rhs"], name=constraint_name
+            )
+        else:
+            raise ValueError(f"{row['constraint_type']} is not a valid constraint type.")

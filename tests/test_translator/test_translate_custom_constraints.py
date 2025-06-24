@@ -1,197 +1,46 @@
-import numpy as np
 import pandas as pd
 import pytest
 
-from ispypsa.translator.custom_constraints import (
-    _check_custom_constraint_table_sets_are_complete,
-    _translate_custom_constraint_generators_to_lhs,
-    _translate_custom_constraint_lhs,
-    _translate_custom_constraint_rhs,
-    _translate_custom_constraints,
-    _translate_custom_constraints_generators,
-)
+from ispypsa.translator.custom_constraints import _translate_custom_constraints
 
 
-def test_check_custom_constraint_table_sets_are_complete():
-    # Test no error with complete set of tables.
-    _check_custom_constraint_table_sets_are_complete(
-        {
-            "rez_group_constraints_rhs": pd.DataFrame(),
-            "rez_group_constraints_lhs": pd.DataFrame(),
-            "rez_transmission_limit_constraints_lhs": pd.DataFrame(),
-            "rez_transmission_limit_constraints_rhs": pd.DataFrame(),
-        }
-    )
-
-    # Also should be fine if both tables from a set are missing.
-    _check_custom_constraint_table_sets_are_complete(
-        {
-            "rez_group_constraints_rhs": pd.DataFrame(),
-            "rez_group_constraints_lhs": pd.DataFrame(),
-        }
-    )
-
-    # Test error is raised when an incomplete set is given
-    with pytest.raises(
-        ValueError,
-        match=f"An incomplete set of inputs have been provided for custom group constraints",
-    ):
-        _check_custom_constraint_table_sets_are_complete(
-            {
-                "rez_group_constraints_rhs": pd.DataFrame(),
-            }
-        )
-
-
-def test_translate_custom_constraints_generators():
-    constraint_expansion_costs = pd.DataFrame(
-        {
-            "rez_constraint_id": ["A", "B"],
-            "2025_26_$/mw": [9.0, np.nan],
-            "2026_27_$/mw": [10.0, 15.0],
-        }
-    )
-    expected_pypsa_custom_constraint_gens = pd.DataFrame(
-        {
-            "name": ["A_exp_2026", "A_exp_2027", "B_exp_2027"],
-            "constraint_name": ["A", "A", "B"],
-            "bus": "bus_for_custom_constraint_gens",
-            "p_nom": [0.0, 0.0, 0.0],
-            "p_nom_extendable": [True, True, True],
-            "build_year": [2026, 2027, 2027],
-            "lifetime": np.inf,
-        }
-    )
-    pypsa_custom_constraint_gens = _translate_custom_constraints_generators(
-        ["A", "B"],
-        constraint_expansion_costs,
-        wacc=5.0,
-        asset_lifetime=10,
-        investment_periods=[2026, 2027],
-        year_type="fy",
-    )
-
-    assert all(pypsa_custom_constraint_gens["capital_cost"] > 0)
-    pypsa_custom_constraint_gens = pypsa_custom_constraint_gens.drop(
-        columns="capital_cost"
-    )
-
-    pd.testing.assert_frame_equal(
-        expected_pypsa_custom_constraint_gens,
-        pypsa_custom_constraint_gens,
-    )
-
-
-def test_translate_custom_constraints_rhs():
-    ispypsa_custom_constraint_rhs = pd.DataFrame(
-        {
-            "constraint_id": ["A", "B"],
-            "summer_typical": [10.0, 20.0],
-        }
-    )
-    expected_pypsa_custom_constraint_rhs = pd.DataFrame(
-        {
-            "constraint_name": ["A", "B"],
-            "rhs": [10.0, 20.0],
-        }
-    )
-    pypsa_custom_constraint_rhs = _translate_custom_constraint_rhs(
-        [ispypsa_custom_constraint_rhs]
-    )
-    pd.testing.assert_frame_equal(
-        expected_pypsa_custom_constraint_rhs, pypsa_custom_constraint_rhs
-    )
-
-
-def test_translate_custom_constraints_lhs():
-    ispypsa_custom_constraint_lhs = pd.DataFrame(
-        {
-            "variable_name": ["X", "Y", "Z", "W", "F"],
-            "constraint_id": ["A", "B", "A", "B", "A"],
-            "term_type": [
-                "link_flow",
-                "generator_capacity",
-                "generator_output",
-                "load_consumption",
-                "storage_output",
-            ],
-            "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
-        }
-    )
-    pypsa_links = pd.DataFrame(
-        {
-            "isp_name": ["X"],
-            "name": ["X_existing"],
-        }
-    )
-    expected_pypsa_custom_constraint_lhs = pd.DataFrame(
-        {
-            "variable_name": ["X_existing", "Y", "Z", "W", "F"],
-            "constraint_name": ["A", "B", "A", "B", "A"],
-            "coefficient": [1.0, 2.0, 3.0, 4.0, 5.0],
-            "component": ["Link", "Generator", "Generator", "Load", "Storage"],
-            "attribute": ["p", "p_nom", "p", "p", "p"],
-        }
-    )
-    pypsa_custom_constraint_lhs = _translate_custom_constraint_lhs(
-        [ispypsa_custom_constraint_lhs], pypsa_links
-    )
-    pd.testing.assert_frame_equal(
-        expected_pypsa_custom_constraint_lhs.sort_values("variable_name").reset_index(
-            drop=True
-        ),
-        pypsa_custom_constraint_lhs.sort_values("variable_name").reset_index(drop=True),
-    )
-
-
-def test_translate_custom_constraint_generators_to_lhs(csv_str_to_df):
-    custom_constraint_generators = """
-    constraint_name, name
-    XY,              B
+def test_translate_custom_constraints_duplicate_constraint_names(csv_str_to_df):
+    """Test that ValueError is raised when duplicate constraint names exist in RHS."""
+    
+    # Input: manual custom constraints
+    custom_constraints_lhs_csv = """
+    constraint_id,  term_type,           term_id,  coefficient
+    CONS1,          generator_capacity,  GEN1,     1.0
+    CONS2,          generator_capacity,  GEN2,     1.0
     """
-    custom_constraint_generators = csv_str_to_df(custom_constraint_generators)
-    expected_lhs_definition = """
-    constraint_id,    term_type,        term_id,    coefficient
-    XY,             generator_capacity,       B,    -1.0
-    """
-    expected_lhs_definition = csv_str_to_df(expected_lhs_definition)
-
-    lhs_definition = _translate_custom_constraint_generators_to_lhs(
-        custom_constraint_generators
-    )
-    pd.testing.assert_frame_equal(expected_lhs_definition, lhs_definition)
-
-
-def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df):
-    """Test translation of custom constraints when tables are present but REZ transmission expansion is disabled."""
-    # Create sample custom constraint tables
-    rez_group_constraints_rhs_csv = """
+    
+    custom_constraints_rhs_csv = """
     constraint_id,  summer_typical
-    REZ_NSW,        5000
-    REZ_VIC,        3000
+    CONS1,          5000
+    CONS2,          3000
     """
-
-    rez_group_constraints_lhs_csv = """
-    constraint_id,  term_type,           variable_name,  coefficient
-    REZ_NSW,        generator_capacity,  GEN1,           1.0
-    REZ_NSW,        generator_capacity,  GEN2,           1.0
-    REZ_VIC,        generator_capacity,  GEN3,           1.0
+    
+    # Input: flow path expansion costs (will create CONS1_expansion_limit)
+    flow_path_expansion_costs_csv = """
+    flow_path,  additional_network_capacity_mw
+    CONS1,      500
     """
-
-    # Create sample links DataFrame
+    
+    # Input: links
     links_csv = """
-    isp_name,    name,                 carrier,  bus0,    bus1,    p_nom,  p_nom_extendable
-    PathA-PathB, PathA-PathB_existing, AC,       NodeA,   NodeB,   1000,   False
+    isp_name,  name,            carrier,  bus0,   bus1,   p_nom,  p_nom_extendable
+    CONS1,     CONS1_exp_2025,  AC,       BUS1,   BUS2,   0,      True
     """
-
+    
+    # Create input data
     ispypsa_tables = {
-        "rez_group_constraints_rhs": csv_str_to_df(rez_group_constraints_rhs_csv),
-        "rez_group_constraints_lhs": csv_str_to_df(rez_group_constraints_lhs_csv),
+        "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
+        "custom_constraints_rhs": csv_str_to_df(custom_constraints_rhs_csv),
+        "flow_path_expansion_costs": csv_str_to_df(flow_path_expansion_costs_csv),
     }
-
     links = csv_str_to_df(links_csv)
-
-    # Mock config with REZ transmission expansion disabled
+    
+    # Mock configuration
     class MockNetworkConfig:
         rez_transmission_expansion = False
 
@@ -199,52 +48,206 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
         network = MockNetworkConfig()
 
     config = MockConfig()
+    
+    # This will create two constraints named CONS1:
+    # - One from manual constraints
+    # - One from flow path expansion limits (CONS1_expansion_limit)
+    # These don't conflict because they have different names
+    # Let's create a real duplicate by having duplicate manual constraints
+    
+    # Create duplicate manual constraints
+    custom_constraints_rhs_with_dup_csv = """
+    constraint_id,  rhs,   constraint_type
+    CONS1,          5000,  <=
+    CONS1,          6000,  <=
+    CONS2,          3000,  <=
+    """
+    
+    ispypsa_tables_with_dup = {
+        "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
+        "custom_constraints_rhs": csv_str_to_df(custom_constraints_rhs_with_dup_csv),
+    }
+    
+    # Should raise ValueError due to duplicate CONS1 in RHS
+    with pytest.raises(ValueError, match="Duplicate constraint names found in custom constraints RHS: \\['CONS1'\\]"):
+        _translate_custom_constraints(config, ispypsa_tables_with_dup, links)
 
-    # Call the function
+
+def test_translate_custom_constraints_basic_integration(csv_str_to_df):
+    """Test basic integration of manual constraints and expansion limit constraints."""
+    
+    # Input: manual custom constraints
+    custom_constraints_lhs_csv = """
+    constraint_id,  term_type,           term_id,  coefficient
+    MANUAL1,        generator_capacity,  GEN1,     1.0
+    MANUAL2,        link_flow,           PATH1,    2.0
+    """
+    
+    custom_constraints_rhs_csv = """
+    constraint_id,  rhs,   constraint_type
+    MANUAL1,        5000,  <=
+    MANUAL2,        3000,  <=
+    """
+    
+    # Input: flow path expansion costs
+    flow_path_expansion_costs_csv = """
+    flow_path,  additional_network_capacity_mw
+    PATH1,      500
+    PATH2,      800
+    """
+    
+    # Input: links
+    links_csv = """
+    isp_name,  name,            carrier,  bus0,   bus1,   p_nom,  p_nom_extendable
+    PATH1,     PATH1_existing,  AC,       BUS1,   BUS2,   1000,   False
+    PATH1,     PATH1_exp_2025,  AC,       BUS1,   BUS2,   0,      True
+    PATH2,     PATH2_exp_2025,  AC,       BUS3,   BUS4,   0,      True
+    """
+    
+    # Create input data
+    ispypsa_tables = {
+        "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
+        "custom_constraints_rhs": csv_str_to_df(custom_constraints_rhs_csv),
+        "flow_path_expansion_costs": csv_str_to_df(flow_path_expansion_costs_csv),
+    }
+    links = csv_str_to_df(links_csv)
+    
+    # Mock configuration
+    class MockNetworkConfig:
+        rez_transmission_expansion = False
+
+    class MockConfig:
+        network = MockNetworkConfig()
+
+    config = MockConfig()
+    
+    # Call the function under test
     result = _translate_custom_constraints(config, ispypsa_tables, links)
-
-    # Expected RHS result
-    expected_rhs_csv = """
-    constraint_name,  rhs
-    REZ_NSW,          5000
-    REZ_VIC,          3000
-    """
-    expected_rhs = csv_str_to_df(expected_rhs_csv)
-
-    # Expected LHS result
-    expected_lhs_csv = """
-    variable_name,  constraint_name,  coefficient,  component,  attribute
-    GEN1,           REZ_NSW,          1.0,          Generator,  p_nom
-    GEN2,           REZ_NSW,          1.0,          Generator,  p_nom
-    GEN3,           REZ_VIC,          1.0,          Generator,  p_nom
-    """
-    expected_lhs = csv_str_to_df(expected_lhs_csv)
-
-    # Assert results
-    assert "custom_constraints_rhs" in result
+    
+    # Check that both manual and expansion limit constraints are present
     assert "custom_constraints_lhs" in result
-    assert (
-        "custom_constraints_generators" not in result
-    )  # Should not be present when REZ expansion is disabled
+    assert "custom_constraints_rhs" in result
+    
+    # Expected LHS should have manual constraints and expansion limit constraints
+    lhs = result["custom_constraints_lhs"]
+    rhs = result["custom_constraints_rhs"]
+    
+    # Check constraint names
+    expected_constraint_names = {"MANUAL1", "MANUAL2", "PATH1_expansion_limit", "PATH2_expansion_limit"}
+    assert set(lhs["constraint_name"].unique()) == expected_constraint_names
+    assert set(rhs["constraint_name"].unique()) == expected_constraint_names
+    
+    # Verify specific constraints
+    manual1_lhs = lhs[lhs["constraint_name"] == "MANUAL1"]
+    assert len(manual1_lhs) == 1
+    assert manual1_lhs.iloc[0]["variable_name"] == "GEN1"
+    assert manual1_lhs.iloc[0]["component"] == "Generator"
+    
+    # Link flow constraints should be expanded
+    manual2_lhs = lhs[lhs["constraint_name"] == "MANUAL2"]
+    assert len(manual2_lhs) == 2  # PATH1_existing and PATH1_exp_2025
+    
+    # Check RHS values
+    manual1_rhs = rhs[rhs["constraint_name"] == "MANUAL1"]
+    assert manual1_rhs.iloc[0]["rhs"] == 5000
+    
+    path1_rhs = rhs[rhs["constraint_name"] == "PATH1_expansion_limit"]
+    assert path1_rhs.iloc[0]["rhs"] == 500
 
-    pd.testing.assert_frame_equal(
-        result["custom_constraints_rhs"]
-        .sort_values("constraint_name")
-        .reset_index(drop=True),
-        expected_rhs.sort_values("constraint_name").reset_index(drop=True),
-    )
 
-    # Sort columns to match for comparison
-    result_lhs = (
-        result["custom_constraints_lhs"]
-        .sort_values(["constraint_name", "variable_name"])
-        .reset_index(drop=True)
-    )
-    expected_lhs = expected_lhs.sort_values(
-        ["constraint_name", "variable_name"]
-    ).reset_index(drop=True)
+def test_translate_custom_constraints_no_constraints(csv_str_to_df):
+    """Test when no custom constraints are provided."""
+    
+    # Empty inputs
+    ispypsa_tables = {}
+    links = pd.DataFrame()
+    
+    # Mock configuration
+    class MockNetworkConfig:
+        rez_transmission_expansion = False
 
-    # Reorder columns to match
-    result_lhs = result_lhs[expected_lhs.columns]
+    class MockConfig:
+        network = MockNetworkConfig()
 
-    pd.testing.assert_frame_equal(result_lhs, expected_lhs)
+    config = MockConfig()
+    
+    # Call the function under test
+    result = _translate_custom_constraints(config, ispypsa_tables, links)
+    
+    # Should return empty dictionary
+    assert result == {}
+
+
+def test_translate_custom_constraints_mismatched_lhs_rhs(csv_str_to_df):
+    """Test that ValueError is raised when LHS and RHS constraints don't match."""
+    
+    # Input: manual constraints with mismatched LHS/RHS
+    custom_constraints_lhs_csv = """
+    constraint_id,  term_type,           term_id,  coefficient
+    CONS1,          generator_capacity,  GEN1,     1.0
+    CONS2,          generator_capacity,  GEN2,     1.0
+    """
+    
+    custom_constraints_rhs_csv = """
+    constraint_id,  rhs,   constraint_type
+    CONS1,          5000,  <=
+    CONS3,          3000,  <=
+    """
+    
+    # Create input data
+    ispypsa_tables = {
+        "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
+        "custom_constraints_rhs": csv_str_to_df(custom_constraints_rhs_csv),
+    }
+    links = pd.DataFrame()
+    
+    # Mock configuration
+    class MockNetworkConfig:
+        rez_transmission_expansion = False
+
+    class MockConfig:
+        network = MockNetworkConfig()
+
+    config = MockConfig()
+    
+    # Should raise ValueError due to mismatched constraints
+    with pytest.raises(ValueError, match="LHS constraints do not have corresponding RHS definitions.*CONS2"):
+        _translate_custom_constraints(config, ispypsa_tables, links)
+
+
+def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_to_df):
+    """Test duplicate constraint names from different sources."""
+    
+    # Input: manual constraints
+    custom_constraints_lhs_csv = """
+    constraint_id,  term_type,           term_id,  coefficient
+    PATH1,          generator_capacity,  GEN1,     1.0
+    PATH1,          generator_capacity,  GEN2,     1.0
+    """
+    
+    custom_constraints_rhs_csv = """
+    constraint_id,  rhs,   constraint_type
+    PATH1,          5000,  <=
+    PATH1,          3000,  <=
+    """
+    
+    # Create input data
+    ispypsa_tables = {
+        "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
+        "custom_constraints_rhs": csv_str_to_df(custom_constraints_rhs_csv),
+    }
+    links = pd.DataFrame()
+    
+    # Mock configuration
+    class MockNetworkConfig:
+        rez_transmission_expansion = False
+
+    class MockConfig:
+        network = MockNetworkConfig()
+
+    config = MockConfig()
+    
+    # This creates duplicate PATH1 constraints in RHS
+    # Should raise ValueError
+    with pytest.raises(ValueError, match="Duplicate constraint names found in custom constraints RHS: \\['PATH1'\\]"):
+        _translate_custom_constraints(config, ispypsa_tables, links)

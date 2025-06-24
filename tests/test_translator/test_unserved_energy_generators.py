@@ -47,7 +47,6 @@ def test_no_unserved_energy_generators_when_cost_is_none(
     sample_model_config: ModelConfig,
 ):
     """Test that no unserved energy generators are created when cost is None."""
-
     # Ensure unserved energy cost is None
     sample_model_config.unserved_energy.cost = None
 

@@ -246,11 +246,13 @@ def _template_rez_transmission_costs(
         scenario=scenario,
         config=_REZ_CONFIG,
     )
+
     rez_costs["rez_constraint_id"] = _fuzzy_match_names(
         rez_costs["rez_constraint_id"],
         possible_rez_or_constraint_names,
         task_desc="Processing rez transmission costs",
     )
+
     return rez_costs
 
 
