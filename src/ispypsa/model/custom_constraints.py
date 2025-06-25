@@ -109,4 +109,6 @@ def _add_custom_constraints(
                 linear_expression == row["rhs"], name=constraint_name
             )
         else:
-            raise ValueError(f"{row['constraint_type']} is not a valid constraint type.")
+            raise ValueError(
+                f"{row['constraint_type']} is not a valid constraint type."
+            )

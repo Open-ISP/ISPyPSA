@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.config import load_config, ModelConfig
+from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -126,10 +126,12 @@ def test_create_pypsa_friendly_snapshots_operational():
 
 
 def test_create_pypsa_inputs_template_sub_regions(
-        sample_model_config: ModelConfig,
-        sample_ispypsa_tables: dict[str, pd.DataFrame],
-    ):
-    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
+    sample_model_config: ModelConfig,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
+    )
 
     assert "CNSW" in pypsa_tables["buses"]["name"].values
     assert "Central-West Orana REZ" in pypsa_tables["buses"]["name"].values
@@ -140,7 +142,9 @@ def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
     sample_ispypsa_tables: dict[str, pd.DataFrame],
 ):
     sample_model_config.network.nodes.rezs = "attached_to_parent_node"
-    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
+    )
 
     for table in list_translator_output_files():
         assert table in pypsa_tables.keys()
@@ -155,7 +159,9 @@ def test_create_ispypsa_inputs_template_single_regions(
 ):
     sample_model_config.network.nodes.regional_granularity = "single_region"
     sample_model_config.network.nodes.rezs = "attached_to_parent_node"
-    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
+    )
 
     for table in list_translator_output_files():
         assert table in pypsa_tables.keys()
