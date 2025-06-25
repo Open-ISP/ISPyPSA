@@ -1,7 +1,10 @@
 import pandas as pd
 import pytest
 
-from ispypsa.translator.custom_constraints import _translate_custom_constraints
+from ispypsa.translator.custom_constraints import (
+    _translate_custom_constraints,
+    _validate_lhs_rhs_constraints,
+)
 
 
 def test_translate_custom_constraints_duplicate_constraint_names(csv_str_to_df):
@@ -265,3 +268,218 @@ def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_t
         match="Duplicate constraint names found in custom constraints RHS: \\['PATH1'\\]",
     ):
         _translate_custom_constraints(config, ispypsa_tables, links)
+
+
+def test_validate_lhs_rhs_constraints_matching_constraints(csv_str_to_df):
+    """Test validation passes when LHS and RHS constraints match exactly."""
+
+    # Create matching LHS constraints
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS1,            GEN2,           2.0,          Generator,  p_nom
+    CONS2,            LINK1,          1.0,          Link,       p
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create matching RHS constraints
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should not raise any exception
+    _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_empty_dataframes(csv_str_to_df):
+    """Test validation passes when both LHS and RHS are empty."""
+
+    lhs = pd.DataFrame()
+    rhs = pd.DataFrame()
+
+    # Should not raise any exception
+    _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_lhs_without_rhs(csv_str_to_df):
+    """Test validation fails when LHS has constraints without matching RHS."""
+
+    # Create LHS constraints
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS2,            GEN2,           2.0,          Generator,  p_nom
+    CONS3,            LINK1,          1.0,          Link,       p
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create RHS with missing CONS3
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should raise ValueError
+    with pytest.raises(
+        ValueError,
+        match="The following LHS constraints do not have corresponding RHS definitions: \\['CONS3'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_rhs_without_lhs(csv_str_to_df):
+    """Test validation fails when RHS has constraints without matching LHS."""
+
+    # Create LHS constraints
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS2,            GEN2,           2.0,          Generator,  p_nom
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create RHS with extra CONS3
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    CONS3,            1000,  ==
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should raise ValueError
+    with pytest.raises(
+        ValueError,
+        match="The following RHS constraints do not have corresponding LHS definitions: \\['CONS3'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_multiple_mismatches(csv_str_to_df):
+    """Test validation with multiple mismatched constraints on both sides."""
+
+    # Create LHS constraints
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS2,            GEN2,           2.0,          Generator,  p_nom
+    CONS3,            LINK1,          1.0,          Link,       p
+    CONS4,            LINK2,          2.0,          Link,       p
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create RHS with different constraints
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    CONS5,            2000,  ==
+    CONS6,            4000,  <=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should raise ValueError about LHS without RHS (checked first)
+    with pytest.raises(
+        ValueError,
+        match="The following LHS constraints do not have corresponding RHS definitions: \\['CONS3', 'CONS4'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_empty_lhs_nonempty_rhs(csv_str_to_df):
+    """Test validation fails when LHS is empty but RHS has constraints."""
+
+    lhs = pd.DataFrame()
+
+    # Create non-empty RHS
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should raise ValueError
+    with pytest.raises(
+        ValueError,
+        match="The following RHS constraints do not have corresponding LHS definitions: \\['CONS1', 'CONS2'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_nonempty_lhs_empty_rhs(csv_str_to_df):
+    """Test validation fails when LHS has constraints but RHS is empty."""
+
+    # Create non-empty LHS
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS2,            GEN2,           2.0,          Generator,  p_nom
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    rhs = pd.DataFrame()
+
+    # Should raise ValueError
+    with pytest.raises(
+        ValueError,
+        match="The following LHS constraints do not have corresponding RHS definitions: \\['CONS1', 'CONS2'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_duplicate_lhs_entries(csv_str_to_df):
+    """Test validation with multiple LHS entries for the same constraint (valid case)."""
+
+    # Create LHS with multiple entries for CONS1
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    CONS1,            GEN1,           1.0,          Generator,  p_nom
+    CONS1,            GEN2,           2.0,          Generator,  p_nom
+    CONS1,            GEN3,           -1.0,         Generator,  p_nom
+    CONS2,            LINK1,          1.0,          Link,       p
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create matching RHS
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should not raise any exception - multiple LHS entries per constraint is valid
+    _validate_lhs_rhs_constraints(lhs, rhs)
+
+
+def test_validate_lhs_rhs_constraints_case_sensitive_names(csv_str_to_df):
+    """Test that constraint name matching is case-sensitive."""
+
+    # Create LHS with lowercase names
+    lhs_csv = """
+    constraint_name,  variable_name,  coefficient,  component,  attribute
+    cons1,            GEN1,           1.0,          Generator,  p_nom
+    CONS2,            GEN2,           2.0,          Generator,  p_nom
+    """
+    lhs = csv_str_to_df(lhs_csv)
+
+    # Create RHS with uppercase names
+    rhs_csv = """
+    constraint_name,  rhs,   constraint_type
+    CONS1,            5000,  <=
+    CONS2,            3000,  >=
+    """
+    rhs = csv_str_to_df(rhs_csv)
+
+    # Should raise ValueError due to case mismatch
+    with pytest.raises(
+        ValueError,
+        match="The following LHS constraints do not have corresponding RHS definitions: \\['cons1'\\]",
+    ):
+        _validate_lhs_rhs_constraints(lhs, rhs)

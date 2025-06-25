@@ -638,11 +638,18 @@ def _validate_lhs_rhs_constraints(
     Raises:
         ValueError: If there are mismatched constraints
     """
-    if lhs.empty or rhs.empty:
+    if lhs.empty and rhs.empty:
         return
 
-    lhs_constraint_names = set(lhs["constraint_name"].unique())
-    rhs_constraint_names = set(rhs["constraint_name"].unique())
+    if not lhs.empty:
+        lhs_constraint_names = set(lhs["constraint_name"].unique())
+    else:
+        lhs_constraint_names = set()
+
+    if not rhs.empty:
+        rhs_constraint_names = set(rhs["constraint_name"].unique())
+    else:
+        rhs_constraint_names = set()
 
     # Check for LHS without RHS
     lhs_without_rhs = lhs_constraint_names - rhs_constraint_names
