@@ -24,7 +24,7 @@ def test_my_function(csv_str_to_df):
     item2,    200,    False
     """
     input_data = csv_str_to_df(input_data_csv)
-    
+
     # Create expected output
     expected_output_csv = """
     name,     processed_value
@@ -32,7 +32,7 @@ def test_my_function(csv_str_to_df):
     item2,    250
     """
     expected_output = csv_str_to_df(expected_output_csv)
-    
+
     # Call function and compare
     result = my_function(input_data)
     pd.testing.assert_frame_equal(result, expected_output)
@@ -48,47 +48,47 @@ def test_my_function(csv_str_to_df):
 ```python
 def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df):
     """Test translation of custom constraints when tables are present but REZ transmission expansion is disabled."""
-    
+
     # Input: REZ group constraints RHS
     rez_group_constraints_rhs_csv = """
     constraint_id,  summer_typical
     REZ_NSW,        5000
     REZ_VIC,        3000
     """
-    
-    # Input: REZ group constraints LHS  
+
+    # Input: REZ group constraints LHS
     rez_group_constraints_lhs_csv = """
     constraint_id,  term_type,           variable_name,  coefficient
     REZ_NSW,        generator_capacity,  GEN1,           1.0
     REZ_NSW,        generator_capacity,  GEN2,           1.0
     REZ_VIC,        generator_capacity,  GEN3,           1.0
     """
-    
+
     # Input: Links DataFrame
     links_csv = """
     isp_name,    name,                 carrier,  bus0,    bus1,    p_nom,  p_nom_extendable
     PathA-PathB, PathA-PathB_existing, AC,       NodeA,   NodeB,   1000,   False
     """
-    
+
     # Convert CSV strings to DataFrames
     ispypsa_tables = {
         "rez_group_constraints_rhs": csv_str_to_df(rez_group_constraints_rhs_csv),
         "rez_group_constraints_lhs": csv_str_to_df(rez_group_constraints_lhs_csv),
     }
     links = csv_str_to_df(links_csv)
-    
+
     # Mock configuration
     class MockNetworkConfig:
         rez_transmission_expansion = False
-    
+
     class MockConfig:
         network = MockNetworkConfig()
-    
+
     config = MockConfig()
-    
+
     # Call the function under test
     result = _translate_custom_constraints(config, ispypsa_tables, links)
-    
+
     # Expected RHS result
     expected_rhs_csv = """
     constraint_name,  rhs
@@ -96,7 +96,7 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
     REZ_VIC,          3000
     """
     expected_rhs = csv_str_to_df(expected_rhs_csv)
-    
+
     # Expected LHS result - note the column order matches the actual output
     expected_lhs_csv = """
     constraint_name,  variable_name,  coefficient,  component,  attribute
@@ -105,11 +105,11 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
     REZ_VIC,          GEN3,           1.0,          Generator,  p_nom
     """
     expected_lhs = csv_str_to_df(expected_lhs_csv)
-    
+
     # Assert results are as expected
     assert "custom_constraints_rhs" in result
     assert "custom_constraints_lhs" in result
-    
+
     # Compare DataFrames with sorting to handle row order differences
     pd.testing.assert_frame_equal(
         result["custom_constraints_rhs"]
@@ -117,7 +117,7 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
         .reset_index(drop=True),
         expected_rhs.sort_values("constraint_name").reset_index(drop=True)
     )
-    
+
     pd.testing.assert_frame_equal(
         result["custom_constraints_lhs"]
         .sort_values(["constraint_name", "variable_name"])
@@ -174,10 +174,10 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
 def complex_function(inputs):
     # Workflow 1
     # ... lots of code ...
-    
+
     # Workflow 2
     # ... lots of code ...
-    
+
     return results
 
 # After: Separated concerns
