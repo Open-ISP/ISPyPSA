@@ -11,6 +11,7 @@ from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
 )
 
+
 def _translate_custom_constraints(
     config: ModelConfig,
     ispypsa_tables: dict[str, pd.DataFrame],
@@ -73,15 +74,15 @@ def _translate_custom_constraints(
         # Validate that all constraints have matching LHS and RHS
         _validate_lhs_rhs_constraints(
             pypsa_inputs["custom_constraints_lhs"],
-            pypsa_inputs["custom_constraints_rhs"]
+            pypsa_inputs["custom_constraints_rhs"],
         )
 
     return pypsa_inputs
 
 
 def _append_if_not_empty(
-        target_list: list[pd.DataFrame],
-        dataframe: pd.DataFrame,
+    target_list: list[pd.DataFrame],
+    dataframe: pd.DataFrame,
 ) -> None:
     """Append dataframe to list if it's not empty.
 
@@ -94,9 +95,9 @@ def _append_if_not_empty(
 
 
 def _process_manual_custom_constraints(
-        config: ModelConfig,
-        ispypsa_tables: dict[str, pd.DataFrame],
-        links: pd.DataFrame,
+    config: ModelConfig,
+    ispypsa_tables: dict[str, pd.DataFrame],
+    links: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]:
     """Process manually specified custom constraints
 
@@ -133,8 +134,8 @@ def _process_manual_custom_constraints(
         )
 
         # Add generator constraints to LHS
-        custom_constraint_generators_lhs = _translate_custom_constraint_generators_to_lhs(
-            generators
+        custom_constraint_generators_lhs = (
+            _translate_custom_constraint_generators_to_lhs(generators)
         )
 
         lhs = pd.concat([lhs, custom_constraint_generators_lhs])
@@ -143,7 +144,7 @@ def _process_manual_custom_constraints(
 
 
 def _has_manual_custom_constraints(
-        ispypsa_tables: dict[str, pd.DataFrame],
+    ispypsa_tables: dict[str, pd.DataFrame],
 ) -> bool:
     """Check if manual custom constraint tables are present and not empty.
 
@@ -154,15 +155,15 @@ def _has_manual_custom_constraints(
         True if both custom_constraints_lhs and custom_constraints_rhs exist and are not empty
     """
     lhs_exists = (
-            "custom_constraints_lhs" in ispypsa_tables
-            and ispypsa_tables["custom_constraints_lhs"] is not None
-            and not ispypsa_tables["custom_constraints_lhs"].empty
+        "custom_constraints_lhs" in ispypsa_tables
+        and ispypsa_tables["custom_constraints_lhs"] is not None
+        and not ispypsa_tables["custom_constraints_lhs"].empty
     )
 
     rhs_exists = (
-            "custom_constraints_rhs" in ispypsa_tables
-            and ispypsa_tables["custom_constraints_rhs"] is not None
-            and not ispypsa_tables["custom_constraints_rhs"].empty
+        "custom_constraints_rhs" in ispypsa_tables
+        and ispypsa_tables["custom_constraints_rhs"] is not None
+        and not ispypsa_tables["custom_constraints_rhs"].empty
     )
 
     if lhs_exists and rhs_exists:
@@ -174,12 +175,12 @@ def _has_manual_custom_constraints(
 
 
 def _translate_custom_constraints_generators(
-        custom_constraints: list[str],
-        rez_expansion_costs: pd.DataFrame,
-        wacc: float,
-        asset_lifetime: int,
-        investment_periods: list[int],
-        year_type: str,
+    custom_constraints: list[str],
+    rez_expansion_costs: pd.DataFrame,
+    wacc: float,
+    asset_lifetime: int,
+    investment_periods: list[int],
+    year_type: str,
 ) -> pd.DataFrame:
     """Translates REZ network expansion data into custom generators for modelling
     rez constraint relaxation.
@@ -219,7 +220,7 @@ def _translate_custom_constraints_generators(
 
 
 def _format_expansion_generators(
-        expansion_generators: pd.DataFrame,
+    expansion_generators: pd.DataFrame,
 ) -> pd.DataFrame:
     """Format expansion generators with required fields for PyPSA.
 
@@ -230,9 +231,9 @@ def _format_expansion_generators(
         Formatted DataFrame with all required PyPSA generator columns
     """
     expansion_generators["name"] = (
-            expansion_generators["constraint_name"]
-            + "_exp_"
-            + expansion_generators["build_year"].astype(str)
+        expansion_generators["constraint_name"]
+        + "_exp_"
+        + expansion_generators["build_year"].astype(str)
     )
     expansion_generators["isp_name"] = expansion_generators["constraint_name"]
     expansion_generators["bus"] = "bus_for_custom_constraint_gens"
@@ -253,8 +254,9 @@ def _format_expansion_generators(
     ]
     return expansion_generators[expansion_cols].reset_index(drop=True)
 
+
 def _translate_custom_constraint_rhs(
-        custom_constraint_rhs_table: pd.DataFrame,
+    custom_constraint_rhs_table: pd.DataFrame,
 ) -> pd.DataFrame:
     """Change RHS custom constraints to PyPSA style.
 
@@ -268,7 +270,7 @@ def _translate_custom_constraint_rhs(
 
 
 def _translate_custom_constraint_lhs(
-        custom_constraint_lhs_table: pd.DataFrame,
+    custom_constraint_lhs_table: pd.DataFrame,
 ) -> pd.DataFrame:
     """Change RHS custom constraints to PyPSA style.
 
@@ -278,14 +280,14 @@ def _translate_custom_constraint_lhs(
 
     Returns: pd.DataFrame
     """
-    custom_constraint_lhs_values = (
-        custom_constraint_lhs_table.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+    custom_constraint_lhs_values = custom_constraint_lhs_table.rename(
+        columns=_CUSTOM_CONSTRAINT_ATTRIBUTES
     )
     return _add_component_and_attribute_columns(custom_constraint_lhs_values)
 
 
 def _add_component_and_attribute_columns(
-        lhs_values: pd.DataFrame,
+    lhs_values: pd.DataFrame,
 ) -> pd.DataFrame:
     """Add component and attribute columns based on term_type and remove term_type.
 
@@ -305,7 +307,7 @@ def _add_component_and_attribute_columns(
 
 
 def _translate_custom_constraint_generators_to_lhs(
-        custom_constraint_generators: pd.DataFrame,
+    custom_constraint_generators: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create the lhs definitions to match the generators used to relax custom
     constraints
@@ -322,13 +324,19 @@ def _translate_custom_constraint_generators_to_lhs(
     custom_constraint_generators["component"] = "Generator"
     custom_constraint_generators["attribute"] = "p_nom"
     custom_constraint_generators["coefficient"] = -1.0
-    col_order = ["constraint_name", "variable_name", "component", "attribute", "coefficient"]
+    col_order = [
+        "constraint_name",
+        "variable_name",
+        "component",
+        "attribute",
+        "coefficient",
+    ]
     return custom_constraint_generators.loc[:, col_order]
 
 
 def _expand_link_flow_lhs_terms(
-        custom_constraint_lhs: pd.DataFrame,
-        links: pd.DataFrame,
+    custom_constraint_lhs: pd.DataFrame,
+    links: pd.DataFrame,
 ) -> pd.DataFrame:
     """Create lhs terms for each existing link component and each expansion option
     link component.
@@ -340,37 +348,36 @@ def _expand_link_flow_lhs_terms(
 
     Returns: pd.DataFrame specifying lhs terms of custom
         constraints in PyPSA friendly format.
-        
+
     Raises:
         ValueError: If any link_flow terms reference links that don't exist.
     """
-    link_flow_mask = (
-        (custom_constraint_lhs["component"] == "Link") &
-        (custom_constraint_lhs["attribute"] == "p")
+    link_flow_mask = (custom_constraint_lhs["component"] == "Link") & (
+        custom_constraint_lhs["attribute"] == "p"
     )
     link_flow_terms = custom_constraint_lhs[link_flow_mask]
     non_link_flow_terms = custom_constraint_lhs[~link_flow_mask]
-    
+
     # Check for unmatched link_flow terms
     if not link_flow_terms.empty:
         unique_link_flow_names = set(link_flow_terms["variable_name"])
-        
+
         # Handle None or empty links DataFrame
         if links is None or links.empty:
             unique_link_isp_names = set()
         else:
             unique_link_isp_names = set(links["isp_name"])
-        
+
         unmatched_links = unique_link_flow_names - unique_link_isp_names
-        
+
         if unmatched_links:
             raise ValueError(
                 f"The following link_flow terms reference links that don't exist: "
                 f"{sorted(unmatched_links)}"
             )
-    
+
     all_lhs_terms = [non_link_flow_terms]
-    
+
     # Only perform merge if there are link_flow terms and links is not None/empty
     if not link_flow_terms.empty and links is not None and not links.empty:
         link_flow_terms = pd.merge(
@@ -382,15 +389,15 @@ def _expand_link_flow_lhs_terms(
         link_flow_terms = link_flow_terms.drop(columns=["isp_name", "variable_name"])
         link_flow_terms = link_flow_terms.rename(columns={"name": "variable_name"})
         all_lhs_terms.append(link_flow_terms)
-    
+
     return pd.concat(all_lhs_terms)
 
 
 def _create_expansion_limit_constraints(
-        links,
-        constraint_generators,
-        flow_paths,
-        rez_connections,
+    links,
+    constraint_generators,
+    flow_paths,
+    rez_connections,
 ):
     """Create custom constraint lhs and rhs definitions to limit the total expansion
     on rez and flow links
@@ -427,17 +434,16 @@ def _create_expansion_limit_constraints(
 
 
 def _get_isp_names_for_rez_connection(
-        rez_connections: pd.DataFrame,
-        links: pd.DataFrame,
+    rez_connections: pd.DataFrame,
+    links: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Update the rez_connection limits to use names that match with links.
-    """
+    """Update the rez_connection limits to use names that match with links."""
 
     if (
-            rez_connections is not None and
-            not rez_connections.empty and
-            links is not None and
-            not links.empty
+        rez_connections is not None
+        and not rez_connections.empty
+        and links is not None
+        and not links.empty
     ):
         # Merge in the isp flow path names.
         rez_connections = pd.merge(
@@ -455,10 +461,11 @@ def _get_isp_names_for_rez_connection(
             rez_connections["rez_constraint_id"]
         )
         rez_connections = rez_connections.loc[
-                          :, ["isp_name", "additional_network_capacity_mw"]
-                          ]
+            :, ["isp_name", "additional_network_capacity_mw"]
+        ]
 
     return rez_connections
+
 
 def _process_rhs_components(
     rhs_components: pd.DataFrame | None,
@@ -470,7 +477,7 @@ def _process_rhs_components(
 
     Returns:
         DataFrame with processed flow path constraints, empty if input is None
-        
+
     Raises:
         ValueError: If required columns are missing after processing
     """
@@ -483,7 +490,7 @@ def _process_rhs_components(
 
     rhs_components = rhs_components.loc[:, rhs_cols]
     result = rhs_components.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
-    
+
     # Check that required columns are present after renaming
     required_columns = {"constraint_name", "rhs"}
     missing_columns = required_columns - set(result.columns)
@@ -491,12 +498,12 @@ def _process_rhs_components(
         raise ValueError(
             f"RHS components missing required columns after processing: {sorted(missing_columns)}"
         )
-    
+
     return result
 
 
 def _create_expansion_limit_lhs_for_links(
-        links: pd.DataFrame | None,
+    links: pd.DataFrame | None,
 ) -> pd.DataFrame:
     """Create constraints LHS for link expansion limits.
 
@@ -518,7 +525,7 @@ def _create_expansion_limit_lhs_for_links(
 
 
 def _create_expansion_limit_lhs_for_generators(
-        constraint_generators: pd.DataFrame | None,
+    constraint_generators: pd.DataFrame | None,
 ) -> pd.DataFrame:
     """Create LHS constraints for generator expansion limits.
 
@@ -540,7 +547,7 @@ def _create_expansion_limit_lhs_for_generators(
 
 
 def _finalize_expansion_limit_rhs(
-        rhs_parts: list[pd.DataFrame],
+    rhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
     """Combine and finalize RHS constraint parts.
 
@@ -560,7 +567,7 @@ def _finalize_expansion_limit_rhs(
 
 
 def _finalize_expansion_limit_lhs(
-        lhs_parts: list[pd.DataFrame],
+    lhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
     """Combine and finalize LHS constraint parts.
 
@@ -579,8 +586,8 @@ def _finalize_expansion_limit_lhs(
 
 
 def _filter_rhs_by_lhs_constraints(
-        rhs: pd.DataFrame,
-        lhs: pd.DataFrame,
+    rhs: pd.DataFrame,
+    lhs: pd.DataFrame,
 ) -> pd.DataFrame:
     """Filter RHS to only include constraints that have corresponding LHS.
 
@@ -597,7 +604,7 @@ def _filter_rhs_by_lhs_constraints(
 
 
 def _check_duplicate_constraint_names(
-        rhs: pd.DataFrame,
+    rhs: pd.DataFrame,
 ) -> None:
     """Check for duplicate constraint names in RHS.
 
@@ -609,7 +616,7 @@ def _check_duplicate_constraint_names(
     """
     if rhs.empty:
         return
-        
+
     duplicates = rhs[rhs.duplicated(subset=["constraint_name"], keep=False)]
     if not duplicates.empty:
         duplicate_names = sorted(duplicates["constraint_name"].unique())
@@ -619,8 +626,8 @@ def _check_duplicate_constraint_names(
 
 
 def _validate_lhs_rhs_constraints(
-        lhs: pd.DataFrame,
-        rhs: pd.DataFrame,
+    lhs: pd.DataFrame,
+    rhs: pd.DataFrame,
 ) -> None:
     """Validate that all LHS constraints have RHS definitions and vice versa.
 
@@ -652,5 +659,3 @@ def _validate_lhs_rhs_constraints(
             f"The following RHS constraints do not have corresponding LHS definitions: "
             f"{sorted(rhs_without_lhs)}"
         )
-
-

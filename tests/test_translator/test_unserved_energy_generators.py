@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.config import load_config, ModelConfig
+from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -23,7 +23,9 @@ def test_unserved_energy_generator_creation(
     sample_model_config.unserved_energy.cost = 10000.0
     sample_model_config.unserved_energy.generator_size_mw = 5000.0
 
-    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
+    )
 
     # Check for unserved energy generators
     generators = pypsa_tables["generators"]
@@ -50,7 +52,9 @@ def test_no_unserved_energy_generators_when_cost_is_none(
     # Ensure unserved energy cost is None
     sample_model_config.unserved_energy.cost = None
 
-    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
+    )
 
     # Check that no unserved energy generators exist
     generators = pypsa_tables["generators"]
