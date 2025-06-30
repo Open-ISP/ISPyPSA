@@ -1,0 +1,12 @@
+﻿constraint_id,constraint_type,rhs
+NQ2,<=,2500
+SQ1,<=,1400
+SWV1,<=,1850
+MN1,<=,2000
+MN1 North,<=,800
+NSA1,<=,1125
+NSA1 North,<=,350
+NET1,<=,1600
+SEVIC1,<=,6000
+SWQLD1,<=,5300
+S1-TBMO,<=,350
