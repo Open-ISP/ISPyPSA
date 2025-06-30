@@ -4,7 +4,7 @@ NQ2,link_flow,Q4-CQ,1
 NQ2,link_flow,Q5-CQ,1
 SQ1,link_flow,SQ-CQ,-0.5
 SQ1,link_flow,Q7-SQ,1
-SWV1,link_flow,Heywood,-1
+SWV1,link_flow,VIC-SESA,-1
 SWV1,link_flow,V4-VIC,1
 SWV1,link_flow,V8-VIC,1
 MN1,link_flow,S3-CSA,1
@@ -35,7 +35,7 @@ NET1,link_flow,T1-TAS,1
 NET1,link_flow,T4-TAS,1
 SEVIC1,link_flow,V5-VIC,1
 SEVIC1,link_flow,V7-VIC,1
-SEVIC1,link_flow,Basslink,1
+SEVIC1,link_flow,TAS-VIC,1
 SEVIC1,generator_output,Loy Yang A Power Station,1
 SEVIC1,generator_output,Loy Yang B,1
 SEVIC1,generator_output,Yallourn W,1
