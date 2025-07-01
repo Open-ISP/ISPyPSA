@@ -137,6 +137,20 @@ class ModelConfig(BaseModel):
     temporal: TemporalConfig
     iasr_workbook_version: str
     unserved_energy: UnservedEnergyConfig
+    filter_by_nem_regions: list[str] | None = None
+    filter_by_isp_sub_regions: list[str] | None = None
+
+    @model_validator(mode="after")
+    def validate_region_filters(self):
+        if (
+            self.filter_by_nem_regions is not None
+            and self.filter_by_isp_sub_regions is not None
+        ):
+            raise ValueError(
+                "Cannot specify both filter_by_nem_regions and filter_by_isp_sub_regions"
+            )
+        return self
+
     solver: Literal[
         "highs",
         "cbc",

@@ -8,6 +8,7 @@ from ispypsa.templater.dynamic_generator_properties import (
 from ispypsa.templater.energy_policy_targets import (
     _template_energy_policy_targets,
 )
+from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
     _template_rez_transmission_costs,
@@ -52,6 +53,8 @@ def create_ispypsa_inputs_template(
     regional_granularity: str,
     iasr_tables: dict[str : pd.DataFrame],
     manually_extracted_tables: dict[str : pd.DataFrame],
+    filter_to_nem_regions: list[str] = None,
+    filter_to_isp_sub_regions: list[str] = None,
 ) -> dict[str : pd.DataFrame]:
     """Creates a template set of `ISPyPSA` input tables based on IASR tables.
 
@@ -92,10 +95,25 @@ def create_ispypsa_inputs_template(
             extracted using the `isp_workbook_parser`.
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
+        filter_to_nem_regions: Optional list of NEM region IDs (e.g., ['NSW', 'VIC'])
+            to filter the template to. Cannot be specified together with
+            filter_to_isp_sub_regions.
+        filter_to_isp_sub_regions: Optional list of ISP sub-region IDs
+            (e.g., ['CNSW', 'VIC', 'TAS']) to filter the template to. Cannot be
+            specified together with filter_to_nem_regions.
 
     Returns: dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa
         table docs)
+
+    Raises:
+        ValueError: If both filter_to_nem_regions and filter_to_isp_sub_regions are provided
     """
+    # Validate filtering parameters
+    if filter_to_nem_regions is not None and filter_to_isp_sub_regions is not None:
+        raise ValueError(
+            "Cannot specify both filter_to_nem_regions and filter_to_isp_sub_regions"
+        )
+
     template = {}
 
     template.update(manually_extracted_tables)
@@ -166,6 +184,14 @@ def create_ispypsa_inputs_template(
     energy_policy_targets = _template_energy_policy_targets(iasr_tables, scenario)
 
     template.update(energy_policy_targets)
+
+    # Apply regional filtering if requested
+    if filter_to_nem_regions or filter_to_isp_sub_regions:
+        template = _filter_template(
+            template,
+            nem_regions=filter_to_nem_regions,
+            isp_sub_regions=filter_to_isp_sub_regions,
+        )
 
     return template
 
