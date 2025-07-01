@@ -9,6 +9,12 @@ ispypsa_run_name: development
 #   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
 #   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
+# Optional: Filter template inputs to specific NEM regions
+# Note: Cannot be used together with filter_by_isp_sub_regions
+filter_by_nem_regions: ["NSW"]
+# Optional: Filter template inputs to specific ISP sub-regions
+# Note: Cannot be used together with filter_by_nem_regions
+# filter_by_isp_sub_regions: ["CNSW", "SNSW"]
 # Weighted average cost of capital for annuitisation of generation and transmission
 # costs, as a fraction, i.e. 0.07 is 7%.
 wacc: 0.07

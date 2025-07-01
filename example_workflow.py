@@ -50,6 +50,8 @@ ispypsa_tables = create_ispypsa_inputs_template(
     config.network.nodes.regional_granularity,
     iasr_tables,
     manually_extracted_tables,
+    config.filter_by_nem_regions,
+    config.filter_by_isp_sub_regions,
 )
 write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 
