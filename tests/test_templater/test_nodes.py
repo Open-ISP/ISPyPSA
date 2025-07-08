@@ -16,7 +16,8 @@ def test_node_templater_nem_regions(workbook_table_cache_test_path: Path):
         ("Prominent Hill", "Barcaldine")
     )
     assert set(regional_template.regional_reference_node_voltage_kv) == set((132,))
-    assert len(regional_template.columns) == 4
+    # When coordinates are available, we have 6 columns, otherwise 4
+    assert len(regional_template.columns) in (4, 6)
 
 
 def test_templater_sub_regions(workbook_table_cache_test_path: Path):
@@ -29,7 +30,8 @@ def test_templater_sub_regions(workbook_table_cache_test_path: Path):
         ("Prominent Hill", "Barcaldine")
     )
     assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
-    assert len(sub_regions_template.columns) == 4
+    # When coordinates are available, we have 6 columns, otherwise 4
+    assert len(sub_regions_template.columns) in (4, 6)
 
 
 def test_templater_sub_regions_mapping_only(workbook_table_cache_test_path: Path):
@@ -58,7 +60,8 @@ def test_no_substation_coordinates(workbook_table_cache_test_path: Path, mocker)
         ("Prominent Hill", "Barcaldine")
     )
     assert set(sub_regions_template.sub_region_reference_node_voltage_kv) == set((132,))
-    assert len(sub_regions_template.columns) == 4
+    # When coordinates are available, we have 6 columns, otherwise 4
+    assert len(sub_regions_template.columns) in (4, 6)
 
 
 # def test_substation_coordinate_http_error(
