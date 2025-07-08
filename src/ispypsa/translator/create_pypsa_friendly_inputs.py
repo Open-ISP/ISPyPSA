@@ -80,7 +80,7 @@ def create_pypsa_friendly_inputs(
     pypsa_inputs = {}
 
     pypsa_inputs["snapshots"] = create_pypsa_friendly_snapshots(
-        config, "capacity_expansion"
+        config, "capacity_expansion", ispypsa_tables
     )
 
     pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(

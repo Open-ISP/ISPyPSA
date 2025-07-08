@@ -21,7 +21,8 @@ class NetworkConfig(BaseModel):
 
 
 class TemporalAggregationConfig(BaseModel):
-    representative_weeks: list[int] | None
+    representative_weeks: list[int] | None = None
+    named_representative_weeks: list[str] | None = None
 
 
 class TemporalRangeConfig(BaseModel):

@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Literal
 
 import pandas as pd
+from isp_trace_parser import get_data
 
 from ispypsa.config import (
     ModelConfig,
@@ -10,6 +12,7 @@ from ispypsa.config import (
 )
 from ispypsa.config.validators import TemporalConfig
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
+from ispypsa.translator.named_weeks_filter import _filter_snapshots_for_named_weeks
 
 
 def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame):
@@ -37,16 +40,62 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
     return time_series_data[time_series_data["snapshots"].isin(snapshots["snapshots"])]
 
 
+def _merge_snapshot_dataframes(snapshot_dataframes: list[pd.DataFrame]) -> pd.DataFrame:
+    """Merge multiple snapshot DataFrames, removing duplicates and sorting by datetime.
+
+    Args:
+        snapshot_dataframes: List of DataFrames with 'snapshots' column containing datetimes
+
+    Returns:
+        pd.DataFrame: Merged DataFrame with unique snapshots sorted chronologically
+
+    Examples:
+        >>> import pandas as pd
+        >>> df1 = pd.DataFrame({'snapshots': pd.to_datetime(['2024-01-01', '2024-01-02'])})
+        >>> df2 = pd.DataFrame({'snapshots': pd.to_datetime(['2024-01-02', '2024-01-03'])})
+        >>> result = _merge_snapshot_dataframes([df1, df2])
+        >>> len(result)
+        3
+        >>> result['snapshots'].iloc[0]
+        Timestamp('2024-01-01 00:00:00')
+    """
+    if not snapshot_dataframes:
+        return pd.DataFrame({"snapshots": []})
+
+    if len(snapshot_dataframes) == 1:
+        return snapshot_dataframes[0]
+
+    # Concatenate all snapshots
+    merged_snapshots = pd.concat(snapshot_dataframes, ignore_index=True)
+    # Remove duplicates and sort by snapshot datetime
+    merged_snapshots = (
+        merged_snapshots.drop_duplicates(subset=["snapshots"])
+        .sort_values("snapshots")
+        .reset_index(drop=True)
+    )
+
+    return merged_snapshots
+
+
 def _filter_snapshots(
     year_type: Literal["fy", "calendar"],
     temporal_range: TemporalRangeConfig,
     temporal_aggregation_config: TemporalAggregationConfig,
     snapshots: pd.DataFrame,
+    isp_sub_regions: pd.DataFrame = None,
+    trace_data_path: Path | str = None,
+    scenario: str = None,
+    regional_granularity: str = None,
+    reference_year_mapping: dict[int, int] = None,
+    existing_generators: pd.DataFrame = None,
 ) -> pd.DataFrame:
     """Appy filter to the snapshots based on the model config.
 
     - If config.representative_weeks is not None then filter the
       snapshots based on the supplied list of representative weeks.
+    - If config.named_representative_weeks is not None then analyze demand/generation
+      data to identify and filter snapshots for the named weeks.
+    - If both are specified, the results are merged with duplicates removed.
 
     Examples:
 
@@ -94,18 +143,51 @@ def _filter_snapshots(
     Timestamp('2024-01-08 00:00:00')
 
     Args:
-         fy:
-         config: TemporalConfig defining snapshot filtering.
+         year_type: 'fy' or 'calendar' year type
+         temporal_range: TemporalRangeConfig with start and end years
+         temporal_aggregation_config: TemporalAggregationConfig defining snapshot filtering
          snapshots: pd.DataFrame with datetime index containing the snapshot
+         isp_sub_regions: Optional DataFrame needed for named weeks analysis
+         trace_data_path: Optional path to trace data needed for named weeks
+         scenario: Optional ISP scenario needed for named weeks
+         regional_granularity: Optional regional granularity for named weeks
+         reference_year_mapping: Optional year mapping for named weeks
+         existing_generators: Optional generators DataFrame for residual demand calculations
     """
+    filtered_snapshots_list = []
+
     if temporal_aggregation_config.representative_weeks is not None:
-        snapshots = _filter_snapshots_for_representative_weeks(
+        representative_snapshots = _filter_snapshots_for_representative_weeks(
             representative_weeks=temporal_aggregation_config.representative_weeks,
             snapshots=snapshots,
             start_year=temporal_range.start_year,
             end_year=temporal_range.end_year,
             year_type=year_type,
         )
+        filtered_snapshots_list.append(representative_snapshots)
+
+    if temporal_aggregation_config.named_representative_weeks is not None:
+        # Filter snapshots based on named week criteria
+        named_snapshots = _filter_snapshots_for_named_weeks(
+            named_weeks=temporal_aggregation_config.named_representative_weeks,
+            snapshots=snapshots,
+            isp_sub_regions=isp_sub_regions,
+            trace_data_path=trace_data_path,
+            scenario=scenario,
+            regional_granularity=regional_granularity,
+            reference_year_mapping=reference_year_mapping,
+            year_type=year_type,
+            start_year=temporal_range.start_year,
+            end_year=temporal_range.end_year,
+            existing_generators=existing_generators,
+        )
+        filtered_snapshots_list.append(named_snapshots)
+
+    # If we have filtered snapshots, merge them and remove duplicates
+    if filtered_snapshots_list:
+        return _merge_snapshot_dataframes(filtered_snapshots_list)
+
+    # If no filtering was applied, return original snapshots
     return snapshots
 
 

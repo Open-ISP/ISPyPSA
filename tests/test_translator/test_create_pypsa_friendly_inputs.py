@@ -39,7 +39,12 @@ class DummyConfigOne:
                         "investment_periods": [2025, 2026],  # Two investment periods
                         "reference_year_cycle": [2018],
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1]}
+                            "obj",
+                            (object,),
+                            {
+                                "representative_weeks": [1],
+                                "named_representative_weeks": None,
+                            },
                         ),
                     },
                 ),
@@ -52,7 +57,12 @@ class DummyConfigOne:
                         "horizon": 336,
                         "overlap": 48,
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1, 2]}
+                            "obj",
+                            (object,),
+                            {
+                                "representative_weeks": [1, 2],
+                                "named_representative_weeks": None,
+                            },
                         ),
                     },
                 ),

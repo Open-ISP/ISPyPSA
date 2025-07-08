@@ -12,7 +12,9 @@ from ispypsa.translator.temporal_filters import _filter_snapshots
 
 
 def create_pypsa_friendly_snapshots(
-    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
+    config: ModelConfig,
+    model_phase: Literal["capacity_expansion", "operational"],
+    ispypsa_tables: dict[str, pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
     Create a pd.DataFrame of PyPSA-compatible snapshots and associated investment
@@ -52,6 +54,8 @@ def create_pypsa_friendly_snapshots(
         model_phase: string defining whether the snapshots are for the operational or
             capacity expansion phase of the modelling. This allows the correct temporal
             config inputs to be used from the ModelConfig instance.
+        ispypsa_tables: Optional dictionary of ISPyPSA tables. Required when using
+            named_representative_weeks in the temporal aggregation config.
 
     Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
         the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
@@ -74,11 +78,45 @@ def create_pypsa_friendly_snapshots(
         year_type=config.temporal.year_type,
     )
 
+    # Prepare additional parameters for named weeks if needed
+    additional_params = {}
+    if aggregation.named_representative_weeks is not None:
+        if ispypsa_tables is None:
+            raise ValueError(
+                "ispypsa_tables must be provided when using named_representative_weeks"
+            )
+
+        # Build reference year mapping
+        if model_phase == "capacity_expansion":
+            reference_year_cycle = (
+                config.temporal.capacity_expansion.reference_year_cycle
+            )
+        else:
+            reference_year_cycle = config.temporal.operational.reference_year_cycle
+
+        reference_year_mapping = {}
+        cycle_length = len(reference_year_cycle)
+        for year in range(
+            config.temporal.range.start_year, config.temporal.range.end_year + 1
+        ):
+            cycle_index = (year - config.temporal.range.start_year) % cycle_length
+            reference_year_mapping[year] = reference_year_cycle[cycle_index]
+
+        additional_params = {
+            "isp_sub_regions": ispypsa_tables.get("sub_regions"),
+            "trace_data_path": config.temporal.path_to_parsed_traces,
+            "scenario": config.scenario,
+            "regional_granularity": config.network.nodes.regional_granularity,
+            "reference_year_mapping": reference_year_mapping,
+            "existing_generators": ispypsa_tables.get("ecaa_generators"),
+        }
+
     snapshots = _filter_snapshots(
         config.temporal.year_type,
         config.temporal.range,
         aggregation,
         snapshots,
+        **additional_params,
     )
 
     snapshots = _add_investment_periods(
