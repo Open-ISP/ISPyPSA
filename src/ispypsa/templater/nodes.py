@@ -16,8 +16,7 @@ from .helpers import (
 
 def _get_reference_node_locations(reference_nodes):
     # request and merge in substation coordinates for reference nodes
-    # substation_coordinates = _request_transmission_substation_coordinates()
-    substation_coordinates = pd.DataFrame()
+    substation_coordinates = _request_transmission_substation_coordinates()
     if not substation_coordinates.empty:
         reference_node_col = process.extractOne(
             "reference_node", reference_nodes.columns
@@ -187,10 +186,10 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
         service="WFS",
         version="2.0.0",
         request="GetFeature",
-        typeNames="Foundation_Electricity_Infrastructure:Transmission_Substations",
+        typeNames="National_Electricity_Infrastructure:Electricity_Transmission_Substations",
         maxFeatures=10000,
     )
-    url = "https://services.ga.gov.au/gis/services/Foundation_Electricity_Infrastructure/MapServer/WFSServer"
+    url = "https://services.ga.gov.au/gis/services/National_Electricity_Infrastructure/MapServer/WFSServer"
     substation_coordinates = {}
     try:
         r = requests.get(url, params=params, timeout=60)
@@ -198,14 +197,20 @@ def _request_transmission_substation_coordinates() -> pd.DataFrame:
             data = xmltodict.parse(r.content)
             features = data["wfs:FeatureCollection"]["wfs:member"]
             for feature in features:
-                substation = feature["esri:Transmission_Substations"]
-                name = substation.get("esri:NAME")
-                coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
-                lat, long = coordinates.split(" ")
-                substation_coordinates[name] = {
-                    "substation_latitude": lat,
-                    "substation_longitude": long,
-                }
+                substation = feature["esri:Electricity_Transmission_Substations"]
+                name = substation.get("esri:SUBSTATION_NAME")
+                # The new format stores coordinates in X_COORDINATE and Y_COORDINATE fields
+                # These are in GDA2020 / MGA coordinates, but we also have SHAPE with gml:pos
+                if (
+                    "esri:SHAPE" in substation
+                    and "gml:Point" in substation["esri:SHAPE"]
+                ):
+                    coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
+                    lat, long = coordinates.split(" ")
+                    substation_coordinates[name] = {
+                        "substation_latitude": lat,
+                        "substation_longitude": long,
+                    }
         else:
             logging.warning(
                 f"Failed to fetch substation coordinates. HTTP Status code: {r.status_code}."
