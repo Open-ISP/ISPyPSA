@@ -1,0 +1,2 @@
+name,bus0,bus1,p_nom,p_nom_extendable,capital_cost
+link_one,bus_one,bus_two,1000.0,False,0.0
