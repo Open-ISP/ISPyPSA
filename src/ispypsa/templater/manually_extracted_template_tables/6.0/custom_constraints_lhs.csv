@@ -14,7 +14,6 @@ MN1,link_flow,S6-CSA,1
 MN1,link_flow,S7-CSA,1
 MN1,link_flow,S8-CSA,1
 MN1,link_flow,S9-CSA,1
-MN1,load_consumption,CSA Export Electrolyser,-1
 MN1 North,link_flow,S3-CSA,1
 MN1 North,link_flow,S4-CSA,-0.5
 MN1 North,link_flow,S5-CSA,-1
@@ -22,15 +21,12 @@ MN1 North,link_flow,S6-CSA,-1
 MN1 North,link_flow,S7-CSA,-1
 MN1 North,link_flow,S8-CSA,-1
 MN1 North,link_flow,S9-CSA,-1
-MN1 North,load_consumption,CSA Export Electrolyser,1
 NSA1,link_flow,S5-CSA,0.5
 NSA1,link_flow,S8-CSA,1
 NSA1,link_flow,S9-CSA,1
-NSA1,load_consumption,CSA Export Electrolyser,-1
 NSA1 North,link_flow,S5-CSA,-0.05
 NSA1 North,link_flow,S8-CSA,-1
 NSA1 North,link_flow,S9-CSA,-1
-NSA1 North,load_consumption,CSA Export Electrolyser,1
 NET1,link_flow,T1-TAS,1
 NET1,link_flow,T4-TAS,1
 SEVIC1,link_flow,V5-VIC,1
