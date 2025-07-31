@@ -546,16 +546,16 @@ def _create_expansion_limit_lhs_for_generators(
     return generators_lhs
 
 
-def _finalize_expansion_limit_rhs(
+def _finalise_expansion_limit_rhs(
     rhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
-    """Combine and finalize RHS constraint parts.
+    """Combine and finalise RHS constraint parts.
 
     Args:
         rhs_parts: List of DataFrames with RHS constraint definitions
 
     Returns:
-        Combined DataFrame with finalized RHS constraints, empty if no parts
+        Combined DataFrame with finalised RHS constraints, empty if no parts
     """
     if not rhs_parts:
         return pd.DataFrame()
