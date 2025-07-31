@@ -511,7 +511,7 @@ def _create_expansion_limit_lhs_for_links(
         links: DataFrame with link information
 
     Returns:
-        DataFrame with LHS constraint definitions for links
+        DataFrame with LHS constraint definitions for links, empty if input is None
     """
     if links is None or links.empty:
         return pd.DataFrame()
