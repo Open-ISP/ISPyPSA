@@ -10,14 +10,14 @@ authors = [
 dependencies = [
     "pandas>=2.2.2",
     "pypsa>=0.31.1",
-    "isp-workbook-parser>=2.4.1",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
     "thefuzz>=0.22.1",
-    "isp-trace-parser>=1.0.0",
     "pyarrow>=18.0.0",
     "tables>=3.10.1",
+    "isp-trace-parser>=1.0.3",
+    "isp-workbook-parser>=2.6.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

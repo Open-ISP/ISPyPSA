@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.config import load_config
+from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -125,68 +125,49 @@ def test_create_pypsa_friendly_snapshots_operational():
     assert len(snapshots) == 1344
 
 
-def test_create_pypsa_inputs_template_sub_regions(workbook_table_cache_test_path: Path):
-    iasr_tables = read_csvs(workbook_table_cache_test_path)
-    manual_tables = load_manually_extracted_tables("6.0")
-    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
-    template_tables = create_ispypsa_inputs_template(
-        config.scenario,
-        config.network.nodes.regional_granularity,
-        iasr_tables,
-        manual_tables,
+def test_create_pypsa_inputs_template_sub_regions(
+    sample_model_config: ModelConfig,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
     )
-    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
 
-    for table in list_translator_output_files():
-        assert table in pypsa_tables.keys()
-
-    assert "SQ" in pypsa_tables["buses"]["name"].values
-    assert "Q1" in pypsa_tables["buses"]["name"].values
+    assert "CNSW" in pypsa_tables["buses"]["name"].values
+    assert "Central-West Orana REZ" in pypsa_tables["buses"]["name"].values
 
 
 def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
-    workbook_table_cache_test_path: Path,
+    sample_model_config: ModelConfig,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
 ):
-    iasr_tables = read_csvs(workbook_table_cache_test_path)
-    manual_tables = load_manually_extracted_tables("6.0")
-    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
-    config.network.nodes.rezs = "attached_to_parent_node"
-    template_tables = create_ispypsa_inputs_template(
-        config.scenario,
-        config.network.nodes.regional_granularity,
-        iasr_tables,
-        manual_tables,
+    sample_model_config.network.nodes.rezs = "attached_to_parent_node"
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
     )
-    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
 
     for table in list_translator_output_files():
         assert table in pypsa_tables.keys()
 
-    assert "SQ" in pypsa_tables["buses"]["name"].values
-    assert "Q1" not in pypsa_tables["buses"]["name"].values
+    assert "CNSW" in pypsa_tables["buses"]["name"].values
+    assert "Central-West Orana REZ" not in pypsa_tables["buses"]["name"].values
 
 
 def test_create_ispypsa_inputs_template_single_regions(
-    workbook_table_cache_test_path: Path,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+    sample_model_config: ModelConfig,
 ):
-    iasr_tables = read_csvs(workbook_table_cache_test_path)
-    manual_tables = load_manually_extracted_tables("6.0")
-    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
-    config.network.nodes.regional_granularity = "single_region"
-    config.network.nodes.rezs = "attached_to_parent_node"
-    template_tables = create_ispypsa_inputs_template(
-        config.scenario,
-        config.network.nodes.regional_granularity,
-        iasr_tables,
-        manual_tables,
+    sample_model_config.network.nodes.regional_granularity = "single_region"
+    sample_model_config.network.nodes.rezs = "attached_to_parent_node"
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
     )
-    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
 
     for table in list_translator_output_files():
         assert table in pypsa_tables.keys()
 
     assert "NEM" in pypsa_tables["buses"]["name"].values
-    assert pypsa_tables["lines"].empty
+    assert pypsa_tables["links"].empty
 
 
 class DummyConfigTwo:

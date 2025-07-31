@@ -1,4 +1,4 @@
 ,constraint_name,component,attribute,variable_name,coefficient
-0,con_one,Line,s,line_one,1.0
+0,con_one,Link,p,link_one,1.0
 1,con_one,Generator,p,Bayswater,1.0
 2,con_one,Generator,p_nom,con_one-EXPANSION,-1.0

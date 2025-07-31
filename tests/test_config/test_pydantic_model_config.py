@@ -14,7 +14,11 @@ from ispypsa.config.validators import ModelConfig
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
 @pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
 def test_valid_config(
-    scenario, regional_granularity, nodes_rezs, year_type, representative_weeks
+    scenario,
+    regional_granularity,
+    nodes_rezs,
+    year_type,
+    representative_weeks,
 ):
     config = get_valid_config()
 
@@ -46,7 +50,9 @@ def get_valid_config():
         "discount_rate": 0.05,
         "network": {
             "transmission_expansion": True,
+            "transmission_expansion_limit_override": None,
             "rez_transmission_expansion": True,
+            "rez_connection_expansion_limit_override": None,
             "annuitisation_lifetime": 30,
             "nodes": {
                 "regional_granularity": "sub_regions",
