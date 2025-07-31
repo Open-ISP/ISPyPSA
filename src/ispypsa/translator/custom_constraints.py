@@ -566,16 +566,16 @@ def _finalise_expansion_limit_rhs(
     return rhs
 
 
-def _finalize_expansion_limit_lhs(
+def _finalise_expansion_limit_lhs(
     lhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
-    """Combine and finalize LHS constraint parts.
+    """Combine and finalise LHS constraint parts.
 
     Args:
         lhs_parts: List of DataFrames with LHS constraint definitions
 
     Returns:
-        Combined DataFrame with finalized LHS constraints, empty if no parts
+        Combined DataFrame with finalised LHS constraints, empty if no parts
     """
     if not lhs_parts:
         return pd.DataFrame()
