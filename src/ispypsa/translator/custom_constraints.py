@@ -419,7 +419,7 @@ def _create_expansion_limit_constraints(
     _append_if_not_empty(lhs_parts, links_lhs)
     generators_lhs = _create_expansion_limit_lhs_for_generators(constraint_generators)
     _append_if_not_empty(lhs_parts, generators_lhs)
-    lhs = _finalize_expansion_limit_lhs(lhs_parts)
+    lhs = _finalise_expansion_limit_lhs(lhs_parts)
 
     rhs_parts = []
     flow_path_rhs = _process_rhs_components(flow_paths)
@@ -427,7 +427,7 @@ def _create_expansion_limit_constraints(
     rez_connections = _get_isp_names_for_rez_connection(rez_connections, links)
     rez_rhs = _process_rhs_components(rez_connections)
     _append_if_not_empty(rhs_parts, rez_rhs)
-    rhs = _finalize_expansion_limit_rhs(rhs_parts)
+    rhs = _finalise_expansion_limit_rhs(rhs_parts)
     rhs = _filter_rhs_by_lhs_constraints(rhs, lhs)
 
     return lhs, rhs
