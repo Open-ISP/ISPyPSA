@@ -142,7 +142,7 @@ def test_custom_constraints_equal_link_p_nom(csv_str_to_df):
         {"load2": [50, 100, 150, 200], "load3": [100, 150, 200, 250]},
         index=network.snapshots,
     )
-    network.add("Load", "load1", bus="bus1")
+    network.add("Load", "load2", bus="bus1")
     network.add("Load", "load3", bus="bus3")
 
     # Define custom constraints - link capacities must be equal

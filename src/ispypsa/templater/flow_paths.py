@@ -56,7 +56,7 @@ def _template_regional_interconnectors(
     ISPyPSA template format
 
     Args:
-        interconnector_transfer_capability: pd.DataFrame IASR table specifying the
+        interconnector_capabilities: pd.DataFrame IASR table specifying the
             interconnector transfer capabilities between nem regions
 
     Returns:
