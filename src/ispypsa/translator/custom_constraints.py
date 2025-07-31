@@ -394,11 +394,11 @@ def _expand_link_flow_lhs_terms(
 
 
 def _create_expansion_limit_constraints(
-    links,
-    constraint_generators,
-    flow_paths,
-    rez_connections,
-):
+    links: pd.DataFrame,
+    constraint_generators: pd.DataFrame,
+    flow_paths: pd.DataFrame,
+    rez_connections: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Create custom constraint lhs and rhs definitions to limit the total expansion
     on rez and flow links
 
