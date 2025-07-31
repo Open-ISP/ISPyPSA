@@ -266,7 +266,7 @@ def process_transmission_costs(
 
     Args:
         iasr_tables: dict[str, pd.DataFrame] specifying IASR tables
-        scenario: str specifying the scenario name
+        scenario: str specifying the ISP scenario name
         config: dict with processing configuration containing:
             - transmission_type: str, either "flow_path" or "rez"
             - in_coming_column_mappings: dict mapping standard column names to
