@@ -112,8 +112,6 @@ def test_expand_then_operate():
             }
         )
 
-        lines = pd.DataFrame()  # Empty for one node model
-
         investment_period_weights = pd.DataFrame(
             {
                 "period": [2025, 2026],
@@ -132,7 +130,6 @@ def test_expand_then_operate():
             "snapshots": capacity_expansion_snapshots,
             "buses": buses,
             "generators": generators,
-            "lines": lines,
             "investment_period_weights": investment_period_weights,
             "custom_constraints_lhs": custom_constraints_lhs,
             "custom_constraints_rhs": custom_constraints_rhs,

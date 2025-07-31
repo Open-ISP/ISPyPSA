@@ -11,7 +11,7 @@ from ispypsa.model.generators import (
 )
 from ispypsa.model.initialise import _initialise_network
 from ispypsa.model.investment_period_weights import _add_investment_period_weights
-from ispypsa.model.lines import _add_lines_to_network
+from ispypsa.model.links import _add_links_to_network
 
 
 def build_pypsa_network(
@@ -60,14 +60,8 @@ def build_pypsa_network(
         network, pypsa_friendly_tables["buses"], path_to_pypsa_friendly_timeseries_data
     )
 
-    if not pypsa_friendly_tables["custom_constraints_generators"].empty:
-        _add_bus_for_custom_constraints(network)
-
-    _add_lines_to_network(network, pypsa_friendly_tables["lines"])
-
-    _add_custom_constraint_generators_to_network(
-        network, pypsa_friendly_tables["custom_constraints_generators"]
-    )
+    if "links" in pypsa_friendly_tables.keys():
+        _add_links_to_network(network, pypsa_friendly_tables["links"])
 
     _add_generators_to_network(
         network,
@@ -75,13 +69,21 @@ def build_pypsa_network(
         path_to_pypsa_friendly_timeseries_data,
     )
 
-    # The underlying linopy model needs to get built so we can add custom constraints.
-    network.optimize.create_model()
+    if "custom_constraints_generators" in pypsa_friendly_tables.keys():
+        _add_bus_for_custom_constraints(network)
 
-    _add_custom_constraints(
-        network,
-        pypsa_friendly_tables["custom_constraints_rhs"],
-        pypsa_friendly_tables["custom_constraints_lhs"],
-    )
+        _add_custom_constraint_generators_to_network(
+            network, pypsa_friendly_tables["custom_constraints_generators"]
+        )
+
+    # The underlying linopy model needs to get built so we can add custom constraints.
+    network.optimize.create_model(multi_investment_periods=True)
+
+    if "custom_constraints_rhs" in pypsa_friendly_tables:
+        _add_custom_constraints(
+            network,
+            pypsa_friendly_tables["custom_constraints_rhs"],
+            pypsa_friendly_tables["custom_constraints_lhs"],
+        )
 
     return network

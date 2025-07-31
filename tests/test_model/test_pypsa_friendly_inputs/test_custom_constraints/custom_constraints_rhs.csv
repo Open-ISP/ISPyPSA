@@ -1,2 +1,2 @@
-,constraint_name,rhs
-0,con_one,500
+,constraint_name,rhs,constraint_type
+0,con_one,500,<=

@@ -960,7 +960,7 @@ wheels = [
 
 [[package]]
 name = "isp-trace-parser"
-version = "1.0.1"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "joblib" },
@@ -968,14 +968,14 @@ dependencies = [
     { name = "polars" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/ee/bb1766136177990809f922b31d157aa64276de2bd39d52dc5396d03869d1/isp_trace_parser-1.0.1.tar.gz", hash = "sha256:24b2bfea350bc7d9cf914cf37aca94ae2ae8d6a30e4c827bf2421f83440613c7", size = 47637 }
+sdist = { url = "https://files.pythonhosted.org/packages/47/e7/31602674cebf1b951f113d0c185a00499a1d387ffdda4cf6e2e5a34c2004/isp_trace_parser-1.0.3.tar.gz", hash = "sha256:8862ac7bfe41ac7d3b7ac05e5f4f9fb9ce21689e48b5c73a1ca4b8f4b503f395", size = 47948 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/db/5275985f5305975443f58363307a0283b3549fdeec53b99827148d803f6a/isp_trace_parser-1.0.1-py3-none-any.whl", hash = "sha256:f7c59e0b449017454e9821d87ca80393e8599a9072dc1480a7d0fea93581ead3", size = 44849 },
+    { url = "https://files.pythonhosted.org/packages/30/5a/74b90f1aaeec4304e9a80d310fb2ba247b960489b84463dee45f18fbfc8d/isp_trace_parser-1.0.3-py3-none-any.whl", hash = "sha256:a17bebd07edf6edd9c31b27dff361dfc64efbfd44d0f9e61c8642089ba461b1a", size = 45111 },
 ]
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.4.1"
+version = "2.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openpyxl" },
@@ -984,9 +984,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/b3/c82c654fdfa843b00e08609492204d68435a125138e8294ebaf51d5ef245/isp_workbook_parser-2.4.1.tar.gz", hash = "sha256:61d6577d90ff804ef662368d77a1c1978ab7456aae863f71478c55f20f1621d6", size = 52394 }
+sdist = { url = "https://files.pythonhosted.org/packages/da/d3/c33976dccb3ba135f785d685d26d9a7c4479377e3d584afd628915bba96c/isp_workbook_parser-2.6.0.tar.gz", hash = "sha256:e35a756311f39e8b7327b8fd2e30e367f41400ac710106a1b42de383ade3cb1c", size = 53856 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/0a/ce602e2f1a45dc45bcb266c43fcf9901eaeeb182f24cb15e3ff2774b0f0f/isp_workbook_parser-2.4.1-py3-none-any.whl", hash = "sha256:65731de03f29af97ead30a903d0fa3e45a5e9862358c82ea21e6ed807ea444df", size = 84820 },
+    { url = "https://files.pythonhosted.org/packages/2f/96/d30d8e0e633adf8376310e71f11309169b44271142219a0e289e306194f0/isp_workbook_parser-2.6.0-py3-none-any.whl", hash = "sha256:d20ab3c442aa0293019810b9edb7aaad86e1c12768bfb506a8ae98133f503324", size = 86466 },
 ]
 
 [[package]]
@@ -1032,8 +1032,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
-    { name = "isp-trace-parser", specifier = ">=1.0.0" },
-    { name = "isp-workbook-parser", specifier = ">=2.4.1" },
+    { name = "isp-trace-parser", specifier = ">=1.0.3" },
+    { name = "isp-workbook-parser", specifier = ">=2.6.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },

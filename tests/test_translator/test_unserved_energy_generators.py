@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.config import load_config
+from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -14,23 +14,18 @@ from ispypsa.translator import (
 from ispypsa.translator.generators import _create_unserved_energy_generators
 
 
-def test_unserved_energy_generator_creation(workbook_table_cache_test_path: Path):
+def test_unserved_energy_generator_creation(
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+    sample_model_config: ModelConfig,
+):
     """Test that unserved energy generators are created when cost is specified."""
-    iasr_tables = read_csvs(workbook_table_cache_test_path)
-    manual_tables = load_manually_extracted_tables("6.0")
-    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
-
     # Set unserved energy cost for testing
-    config.unserved_energy.cost = 10000.0
-    config.unserved_energy.generator_size_mw = 5000.0
+    sample_model_config.unserved_energy.cost = 10000.0
+    sample_model_config.unserved_energy.generator_size_mw = 5000.0
 
-    template_tables = create_ispypsa_inputs_template(
-        config.scenario,
-        config.network.nodes.regional_granularity,
-        iasr_tables,
-        manual_tables,
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
     )
-    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
 
     # Check for unserved energy generators
     generators = pypsa_tables["generators"]
@@ -50,23 +45,16 @@ def test_unserved_energy_generator_creation(workbook_table_cache_test_path: Path
 
 
 def test_no_unserved_energy_generators_when_cost_is_none(
-    workbook_table_cache_test_path: Path,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+    sample_model_config: ModelConfig,
 ):
     """Test that no unserved energy generators are created when cost is None."""
-    iasr_tables = read_csvs(workbook_table_cache_test_path)
-    manual_tables = load_manually_extracted_tables("6.0")
-    config = load_config(Path(__file__).parent / Path("ispypsa_config.yaml"))
-
     # Ensure unserved energy cost is None
-    config.unserved_energy.cost = None
+    sample_model_config.unserved_energy.cost = None
 
-    template_tables = create_ispypsa_inputs_template(
-        config.scenario,
-        config.network.nodes.regional_granularity,
-        iasr_tables,
-        manual_tables,
+    pypsa_tables = create_pypsa_friendly_inputs(
+        sample_model_config, sample_ispypsa_tables
     )
-    pypsa_tables = create_pypsa_friendly_inputs(config, template_tables)
 
     # Check that no unserved energy generators exist
     generators = pypsa_tables["generators"]

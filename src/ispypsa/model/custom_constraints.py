@@ -17,9 +17,9 @@ def _get_variables(
         component_name: str, the name given to the component when added by ISPyPSA to
             the `pypsa.Network`.
         component_type: str, the type of variable, should be one of
-            'Generator', 'Line', 'Load', or 'Storage'
+            'Generator', 'Link', 'Load', or 'Storage
         attribute_type: str, the type of variable, should be one of
-            'p', 'p_nom', or 's'
+            'p' or 'p_nom'
 
     Returns: linopy.variables.Variable
 
@@ -27,8 +27,10 @@ def _get_variables(
     var = None
     if component_type == "Generator" and attribute_type == "p_nom":
         var = model.variables.Generator_p_nom.at[f"{component_name}"]
-    elif component_type == "Line" and attribute_type == "s":
-        var = model.variables.Line_s.loc[:, f"{component_name}"]
+    elif component_type == "Link" and attribute_type == "p":
+        var = model.variables.Link_p.loc[:, f"{component_name}"]
+    elif component_type == "Link" and attribute_type == "p_nom":
+        var = model.variables.Link_p_nom.at[f"{component_name}"]
     elif component_type == "Generator" and attribute_type == "p":
         var = model.variables.Generator_p.loc[:, f"{component_name}"]
     elif component_type == "Load" and attribute_type == "p":
@@ -62,7 +64,7 @@ def _add_custom_constraints(
         custom_constraints_lhs: `pd.DataFrame` specifying custom constraint LHS values.
             The DataFrame has five columns 'constraint_name', 'variable_name',
             'component', 'attribute', and 'coefficient'. The 'component' specifies
-            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Line',
+            whether the LHS variable belongs to a `PyPSA` 'Bus', 'Generator', 'Link',
             etc. The 'variable_name' specifies the name of the `PyPSA` component, and
             the 'attribute' specifies the attribute of the component that the variable
             belongs to i.e. 'p_nom', 's_nom', etc.
@@ -78,9 +80,12 @@ def _add_custom_constraints(
 
         # Retrieve the variable objects needed on the constraint lhs from the linopy
         # model used by the pypsa.Network
-        variables = constraint_lhs.apply(
-            lambda row: _get_variables(
-                network.model, row["variable_name"], row["component"], row["attribute"]
+        model_variables = constraint_lhs.apply(
+            lambda lhs_var: _get_variables(
+                network.model,
+                lhs_var["variable_name"],
+                lhs_var["component"],
+                lhs_var["attribute"],
             ),
             axis=1,
         )
@@ -88,12 +93,25 @@ def _add_custom_constraints(
         # Some variables may not be present in the modeled so these a filtered out.
         # variables that couldn't be found are logged in _get_variables so this doesn't
         # result in 'silent failure'.
-        retrieved_vars = ~variables.isna()
-        variables = variables.loc[retrieved_vars]
+        retrieved_vars = ~model_variables.isna()
+        model_variables = model_variables.loc[retrieved_vars]
         coefficients = constraint_lhs.loc[retrieved_vars, "coefficient"]
 
-        x = tuple(zip(coefficients, variables))
+        x = tuple(zip(coefficients, model_variables))
         linear_expression = network.model.linexpr(*x)
-        network.model.add_constraints(
-            linear_expression <= row["rhs"], name=constraint_name
-        )
+        if row["constraint_type"] == "<=":
+            network.model.add_constraints(
+                linear_expression <= row["rhs"], name=constraint_name
+            )
+        elif row["constraint_type"] == ">=":
+            network.model.add_constraints(
+                linear_expression >= row["rhs"], name=constraint_name
+            )
+        elif row["constraint_type"] == "==":
+            network.model.add_constraints(
+                linear_expression == row["rhs"], name=constraint_name
+            )
+        else:
+            raise ValueError(
+                f"{row['constraint_type']} is not a valid constraint type."
+            )

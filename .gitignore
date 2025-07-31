@@ -169,10 +169,7 @@ scratch.py
 # ispypsa ignores
 ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
-ispypsa_runs/**/*.hdf5
+ispypsa_runs/**/*.h5
 
 # ignore doit database
 .doit*
-
-.repomixignore
-repomix.config.json
