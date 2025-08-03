@@ -12,7 +12,11 @@ from ispypsa.translator.temporal_filters import _filter_snapshots
 
 
 def create_pypsa_friendly_snapshots(
-    config: ModelConfig, model_phase: Literal["capacity_expansion", "operational"]
+    config: ModelConfig,
+    model_phase: Literal["capacity_expansion", "operational"],
+    existing_generators: pd.DataFrame | None = None,
+    demand_traces: dict[str, pd.DataFrame] | None = None,
+    generator_traces: dict[str, pd.DataFrame] | None = None,
 ) -> pd.DataFrame:
     """
     Create a pd.DataFrame of PyPSA-compatible snapshots and associated investment
@@ -52,6 +56,13 @@ def create_pypsa_friendly_snapshots(
         model_phase: string defining whether the snapshots are for the operational or
             capacity expansion phase of the modelling. This allows the correct temporal
             config inputs to be used from the ModelConfig instance.
+        existing_generators: pd.DataFrame containing existing generators data, required
+            if using named_representative_weeks with residual metrics (e.g.,
+            "residual-peak-demand", "residual-minimum-demand") (optional).
+        demand_traces: dict[str, pd.DataFrame] with demand node names as keys and
+            time series dataframes as values (optional, required for named_representative_weeks).
+        generator_traces: dict[str, pd.DataFrame] with generator names as keys and
+            time series dataframes as values (optional, required for residual metrics).
 
     Returns: A pd.DataFrame containing the columns 'investment_periods' (int) defining
         the investment a modelled inteval belongs to and 'snapshots' (datetime) defining
@@ -79,6 +90,9 @@ def create_pypsa_friendly_snapshots(
         config.temporal.range,
         aggregation,
         snapshots,
+        existing_generators=existing_generators,
+        demand_traces=demand_traces,
+        generator_traces=generator_traces,
     )
 
     snapshots = _add_investment_periods(
