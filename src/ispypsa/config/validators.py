@@ -49,6 +49,19 @@ class NetworkConfig(BaseModel):
 
 class TemporalAggregationConfig(BaseModel):
     representative_weeks: list[int] | None
+    named_representative_weeks: (
+        list[
+            Literal[
+                "peak-demand",
+                "residual-peak-demand",
+                "minimum-demand",
+                "residual-minimum-demand",
+                "peak-consumption",
+                "residual-peak-consumption",
+            ]
+        ]
+        | None
+    ) = None
 
 
 class TemporalRangeConfig(BaseModel):
