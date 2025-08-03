@@ -35,6 +35,8 @@ from ispypsa.translator.snapshots import (
     _create_investment_period_weightings,
     create_pypsa_friendly_snapshots,
 )
+from ispypsa.translator.temporal_filters import _time_series_filter
+from ispypsa.translator.time_series_checker import _check_time_series
 
 _BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
@@ -82,10 +84,6 @@ def create_pypsa_friendly_inputs(
         pypsa friendly format table docs)
     """
     pypsa_inputs = {}
-
-    pypsa_inputs["snapshots"] = create_pypsa_friendly_snapshots(
-        config, "capacity_expansion"
-    )
 
     pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
         config.temporal.capacity_expansion.investment_periods,
@@ -179,14 +177,12 @@ def create_pypsa_friendly_timeseries_inputs(
     generators: pd.DataFrame,
     parsed_traces_directory: Path,
     pypsa_friendly_timeseries_inputs_location: Path,
-) -> None:
-    """Creates on disk the timeseries data files in PyPSA friendly format for generation
+) -> pd.DataFrame:
+    """Creates snapshots and timeseries data files in PyPSA friendly format for generation
     and demand.
 
-    - a time series file is created for each wind and solar generator in the
-    ecaa_generators table (table in ispypsa_tables dict). The time series data is saved
-    in parquet files in the 'solar_traces' and 'wind_traces' directories with the
-    columns "snapshots" (datetime) and "p_max_pu" (float specifying availability in MW).
+    - First creates snapshots based on the temporal configuration, optionally using
+      named_representative_weeks if configured.
 
     - a time series file is created for each wind and solar generator in the new_entrant_generators
     table (table in ispypsa_tables dict). The time series data is saved in parquet files
@@ -206,10 +202,10 @@ def create_pypsa_friendly_timeseries_inputs(
 
     Examples:
 
-        >>> from ispypsa.translator import create_pypsa_friendly_snapshots        >>> from pathlib import Path
+        >>> from pathlib import Path
         >>> from ispypsa.config import load_config
         >>> from ispypsa.data_fetch import read_csvs
-        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
+        >>> from ispypsa.translator import (
         ...      create_pypsa_friendly_timeseries_inputs
         ... )
 
@@ -226,18 +222,12 @@ def create_pypsa_friendly_timeseries_inputs(
 
         >>> model_phase = "capacity_expansion"
 
-        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
+        Now create the complete set of time series files and get the snapshots.
 
-        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
-
-        Now the complete set of time series files needed to run the PyPSA model can
-        be created.
-
-        >>> create_pypsa_friendly_timeseries_inputs(
+        >>> snapshots = create_pypsa_friendly_timeseries_inputs(
         ...     config,
         ...     model_phase,
-        ...     ispypsa_tables
-        ...     snapshots
+        ...     ispypsa_tables,
         ...     Path("path/to/parsed/isp/traces"),
         ...     Path("path/to/write/time/series/inputs/to")
         ... )
@@ -269,7 +259,7 @@ def create_pypsa_friendly_timeseries_inputs(
         pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
             time series data which is to be created should be saved.
 
-    Returns: None
+    Returns: pd.DataFrame containing the snapshots used for filtering the timeseries
     """
 
     if model_phase == "capacity_expansion":
@@ -282,14 +272,14 @@ def create_pypsa_friendly_timeseries_inputs(
         end_year=config.temporal.range.end_year,
         reference_years=reference_year_cycle,
     )
-    create_pypsa_friendly_ecaa_generator_timeseries(
+
+    # Load generator timeseries data (organized by type)
+    generator_traces_by_type = create_pypsa_friendly_ecaa_generator_timeseries(
         ispypsa_tables["ecaa_generators"],
         parsed_traces_directory,
-        pypsa_friendly_timeseries_inputs_location,
         generator_types=["solar", "wind"],
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
-        snapshots=snapshots,
     )
     create_pypsa_friendly_new_entrant_generator_timeseries(
         ispypsa_tables["new_entrant_generators"],
@@ -310,16 +300,48 @@ def create_pypsa_friendly_timeseries_inputs(
         snapshots,
         pypsa_friendly_timeseries_inputs_location,
     )
-    create_pypsa_friendly_bus_demand_timeseries(
+
+    # Load demand timeseries data
+    demand_traces = create_pypsa_friendly_bus_demand_timeseries(
         ispypsa_tables["sub_regions"],
         parsed_traces_directory,
-        pypsa_friendly_timeseries_inputs_location,
         scenario=config.scenario,
         regional_granularity=config.network.nodes.regional_granularity,
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
-        snapshots=snapshots,
     )
+
+    # Create snapshots, potentially using the loaded data for named_representative_weeks
+    # Flatten generator traces for snapshot creation
+    all_generator_traces = _flatten_generator_traces(generator_traces_by_type)
+
+    snapshots = create_pypsa_friendly_snapshots(
+        config,
+        model_phase,
+        existing_generators=ispypsa_tables.get("ecaa_generators"),
+        demand_traces=demand_traces,
+        generator_traces=all_generator_traces,
+    )
+
+    # Filter and save generator timeseries by type
+    for gen_type, gen_traces in generator_traces_by_type.items():
+        if gen_traces:
+            _filter_and_save_timeseries(
+                gen_traces,
+                snapshots,
+                pypsa_friendly_timeseries_inputs_location,
+                f"{gen_type}_traces",
+            )
+
+    # Filter and save demand timeseries
+    _filter_and_save_timeseries(
+        demand_traces,
+        snapshots,
+        pypsa_friendly_timeseries_inputs_location,
+        "demand_traces",
+    )
+
+    return snapshots
 
 
 def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
@@ -395,3 +417,73 @@ def list_timeseries_files(
             files.append(output_base_path / "demand_traces" / f"{region}.parquet")
 
     return files
+
+
+def _flatten_generator_traces(
+    generator_traces_by_type: dict[str, dict[str, pd.DataFrame]],
+) -> dict[str, pd.DataFrame]:
+    """Flatten nested generator traces dictionary into a single level dictionary.
+
+    Args:
+        generator_traces_by_type: Dictionary with generator types as keys,
+            each containing a dictionary with generator names as keys
+
+    Returns:
+        dict[str, pd.DataFrame]: Flattened dictionary with generator names as keys
+    """
+    flattened_traces = {}
+    for gen_type_traces in generator_traces_by_type.values():
+        flattened_traces.update(gen_type_traces)
+    return flattened_traces
+
+
+def _filter_and_save_timeseries(
+    timeseries_data: dict[str, pd.DataFrame],
+    snapshots: pd.DataFrame,
+    output_path: Path,
+    trace_type: str,
+) -> None:
+    """Filter timeseries data by snapshots and save to parquet files.
+
+    Args:
+        timeseries_data: Dictionary of timeseries dataframes with names as keys.
+            Each dataframe must have columns: Datetime, Value
+        snapshots: DataFrame containing the expected time series values
+        output_path: Path to directory where files will be saved
+        trace_type: Type of trace data (e.g., "demand_traces", "solar_traces", "wind_traces")
+    """
+    output_trace_path = Path(output_path, trace_type)
+    if not output_trace_path.exists():
+        output_trace_path.mkdir(parents=True)
+
+    # Determine the value column name based on trace type
+    if "demand" in trace_type:
+        value_column_name = "p_set"
+    else:  # solar_traces or wind_traces
+        value_column_name = "p_max_pu"
+
+    for name, trace in timeseries_data.items():
+        # Rename columns to PyPSA format
+        trace = trace.rename(
+            columns={"Datetime": "snapshots", "Value": value_column_name}
+        )
+
+        # Filter by snapshots
+        trace = _time_series_filter(trace, snapshots)
+
+        # Check time series alignment
+        _check_time_series(
+            trace["snapshots"],
+            snapshots["snapshots"],
+            trace_type.replace("_traces", " data"),
+            name,
+        )
+
+        # Merge with snapshots to get investment periods
+        trace = pd.merge(trace, snapshots, on="snapshots")
+
+        # Select relevant columns
+        trace = trace.loc[:, ["investment_periods", "snapshots", value_column_name]]
+
+        # Save to parquet
+        trace.to_parquet(Path(output_trace_path, f"{name}.parquet"), index=False)
