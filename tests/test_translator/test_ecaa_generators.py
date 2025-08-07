@@ -7,10 +7,6 @@ from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     create_pypsa_friendly_existing_generator_timeseries,
 )
-from ispypsa.translator.snapshots import (
-    _add_investment_periods,
-    _create_complete_snapshots_index,
-)
 
 
 def test_translate_ecaa_generators_sub_regions():
@@ -92,73 +88,53 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
         }
     )
 
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2026,
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
-    create_pypsa_friendly_existing_generator_timeseries(
+    # Get generator timeseries - function no longer takes output path or snapshots
+    generator_traces_by_type = create_pypsa_friendly_existing_generator_timeseries(
         ecaa_ispypsa,
         parsed_trace_path,
-        tmp_path,
         generator_types=["solar", "wind"],
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
 
-    files = [
+    # Check the returned dictionary structure
+    assert "solar" in generator_traces_by_type
+    assert "wind" in generator_traces_by_type
+    assert "Moree Solar Farm" in generator_traces_by_type["solar"]
+    assert "Canunda Wind Farm" in generator_traces_by_type["wind"]
+
+    # Check solar trace
+    solar_files = [
         "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
         "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2025-1.parquet",
         "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2025-2.parquet",
         "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2026-1.parquet",
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
-    expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    solar_files = [parsed_trace_path / Path(file) for file in solar_files]
+    expected_solar_trace = pd.concat([pd.read_parquet(file) for file in solar_files])
+    expected_solar_trace["Datetime"] = expected_solar_trace["Datetime"].astype(
+        "datetime64[ns]"
     )
-    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
-    expected_trace = expected_trace.loc[
-        :, ["investment_periods", "snapshots", "p_max_pu"]
-    ]
-    expected_trace = expected_trace.reset_index(drop=True)
+    expected_solar_trace = expected_solar_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(
-        tmp_path / Path("solar_traces/Moree Solar Farm.parquet")
-    )
+    got_solar_trace = generator_traces_by_type["solar"]["Moree Solar Farm"]
+    got_solar_trace = got_solar_trace.reset_index(drop=True)
+    pd.testing.assert_frame_equal(expected_solar_trace, got_solar_trace)
 
-    pd.testing.assert_frame_equal(expected_trace, got_trace)
-
-    files = [
+    # Check wind trace
+    wind_files = [
         "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2024-2.parquet",
         "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2025-1.parquet",
         "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2025-2.parquet",
         "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2026-1.parquet",
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
-    expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+    wind_files = [parsed_trace_path / Path(file) for file in wind_files]
+    expected_wind_trace = pd.concat([pd.read_parquet(file) for file in wind_files])
+    expected_wind_trace["Datetime"] = expected_wind_trace["Datetime"].astype(
+        "datetime64[ns]"
     )
-    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
-    expected_trace = expected_trace.loc[
-        :, ["investment_periods", "snapshots", "p_max_pu"]
-    ]
-    expected_trace = expected_trace.reset_index(drop=True)
+    expected_wind_trace = expected_wind_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(
-        tmp_path / Path("wind_traces/Canunda Wind Farm.parquet")
-    )
-
-    pd.testing.assert_frame_equal(expected_trace, got_trace)
+    got_wind_trace = generator_traces_by_type["wind"]["Canunda Wind Farm"]
+    got_wind_trace = got_wind_trace.reset_index(drop=True)
+    pd.testing.assert_frame_equal(expected_wind_trace, got_wind_trace)

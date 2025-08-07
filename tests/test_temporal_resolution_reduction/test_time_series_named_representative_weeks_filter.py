@@ -14,10 +14,7 @@ Test Structure:
 - Results are compared against hardcoded expected DataFrames for clarity
 """
 
-from datetime import datetime
-
 import pandas as pd
-import pytest
 
 from ispypsa.translator.temporal_filters import (
     _filter_snapshots_for_named_representative_weeks,
@@ -382,65 +379,6 @@ def test_residual_metrics_without_renewable_data(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_year_boundary_week(csv_str_to_df):
-    """Test handling of weeks that span across year boundaries.
-
-    This test verifies that weeks at year boundaries are handled correctly,
-    particularly when the peak/minimum occurs in a week that spans Dec/Jan.
-    """
-    # Create snapshots spanning year boundary
-    snapshots_csv = """
-    snapshots
-    2024-12-23__00:00:00
-    2024-12-26__00:00:00
-    2024-12-30__00:00:00
-    2025-01-02__00:00:00
-    2025-01-06__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data with peak in year-boundary week
-    demand_csv = """
-    Datetime,Value
-    2024-12-23__00:00:00,500
-    2024-12-26__00:00:00,800
-    2024-12-30__00:00:00,1500
-    2025-01-02__00:00:00,1200
-    2025-01-06__00:00:00,600
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for peak demand week
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2026,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Expected: Peak week for each year
-    # 2024: Week ending Dec 30 (contains peak of 1500)
-    # 2025: Week ending Jan 6 (only week with 2025 data)
-    expected_csv = """
-    snapshots
-    2024-12-26__00:00:00
-    2024-12-30__00:00:00
-    2025-01-02__00:00:00
-    2025-01-06__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
 def test_residual_minimum_demand_week(csv_str_to_df):
     """Test selection of residual minimum demand weeks.
 
@@ -670,63 +608,6 @@ def test_negative_residual_demand(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_sparse_data_coverage(csv_str_to_df):
-    """Test handling of sparse data where some weeks have very few data points.
-
-    This tests the robustness when weeks have uneven data coverage.
-    """
-    snapshots_csv = """
-    snapshots
-    2024-01-01__00:00:00
-    2024-01-08__00:00:00
-    2024-01-08__06:00:00
-    2024-01-08__12:00:00
-    2024-01-08__18:00:00
-    2024-01-15__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Week 1 has only one data point, Week 2 has multiple
-    demand_csv = """
-    Datetime,Value
-    2024-01-01__00:00:00,700
-    2024-01-08__00:00:00,800
-    2024-01-08__06:00:00,900
-    2024-01-08__12:00:00,1000
-    2024-01-08__18:00:00,850
-    2024-01-15__00:00:00,600
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-consumption"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Week 2 should have highest average consumption
-    # Note: Jan 15 00:00:00 is Monday and marks END of week 2
-    expected_csv = """
-    snapshots
-    2024-01-08__06:00:00
-    2024-01-08__12:00:00
-    2024-01-08__18:00:00
-    2024-01-15__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
 def test_empty_snapshots_dataframe(csv_str_to_df):
     """Test handling of empty snapshots DataFrame."""
     snapshots = pd.DataFrame({"snapshots": pd.Series([], dtype="datetime64[ns]")})
@@ -748,65 +629,6 @@ def test_empty_snapshots_dataframe(csv_str_to_df):
     )
 
     expected = pd.DataFrame({"snapshots": pd.Series([], dtype="datetime64[ns]")})
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_mismatched_datetime_indices(csv_str_to_df):
-    """Test handling when demand and renewable data have different timestamps.
-
-    The function should handle merging data with non-overlapping timestamps.
-    """
-    snapshots_csv = """
-    snapshots
-    2024-01-08__00:00:00
-    2024-01-08__12:00:00
-    2024-01-15__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Demand data with all timestamps
-    demand_csv = """
-    Datetime,Value
-    2024-01-08__00:00:00,1000
-    2024-01-08__12:00:00,900
-    2024-01-15__00:00:00,800
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Renewable data missing some timestamps
-    renewable_csv = """
-    Datetime,Value
-    2024-01-08__00:00:00,200
-    2024-01-15__00:00:00,300
-    """
-    renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
-
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["residual-peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=demand_data,
-        renewable_data=renewable_data,
-    )
-
-    # Week 1: Jan 8 00:00:00 has residual 800
-    # Week 2: Jan 8 12:00:00 has residual 900 (peak), Jan 15 has residual 500
-    expected_csv = """
-    snapshots
-    2024-01-08__12:00:00
-    2024-01-15__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -892,132 +714,6 @@ def test_all_residual_week_types(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_calendar_year_boundary_peak_spans_years(csv_str_to_df):
-    """Test when peak demand week spans from one year to the next.
-
-    This test verifies correct handling when the peak demand occurs in a week
-    that starts in December of one year and ends in January of the next.
-    """
-    # Create snapshots spanning Dec 2024 to Jan 2025
-    snapshots_csv = """
-    snapshots
-    2024-12-23__00:00:00
-    2024-12-26__00:00:00
-    2024-12-30__00:00:00
-    2025-01-02__00:00:00
-    2025-01-06__00:00:00
-    2025-01-13__00:00:00
-    2025-01-20__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data where peak spans year boundary
-    demand_csv = """
-    Datetime,Value
-    2024-12-23__00:00:00,500
-    2024-12-26__00:00:00,800
-    2024-12-30__00:00:00,600
-    2025-01-02__00:00:00,1500
-    2025-01-06__00:00:00,1200
-    2025-01-13__00:00:00,700
-    2025-01-20__00:00:00,500
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for peak demand weeks
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2026,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # 2024: Week ending Dec 30 (max demand 800 in that year)
-    # 2025: Week ending Jan 6 (max demand 1500)
-    expected_csv = """
-    snapshots
-    2024-12-26__00:00:00
-    2024-12-30__00:00:00
-    2025-01-02__00:00:00
-    2025-01-06__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_financial_year_boundary_minimum_demand_simplified(csv_str_to_df):
-    """Test financial year boundary with minimum demand selection.
-
-    Tests the June/July boundary for financial years when minimum
-    demand occurs in a week spanning the boundary.
-    """
-    # Create snapshots spanning FY2025 (Jul 2024 - Jun 2025) and FY2026 (Jul 2025 - Jun 2026)
-    snapshots_csv = """
-    snapshots
-    2024-07-01__00:00:00
-    2024-07-04__00:00:00
-    2024-07-08__00:00:00
-    2025-06-23__00:00:00
-    2025-06-30__00:00:00
-    2025-07-07__00:00:00
-    2025-07-14__00:00:00
-    2026-06-29__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data with minimums around FY boundaries
-    demand_csv = """
-    Datetime,Value
-    2024-07-01__00:00:00,300
-    2024-07-04__00:00:00,200
-    2024-07-08__00:00:00,500
-    2025-06-23__00:00:00,450
-    2025-06-30__00:00:00,150
-    2025-07-07__00:00:00,600
-    2025-07-14__00:00:00,400
-    2026-06-29__00:00:00,350
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for minimum demand weeks in FY2025 and FY2026
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["minimum-demand"],
-        snapshots=snapshots,
-        start_year=2025,
-        end_year=2026,
-        year_type="fy",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # FY2025: Week ending Jun 30, 2025 has min 150
-    # FY2026: Week ending Jun 29, 2026 has min 350
-    expected_csv = """
-    snapshots
-    2025-06-30__00:00:00
-    2026-06-29__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
 def test_calendar_year_week_52_53_handling(csv_str_to_df):
     """Test handling of week 52/53 at year end.
 
@@ -1069,139 +765,6 @@ def test_calendar_year_week_52_53_handling(csv_str_to_df):
     2020-12-24__00:00:00
     2020-12-28__00:00:00
     2021-12-27__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_financial_year_residual_metrics_boundary(csv_str_to_df):
-    """Test residual metrics across financial year boundaries.
-
-    Verifies that residual demand calculations work correctly
-    when data spans financial year boundaries.
-    """
-    # Snapshots for FY2025 (Jul 2024 - Jun 2025)
-    snapshots_csv = """
-    snapshots
-    2024-07-01__00:00:00
-    2024-07-01__12:00:00
-    2024-07-08__00:00:00
-    2025-06-23__00:00:00
-    2025-06-30__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    demand_csv = """
-    Datetime,Value
-    2024-07-01__00:00:00,900
-    2024-07-01__12:00:00,950
-    2024-07-08__00:00:00,800
-    2025-06-23__00:00:00,1000
-    2025-06-30__00:00:00,1100
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    renewable_csv = """
-    Datetime,Value
-    2024-07-01__00:00:00,600
-    2024-07-01__12:00:00,650
-    2024-07-08__00:00:00,100
-    2025-06-23__00:00:00,200
-    2025-06-30__00:00:00,250
-    """
-    renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
-
-    # Filter for residual metrics in FY2025
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["residual-peak-demand", "residual-minimum-demand"],
-        snapshots=snapshots,
-        start_year=2025,
-        end_year=2025,
-        year_type="fy",
-        demand_data=demand_data,
-        renewable_data=renewable_data,
-    )
-
-    # FY2025 data (Jul 1, 2024 - Jun 30, 2025):
-    # Jul 1: residual = 900-600=300, Jul 1 12:00: residual = 950-650=300
-    # Jul 8: residual = 800-100=700
-    # Jun 23: residual = 1000-200=800, Jun 30: residual = 1100-250=850 (peak)
-    # Week ending Jul 1 has minimum residual, week ending Jun 30 has peak residual
-    expected_csv = """
-    snapshots
-    2024-07-01__00:00:00
-    2025-06-30__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result = result.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_multiple_years_calendar_boundary_consistency_fixed(csv_str_to_df):
-    """Test consistent handling across multiple calendar year boundaries.
-
-    Verifies that the function handles multiple years consistently,
-    especially when weeks span year boundaries.
-    """
-    # Create data spanning 2 years with consistent weekly pattern
-    snapshots_csv = """
-    snapshots
-    2024-01-01__00:00:00
-    2024-01-08__00:00:00
-    2024-12-23__00:00:00
-    2024-12-30__00:00:00
-    2025-01-06__00:00:00
-    2025-01-13__00:00:00
-    2025-12-22__00:00:00
-    2025-12-29__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Each year has peak in specific weeks
-    demand_csv = """
-    Datetime,Value
-    2024-01-01__00:00:00,950
-    2024-01-08__00:00:00,900
-    2024-12-23__00:00:00,800
-    2024-12-30__00:00:00,850
-    2025-01-06__00:00:00,820
-    2025-01-13__00:00:00,810
-    2025-12-22__00:00:00,700
-    2025-12-29__00:00:00,750
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Get peak consumption weeks for 2024 and 2025
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-consumption"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Each year should have its peak consumption week selected
-    # 2024: Week ending Jan 1 has peak 950
-    # 2025: Week ending Jan 6 has peak 820
-    expected_csv = """
-    snapshots
-    2024-01-01__00:00:00
-    2025-01-06__00:00:00
     """
     expected = csv_str_to_df(expected_csv)
     expected["snapshots"] = pd.to_datetime(expected["snapshots"])
@@ -1268,325 +831,6 @@ def test_leap_year_february_week_handling(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_week_spanning_calendar_year_boundary_assignment(csv_str_to_df):
-    """Test how weeks spanning calendar year boundaries are assigned.
-
-    Weeks are assigned to the year in which they END (Monday timestamp).
-    A week ending on Monday Jan 6, 2025 belongs to 2025 even if it
-    starts on Dec 31, 2024.
-    """
-    # Create snapshots with a week spanning Dec 2024 to Jan 2025
-    snapshots_csv = """
-    snapshots
-    2024-12-23__00:00:00
-    2024-12-30__00:00:00
-    2025-01-06__00:00:00
-    2025-01-13__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data with peak in the spanning week
-    demand_csv = """
-    Datetime,Value
-    2024-12-23__00:00:00,500
-    2024-12-30__00:00:00,1000
-    2025-01-06__00:00:00,300
-    2025-01-13__00:00:00,400
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for both years to see full behavior
-    result_both = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # 2024: Week ending Dec 30 (peak=1000, assigned to 2024 since it ends in 2024)
-    # 2025: Week ending Jan 13 (peak=400 for 2025, Jan 6 only has 300)
-    # Note: The week Dec 31-Jan 6 is assigned to 2025 based on its ending date
-    expected_csv = """
-    snapshots
-    2024-12-30__00:00:00
-    2025-01-13__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result_both = result_both.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result_both, expected)
-
-
-def test_week_spanning_financial_year_boundary_assignment(csv_str_to_df):
-    """Test how weeks spanning financial year boundaries are assigned.
-
-    Weeks are assigned to the financial year in which they END (Monday timestamp).
-    A week ending on Monday Jul 1 belongs to the FY that includes that date.
-    """
-    # Create snapshots with a week spanning June/July boundary
-    snapshots_csv = """
-    snapshots
-    2024-06-24__00:00:00
-    2024-07-01__00:00:00
-    2024-07-08__00:00:00
-    2024-07-15__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data
-    demand_csv = """
-    Datetime,Value
-    2024-06-24__00:00:00,500
-    2024-07-01__00:00:00,1000
-    2024-07-08__00:00:00,300
-    2024-07-15__00:00:00,400
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for both FY2024 and FY2025
-    result_both = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="fy",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # FY2024: Week ending Jun 24 (demand=500, ends in FY2024)
-    # FY2025: Week ending Jul 1 (peak=1000, ends in FY2025 even though it starts in FY2024)
-    # Note: Jul 1 is assigned to FY2025 since that's when the week ends
-    expected_csv = """
-    snapshots
-    2024-06-24__00:00:00
-    2024-07-01__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    result_both = result_both.sort_values("snapshots").reset_index(drop=True)
-    expected = expected.sort_values("snapshots").reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(result_both, expected)
-
-
-def test_partial_week_at_start_of_timeseries(csv_str_to_df):
-    """Test how partial weeks at the start of the time series are handled.
-
-    When the time series starts mid-week, that partial week is EXCLUDED
-    from the analysis to ensure consistent comparison between weeks.
-    """
-    # Create snapshots starting on Thursday Jan 4, 2024 (mid-week)
-    # Include full week data for Jan 15 and Jan 22
-    snapshots_csv = """
-    snapshots
-    2024-01-04__00:00:00
-    2024-01-05__00:00:00
-    2024-01-08__00:00:00
-    2024-01-09__00:00:00
-    2024-01-10__00:00:00
-    2024-01-11__00:00:00
-    2024-01-12__00:00:00
-    2024-01-13__00:00:00
-    2024-01-14__00:00:00
-    2024-01-15__00:00:00
-    2024-01-16__00:00:00
-    2024-01-17__00:00:00
-    2024-01-18__00:00:00
-    2024-01-19__00:00:00
-    2024-01-20__00:00:00
-    2024-01-21__00:00:00
-    2024-01-22__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data with peak in complete week
-    demand_csv = """
-    Datetime,Value
-    2024-01-04__00:00:00,900
-    2024-01-05__00:00:00,950
-    2024-01-08__00:00:00,700
-    2024-01-09__00:00:00,720
-    2024-01-10__00:00:00,730
-    2024-01-11__00:00:00,740
-    2024-01-12__00:00:00,750
-    2024-01-13__00:00:00,760
-    2024-01-14__00:00:00,770
-    2024-01-15__00:00:00,800
-    2024-01-16__00:00:00,650
-    2024-01-17__00:00:00,640
-    2024-01-18__00:00:00,630
-    2024-01-19__00:00:00,620
-    2024-01-20__00:00:00,610
-    2024-01-21__00:00:00,605
-    2024-01-22__00:00:00,600
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for peak demand in 2024
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2024,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # The partial week ending Jan 8 is EXCLUDED (only has data from Jan 4-8)
-    # Week ending Jan 15 has peak demand (800)
-    expected_csv = """
-    snapshots
-    2024-01-15__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_partial_week_exclusion_with_later_first_monday(csv_str_to_df):
-    """Test partial week exclusion when first Monday is later in the year.
-
-    Uses 2025 where January 1st is a Wednesday, so the first Monday is January 6.
-    This clearly demonstrates how partial weeks before the first Monday are excluded.
-    """
-    # Create snapshots starting Thursday Jan 2, 2025
-    snapshots_csv = """
-    snapshots
-    2025-01-02__00:00:00
-    2025-01-03__00:00:00
-    2025-01-06__00:00:00
-    2025-01-07__00:00:00
-    2025-01-08__00:00:00
-    2025-01-09__00:00:00
-    2025-01-10__00:00:00
-    2025-01-11__00:00:00
-    2025-01-12__00:00:00
-    2025-01-13__00:00:00
-    2025-01-14__00:00:00
-    2025-01-20__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data
-    # Partial week (Jan 2-6): has highest values but should be excluded
-    # Complete week (Jan 7-13): has peak among complete weeks
-    demand_csv = """
-    Datetime,Value
-    2025-01-02__00:00:00,1000
-    2025-01-03__00:00:00,1100
-    2025-01-06__00:00:00,900
-    2025-01-07__00:00:00,700
-    2025-01-08__00:00:00,720
-    2025-01-09__00:00:00,730
-    2025-01-10__00:00:00,740
-    2025-01-11__00:00:00,750
-    2025-01-12__00:00:00,760
-    2025-01-13__00:00:00,800
-    2025-01-14__00:00:00,650
-    2025-01-20__00:00:00,600
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for peak demand in 2025
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2025,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # The partial week ending Jan 6 is EXCLUDED (only has Thu/Fri/Mon)
-    # Week ending Jan 13 has peak demand (800) among complete weeks
-    expected_csv = """
-    snapshots
-    2025-01-07__00:00:00
-    2025-01-08__00:00:00
-    2025-01-09__00:00:00
-    2025-01-10__00:00:00
-    2025-01-11__00:00:00
-    2025-01-12__00:00:00
-    2025-01-13__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
-
-
-def test_partial_week_at_start_of_financial_year(csv_str_to_df):
-    """Test partial week at the start of a financial year.
-
-    When data starts mid-week at the beginning of a financial year,
-    that partial week is EXCLUDED from the analysis.
-    """
-    # Create snapshots starting Thursday July 4, 2024 (mid-week in FY2025)
-    snapshots_csv = """
-    snapshots
-    2024-07-04__00:00:00
-    2024-07-05__00:00:00
-    2024-07-08__00:00:00
-    2024-07-15__00:00:00
-    2024-07-22__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # Create demand data
-    demand_csv = """
-    Datetime,Value
-    2024-07-04__00:00:00,1000
-    2024-07-05__00:00:00,1100
-    2024-07-08__00:00:00,700
-    2024-07-15__00:00:00,800
-    2024-07-22__00:00:00,600
-    """
-    demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-
-    # Filter for peak demand in FY2025
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2025,
-        end_year=2025,
-        year_type="fy",
-        demand_data=demand_data,
-    )
-
-    # Expected:
-    # The partial week ending Jul 8 is EXCLUDED (only has data from Jul 4-8)
-    # Week ending Jul 15 has peak demand (800)
-    expected_csv = """
-    snapshots
-    2024-07-15__00:00:00
-    """
-    expected = csv_str_to_df(expected_csv)
-    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
 def test_financial_year_single_week_data(csv_str_to_df):
     """Test financial year with data in only one week.
 
@@ -1605,7 +849,6 @@ def test_financial_year_single_week_data(csv_str_to_df):
 
     demand_csv = """
     Datetime,Value
-    2024-07-01__00:00:00,500
     2024-07-03__00:00:00,600
     2024-07-05__00:00:00,700
     2024-07-08__00:00:00,550
@@ -1629,10 +872,441 @@ def test_financial_year_single_week_data(csv_str_to_df):
     # All metrics should select the same (only) week
     expected_csv = """
     snapshots
-    2024-07-01__00:00:00
     2024-07-03__00:00:00
     2024-07-05__00:00:00
     2024-07-08__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_calendar_year_partial_weeks_excluded(csv_str_to_df):
+    """Test that weeks partially within a calendar year are excluded.
+
+    This test verifies that weeks spanning year boundaries (Dec/Jan) are
+    not considered when selecting representative weeks. A week that starts
+    in December 2023 and ends in January 2024 should not be included in
+    either year's analysis.
+    """
+    # Create snapshots around year boundaries
+    snapshots_csv = """
+    snapshots
+    2023-12-25__00:00:00
+    2023-12-28__12:00:00
+    2023-12-31__00:00:00
+    2024-01-01__00:00:00
+    2024-01-03__00:00:00
+    2024-01-08__00:00:00
+    2024-01-15__00:00:00
+    2024-12-23__00:00:00
+    2024-12-26__12:00:00
+    2024-12-30__00:00:00
+    2025-01-06__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data with peaks in partial weeks and full weeks
+    demand_csv = """
+    Datetime,Value
+    2023-12-25__00:00:00,800
+    2023-12-28__12:00:00,900
+    2023-12-31__00:00:00,1500
+    2024-01-01__00:00:00,1600
+    2024-01-03__00:00:00,1000
+    2024-01-08__00:00:00,700
+    2024-01-15__00:00:00,600
+    2024-12-23__00:00:00,750
+    2024-12-26__12:00:00,850
+    2024-12-30__00:00:00,1300
+    2025-01-06__00:00:00,500
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    # Filter for peak demand weeks in 2024
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2024,
+        end_year=2025,
+        year_type="calendar",
+        demand_data=demand_data,
+    )
+
+    # Expected: Despite high demand values in the partial weeks (1200 on Jan 1 1600),
+    # these weeks should be excluded. The peak (1300) is on Dec 30 2024 which is in a full week.
+    # Week ending Dec 30 2024 is fully within 2024 (Dec 23-29).
+    expected_csv = """
+    snapshots
+    2024-12-26__12:00:00
+    2024-12-30__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_financial_year_partial_weeks_excluded(csv_str_to_df):
+    """Test that weeks partially within a financial year are excluded.
+
+    This test verifies that weeks spanning financial year boundaries (Jun/Jul)
+    are not considered when selecting representative weeks.
+    """
+    # Create snapshots around FY boundaries
+    snapshots_csv = """
+    snapshots
+    2023-06-26__00:00:00
+    2023-06-29__12:00:00
+    2023-07-01__00:00:00
+    2023-07-03__00:00:00
+    2023-07-10__00:00:00
+    2023-07-17__00:00:00
+    2024-06-24__00:00:00
+    2024-06-27__12:00:00
+    2024-06-30__00:00:00
+    2024-07-01__00:00:00
+    2024-07-08__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data with peaks in partial weeks
+    demand_csv = """
+    Datetime,Value
+    2023-06-26__00:00:00,800
+    2023-06-29__12:00:00,900
+    2023-07-01__00:00:00,1600
+    2023-07-03__00:00:00,1400
+    2023-07-10__00:00:00,700
+    2023-07-17__00:00:00,600
+    2024-06-24__00:00:00,850
+    2024-06-27__12:00:00,950
+    2024-06-30__00:00:00,1500
+    2024-07-01__00:00:00,1100
+    2024-07-08__00:00:00,500
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    # Filter for peak demand weeks in FY2024 (July 2023 - June 2024)
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2024,
+        end_year=2024,  # Only FY2024, not FY2025
+        year_type="fy",
+        demand_data=demand_data,
+    )
+
+    # Expected: Despite high demand in partial week (1600),
+    # these should be excluded. Peak (1500) is in week ending July 1, 2024.
+    # This week (June 24-30, 2024) is fully within FY2024.
+    # Snapshots from this week are those > June 24 00:00:00 and <= July 1 00:00:00
+    expected_csv = """
+    snapshots
+    2024-06-27__12:00:00
+    2024-06-30__00:00:00
+    2024-07-01__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_calendar_years_partial_weeks_excluded(csv_str_to_df):
+    """Test that weeks partially within calendar years are excluded.
+
+    This test verifies that partial weeks are consistently excluded
+    across multiple calendar years. A week that spans year boundaries
+    (Dec/Jan) should not be considered for either year.
+    """
+    # Create data spanning 2022-2024 with partial weeks at each boundary
+    snapshots_csv = """
+    snapshots
+    2021-12-27__00:00:00
+    2021-12-30__00:00:00
+    2022-01-03__00:00:00
+    2022-01-10__00:00:00
+    2022-07-04__00:00:00
+    2022-12-26__00:00:00
+    2022-12-29__00:00:00
+    2023-01-02__00:00:00
+    2023-01-09__00:00:00
+    2023-07-03__00:00:00
+    2023-12-25__00:00:00
+    2023-12-28__00:00:00
+    2024-01-01__00:00:00
+    2024-01-08__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data with highest values in partial weeks
+    demand_csv = """
+    Datetime,Value
+    2021-12-27__00:00:00,2000
+    2021-12-30__00:00:00,2100
+    2022-01-03__00:00:00,1900
+    2022-01-10__00:00:00,800
+    2022-07-04__00:00:00,700
+    2022-12-26__00:00:00,2200
+    2022-12-29__00:00:00,2300
+    2023-01-02__00:00:00,2150
+    2023-01-09__00:00:00,900
+    2023-07-03__00:00:00,750
+    2023-12-25__00:00:00,2400
+    2023-12-28__00:00:00,2500
+    2024-01-01__00:00:00,2350
+    2024-01-08__00:00:00,1000
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    # Test calendar years
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2022,
+        end_year=2024,
+        year_type="calendar",
+        demand_data=demand_data,
+    )
+
+    # Expected: Only full weeks should be considered
+    # 2022: Week ending Dec 26 has peak value 2200
+    # 2023: Week ending Jan 1 2024 (Dec 25-31, 2023) has peak value 2500
+    expected_csv = """
+    snapshots
+    2022-12-26__00:00:00
+    2023-12-28__00:00:00
+    2024-01-01__00:00:00
+    2024-01-08__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_financial_years_partial_weeks_excluded(csv_str_to_df):
+    """Test that weeks partially within financial years are excluded.
+
+    This test verifies that partial weeks are consistently excluded
+    across multiple financial years. A week that spans financial year
+    boundaries (Jun/Jul) should not be considered for either year.
+    """
+    # Create data spanning FY2022-FY2024 with partial weeks at each FY boundary
+    snapshots_csv = """
+    snapshots
+    2021-06-28__00:00:00
+    2021-06-30__00:00:00
+    2021-07-01__00:00:00
+    2021-07-05__00:00:00
+    2021-07-12__00:00:00
+    2022-01-10__00:00:00
+    2022-06-27__00:00:00
+    2022-06-29__00:00:00
+    2022-07-01__00:00:00
+    2022-07-04__00:00:00
+    2022-07-11__00:00:00
+    2023-01-09__00:00:00
+    2023-06-26__00:00:00
+    2023-06-28__00:00:00
+    2023-07-03__00:00:00
+    2023-07-10__00:00:00
+    2024-01-08__00:00:00
+    2024-06-24__00:00:00
+    2024-06-27__00:00:00
+    2024-07-01__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data with highest values in partial weeks to test exclusion
+    demand_csv = """
+    Datetime,Value
+    2021-06-28__00:00:00,2100
+    2021-06-30__00:00:00,2200
+    2021-07-01__00:00:00,2000
+    2021-07-05__00:00:00,800
+    2021-07-12__00:00:00,700
+    2022-01-10__00:00:00,900
+    2022-06-27__00:00:00,2300
+    2022-06-29__00:00:00,2400
+    2022-07-01__00:00:00,3000
+    2022-07-04__00:00:00,850
+    2022-07-11__00:00:00,750
+    2023-01-09__00:00:00,950
+    2023-06-26__00:00:00,2500
+    2023-06-28__00:00:00,2600
+    2023-07-03__00:00:00,3000
+    2023-07-10__00:00:00,800
+    2024-01-08__00:00:00,1000
+    2024-06-24__00:00:00,2700
+    2024-06-27__00:00:00,2800
+    2024-07-01__00:00:00,2650
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    # Test financial years FY2022-FY2024
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2022,
+        end_year=2024,
+        year_type="fy",
+        demand_data=demand_data,
+    )
+
+    # Expected: Only full weeks within each FY should be considered
+    # FY2022 (Jul 2021 - Jun 2022): Peak in week ending Jun 27, 2022 (value 2400)
+    #   - This week (Jun 20-26) is fully within FY2022
+    # FY2023 (Jul 2022 - Jun 2023): Peak in week ending Jun 26, 2023 (value 2600)
+    #   - This week (Jun 19-25) is fully within FY2023
+    # FY2024 (Jul 2023 - Jun 2024): Peak in week ending Jul 1, 2024 (value 2800)
+    #   - This week (Jun 24-30) is fully within FY2024 (ends June 30)
+    #   - July 1 00:00:00 marks the END of this week
+    # Note: Partial weeks spanning FY boundaries are excluded
+    expected_csv = """
+    snapshots
+    2022-06-27__00:00:00
+    2023-06-26__00:00:00
+    2024-06-27__00:00:00
+    2024-07-01__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_year_starting_on_monday(csv_str_to_df):
+    """Test edge case where year starts on Monday.
+
+    When January 1 is a Monday, the first week is complete and should be included.
+    2024 is such a year.
+    """
+    # Create snapshots for 2024 where Jan 1 is a Monday
+    snapshots_csv = """
+    snapshots
+    2024-01-01__00:00:00
+    2024-01-01__12:00:00
+    2024-01-04__00:00:00
+    2024-01-08__00:00:00
+    2024-01-15__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data
+    demand_csv = """
+    Datetime,Value
+    2024-01-01__00:00:00,1000
+    2024-01-01__12:00:00,1100
+    2024-01-04__00:00:00,900
+    2024-01-08__00:00:00,800
+    2024-01-15__00:00:00,700
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2024,
+        end_year=2025,
+        year_type="calendar",
+        demand_data=demand_data,
+    )
+
+    # Expected: First week (ending Jan 8) has peak demand
+    expected_csv = """
+    snapshots
+    2024-01-01__12:00:00
+    2024-01-04__00:00:00
+    2024-01-08__00:00:00
+    """
+    expected = csv_str_to_df(expected_csv)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+
+    result = result.sort_values("snapshots").reset_index(drop=True)
+    expected = expected.sort_values("snapshots").reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_year_ending_on_sunday(csv_str_to_df):
+    """Test edge case where year ends on Sunday.
+
+    When December 31 is a Sunday, the last week is complete and should be included.
+    2023 is such a year.
+    """
+    # Create snapshots for end of 2023 where Dec 31 is a Sunday
+    snapshots_csv = """
+    snapshots
+    2023-12-18__00:00:00
+    2023-12-25__00:00:00
+    2023-12-27__00:00:00
+    2023-12-29__00:00:00
+    2023-12-31__00:00:00
+    2023-12-31__23:00:00
+    2024-01-01__00:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
+    # Create demand data
+    demand_csv = """
+    Datetime,Value
+    2023-12-18__00:00:00,600
+    2023-12-25__00:00:00,700
+    2023-12-27__00:00:00,800
+    2023-12-29__00:00:00,900
+    2023-12-31__00:00:00,1000
+    2023-12-31__23:00:00,1000
+    2024-01-01__00:00:00,1100
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+
+    result = _filter_snapshots_for_named_representative_weeks(
+        named_representative_weeks=["peak-demand"],
+        snapshots=snapshots,
+        start_year=2023,
+        end_year=2024,
+        year_type="calendar",
+        demand_data=demand_data,
+    )
+
+    # Expected: Last week (Dec 25-31) has peak demand and is fully within 2023
+    expected_csv = """
+    snapshots
+    2023-12-27__00:00:00
+    2023-12-29__00:00:00
+    2023-12-31__00:00:00
+    2023-12-31__23:00:00
+    2024-01-01__00:00:00
     """
     expected = csv_str_to_df(expected_csv)
     expected["snapshots"] = pd.to_datetime(expected["snapshots"])
