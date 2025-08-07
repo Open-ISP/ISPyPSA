@@ -37,9 +37,8 @@ def test_create_pypsa_friendly_inputs_with_fixture(
     # Run create_pypsa_friendly_inputs
     result = create_pypsa_friendly_inputs(sample_model_config, sample_ispypsa_tables)
 
-    # Check that all expected outputs are present
+    # Check that all expected outputs are present (snapshots is now created by create_pypsa_friendly_timeseries_inputs)
     expected_outputs = [
-        "snapshots",
         "investment_period_weights",
         "buses",
         "links",
@@ -70,10 +69,6 @@ def test_create_pypsa_friendly_inputs_with_fixture(
     # Custom constraints should be translated
     assert not result["custom_constraints_rhs"].empty
     assert not result["custom_constraints_lhs"].empty
-
-    # Snapshots should be created based on config
-    assert not result["snapshots"].empty
-    assert "investment_periods" in result["snapshots"].columns
 
     # Investment period weights should be created
     assert not result["investment_period_weights"].empty
