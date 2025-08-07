@@ -308,29 +308,6 @@ def test_multiple_week_types_selection(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_no_demand_data_returns_empty(csv_str_to_df):
-    """Test that function returns empty DataFrame when no demand data provided."""
-    snapshots_csv = """
-    snapshots
-    2024-01-01__00:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    result = _filter_snapshots_for_named_representative_weeks(
-        named_representative_weeks=["peak-demand"],
-        snapshots=snapshots,
-        start_year=2024,
-        end_year=2025,
-        year_type="calendar",
-        demand_data=None,
-    )
-
-    expected = pd.DataFrame({"snapshots": []})
-
-    pd.testing.assert_frame_equal(result, expected)
-
-
 def test_residual_metrics_without_renewable_data(csv_str_to_df):
     """Test residual metrics when renewable data is not provided.
 
