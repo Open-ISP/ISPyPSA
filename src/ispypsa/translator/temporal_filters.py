@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 
 from ispypsa.config import (
-    ModelConfig,
     TemporalAggregationConfig,
     TemporalRangeConfig,
 )
-from ispypsa.config.validators import TemporalConfig
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 
 
@@ -272,11 +271,51 @@ def _filter_snapshots_for_named_representative_weeks(
     - Weeks are defined as Monday 00:00:00 to Monday 00:00:00 (7 days)
     - Monday 00:00:00 timestamps mark the END of a week, not the beginning
     - Weeks are assigned to the year/financial year in which they END
-    - This means weeks spanning year boundaries (e.g., Dec 28 2024 to Jan 4 2025)
-      are assigned to the year of their ending Monday (2025 in this example)
-    - Only weeks that END within the specified year range are included
-    - Partial weeks (those without data for all 7 days) are EXCLUDED from the analysis
-      to ensure consistent comparison between weeks
+    - Weeks spanning year boundaries (e.g., Dec 28 2024 to Jan 4 2025)
+      are EXCLUDED from the analysis
+
+    Examples:
+
+    >>> # Create sample data for 2024
+    >>> snapshots = pd.DataFrame({
+    ...     'snapshots': pd.date_range('2024-01-01', '2024-01-31', freq='D')
+    ... })
+    >>> demand_data = pd.DataFrame({
+    ...     'Datetime': pd.date_range('2024-01-01', '2024-01-31', freq='D'),
+    ...     'Value': [100, 110, 120, 130, 140, 150, 160,  # Week 1 (Jan 1-7)
+    ...               170, 300, 250, 200, 180, 160, 140,  # Week 2 (Jan 8-14) - peak
+    ...               120, 110, 100, 90, 80, 70, 60,      # Week 3 (Jan 15-21) - minimum
+    ...               50, 60, 70, 80, 90, 100, 110,       # Week 4 (Jan 22-28)
+    ...               120, 130, 140]                       # Partial week
+    ... })
+
+    >>> # Filter for peak demand week
+    >>> result = _filter_snapshots_for_named_representative_weeks(
+    ...     named_representative_weeks=["peak-demand"],
+    ...     snapshots=snapshots,
+    ...     start_year=2024,
+    ...     end_year=2025,
+    ...     year_type="calendar",
+    ...     demand_data=demand_data
+    ... )
+    >>> # Returns snapshots from week containing Jan 9 (highest demand of 300)
+    >>> # This is the week from Jan 9-15 (Tuesday to Monday)
+    >>> len(result)
+    7
+
+    >>> # Filter for minimum demand week
+    >>> result = _filter_snapshots_for_named_representative_weeks(
+    ...     named_representative_weeks=["minimum-demand"],
+    ...     snapshots=snapshots,
+    ...     start_year=2024,
+    ...     end_year=2025,
+    ...     year_type="calendar",
+    ...     demand_data=demand_data
+    ... )
+    >>> # Returns snapshots from week containing Jan 22 (lowest demand of 50)
+    >>> # This is the week from Jan 16-22 (Tuesday to Monday)
+    >>> len(result)
+    7
 
     Args:
         named_representative_weeks: List of named week types to include
@@ -356,61 +395,45 @@ def _filter_and_assign_weeks(
         [datetime(y + 1, month, 1) for y in range(start_year, end_year)]
     )
 
-    df = demand_df.copy()
+    output = []
 
-    # Assign years
-    df["year"] = df["Datetime"].dt.year - (
-        df["Datetime"].dt.month < month if month == 7 else 0
-    )
+    for year_start, year_end in zip(year_starts, year_ends):
+        df = demand_df[
+            (demand_df["Datetime"] > year_start) & (demand_df["Datetime"] <= year_end)
+        ].copy()
 
-    # Calculate first Mondays and assign week structure
-    first_monday_map = _calculate_first_mondays(start_year, end_year, year_starts)
+        if month == 1:
+            df["year"] = year_start.year
+        else:
+            df["year"] = year_end.year
 
-    # Filter to only include data from after the first Monday of the first year
-    # This ensures we don't have partial weeks at the start
-    earliest_first_monday = min(first_monday_map.values())
-    df = df[df["Datetime"] > earliest_first_monday]
+        days_until_next_monday = (7 - df["Datetime"].dt.weekday) % 7
+        days_until_next_monday = days_until_next_monday.where(
+            days_until_next_monday != 0, 7
+        )
 
-    if df.empty:
-        return df
+        already_week_end_time = (
+            (df["Datetime"].dt.weekday == 0)
+            & (df["Datetime"].dt.hour == 0)
+            & (df["Datetime"].dt.minute == 0)
+        )
 
-    df["first_monday"] = df["year"].map(first_monday_map)
+        df["week_end_time"] = np.where(
+            already_week_end_time,
+            df["Datetime"],
+            df["Datetime"] + pd.to_timedelta(days_until_next_monday, unit="days"),
+        )
 
-    # Calculate week number and week start
-    # For timestamps exactly at Monday 00:00:00, they belong to the end of the previous week
-    # We handle this by calculating days_since_first_monday and adjusting for the boundary
-    days_since_first_monday = (
-        df["Datetime"] - df["first_monday"]
-    ).dt.total_seconds() / 86400
+        # round back to midnight
+        df["week_end_time"] = df["week_end_time"].dt.normalize()
 
-    # If exactly on a Monday midnight (days is exact multiple of 7), assign to previous week
-    df["week_number"] = (days_since_first_monday // 7).astype(int)
-    df["week_number"] = (
-        df["week_number"].where(days_since_first_monday % 7 != 0, df["week_number"] - 1)
-        + 1
-    )
+        # Filter out partial weeks.
+        df = df[df["week_end_time"] <= year_end]
+        df = df[df["week_end_time"] - timedelta(days=7) >= year_start]
 
-    df["week_start"] = df["first_monday"] + pd.to_timedelta(
-        df["week_number"] - 1, unit="W"
-    )
+        output.append(df.copy())
 
-    # Keep only complete weeks by excluding weeks that end after the end of the last year
-    last_year_end = year_ends[-1]
-    df = df[df["week_start"] + timedelta(days=7) <= last_year_end]
-
-    return df
-
-
-def _calculate_first_mondays(
-    start_year: int,
-    end_year: int,
-    year_starts: list[pd.Timestamp],
-) -> dict[int, pd.Timestamp]:
-    """Calculate the first Monday for each year."""
-    return {
-        y: start + timedelta(days=(7 - start.weekday()) % 7)
-        for y, start in zip(range(start_year, end_year), year_starts)
-    }
+    return pd.concat(output)
 
 
 def _calculate_week_metrics(demand_df: pd.DataFrame) -> pd.DataFrame:
@@ -424,7 +447,7 @@ def _calculate_week_metrics(demand_df: pd.DataFrame) -> pd.DataFrame:
     if "residual_demand" in demand_df.columns:
         agg_dict["residual_demand"] = ["max", "min", "mean"]
 
-    metrics = demand_df.groupby(["year", "week_start"]).agg(agg_dict)
+    metrics = demand_df.groupby(["year", "week_end_time"]).agg(agg_dict)
     metrics.columns = ["_".join(col).strip("_") for col in metrics.columns]
 
     return metrics.reset_index()
@@ -458,7 +481,7 @@ def _find_target_weeks(
         else:
             idx = week_metrics.groupby("year")[metric_col].idxmin()
 
-        target_weeks.extend(week_metrics.loc[idx, "week_start"])
+        target_weeks.extend(week_metrics.loc[idx, "week_end_time"])
 
     return target_weeks
 
@@ -477,7 +500,7 @@ def _extract_snapshots_for_weeks(
 
     mask = pd.concat(
         [
-            (snapshot_series > week) & (snapshot_series <= week + timedelta(days=7))
+            (snapshot_series > week - timedelta(days=7)) & (snapshot_series <= week)
             for week in target_weeks
         ],
         axis=1,
