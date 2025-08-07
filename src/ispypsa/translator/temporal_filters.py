@@ -329,9 +329,6 @@ def _filter_snapshots_for_named_representative_weeks(
     Returns:
         DataFrame with filtered snapshots
     """
-    if demand_data is None:
-        return pd.DataFrame({"snapshots": []})
-
     start_year, end_year, month = _get_iteration_start_and_end_time(
         year_type, start_year, end_year
     )
@@ -343,9 +340,6 @@ def _filter_snapshots_for_named_representative_weeks(
 
     # Filter to time range and assign weekly structure
     demand_df = _filter_and_assign_weeks(demand_df, start_year, end_year, month)
-
-    if demand_df.empty:
-        return pd.DataFrame({"snapshots": []})
 
     # Calculate metrics for each week
     week_metrics = _calculate_week_metrics(demand_df)
@@ -458,10 +452,6 @@ def _find_target_weeks(
     named_representative_weeks: list[str],
 ) -> list[pd.Timestamp]:
     """Find target weeks based on named criteria."""
-    # Handle empty DataFrame case (no complete weeks)
-    if week_metrics.empty:
-        return []
-
     week_type_mapping = {
         "peak-demand": ("demand_max", "max"),
         "residual-peak-demand": ("residual_demand_max", "max"),
@@ -495,9 +485,6 @@ def _extract_snapshots_for_weeks(
     Week runs from Monday 00:00:01 to Monday 00:00:00 (next week).
     Monday 00:00:00 belongs to the previous week.
     """
-    if not target_weeks:
-        return pd.DataFrame({"snapshots": []})
-
     mask = pd.concat(
         [
             (snapshot_series > week - timedelta(days=7)) & (snapshot_series <= week)
@@ -526,9 +513,6 @@ def _prepare_data_for_named_weeks(
     Returns:
         Tuple of (demand_data, renewable_data) DataFrames or None values
     """
-    if demand_traces is None:
-        return None, None
-
     # Check if any residual metrics are requested
     residual_metrics = [
         "residual-peak-demand",
@@ -569,9 +553,6 @@ def _aggregate_demand_traces(
     Returns:
         DataFrame with columns: Datetime, Value (total demand in MW)
     """
-    if not demand_traces:
-        return pd.DataFrame({"Datetime": [], "Value": []})
-
     # Combine all demand data
     all_demand_data = list(demand_traces.values())
     combined_demand = pd.concat(all_demand_data)
