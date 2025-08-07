@@ -103,7 +103,20 @@ temporal:
     investment_periods: [2025, 2026]
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
-      representative_weeks: [12]
+      # Options:
+      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+
+      representative_weeks: None
+
+      # Named representative weeks based on demand characteristics
+      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
+      #     residual-minimum-demand, peak-consumption, residual-peak-consumption
+      named_representative_weeks: [residual-peak-demand]
+
   operational:
     resolution_min: 30
     reference_year_cycle: [2018]
@@ -111,7 +124,18 @@ temporal:
     overlap: 48
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
-      representative_weeks: [12]
+      # Options:
+      #   "None": Full yearly temporal representation is used.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: None
+
+      # Named representative weeks based on demand characteristics
+      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
+      #     residual-minimum-demand, peak-consumption, residual-peak-consumption
+      named_representative_weeks: [residual-peak-demand]
 
 
 # ===== Solver =======================================================================
