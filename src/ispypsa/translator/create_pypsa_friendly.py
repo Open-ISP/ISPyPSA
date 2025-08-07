@@ -173,16 +173,17 @@ def create_pypsa_friendly_timeseries_inputs(
     config: ModelConfig,
     model_phase: Literal["capacity_expansion", "operational"],
     ispypsa_tables: dict[str, pd.DataFrame],
-    snapshots: pd.DataFrame,
     generators: pd.DataFrame,
     parsed_traces_directory: Path,
     pypsa_friendly_timeseries_inputs_location: Path,
+    snapshots: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Creates snapshots and timeseries data files in PyPSA friendly format for generation
     and demand.
 
     - First creates snapshots based on the temporal configuration, optionally using
-      named_representative_weeks if configured.
+      named_representative_weeks if configured. If snapshots are provided, they are used
+      instead of generating new ones.
 
     - a time series file is created for each wind and solar generator in the new_entrant_generators
     table (table in ispypsa_tables dict). The time series data is saved in parquet files
@@ -258,6 +259,10 @@ def create_pypsa_friendly_timeseries_inputs(
             has been parsed using isp-trace-parser is located.
         pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
             time series data which is to be created should be saved.
+        snapshots: Optional pd.DataFrame containing pre-defined snapshots to use instead
+            of generating them. If provided, must contain columns 'snapshots' (datetime)
+            and 'investment_periods' (int). This is useful for testing or when custom
+            snapshots are needed.
 
     Returns: pd.DataFrame containing the snapshots used for filtering the timeseries
     """
@@ -311,17 +316,19 @@ def create_pypsa_friendly_timeseries_inputs(
         year_type=config.temporal.year_type,
     )
 
-    # Create snapshots, potentially using the loaded data for named_representative_weeks
-    # Flatten generator traces for snapshot creation
-    all_generator_traces = _flatten_generator_traces(generator_traces_by_type)
+    # Use provided snapshots or create new ones
+    if snapshots is None:
+        # Create snapshots, potentially using the loaded data for named_representative_weeks
+        # Flatten generator traces for snapshot creation
+        all_generator_traces = _flatten_generator_traces(generator_traces_by_type)
 
-    snapshots = create_pypsa_friendly_snapshots(
-        config,
-        model_phase,
-        existing_generators=ispypsa_tables.get("ecaa_generators"),
-        demand_traces=demand_traces,
-        generator_traces=all_generator_traces,
-    )
+        snapshots = create_pypsa_friendly_snapshots(
+            config,
+            model_phase,
+            existing_generators=ispypsa_tables.get("ecaa_generators"),
+            demand_traces=demand_traces,
+            generator_traces=all_generator_traces,
+        )
 
     # Filter and save generator timeseries by type
     for gen_type, gen_traces in generator_traces_by_type.items():
@@ -342,13 +349,6 @@ def create_pypsa_friendly_timeseries_inputs(
     )
 
     return snapshots
-
-
-def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
-    files = _BASE_TRANSLATOR_OUTPUTS
-    if output_path is not None:
-        files = [output_path / Path(file + ".csv") for file in files]
-    return files
 
 
 def list_timeseries_files(
@@ -487,3 +487,10 @@ def _filter_and_save_timeseries(
 
         # Save to parquet
         trace.to_parquet(Path(output_trace_path, f"{name}.parquet"), index=False)
+
+
+def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
+    files = _BASE_TRANSLATOR_OUTPUTS
+    if output_path is not None:
+        files = [output_path / Path(file + ".csv") for file in files]
+    return files

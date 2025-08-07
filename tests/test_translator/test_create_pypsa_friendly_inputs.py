@@ -145,7 +145,9 @@ def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
         sample_model_config, sample_ispypsa_tables
     )
 
-    for table in list_translator_output_files():
+    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
+    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    for table in expected_tables:
         assert table in pypsa_tables.keys()
 
     assert "CNSW" in pypsa_tables["buses"]["name"].values
@@ -162,7 +164,9 @@ def test_create_pypsa_inputs_template_single_regions(
         sample_model_config, sample_ispypsa_tables
     )
 
-    for table in list_translator_output_files():
+    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
+    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    for table in expected_tables:
         assert table in pypsa_tables.keys()
 
     assert "NEM" in pypsa_tables["buses"]["name"].values
@@ -190,7 +194,9 @@ class DummyConfigTwo:
                         "resolution_min": 60,
                         "investment_periods": [2025],
                         "reference_year_cycle": [2011],
-                        "aggregation": {"representative_weeks": [1]},
+                        "aggregation": type(
+                            "obj", (object,), {"representative_weeks": [1]}
+                        ),
                     },
                 ),
                 "operational": type(
@@ -275,12 +281,11 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     # Create output directory
     output_dir = tmp_path / "timeseries_output"
 
-    # Call the function
-    create_pypsa_friendly_timeseries_inputs(
+    # Call the function - it now returns snapshots instead of taking them as input
+    snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         sample_ispypsa_tables,
-        snapshots,
         generators,
         parsed_trace_path,
         output_dir,
@@ -386,25 +391,14 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
         ignore_index=True,
     )
 
-    # Create snapshots for operational model (half-hourly)
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2025,  # Just one year for operational
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
     # Create output directory
     output_dir = tmp_path / "timeseries_output"
 
     # Call the function
-    create_pypsa_friendly_timeseries_inputs(
+    snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         sample_ispypsa_tables,
-        snapshots,
         generators,
         parsed_trace_path,
         output_dir,

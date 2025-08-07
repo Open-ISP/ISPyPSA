@@ -9,10 +9,6 @@ from ispypsa.translator.buses import (
     _translate_rezs_to_buses,
     create_pypsa_friendly_bus_demand_timeseries,
 )
-from ispypsa.translator.snapshots import (
-    _add_investment_periods,
-    _create_complete_snapshots_index,
-)
 
 
 def test_translate_isp_sub_regions_to_buses():
@@ -60,26 +56,17 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
         }
     )
 
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2026,
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
-    create_pypsa_friendly_bus_demand_timeseries(
+    # Get demand traces - function no longer takes output path or snapshots
+    demand_traces = create_pypsa_friendly_bus_demand_timeseries(
         sub_regions_ispypsa,
         parsed_trace_path,
-        tmp_path,
         scenario="Step Change",
         regional_granularity="sub_regions",
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
 
+    # Build expected trace from the same source files
     files = [
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
@@ -91,15 +78,15 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
 
     expected_trace = pd.concat([pd.read_parquet(file) for file in files])
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
-    expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_set"}
-    )
-    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
-    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NNSW.parquet"))
+    # The function returns a dictionary with node names as keys
+    # For sub_regions granularity, CNSW should be its own node
+    assert "CNSW" in demand_traces
+    got_trace = demand_traces["CNSW"]
 
+    # Compare the traces
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
 
@@ -113,24 +100,14 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
         }
     )
 
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2026,
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
-    create_pypsa_friendly_bus_demand_timeseries(
+    # Get demand traces - function no longer takes output path or snapshots
+    demand_traces = create_pypsa_friendly_bus_demand_timeseries(
         sub_regions_ispypsa,
         parsed_trace_path,
-        tmp_path,
         scenario="Step Change",
         regional_granularity="nem_regions",
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
 
     files = [
@@ -143,21 +120,21 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
     files = [parsed_trace_path / Path(file) for file in files]
 
     expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
 
+    # For nem_regions, aggregate by Datetime to combine CNSW and NNSW into NSW
     expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
         {"Value": "sum"}
     )
-    expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_set"}
-    )
-    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
-    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NSW.parquet"))
+    # The function returns a dictionary with node names as keys
+    # For nem_regions granularity, NSW should be aggregated from CNSW and NNSW
+    assert "NSW" in demand_traces
+    got_trace = demand_traces["NSW"]
 
+    # Compare the traces
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
 
@@ -171,24 +148,14 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
         }
     )
 
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2026,
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
-    create_pypsa_friendly_bus_demand_timeseries(
+    # Get demand traces - function no longer takes output path or snapshots
+    demand_traces = create_pypsa_friendly_bus_demand_timeseries(
         sub_regions_ispypsa,
         parsed_trace_path,
-        tmp_path,
         scenario="Step Change",
         regional_granularity="single_region",
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
 
     files = [
@@ -205,19 +172,19 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
     files = [parsed_trace_path / Path(file) for file in files]
 
     expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
 
+    # For single_region, aggregate all sub-regions into NEM
     expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
         {"Value": "sum"}
     )
-    expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_set"}
-    )
-    expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
-    expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
+    # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NEM.parquet"))
+    # The function returns a dictionary with node names as keys
+    # For single_region granularity, NEM should aggregate all sub-regions
+    assert "NEM" in demand_traces
+    got_trace = demand_traces["NEM"]
 
+    # Compare the traces
     pd.testing.assert_frame_equal(expected_trace, got_trace)
