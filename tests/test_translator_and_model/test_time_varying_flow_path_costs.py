@@ -178,22 +178,22 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     )
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
-    # Override the longer snapshots that would have auto generated.
-    pypsa_tables["snapshots"] = snapshots
-
     # Create timeseries data directory structure for PyPSA inputs
     pypsa_timeseries_dir = pypsa_dir / "timeseries"
     pypsa_timeseries_dir.mkdir(parents=True)
 
-    # Create demand traces for the network model
-    create_pypsa_friendly_timeseries_inputs(
+    # Create demand traces for the network model with custom snapshots
+    returned_snapshots = create_pypsa_friendly_timeseries_inputs(
         config=config,
         model_phase="capacity_expansion",
         ispypsa_tables=ispypsa_tables,
-        snapshots=snapshots,
         parsed_traces_directory=traces_dir,
         pypsa_friendly_timeseries_inputs_location=pypsa_timeseries_dir,
+        snapshots=snapshots,
     )
+
+    # Add snapshots to pypsa_tables for network building
+    pypsa_tables["snapshots"] = returned_snapshots
 
     # Build the network model
     network = build_pypsa_network(
