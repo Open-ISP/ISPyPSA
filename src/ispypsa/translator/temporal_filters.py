@@ -356,7 +356,21 @@ def _prepare_demand_with_residual(
     renewable_data: pd.DataFrame | None,
     named_representative_weeks: list[str],
 ) -> pd.DataFrame:
-    """Prepare demand data with residual demand column if needed."""
+    """Prepare demand data with residual demand column if needed.
+
+    Creates a DataFrame with demand and optionally residual demand (demand minus renewable generation)
+    columns. Residual demand is only calculated if renewable data is provided or if any of the
+    named representative weeks require residual metrics.
+
+    Args:
+        demand_data: DataFrame with columns "Datetime" and "Value" containing demand time series
+        renewable_data: Optional DataFrame with columns "Datetime" and "Value" containing
+            renewable generation time series
+        named_representative_weeks: List of named week types to determine if residual is needed
+
+    Returns:
+        DataFrame with columns "Datetime", "demand", and optionally "residual_demand"
+    """
     df = demand_data.rename(columns={"Value": "demand"})
 
     needs_residual = any("residual" in metric for metric in named_representative_weeks)
@@ -380,7 +394,22 @@ def _filter_and_assign_weeks(
     end_year: int,
     month: int,
 ) -> pd.DataFrame:
-    """Filter demand data to time range and assign week structure."""
+    """Filter demand data to time range and assign week structure.
+
+    Filters demand data to the specified year range and assigns each timestamp to a week,
+    where weeks are defined as ending on Monday at 00:00:00. Partial weeks that span
+    year boundaries are excluded from the result.
+
+    Args:
+        demand_df: DataFrame with "Datetime" column containing demand time series data
+        start_year: First year to include in the analysis
+        end_year: Last year to include in the analysis (exclusive)
+        month: Starting month for each year (1 for calendar year, 7 for Australian financial year)
+
+    Returns:
+        DataFrame with original columns plus "year" and "week_end_time" columns,
+        filtered to include only complete weeks within the specified year range
+    """
     # Create year boundaries
     year_starts = pd.to_datetime(
         [datetime(y, month, 1) for y in range(start_year, end_year)]
@@ -433,7 +462,14 @@ def _filter_and_assign_weeks(
 def _calculate_week_metrics(demand_df: pd.DataFrame) -> pd.DataFrame:
     """Calculate metrics for each week across all years.
 
-    Only processes complete weeks (those with 7 full days of data).
+    Args:
+        demand_df: DataFrame with columns "year", "week_end_time", "demand",
+            and optionally "residual_demand"
+
+    Returns:
+        DataFrame with columns "year", "week_end_time", and calculated metrics
+        such as "demand_max", "demand_min", "demand_mean", and optionally
+        "residual_demand_max", "residual_demand_min", "residual_demand_mean"
     """
     # Calculate metrics for all weeks
     agg_dict = {"demand": ["max", "min", "mean"]}
@@ -451,7 +487,21 @@ def _find_target_weeks(
     week_metrics: pd.DataFrame,
     named_representative_weeks: list[str],
 ) -> list[pd.Timestamp]:
-    """Find target weeks based on named criteria."""
+    """Find target weeks based on named criteria.
+
+    Identifies weeks that meet specific criteria such as peak demand, minimum demand,
+    or peak consumption. For each year and each named week type, finds the week
+    that satisfies the criterion.
+
+    Args:
+        week_metrics: DataFrame with week-level metrics including columns like
+            "demand_max", "demand_min", "demand_mean", etc.
+        named_representative_weeks: List of week type names such as "peak-demand",
+            "minimum-demand", "peak-consumption", etc.
+
+    Returns:
+        List of pd.Timestamp objects representing the end times of target weeks
+    """
     week_type_mapping = {
         "peak-demand": ("demand_max", "max"),
         "residual-peak-demand": ("residual_demand_max", "max"),
@@ -484,6 +534,15 @@ def _extract_snapshots_for_weeks(
 
     Week runs from Monday 00:00:01 to Monday 00:00:00 (next week).
     Monday 00:00:00 belongs to the previous week.
+
+    Args:
+        snapshot_series: Series of datetime values representing available snapshots
+        target_weeks: List of pd.Timestamp objects representing week end times
+            (Monday 00:00:00)
+
+    Returns:
+        DataFrame with a single column "snapshots" containing datetime values
+        that fall within the specified target weeks
     """
     mask = pd.concat(
         [
