@@ -57,16 +57,17 @@ write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 
 # Translate ISPyPSA format to a PyPSA friendly format.
 pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 
-create_pypsa_friendly_timeseries_inputs(
+# Create timeseries inputs and snapshots
+pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
     config,
     "capacity_expansion",
     ispypsa_tables,
-    pypsa_friendly_input_tables["snapshots"],
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
+
+write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 
 # Build a PyPSA network object.
 network = build_pypsa_network(
@@ -82,13 +83,10 @@ network.optimize.solve_model(solver_name=config.solver)
 save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
 
 # Operational modelling extension
-operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
-
-create_pypsa_friendly_timeseries_inputs(
+operational_snapshots = create_pypsa_friendly_timeseries_inputs(
     config,
     "operational",
     ispypsa_tables,
-    operational_snapshots,
     parsed_traces_directory,
     operational_timeseries_location,
 )
