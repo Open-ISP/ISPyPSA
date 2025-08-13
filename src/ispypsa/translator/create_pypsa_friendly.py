@@ -149,18 +149,20 @@ def create_pypsa_friendly_timeseries_inputs(
     and demand.
 
     - First creates snapshots based on the temporal configuration, optionally using
-      named_representative_weeks if configured. If snapshots are provided, they are used
-      instead of generating new ones.
+      named_representative_weeks and/or representative_weeks if configured. If snapshots
+      are provided, they are used instead of generating new ones.
 
     - Then creates a time series file for each wind and solar generator in the
       ecaa_generators table (table in ispypsa_tables dict). The time series data is saved
       in parquet files in the 'solar_traces' and 'wind_traces' directories with the
-      columns "snapshots" (datetime) and "p_max_pu" (float specifying availability in MW).
+      columns "investment_periods" (int), "snapshots" (datetime) and "p_max_pu"
+      (float specifying availability in MW).
 
     - Also creates a time series file for each model region specifying the load in that
       region (regions set by config.network.nodes.regional_granularity). The time series
       data is saved in parquet files in the 'demand_traces' directory with the columns
-      "snapshots" (datetime) and "p_set" (float specifying load in MW).
+      "investment_periods" (int), "snapshots" (datetime) and "p_set"
+      (float specifying load in MW).
 
     Examples:
 
