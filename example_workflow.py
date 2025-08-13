@@ -79,16 +79,13 @@ write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
 # Create timeseries inputs and snapshots
-capacity_expansion_snapshots = create_pypsa_friendly_timeseries_inputs(
+pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
     config,
     "capacity_expansion",
     ispypsa_tables,
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
-
-# Add snapshots to pypsa_friendly_input_tables
-pypsa_friendly_input_tables["snapshots"] = capacity_expansion_snapshots
 
 write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 

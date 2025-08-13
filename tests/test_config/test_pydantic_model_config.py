@@ -13,12 +13,20 @@ from ispypsa.config.validators import ModelConfig
 @pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
 @pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
+@pytest.mark.parametrize(
+    "named_representative_weeks",
+    [
+        None,
+        ["residual-peak-demand", "minimum-demand"],
+    ],
+)
 def test_valid_config(
     scenario,
     regional_granularity,
     nodes_rezs,
     year_type,
     representative_weeks,
+    named_representative_weeks,
 ):
     config = get_valid_config()
 
@@ -32,6 +40,12 @@ def test_valid_config(
     )
     config["temporal"]["operational"]["aggregation"]["representative_weeks"] = (
         representative_weeks
+    )
+    config["temporal"]["capacity_expansion"]["aggregation"][
+        "named_representative_weeks"
+    ] = named_representative_weeks
+    config["temporal"]["operational"]["aggregation"]["named_representative_weeks"] = (
+        named_representative_weeks
     )
 
     ModelConfig(**config)
@@ -282,6 +296,13 @@ def invalid_trace_dataset_year(config):
     return config, ValidationError
 
 
+def invalid_named_representative_weeks(config):
+    config["temporal"]["capacity_expansion"]["aggregation"][
+        "named_representative_weeks"
+    ] = ["invalid-week-type"]
+    return config, ValidationError
+
+
 @pytest.mark.parametrize(
     "modifier_func",
     [
@@ -318,6 +339,7 @@ def invalid_trace_dataset_year(config):
         invalid_env_variable_not_set,
         invalid_trace_dataset_type,
         invalid_trace_dataset_year,
+        invalid_named_representative_weeks,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
