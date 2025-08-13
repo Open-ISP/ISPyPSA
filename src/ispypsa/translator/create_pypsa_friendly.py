@@ -182,8 +182,8 @@ def create_pypsa_friendly_timeseries_inputs(
     and demand.
 
     - First creates snapshots based on the temporal configuration, optionally using
-      named_representative_weeks if configured. If snapshots are provided, they are used
-      instead of generating new ones.
+      named_representative_weeks and/or representative_weeks if configured. If snapshots
+      are provided, they are used instead of generating new ones.
 
     - a time series file is created for each wind and solar generator in the new_entrant_generators
     table (table in ispypsa_tables dict). The time series data is saved in parquet files
