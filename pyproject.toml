@@ -18,6 +18,7 @@ dependencies = [
     "tables>=3.10.1",
     "isp-trace-parser>=1.0.3",
     "isp-workbook-parser>=2.6.0",
+    "pointblank>=0.12.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

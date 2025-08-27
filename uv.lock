@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version < '3.11'",
@@ -361,7 +360,7 @@ name = "click"
 version = "8.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
 wheels = [
@@ -396,6 +395,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/a8/fb783cb0abe2b5fded9f55e5703015cdf1c9c85b3669087c538dd15a6a86/comm-0.2.2.tar.gz", hash = "sha256:3fd7a84065306e07bea1773df6eb8282de51ba82f77c72f9c85716ab11fe980e", size = 6210 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/75/49e5bfe642f71f272236b5b2d2691cf915a7283cc0ceda56357b61daa538/comm-0.2.2-py3-none-any.whl", hash = "sha256:e6fb86cb70ff661ee8c9c14e7d36d6de3b4066f1441be4063df9c5009f0a64d3", size = 7180 },
+]
+
+[[package]]
+name = "commonmark"
+version = "0.9.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/48/a60f593447e8f0894ebb7f6e6c1f25dafc5e89c5879fdc9360ae93ff83f0/commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60", size = 95764 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9", size = 51068 },
 ]
 
 [[package]]
@@ -657,6 +665,18 @@ wheels = [
 ]
 
 [[package]]
+name = "faicons"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "htmltools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/e8/c12ef85c4444616ab1c1e96d5ecbadc8046d40b34797308846a2cfc06c80/faicons-0.2.2.tar.gz", hash = "sha256:6b7d7b19180179b6b83783f91bf6c9311c0f00ae0f97d41be1d24d9942361659", size = 604434 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/3c/1db1b0f878319bb227f35a0fca7cad64e1f528b518bcab1a708da305c86d/faicons-0.2.2-py3-none-any.whl", hash = "sha256:d45d7c2635b53582a3375c67d7e975a28a91d2c16ef5f6b5033b5cdd507224b6", size = 607225 },
+]
+
+[[package]]
 name = "fastjsonschema"
 version = "2.21.0"
 source = { registry = "https://pypi.org/simple" }
@@ -739,6 +759,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/39/08/2cf5d85356e45b10b8d066cf4c3ba1e9e3185423c48104eed87e8afd0455/geopandas-1.0.1.tar.gz", hash = "sha256:b8bf70a5534588205b7a56646e2082fb1de9a03599651b3d80c99ea4c2ca08ab", size = 317736 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/64/7d344cfcef5efddf9cf32f59af7f855828e9d74b5f862eddf5bfd9f25323/geopandas-1.0.1-py3-none-any.whl", hash = "sha256:01e147d9420cc374d26f51fc23716ac307f32b49406e4bd8462c07e82ed1d3d6", size = 323587 },
+]
+
+[[package]]
+name = "great-tables"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "babel" },
+    { name = "commonmark" },
+    { name = "faicons" },
+    { name = "htmltools" },
+    { name = "importlib-metadata" },
+    { name = "importlib-resources" },
+    { name = "numpy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/3f/7cb44926c661fd1cd6c3a773aa858dca70bd57fbdded31b597f1e8d1a850/great_tables-0.18.0.tar.gz", hash = "sha256:7e5773e878ba20f2aa2e00e511f8aae2bc31bdda90a6441756d0719276d7b164", size = 12541288 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/0e/1b5649e637b456ffd76bd7e83eb7abd12203030ca8b3262199c46754b965/great_tables-0.18.0-py3-none-any.whl", hash = "sha256:24fff29aa73a7e8018e871786dc9384111864cbc38eea5a409861ea3d8c4d880", size = 1386145 },
 ]
 
 [[package]]
@@ -852,6 +891,19 @@ wheels = [
 ]
 
 [[package]]
+name = "htmltools"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/1d/c568d17e9fb5ad5aa0ca3531c58d36fe69deb8eee4e53ff6425c1f99f210/htmltools-0.6.0.tar.gz", hash = "sha256:e8a3fb023d748935035db7ff17f620612ffc814a6a80b6ae388f7b7ab182adf7", size = 97152 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl", hash = "sha256:072a274ff5e2851e0acce13fc5bb2bbdbbad8268dc8b123f881c05012ce7dce0", size = 84954 },
+]
+
+[[package]]
 name = "identify"
 version = "2.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -891,6 +943,15 @@ wheels = [
 ]
 
 [[package]]
+name = "importlib-resources"
+version = "6.5.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461 },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -918,7 +979,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin'" },
+    { name = "appnope", marker = "platform_system == 'Darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -998,6 +1059,7 @@ dependencies = [
     { name = "isp-trace-parser" },
     { name = "isp-workbook-parser" },
     { name = "pandas" },
+    { name = "pointblank" },
     { name = "pyarrow" },
     { name = "pypsa" },
     { name = "pyyaml" },
@@ -1036,6 +1098,7 @@ requires-dist = [
     { name = "isp-workbook-parser", specifier = ">=2.6.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
+    { name = "pointblank", specifier = ">=0.12.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pypsa", specifier = ">=0.31.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
@@ -1043,7 +1106,6 @@ requires-dist = [
     { name = "thefuzz", specifier = ">=0.22.1" },
     { name = "xmltodict", specifier = ">=0.13.0" },
 ]
-provides-extras = ["solvers"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1522,6 +1584,15 @@ wheels = [
 ]
 
 [[package]]
+name = "narwhals"
+version = "2.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/f0/b0550d9b84759f4d045fd43da2f811e8b23dc2001e38c3254456da7f3adb/narwhals-2.1.2.tar.gz", hash = "sha256:afb9597e76d5b38c2c4b7c37d27a2418b8cc8049a66b8a5aca9581c92ae8f8bf", size = 533772 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/01/824fff6789ce92a53242d24b6f5f3a982df2f610c51020f934bf878d2a99/narwhals-2.1.2-py3-none-any.whl", hash = "sha256:136b2f533a4eb3245c54254f137c5d14cef5c4668cff67dc6e911a602acd3547", size = 392064 },
+]
+
+[[package]]
 name = "nbclient"
 version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1913,6 +1984,26 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a18b314a5ad0b3210edb65a906f868e31c111dede4a6/pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1", size = 67955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
+]
+
+[[package]]
+name = "pointblank"
+version = "0.12.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "commonmark" },
+    { name = "great-tables" },
+    { name = "importlib-metadata" },
+    { name = "narwhals" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "rich" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/8b/b6d9277f7eaf13dc58086cc658f76711402f622b4600f00a19f937780a32/pointblank-0.12.2.tar.gz", hash = "sha256:deaf4889b7cec7a15cd19c76d975664f8211484bec224f5b54152a54e5718060", size = 54833079 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/64/1228469664738b419c4c9af5b1fd82c7a89acd015404ff580af39ffd89b2/pointblank-0.12.2-py3-none-any.whl", hash = "sha256:a8baa0c5d90a64f629fea8633eaacee215105bd3860f2140a0dff4862f422b33", size = 17082655 },
 ]
 
 [[package]]
@@ -2578,6 +2669,19 @@ wheels = [
 ]
 
 [[package]]
+name = "rich"
+version = "14.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/75/af448d8e52bf1d8fa6a9d089ca6c07ff4453d86c65c145d0a300bb073b9b/rich-14.1.0.tar.gz", hash = "sha256:e497a48b844b0320d45007cdebfeaeed8db2a4f4bcf49f15e455cfc4af11eaa8", size = 224441 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/30/3c4d035596d3cf444529e0b2953ad0466f6049528a879d27534700580395/rich-14.1.0-py3-none-any.whl", hash = "sha256:536f5f1785986d6dbdea3c75205c473f970777b4a0d6c6dd1b696aa05a3fa04f", size = 243368 },
+]
+
+[[package]]
 name = "rpds-py"
 version = "0.21.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3095,7 +3199,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [

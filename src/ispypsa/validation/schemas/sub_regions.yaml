@@ -1,0 +1,32 @@
+tbl: small_table  # This will be overridden by set_tbl parameter
+tbl_name: "ISPyPSA Sub-regions Table"
+label: "Validate sub-regions table structure and data"
+thresholds:
+  warning: 0.0
+  error: 0.0
+  critical: 0.0
+
+steps:
+  # Required columns check
+  - col_exists:
+      columns: [isp_sub_region_id, nem_region_id]
+
+  # No duplicate sub-regions
+  - rows_distinct:
+      columns_subset: [isp_sub_region_id]
+
+  # Not null checks for mandatory fields
+  - col_vals_not_null:
+      columns: [isp_sub_region_id, nem_region_id]
+
+  # Valid NEM region IDs
+  - col_vals_in_set:
+      columns: [nem_region_id]
+      set: ["NSW", "QLD", "SA", "TAS", "VIC"]
+
+  # Additional columns when not mapping_only
+  # These columns may or may not exist depending on usage
+  # - sub_region_reference_node
+  # - sub_region_reference_node_voltage_kv
+  # - substation_latitude (optional)
+  # - substation_longitude (optional)

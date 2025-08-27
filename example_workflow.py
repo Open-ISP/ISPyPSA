@@ -13,6 +13,7 @@ from ispypsa.translator import (
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
 )
+from ispypsa.validation import validate_ispypsa_inputs
 
 # Define root folder for modelling files.
 root_folder = Path("ispypsa_runs")
@@ -48,6 +49,10 @@ ispypsa_tables = create_ispypsa_inputs_template(
     iasr_tables,
     manually_extracted_tables,
 )
+
+# Validate ISPyPSA input tables before writing to disk.
+validate_ispypsa_inputs(ispypsa_tables)
+
 write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 
 # Suggested stage of user interaction:

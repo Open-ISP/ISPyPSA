@@ -1,0 +1,49 @@
+tbl: small_table  # This will be overridden by set_tbl parameter
+tbl_name: "ISPyPSA Flow Paths Table"
+label: "Validate flow paths (interconnectors) table structure and data"
+thresholds:
+  warning: 0.0
+  error: 0.0
+  critical: 0.0
+
+steps:
+  # Required columns check - columns differ between regional and sub-regional
+  - col_exists:
+      columns: [flow_path, node_from, node_to, carrier]
+
+  # No duplicate flow paths
+  - rows_distinct:
+      columns_subset: [flow_path]
+
+  # Not null checks for mandatory fields
+  - col_vals_not_null:
+      columns: [flow_path, node_from, node_to, carrier]
+
+  # Carrier must be AC or DC
+  - col_vals_in_set:
+      columns: [carrier]
+      set: ["AC", "DC"]
+
+  # MW capacity columns must exist and be positive
+  # Note: Column names vary between regional and sub-regional
+  # For sub-regional: forward_direction_mw_summer_typical, reverse_direction_mw_summer_typical
+  # For regional: forward_direction_mw_summer_typical only
+  - col_vals_gt:
+      columns: [forward_direction_mw_summer_typical]
+      value: 0
+      na_pass: true  # Allow NA for some flow paths
+
+  # Node from and to should be different
+  # This check is done in Python referential integrity
+
+# Referential integrity checks
+referential_integrity:
+  - source_column: node_from
+    target_table: sub_regions
+    target_column: isp_sub_region_id
+    description: "node_from must reference a valid sub-region"
+
+  - source_column: node_to
+    target_table: sub_regions
+    target_column: isp_sub_region_id
+    description: "node_to must reference a valid sub-region"

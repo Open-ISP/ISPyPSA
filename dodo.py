@@ -20,6 +20,7 @@ from ispypsa.translator import (
     create_pypsa_friendly_timeseries_inputs,
     list_translator_output_files,
 )
+from ispypsa.validation import validate_ispypsa_inputs
 
 root_folder = Path("ispypsa_runs")
 
@@ -113,6 +114,10 @@ def create_pypsa_inputs_from_config_and_ispypsa_inputs(
     create_or_clean_task_output_folder(pypsa_inputs_location)
 
     ispypsa_tables = read_csvs(ispypsa_inputs_location)
+
+    # Validate ISPyPSA input tables at the start of the translator step
+    validate_ispypsa_inputs(ispypsa_tables)
+
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
     write_csvs(pypsa_tables, pypsa_inputs_location)
 

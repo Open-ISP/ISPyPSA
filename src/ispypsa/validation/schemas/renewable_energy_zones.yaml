@@ -1,0 +1,67 @@
+tbl: small_table  # This will be overridden by set_tbl parameter
+tbl_name: "ISPyPSA Renewable Energy Zones Table"
+label: "Validate renewable energy zones table structure and data"
+thresholds:
+  warning: 0.0
+  error: 0.0
+  critical: 0.0
+
+steps:
+  # Required columns check
+  - col_exists:
+      columns: [
+        rez_id,
+        isp_sub_region_id,
+        carrier,
+        wind_generation_total_limits_mw_high,
+        wind_generation_total_limits_mw_medium,
+        wind_generation_total_limits_mw_offshore_floating,
+        wind_generation_total_limits_mw_offshore_fixed,
+        solar_pv_plus_solar_thermal_limits_mw_solar,
+        rez_solar_resource_limit_violation_penalty_factor_$/mw,
+        rez_transmission_network_limit_summer_typical
+      ]
+
+  # No duplicate REZ IDs
+  - rows_distinct:
+      columns_subset: [rez_id]
+
+  # Not null checks for mandatory fields
+  - col_vals_not_null:
+      columns: [rez_id, isp_sub_region_id, carrier]
+
+  # Carrier must be AC or DC
+  - col_vals_in_set:
+      columns: [carrier]
+      set: ["AC", "DC"]
+
+  # Generation limits must be non-negative
+  - col_vals_ge:
+      columns: [
+        wind_generation_total_limits_mw_high,
+        wind_generation_total_limits_mw_medium,
+        wind_generation_total_limits_mw_offshore_floating,
+        wind_generation_total_limits_mw_offshore_fixed,
+        solar_pv_plus_solar_thermal_limits_mw_solar
+      ]
+      value: 0
+      na_pass: true  # Allow NA/NaN values
+
+  # Transmission limits must be positive when present
+  - col_vals_gt:
+      columns: [rez_transmission_network_limit_summer_typical]
+      value: 0
+      na_pass: true  # Allow NA/NaN for REZs without transmission limits
+
+  # Penalty factor must be positive when present
+  - col_vals_gt:
+      columns: [rez_solar_resource_limit_violation_penalty_factor_$/mw]
+      value: 0
+      na_pass: true  # Allow NA/NaN for REZs without penalty factors
+
+# Referential integrity checks
+referential_integrity:
+  - source_column: isp_sub_region_id
+    target_table: sub_regions
+    target_column: isp_sub_region_id
+    description: "REZ must be located in a valid sub-region"
