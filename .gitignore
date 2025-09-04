@@ -173,3 +173,4 @@ ispypsa_runs/**/*.h5
 
 # ignore doit database
 .doit*
+.claude/settings.local.json
