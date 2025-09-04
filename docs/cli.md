@@ -39,6 +39,7 @@ The basic command structure is:
 
 The `config=<config_file>` argument is required for task execution and must point to a valid ISPyPSA configuration YAML file.
 
+
 !!! important
 
     For the sake of brevity the commands on the rest of this page are given in plain
@@ -55,7 +56,6 @@ ispypsa config=my_config.yaml create_and_run_capacity_expansion_model
 
 # Run all tasks with config
 ispypsa config=my_config.yaml
-
 ```
 
 ## Tasks
@@ -97,6 +97,7 @@ Extracts data from the ISP Excel workbook and caches it as CSV files.
 
 ```bash
 ispypsa config=config.yaml cache_required_iasr_workbook_tables
+
 ```
 
 **Inputs:**

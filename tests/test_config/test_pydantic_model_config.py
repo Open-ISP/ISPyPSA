@@ -393,6 +393,7 @@ def test_base_paths_only():
 
     # Verify only base paths are present
     assert model.paths.parsed_traces_directory == "tests/trace_data"
+
     assert model.paths.parsed_workbook_cache == "ispypsa_runs/workbook_table_cache"
     assert model.paths.workbook_path == "tests/test_workbooks/test-workbook.xlsx"
     assert model.paths.run_directory == "ispypsa_runs/test"

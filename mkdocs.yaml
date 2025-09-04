@@ -14,7 +14,6 @@ extra_css:
 extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
-
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -42,6 +41,15 @@ plugins:
             show_signature_annotations: true
             separate_signature: true
             heading_level: 3
+          options.extra:
+            docstring_style: google
+            docstring_section_style: list
+          rendering:
+            show_root_heading: true
+            show_source: true
+            show_signature: true  # This is key for displaying signatures
+            show_signature_annotations: true
+            separate_signature: true
 
 nav:
   - Introduction: index.md
@@ -63,3 +71,4 @@ nav:
 watch:
   - src
   - docs
+

@@ -1,10 +1,7 @@
 from pathlib import Path
 
-from isp_trace_parser import construct_reference_year_mapping
-
 from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
-from ispypsa.iasr_table_caching import build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, save_results, update_network_timeseries
 from ispypsa.templater import (
@@ -12,50 +9,33 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
-    create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
 )
 
+# Define root folder for modelling files.
+root_folder = Path("ispypsa_runs")
+
 # Load model config.
-config_path = Path("ispypsa_config.yaml")
+config_path = root_folder / Path("development/ispypsa_inputs/ispypsa_config.yaml")
 config = load_config(config_path)
 
-# Load base paths from config
-parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
-parsed_traces_directory = Path(config.paths.parsed_traces_directory)
-workbook_path = Path(config.paths.workbook_path)
-run_directory = Path(config.paths.run_directory)
-
-# Construct full paths from base paths
-ispypsa_input_tables_directory = (
-    run_directory / config.paths.ispypsa_run_name / "ispypsa_inputs"
+# Define input/output data storage directories.
+run_folder = Path(root_folder, config.ispypsa_run_name)
+parsed_workbook_cache = root_folder / Path("workbook_table_cache")
+parsed_traces_directory = Path(config.temporal.path_to_parsed_traces)
+ispypsa_input_tables_directory = Path(run_folder, "ispypsa_inputs", "tables")
+pypsa_friendly_inputs_location = Path(run_folder, "pypsa_friendly")
+capacity_expansion_timeseries_location = Path(
+    pypsa_friendly_inputs_location, "capacity_expansion_timeseries"
 )
-pypsa_friendly_inputs_location = (
-    run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
+operational_timeseries_location = Path(
+    pypsa_friendly_inputs_location, "operational_timeseries"
 )
-capacity_expansion_timeseries_location = (
-    pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
-)
-operational_timeseries_location = (
-    pypsa_friendly_inputs_location / "operational_timeseries"
-)
-pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
-
-
-# Create output directories if they don't exist
-parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
-ispypsa_input_tables_directory.mkdir(parents=True, exist_ok=True)
-pypsa_friendly_inputs_location.mkdir(parents=True, exist_ok=True)
-capacity_expansion_timeseries_location.mkdir(parents=True, exist_ok=True)
-operational_timeseries_location.mkdir(parents=True, exist_ok=True)
-pypsa_outputs_directory.mkdir(parents=True, exist_ok=True)
+pypsa_outputs_directory = Path(run_folder, "outputs")
 
 configure_logging()
-
-# Build the local cache from the workbook
-build_local_cache(parsed_workbook_cache, workbook_path, config.iasr_workbook_version)
 
 # Load ISP IASR data tables.
 iasr_tables = read_csvs(parsed_workbook_cache)
@@ -67,8 +47,6 @@ ispypsa_tables = create_ispypsa_inputs_template(
     config.network.nodes.regional_granularity,
     iasr_tables,
     manually_extracted_tables,
-    config.filter_by_nem_regions,
-    config.filter_by_isp_sub_regions,
 )
 write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 
@@ -86,7 +64,6 @@ create_pypsa_friendly_timeseries_inputs(
     "capacity_expansion",
     ispypsa_tables,
     pypsa_friendly_input_tables["snapshots"],
-    pypsa_friendly_input_tables["generators"],
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
@@ -94,7 +71,7 @@ create_pypsa_friendly_timeseries_inputs(
 # Build a PyPSA network object.
 network = build_pypsa_network(
     pypsa_friendly_input_tables,
-    capacity_expansion_timeseries_location,
+    path_to_pypsa_friendly_timeseries_data=capacity_expansion_timeseries_location,
 )
 
 # Solve for least cost operation/expansion
@@ -102,7 +79,7 @@ network = build_pypsa_network(
 network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
-save_results(network, pypsa_outputs_directory, "capacity_expansion")
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
 
 # Operational modelling extension
 operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
@@ -112,7 +89,6 @@ create_pypsa_friendly_timeseries_inputs(
     "operational",
     ispypsa_tables,
     operational_snapshots,
-    pypsa_friendly_input_tables["generators"],
     parsed_traces_directory,
     operational_timeseries_location,
 )
@@ -132,4 +108,4 @@ network.optimize.optimize_with_rolling_horizon(
     overlap=config.temporal.operational.overlap,
 )
 
-save_results(network, pypsa_outputs_directory, "operational")
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")
