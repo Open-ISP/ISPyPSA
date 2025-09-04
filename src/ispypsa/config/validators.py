@@ -7,6 +7,39 @@ from pydantic import BaseModel, field_validator, model_validator
 from ..templater.lists import _ISP_SCENARIOS
 
 
+class PathsConfig(BaseModel):
+    parsed_traces_directory: str
+    parsed_workbook_cache: str
+    workbook_path: str | None
+    run_directory: str
+
+    @field_validator("parsed_traces_directory")
+    @classmethod
+    def validate_parsed_traces_directory(cls, parsed_traces_directory: str):
+        if parsed_traces_directory == "NOT_SET_FOR_TESTING":
+            return parsed_traces_directory
+
+        if parsed_traces_directory == "ENV":
+            parsed_traces_directory = os.environ.get("PATH_TO_PARSED_TRACES")
+            if parsed_traces_directory is None:
+                raise ValueError("Environment variable PATH_TO_PARSED_TRACES not set")
+
+        trace_path = Path(parsed_traces_directory)
+        if not trace_path.exists():
+            raise NotADirectoryError(
+                f"The parsed traces directory specified in the config ({trace_path})"
+                + " does not exist"
+            )
+        # check this folder contains sub-folders named solar, wind and demand
+        child_folders = set([folder.parts[-1] for folder in trace_path.iterdir()])
+        if child_folders != set(("demand", "wind", "solar")):
+            raise ValueError(
+                "The parsed traces directory must contain the following sub-folders"
+                + " with parsed trace data: 'demand', 'solar', 'wind'"
+            )
+        return parsed_traces_directory
+
+
 class NodesConfig(BaseModel):
     regional_granularity: Literal["sub_regions", "nem_regions", "single_region"]
     rezs: Literal["discrete_nodes", "attached_to_parent_node"]
@@ -71,37 +104,10 @@ class TemporalCapacityInvestmentConfig(TemporalDetailedConfig):
 
 
 class TemporalConfig(BaseModel):
-    path_to_parsed_traces: str
     year_type: Literal["fy", "calendar"]
     range: TemporalRangeConfig
     capacity_expansion: TemporalCapacityInvestmentConfig
     operational: TemporalOperationalConfig = None
-
-    @field_validator("path_to_parsed_traces")
-    @classmethod
-    def validate_path_to_parsed_traces(cls, path_to_parsed_traces: str):
-        if path_to_parsed_traces == "NOT_SET_FOR_TESTING":
-            return path_to_parsed_traces
-
-        if path_to_parsed_traces == "ENV":
-            path_to_parsed_traces = os.environ.get("PATH_TO_PARSED_TRACES")
-            if path_to_parsed_traces is None:
-                raise ValueError("Environment variable PATH_TO_PARSED_TRACES not set")
-
-        trace_path = Path(path_to_parsed_traces)
-        if not trace_path.exists():
-            raise NotADirectoryError(
-                f"The parsed traces directory specified in the config ({trace_path})"
-                + " does not exist"
-            )
-        # check this folder contains sub-folders named solar, wind and demand
-        child_folders = set([folder.parts[-1] for folder in trace_path.iterdir()])
-        if child_folders != set(("demand", "wind", "solar")):
-            raise ValueError(
-                "The parsed traces directory must contain the following sub-folders"
-                + " with parsed trace data: 'demand', 'solar', 'wind'"
-            )
-        return path_to_parsed_traces
 
     @model_validator(mode="after")
     def validate_investment_periods(self):
@@ -137,6 +143,7 @@ class ModelConfig(BaseModel):
     temporal: TemporalConfig
     iasr_workbook_version: str
     unserved_energy: UnservedEnergyConfig
+    paths: PathsConfig
     solver: Literal[
         "highs",
         "cbc",

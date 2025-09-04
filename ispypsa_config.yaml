@@ -1,6 +1,6 @@
 # The name of the ISPyPSA model run
 # This name is used to select the output folder within `ispypsa_runs`
-ispypsa_run_name: development
+ispypsa_run_name: new_test_run
 
 # ===== Path configuration =============================================================
 
@@ -22,7 +22,7 @@ paths:
   #   - {run_directory}/pypsa_friendly/capacity_expansion_timeseries
   #   - {run_directory}/pypsa_friendly/operational_timeseries
   #   - {run_directory}/outputs
-  run_directory: "ispypsa_runs/development"
+  run_directory: "ispypsa_runs"
 
 # The version of IASR workbook that the template inputs are generated from.
 iasr_workbook_version: "6.0"

@@ -61,7 +61,6 @@ def get_valid_config():
             "rez_to_sub_region_transmission_default_limit": 1e6,
         },
         "temporal": {
-            "path_to_parsed_traces": "tests/test_traces",
             "year_type": "fy",
             "range": {
                 "start_year": 2025,
@@ -88,6 +87,12 @@ def get_valid_config():
         "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
+        "paths": {
+            "parsed_traces_directory": "tests/test_traces",
+            "parsed_workbook_cache": "ispypsa_runs/workbook_table_cache",
+            "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
+            "run_directory": "ispypsa_runs/test",
+        },
     }
 
 
@@ -153,12 +158,12 @@ def invalid_end_year(config):
 
 
 def invalid_path_not_directory(config):
-    config["temporal"]["path_to_parsed_traces"] = "tests/wrong_traces"
+    config["paths"]["parsed_traces_directory"] = "tests/wrong_traces"
     return config, NotADirectoryError
 
 
 def invalid_path_wrong_structure(config):
-    config["temporal"]["path_to_parsed_traces"] = "ispypsa_runs"
+    config["paths"]["parsed_traces_directory"] = "ispypsa_runs"
     return config, ValueError
 
 
@@ -229,6 +234,21 @@ def invalid_unserved_energy_generator_size(config):
     return config, ValidationError
 
 
+def invalid_missing_parsed_workbook_cache(config):
+    del config["paths"]["parsed_workbook_cache"]  # Required field
+    return config, ValidationError
+
+
+def invalid_missing_run_directory(config):
+    del config["paths"]["run_directory"]  # Required field
+    return config, ValidationError
+
+
+def invalid_missing_workbook_path(config):
+    del config["paths"]["workbook_path"]  # Required field
+    return config, ValidationError
+
+
 @pytest.mark.parametrize(
     "modifier_func",
     [
@@ -259,6 +279,9 @@ def invalid_unserved_energy_generator_size(config):
         invalid_overlap,
         invalid_unserved_energy_cost,
         invalid_unserved_energy_generator_size,
+        invalid_missing_parsed_workbook_cache,
+        invalid_missing_run_directory,
+        invalid_missing_workbook_path,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
@@ -305,8 +328,28 @@ def test_unserved_energy_defaults():
 
 
 def test_path_to_parsed_traces_not_set_for_testing():
-    """Test that NOT_SET_FOR_TESTING is accepted for path_to_parsed_traces."""
+    """Test that NOT_SET_FOR_TESTING is accepted for parsed_traces_directory."""
     config = get_valid_config()
-    config["temporal"]["path_to_parsed_traces"] = "NOT_SET_FOR_TESTING"
+    config["paths"]["parsed_traces_directory"] = "NOT_SET_FOR_TESTING"
     # This should not raise an error
     ModelConfig(**config)
+
+
+def test_base_paths_only():
+    """Test that only the four base paths are present in the config."""
+    config = get_valid_config()
+
+    model = ModelConfig(**config)
+
+    # Verify only base paths are present
+    assert model.paths.parsed_traces_directory == "tests/test_traces"
+    assert model.paths.parsed_workbook_cache == "ispypsa_runs/workbook_table_cache"
+    assert model.paths.workbook_path == "tests/test_workbooks/test-workbook.xlsx"
+    assert model.paths.run_directory == "ispypsa_runs/test"
+
+    # Verify no derived paths exist as attributes
+    assert not hasattr(model.paths, "ispypsa_input_tables_directory")
+    assert not hasattr(model.paths, "pypsa_friendly_inputs_location")
+    assert not hasattr(model.paths, "capacity_expansion_timeseries_location")
+    assert not hasattr(model.paths, "operational_timeseries_location")
+    assert not hasattr(model.paths, "pypsa_outputs_directory")
