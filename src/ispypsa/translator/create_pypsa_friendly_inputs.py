@@ -328,3 +328,71 @@ def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files
+
+
+def list_timeseries_files(
+    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame], output_base_path: Path
+) -> list[Path]:
+    """List all expected timeseries files based on the generators and demand nodes.
+
+    Args:
+        config: ISPyPSA model configuration
+        ispypsa_tables: Dictionary of ISPyPSA input tables
+        output_base_path: Base path for operational timeseries (e.g., _OPERATIONAL_TIMESERIES_LOCATION)
+
+    Returns:
+        List of Path objects for all expected timeseries files
+
+    Raises:
+        KeyError: If required ISPyPSA tables are missing
+        ValueError: If required columns are missing from tables
+    """
+    files = []
+
+    # Validate required tables exist
+    if "ecaa_generators" not in ispypsa_tables:
+        raise KeyError("Missing required ISPyPSA table: 'ecaa_generators'")
+    if "sub_regions" not in ispypsa_tables:
+        raise KeyError("Missing required ISPyPSA table: 'sub_regions'")
+
+    # Get generators table and validate required columns
+    ecaa_generators = ispypsa_tables["ecaa_generators"]
+    required_gen_cols = ["generator", "fuel_type"]
+    missing_cols = [
+        col for col in required_gen_cols if col not in ecaa_generators.columns
+    ]
+    if missing_cols:
+        raise ValueError(
+            f"Missing required columns in 'ecaa_generators' table: {missing_cols}"
+        )
+
+    # Solar generator files
+    solar_gens = ecaa_generators[ecaa_generators["fuel_type"] == "Solar"]["generator"]
+    for gen in solar_gens:
+        files.append(output_base_path / "solar_traces" / f"{gen}.parquet")
+
+    # Wind generator files
+    wind_gens = ecaa_generators[ecaa_generators["fuel_type"] == "Wind"]["generator"]
+    for gen in wind_gens:
+        files.append(output_base_path / "wind_traces" / f"{gen}.parquet")
+
+    # Get sub_regions table and validate required columns based on granularity
+    sub_regions = ispypsa_tables["sub_regions"]
+    if config.network.nodes.regional_granularity == "single_region":
+        files.append(output_base_path / "demand_traces" / "NEM.parquet")
+    elif config.network.nodes.regional_granularity == "nem_regions":
+        if "nem_region_id" not in sub_regions.columns:
+            raise ValueError(
+                "Missing required column 'nem_region_id' in 'sub_regions' table for nem_regions granularity"
+            )
+        for region in sub_regions["nem_region_id"].unique():
+            files.append(output_base_path / "demand_traces" / f"{region}.parquet")
+    else:  # sub_regions
+        if "isp_sub_region_id" not in sub_regions.columns:
+            raise ValueError(
+                "Missing required column 'isp_sub_region_id' in 'sub_regions' table for sub_regions granularity"
+            )
+        for region in sub_regions["isp_sub_region_id"].unique():
+            files.append(output_base_path / "demand_traces" / f"{region}.parquet")
+
+    return files

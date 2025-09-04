@@ -177,3 +177,4 @@ ispypsa_runs/**/*.h5
 # IDE specific files
 .vscode/
 .DS_Store
+.claude/settings.local.json
