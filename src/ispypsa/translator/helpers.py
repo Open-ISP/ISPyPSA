@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 
@@ -32,27 +34,73 @@ def _annuitised_investment_costs(
     return (capital_cost * wacc) / (1 - (1 + wacc) ** (-1.0 * asset_lifetime))
 
 
-def _get_build_year_as_int(date: str, year_type: str = "fy") -> int:
+def _get_commissioning_date_year_as_int(
+    commissioning_date_str: str, year_type: str = "fy"
+) -> int:
     """Return build year of CAA generator as an int, or 0 if no build year given.
 
     Build years are related to investment periods, so the year type (financial or
     calendar) is used to determine the correct integer year to return.
 
     Args:
-        date: string describing commissioning date of committed, anticipated or
-            additional generator.
+        commissioning_date_str: string describing commissioning date of committed, anticipated
+            or additional generator. Expects a date string in the format "%Y-%m-%d".
         year_type: str which should be "fy" or "calendar". If "fy" then investment
-            period ints are interpreted as specifying financial years (according to the
+            periods are interpreted as specifying financial years (according to the
             calendar year the financial year ends in).
 
     Returns: integer build year or 0.
     """
     build_year = 0
-    if not isinstance(date, str):
+    if not isinstance(commissioning_date_str, str):
         return build_year
     else:
-        date = pd.to_datetime(date, format="%Y-%m-%d")
-        if date.month < 7 or year_type == "calendar":
-            return int(date.year)
+        commissioning_date = pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")
+        if commissioning_date.month < 7 or year_type == "calendar":
+            return int(commissioning_date.year)
         else:
-            return int(date.year) + 1
+            return int(commissioning_date.year) + 1
+
+
+def _get_financial_year_int_from_string(
+    input_string: str, quantity: str, year_type: str = "fy"
+) -> int:
+    """
+    Takes a string containing a financial year represented in the format YYYY_YY
+    and returns the financial year as an int.
+
+    Financial years are referred to by the end year of the financial year.
+    For example, if the input string is "2023_24" then the returned int is 2024.
+
+    Args:
+        input_string: string representing a financial year in the format YYYY_YY
+        quantity: string noting what quantity is being translated when this function
+            is called; used for error messaging. For example, "generator marginal costs".
+        year_type: str which should be "fy" or "calendar".
+
+    Returns:
+        int representing the financial year. For example, if the input string is "2023_24"
+        then the returned int is 2024.
+
+    Raises:
+        ValueError if the input string does not match the expected format.
+    """
+    if year_type == "fy":
+        check_format = re.match(
+            r"^(?P<start_year>\d{4})_(?P<end_year>\d{2})($|_)", input_string
+        )
+        if check_format:
+            start_year_string = check_format.groupdict()["start_year"]
+            # adding 1 to start year instead of just returning end year to avoid
+            # any potential century crossover issues
+            financial_year_int = int(start_year_string) + 1
+            return financial_year_int
+        raise ValueError(
+            f"Invalid financial year string for {quantity}: {input_string}"
+        )
+    elif year_type == "calendar":
+        raise NotImplementedError(
+            f"Calendar years are not implemented yet for {quantity}"
+        )
+    else:
+        raise ValueError(f"Unknown year_type: {year_type}")
