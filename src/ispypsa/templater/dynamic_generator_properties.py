@@ -15,7 +15,7 @@ from .lists import _ECAA_GENERATOR_TYPES
 
 
 def _template_generator_dynamic_properties(
-    iasr_tables: dict[str : pd.DataFrame], scenario: str
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> dict[str, pd.DataFrame]:
     """Creates ISPyPSA templates for dynamic generator properties (i.e. those that vary
     with calendar/financial year).
@@ -106,7 +106,7 @@ def _template_generator_dynamic_properties(
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
         "closure_years": closure_years,
-        "build_costs": build_costs,
+        # "build_costs": build_costs,
         "new_entrant_build_costs": build_costs,
         "new_entrant_wind_and_solar_connection_costs": wind_and_solar_connection_costs,
         "new_entrant_non_vre_connection_costs": non_vre_connection_costs,
@@ -333,7 +333,7 @@ def _template_biomass_prices(
         scenario_mapping.values,
         "Templating biomass prices by fuel cost scenario",
         "existing",
-        threshold=95,
+        threshold=85,  # Set to 85 as >=90 did not handle the case changes for all rows!
     )
     biomass_prices = biomass_prices.drop(columns=["Biomass price"]).set_index(
         "Price Scenario"

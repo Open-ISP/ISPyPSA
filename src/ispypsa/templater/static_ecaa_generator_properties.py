@@ -18,7 +18,7 @@ _OBSOLETE_COLUMNS = [
 
 
 def _template_ecaa_generators_static_properties(
-    iasr_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the existing, commited, anticipated and additional (ECAA) generators
     summary tables into an ISPyPSA template format
@@ -102,7 +102,7 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _merge_and_set_ecaa_generators_static_properties(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "Existing generator summary" template, and renames columns if this is specified
@@ -144,9 +144,15 @@ def _merge_and_set_ecaa_generators_static_properties(
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
+
     # replace remaining string values in static property columns
     df = df.infer_objects()
-    for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
+    for col in [
+        col
+        for col in merged_static_cols
+        if df[col].dtype == "object"
+        and "date" not in col  # keep instances of date/datetime strings as strings
+    ]:
         df[col] = df[col].apply(lambda x: pd.NA if isinstance(x, str) else x)
     return df
 

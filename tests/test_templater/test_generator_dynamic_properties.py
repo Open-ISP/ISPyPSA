@@ -13,7 +13,7 @@ def test_generator_dynamic_properties_templater(workbook_table_cache_test_path: 
         mapped_dfs = _template_generator_dynamic_properties(iasr_tables, scenario)
         for key, df in mapped_dfs.items():
             if "price" in key:
-                if key == "liquid_fuel_prices":
+                if key == "liquid_fuel_prices" or key == "hydrogen_prices":
                     assert all("$/gj" in col for col in df.columns[:])
                     assert all(df.iloc[:, :].dtypes != "object")
                 else:

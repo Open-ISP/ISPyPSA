@@ -22,7 +22,7 @@ _OBSOLETE_COLUMNS = [
 
 
 def _template_new_generators_static_properties(
-    iasr_tables: dict[pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the new entrant generators summary tables into an ISPyPSA
     template format
@@ -125,7 +125,7 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _merge_and_set_new_generators_static_properties(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "New entrants summary" template, and renames columns if this is specified
@@ -229,11 +229,8 @@ def _process_and_merge_opex(
     from this base value multiplied by the O&M locational cost factor. This function
     merges in the post-LCF calculated values provided in the IASR workbook.
     """
-    # update the mapping in this column to include generator name and the
-    # cost region initially given
+    # update the mapping in this column to include generator name and the cost region initially given
     df[col_name] = df["generator_name"] + " " + df[col_name]
-    # renames columns by removing the specified table_col_prefix (the string present
-    # at the start of all variable col names due to row merging from isp-workbook-parser)
     table_data = table_data.rename(
         columns={
             col: col.replace(f"{table_attrs['table_col_prefix']}_", "")
@@ -242,15 +239,15 @@ def _process_and_merge_opex(
     )
     opex_table = table_data.melt(
         id_vars=[table_attrs["table_lookup"]],
-        var_name="Cost region",
-        value_name="OPEX value",
+        var_name="cost_region",
+        value_name="opex_value",
     )
-    # add column with same generator + cost region mapping as df[col_name]:
-    opex_table["Mapping"] = (
-        opex_table[table_attrs["table_lookup"]] + " " + opex_table["Cost region"]
+    # add column with same generator + cost_region mapping as df[col_name]:
+    opex_table["mapping"] = (
+        opex_table[table_attrs["table_lookup"]] + " " + opex_table["cost_region"]
     )
     opex_replacement_dict = (
-        opex_table[["Mapping", "OPEX value"]].set_index("Mapping").squeeze().to_dict()
+        opex_table[["mapping", "opex_value"]].set_index("mapping").squeeze().to_dict()
     )
     # use fuzzy matching in case of slight differences in generator names:
     where_str = df[col_name].apply(lambda x: isinstance(x, str))
@@ -266,7 +263,7 @@ def _process_and_merge_opex(
 
 
 def _calculate_and_merge_tech_specific_lcfs(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], tech_lcf_col: str
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame], tech_lcf_col: str
 ) -> pd.DataFrame:
     """Calculates the technology-specific locational cost factor as a percentage
     for each new entrant generator and merges into summary mapping table.
@@ -394,10 +391,26 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
 
 
 def _add_technology_rez_subregion_column(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], new_col_name: str
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame], new_col_name: str
 ) -> pd.DataFrame:
-    """Adds an extra column holding the technology type and either REZ or ISP
-    subregion ID."""
+    """
+    Adds a new column to the new entrant generator table to act as a unique identifier.
+
+    The new column is filled first by generator type combined with the corresponding REZ ID,
+    and where applicable the technology or resource quality (e.g. WFX = wind offshore floating,
+    SAT = single axis tracking, etc). This function also updates the Non-REZ IDs for Victoria
+    Non-REZ (V0) and New South Wales Non-REZ (N0), as well as manually handling Tasmania
+    Coast and Portland Coast REZ name references.
+
+    Args:
+        df: new entrant generator DataFrame
+        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
+            `isp-workbook-parser`.
+        new_col_name: str, name of the new column to be added
+
+    Returns:
+        pd.DataFrame: new entrant generator DataFrame with new column added
+    """
 
     # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
     # update references to "Portland Coast" to "Southern Ocean"

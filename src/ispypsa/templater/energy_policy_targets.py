@@ -8,7 +8,7 @@ from .mappings import _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP
 
 
 def _template_energy_policy_targets(
-    iasr_tables: dict[str : pd.DataFrame], scenario: str
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> dict[str, pd.DataFrame]:
     """Creates ISPyPSA templates for energy policy targets including NEM-wide and state-level policies.
 
@@ -42,7 +42,7 @@ def _template_energy_policy_targets(
 
 
 def _template_renewable_share_targets(
-    iasr_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable share targets from trajectory CSVs.
     Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their
@@ -131,7 +131,7 @@ def _template_powering_australia_plan(
 
 
 def _template_technology_capacity_targets(
-    iasr_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for technology capacity targets including
     CIS renewable target and storage and offshore wind trajectories.
@@ -186,7 +186,7 @@ def _template_technology_capacity_targets(
 
 
 def _template_renewable_generation_targets(
-    iasr_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Creates ISPyPSA templates for renewable generation targets.
     Uses TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP to identify files and their corresponding regions.
