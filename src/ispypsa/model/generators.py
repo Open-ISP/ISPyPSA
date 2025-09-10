@@ -86,7 +86,12 @@ def _add_generator_to_network(
         )
         generator_definition["marginal_cost"] = marginal_cost_timeseries
 
-    network.add(**generator_definition)
+    pypsa_attributes_only = {
+        key: value
+        for key, value in generator_definition.items()
+        if not key.startswith("isp_")
+    }
+    network.add(**pypsa_attributes_only)
 
 
 def _add_generators_to_network(

@@ -1,16 +1,20 @@
 _ECAA_GENERATOR_ATTRIBUTES = {
+    "generator_name": "isp_name",
     "generator": "name",
     "maximum_capacity_mw": "p_nom",
     "minimum_load_mw": "p_min_pu",
     "commissioning_date": "build_year",
     "fuel_type": "carrier",
     "lifetime": "lifetime",
-    "fuel_cost_mapping": "extra_fuel_cost_mapping",
-    "vom_$/mwh_sent_out": "extra_vom_$/mwh_sent_out",
-    "heat_rate_gj/mwh": "extra_heat_rate_gj/mwh",
+    "marginal_cost": "marginal_cost",
+    "technology_type": "isp_technology_type",
+    "fuel_cost_mapping": "isp_fuel_cost_mapping",
+    "vom_$/mwh_sent_out": "isp_vom_$/mwh_sent_out",
+    "heat_rate_gj/mwh": "isp_heat_rate_gj/mwh",
 }
 
 _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
+    "generator_name": "isp_name",
     "generator": "name",
     "maximum_capacity_mw": "p_nom_max",
     "unit_capacity_mw": "p_nom_mod",
@@ -18,15 +22,18 @@ _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
     "fuel_type": "carrier",
     "build_year": "build_year",
     "lifetime": "lifetime",
-    "fuel_cost_mapping": "extra_fuel_cost_mapping",
-    "vom_$/mwh_sent_out": "extra_vom_$/mwh_sent_out",
-    "heat_rate_gj/mwh": "extra_heat_rate_gj/mwh",
+    "capital_cost": "capital_cost",
+    "marginal_cost": "marginal_cost",
+    "technology_type": "isp_technology_type",
+    "fuel_cost_mapping": "isp_fuel_cost_mapping",
+    "vom_$/mwh_sent_out": "isp_vom_$/mwh_sent_out",
+    "heat_rate_gj/mwh": "isp_heat_rate_gj/mwh",
 }
 
 # _GENERATOR_ATTRIBUTES dictionaries:
-# Fields that have "extra" at the beginning of the value string indicate columns
+# Fields that have "isp_" at the beginning of the value string indicate columns
 # that are used in calculating PyPSA input values for generators, but aren't
-# attributes of Generator objects are aren't passed to the network.
+# attributes of Generator objects and aren't passed to the network.
 
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
