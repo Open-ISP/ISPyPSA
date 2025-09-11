@@ -107,13 +107,13 @@ traces and workbooks from.
     === "uv"
 
         ```commandline
-        uv run ispypsa --config ispypsa_config.yaml
+        uv run ispypsa config=ispypsa_config.yaml
         ```
 
     === "plain python"
 
         ```commandline
-        ispypsa --config ispypsa_config.yaml
+        ispypsa config=ispypsa_config.yaml
         ```
 
        Once the model run finishes you should have the following directory structure.
@@ -157,13 +157,13 @@ traces and workbooks from.
     === "uv"
 
         ```commandline
-        uv run ispypsa --config ispypsa_config.yaml
+        uv run ispypsa config=ispypsa_config.yaml
         ```
 
     === "plain python"
 
         ```commandline
-        ispypsa --config ispypsa_config.yaml
+        ispypsa config=ispypsa_config.yaml
         ```
 
 5. If you want to create the ispypsa inputs, so you can edit them, but not run the
@@ -172,13 +172,13 @@ traces and workbooks from.
     === "uv"
 
         ```commandline
-        uv run ispypsa --config ispypsa_config.yaml create_ispypsa_inputs
+        uv run ispypsa config=ispypsa_config.yaml create_ispypsa_inputs
         ```
 
     === "plain python"
 
         ```commandline
-        ispypsa --config ispypsa_config.yaml create_ispypsa_inputs
+        ispypsa config=ispypsa_config.yaml create_ispypsa_inputs
         ```
 
 !!! note "Mastering the ispysa command line tool (CLI)"
@@ -197,5 +197,5 @@ traces and workbooks from.
       When ISPyPSA is run from the command line the workflow executed is the same as in
       [example_workflow.py](examples/example_workflow.py). If you want to understand
       the workflow by tracing the API calls you can follow along in example_workflow.py
-      script. Alternatively, the [Overview](workflow/overview.md) section provides a
+      script. Alternatively, the [Workflow](workflow.md) section provides a
       high level explanation.

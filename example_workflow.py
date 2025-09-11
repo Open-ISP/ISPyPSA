@@ -16,13 +16,13 @@ from ispypsa.translator import (
 )
 
 # Load model config.
-config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+config_path = Path("ispypsa_config.yaml")
 config = load_config(config_path)
 
 # Load base paths from config
 parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
 parsed_traces_directory = Path(config.paths.parsed_traces_directory)
-workbook_path = Path(config.paths.workbook_path) if config.paths.workbook_path else None
+workbook_path = Path(config.paths.workbook_path)
 run_directory = Path(config.paths.run_directory)
 
 # Construct full paths from base paths
@@ -49,10 +49,6 @@ operational_timeseries_location.mkdir(parents=True, exist_ok=True)
 pypsa_outputs_directory.mkdir(parents=True, exist_ok=True)
 
 configure_logging()
-
-# Verify the workbook file exists
-if not workbook_path.exists():
-    raise FileNotFoundError(f"Workbook file not found: {workbook_path}")
 
 # Build the local cache from the workbook
 build_local_cache(parsed_workbook_cache, workbook_path, config.iasr_workbook_version)
@@ -91,7 +87,7 @@ create_pypsa_friendly_timeseries_inputs(
 # Build a PyPSA network object.
 network = build_pypsa_network(
     pypsa_friendly_input_tables,
-    path_to_pypsa_friendly_timeseries_data=capacity_expansion_timeseries_location,
+    capacity_expansion_timeseries_location,
 )
 
 # Solve for least cost operation/expansion
@@ -102,30 +98,30 @@ network.optimize.solve_model(solver_name=config.solver)
 save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
 
 # Operational modelling extension
-# operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
-#
-# create_pypsa_friendly_timeseries_inputs(
-#     config,
-#     "operational",
-#     ispypsa_tables,
-#     operational_snapshots,
-#     parsed_traces_directory,
-#     operational_timeseries_location,
-# )
-#
-# update_network_timeseries(
-#     network,
-#     pypsa_friendly_input_tables,
-#     operational_snapshots,
-#     operational_timeseries_location,
-# )
-#
-# network.optimize.fix_optimal_capacities()
-#
-# # Never use network.optimize() as this will remove custom constraints.
-# network.optimize.optimize_with_rolling_horizon(
-#     horizon=config.temporal.operational.horizon,
-#     overlap=config.temporal.operational.overlap,
-# )
-#
-# save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")
+operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
+
+create_pypsa_friendly_timeseries_inputs(
+    config,
+    "operational",
+    ispypsa_tables,
+    operational_snapshots,
+    parsed_traces_directory,
+    operational_timeseries_location,
+)
+
+update_network_timeseries(
+    network,
+    pypsa_friendly_input_tables,
+    operational_snapshots,
+    operational_timeseries_location,
+)
+
+network.optimize.fix_optimal_capacities()
+
+# Never use network.optimize() as this will remove custom constraints.
+network.optimize.optimize_with_rolling_horizon(
+    horizon=config.temporal.operational.horizon,
+    overlap=config.temporal.operational.overlap,
+)
+
+save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")

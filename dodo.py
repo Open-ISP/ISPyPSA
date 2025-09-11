@@ -1,13 +1,11 @@
-import argparse
 import logging
-import os
 from pathlib import Path
-from shutil import rmtree
+from shutil import copy2, rmtree
 
 import pypsa
-from doit import create_after
+from doit import create_after, get_var
 
-from ispypsa.config import ModelConfig, load_config
+from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
@@ -25,85 +23,155 @@ from ispypsa.translator import (
     list_translator_output_files,
 )
 
+config_path = get_var("config", None)
 
-# Parse command line arguments for config path
-def get_config_path():
-    # Check if config path was passed via environment variable (from ispypsa CLI)
-    env_config_path = os.environ.get("ISPYPSA_CONFIG_PATH")
-    if env_config_path:
-        return Path(env_config_path)
+if config_path:
+    config = load_config(Path(config_path))
+else:
+    config_path = None
 
-    # Otherwise parse command line arguments
-    parser = argparse.ArgumentParser(description="Run ISPyPSA workflow tasks")
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml",
-        help="Path to the ISPyPSA configuration file (default: ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml)",
+
+def check_config_present():
+    if not config:
+        raise ValueError(
+            "Config path required for task execution. Use config parameter:\n"
+            "  doit config=path/to/config.yaml TASK\n"
+            "  ispypsa config=path/to/config.yaml TASK"
+        )
+
+
+def get_run_directory():
+    """Get run directory path."""
+    return Path(config.paths.run_directory) / config.ispypsa_run_name
+
+
+def get_workbook_path():
+    """Get parsed workbook cache path."""
+    return Path(config.paths.workbook_path)
+
+
+def get_parsed_workbook_cache():
+    """Get parsed workbook cache path."""
+    return Path(config.paths.parsed_workbook_cache)
+
+
+def get_parsed_trace_directory():
+    """Get parsed trace directory path."""
+    return Path(config.paths.parsed_traces_directory)
+
+
+def get_ispypsa_input_directory():
+    """Get ISPyPSA input tables directory path."""
+    return get_run_directory() / "ispypsa_inputs"
+
+
+def get_ispypsa_input_tables_directory():
+    """Get ISPyPSA input tables directory path."""
+    return get_ispypsa_input_directory() / "tables"
+
+
+def get_pypsa_friendly_directory():
+    """Get PyPSA friendly directory path."""
+    return get_run_directory() / "pypsa_friendly"
+
+
+def get_capacity_expansion_timeseries_location():
+    """Get capacity expansion timeseries location path."""
+    return get_pypsa_friendly_directory() / "capacity_expansion_timeseries"
+
+
+def get_operational_timeseries_location():
+    """Get operational timeseries location path."""
+    return get_pypsa_friendly_directory() / "operational_timeseries"
+
+
+def get_pypsa_outputs_directory():
+    """Get PyPSA outputs directory path."""
+    return get_run_directory() / "outputs"
+
+
+def return_empty_list_if_no_config(func):
+    def wrapper(*args, **kwargs):
+        if not config:
+            return []
+        else:
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+@return_empty_list_if_no_config
+def get_config_save_path():
+    """Get config save file path."""
+    config_file_path = Path(config_path)
+    run_dir = get_run_directory()
+    config_copy_path = run_dir / config_file_path.name
+    return config_copy_path
+
+
+@return_empty_list_if_no_config
+def get_capacity_expansion_pypsa_file():
+    """Get capacity expansion PyPSA file path."""
+    return (
+        get_pypsa_outputs_directory()
+        / f"{config.ispypsa_run_name}_capacity_expansion.nc"
     )
 
-    # Only parse known args to avoid conflicts with dodo command line args
-    args, unknown = parser.parse_known_args()
-    config_path = Path(args.config)
 
-    # If running via ispypsa CLI and we have an original working directory,
-    # resolve relative config paths relative to the original directory
-    original_cwd = os.environ.get("ISPYPSA_ORIGINAL_CWD")
-    if original_cwd and not config_path.is_absolute():
-        config_path = Path(original_cwd) / config_path
-
-    return config_path
+@return_empty_list_if_no_config
+def get_operational_pypsa_file():
+    """Get operational PyPSA file path."""
+    return get_pypsa_outputs_directory() / f"{config.ispypsa_run_name}_operational.nc"
 
 
-_CONFIG_PATH = get_config_path()
-config = load_config(_CONFIG_PATH)
+@return_empty_list_if_no_config
+def get_local_cache_files():
+    """Get list of local cache files."""
+    return list_cache_files(get_parsed_workbook_cache())
 
 
-# Load base paths from config, resolving relative paths correctly
-def resolve_path(path_str):
-    """Resolve a path string, handling relative paths correctly when called via ispypsa
-    CLI.
-    """
-    path = Path(path_str)
-    if not path.is_absolute():
-        original_cwd = os.environ.get("ISPYPSA_ORIGINAL_CWD")
-        if original_cwd:
-            # Resolve relative to original working directory
-            path = Path(original_cwd) / path
-    return path
+@return_empty_list_if_no_config
+def get_ispypsa_input_files():
+    """Get list of ISPyPSA input files."""
+    check_config_present()
+    return list_templater_output_files(
+        config.network.nodes.regional_granularity, get_ispypsa_input_tables_directory()
+    )
 
 
-_PARSED_WORKBOOK_CACHE = resolve_path(config.paths.parsed_workbook_cache)
-_PARSED_TRACE_DIRECTORY = resolve_path(config.paths.parsed_traces_directory)
-_WORKBOOK_PATH = resolve_path(config.paths.workbook_path)
-_RUN_DIRECTORY = resolve_path(config.paths.run_directory) / config.ispypsa_run_name
-
-# Construct full paths from base paths
-_ISPYPSA_INPUT_TABLES_DIRECTORY = _RUN_DIRECTORY / "ispypsa_inputs" / "tables"
-_PYPSA_FRIENDLY_DIRECTORY = _RUN_DIRECTORY / "pypsa_friendly"
-_CAPACITY_EXPANSION_TIMESERIES_LOCATION = (
-    _PYPSA_FRIENDLY_DIRECTORY / "capacity_expansion_timeseries"
-)
-_OPERATIONAL_TIMESERIES_LOCATION = _PYPSA_FRIENDLY_DIRECTORY / "operational_timeseries"
-_PYPSA_OUTPUTS_DIRECTORY = _RUN_DIRECTORY / "outputs"
-
-local_cache_files = list_cache_files(_PARSED_WORKBOOK_CACHE)
-
-ispypsa_input_files = list_templater_output_files(
-    config.network.nodes.regional_granularity, _ISPYPSA_INPUT_TABLES_DIRECTORY
-)
-
-pypsa_friendly_input_files = list_translator_output_files(_PYPSA_FRIENDLY_DIRECTORY)
-
-capacity_expansion_pypsa_file = Path(
-    _PYPSA_OUTPUTS_DIRECTORY, f"{config.ispypsa_run_name}_capacity_expansion.nc"
-)
-operational_pypsa_file = Path(
-    _PYPSA_OUTPUTS_DIRECTORY, f"{config.ispypsa_run_name}_operational.nc"
-)
+@return_empty_list_if_no_config
+def get_pypsa_friendly_input_files():
+    """Get list of PyPSA friendly input files."""
+    return list_translator_output_files(get_pypsa_friendly_directory())
 
 
-configure_logging()
+@return_empty_list_if_no_config
+def get_capacity_expansion_timeseries_files():
+    """Get list of capacity expansion timeseries files."""
+    check_config_present()
+    ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+    return list_timeseries_files(
+        config, ispypsa_tables, get_capacity_expansion_timeseries_location()
+    )
+
+
+@return_empty_list_if_no_config
+def get_operational_timeseries_files():
+    """Get list of operational timeseries files."""
+    check_config_present()
+    ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+    return list_timeseries_files(
+        config, ispypsa_tables, get_operational_timeseries_location()
+    )
+
+
+def configure_logging_for_run() -> None:
+    """Configure logging to use run directory."""
+    run_dir = get_run_directory()
+    # Ensure run directory exists before configuring logging
+    run_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = run_dir / "ISPyPSA.log"
+    configure_logging(log_file=str(log_file_path))
 
 
 def create_or_clean_task_output_folder(output_folder: Path) -> None:
@@ -119,25 +187,48 @@ def create_or_clean_task_output_folder(output_folder: Path) -> None:
 
 
 def build_parsed_workbook_cache() -> None:
+    check_config_present()
+    configure_logging_for_run()
+    parsed_workbook_cache = get_parsed_workbook_cache()
+    workbook_path = get_workbook_path()
     version = config.iasr_workbook_version
 
     # Verify the workbook file exists
-    if not _PARSED_WORKBOOK_CACHE.exists():
-        raise FileNotFoundError(f"Workbook file not found: {_PARSED_WORKBOOK_CACHE}")
+    if not workbook_path.exists():
+        raise FileNotFoundError(f"Workbook file not found: {workbook_path}")
 
     # Verify it's an Excel file
-    if _PARSED_WORKBOOK_CACHE.suffix.lower() != ".xlsx":
+    if workbook_path.suffix.lower() != ".xlsx":
         raise ValueError(
-            f"Workbook path must point to a .xlsx file, got: {_PARSED_WORKBOOK_CACHE}"
+            f"Workbook path must point to a .xlsx file, got: {workbook_path}"
         )
 
-    build_local_cache(_PARSED_WORKBOOK_CACHE, _PARSED_WORKBOOK_CACHE, version)
+    build_local_cache(parsed_workbook_cache, workbook_path, version)
+
+
+def save_config_file() -> None:
+    """Save a copy of the configuration file to the run directory."""
+    check_config_present()
+    config_file_path = Path(config_path)
+    run_dir = get_run_directory()
+
+    # Ensure run directory exists
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy config file to run directory
+    config_copy_path = run_dir / config_file_path.name
+    copy2(config_file_path, config_copy_path)
 
 
 def create_ispypsa_inputs_from_config() -> None:
-    create_or_clean_task_output_folder(_ISPYPSA_INPUT_TABLES_DIRECTORY)
+    check_config_present()
+    configure_logging_for_run()
+    input_tables_dir = get_ispypsa_input_tables_directory()
+    parsed_workbook_cache = get_parsed_workbook_cache()
 
-    iasr_tables = read_csvs(_PARSED_WORKBOOK_CACHE)
+    create_or_clean_task_output_folder(input_tables_dir)
+
+    iasr_tables = read_csvs(parsed_workbook_cache)
 
     manually_extracted_tables = load_manually_extracted_tables(
         config.iasr_workbook_version
@@ -149,15 +240,24 @@ def create_ispypsa_inputs_from_config() -> None:
         iasr_tables,
         manually_extracted_tables,
     )
-    write_csvs(template, _ISPYPSA_INPUT_TABLES_DIRECTORY)
+    write_csvs(template, input_tables_dir)
 
 
 def create_pypsa_inputs_for_capacity_expansion_model() -> None:
-    create_or_clean_task_output_folder(_PYPSA_FRIENDLY_DIRECTORY)
+    check_config_present()
+    configure_logging_for_run()
+    pypsa_friendly_dir = get_pypsa_friendly_directory()
+    input_tables_dir = get_ispypsa_input_tables_directory()
+    parsed_trace_dir = get_parsed_trace_directory()
+    capacity_expansion_timeseries_location = (
+        get_capacity_expansion_timeseries_location()
+    )
 
-    ispypsa_tables = read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY)
+    create_or_clean_task_output_folder(pypsa_friendly_dir)
+
+    ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-    write_csvs(pypsa_tables, _PYPSA_FRIENDLY_DIRECTORY)
+    write_csvs(pypsa_tables, pypsa_friendly_dir)
 
     # Create capacity expansion timeseries
     create_pypsa_friendly_timeseries_inputs(
@@ -165,34 +265,50 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
         "capacity_expansion",
         ispypsa_tables,
         pypsa_tables["snapshots"],
-        _PARSED_TRACE_DIRECTORY,
-        _CAPACITY_EXPANSION_TIMESERIES_LOCATION,
+        parsed_trace_dir,
+        capacity_expansion_timeseries_location,
     )
 
 
-def create_and_run_capacity_expansion_model(
-    dont_run: bool = False,
-) -> None:
+def create_and_run_capacity_expansion_model() -> None:
+    check_config_present()
+    configure_logging_for_run()
+    capacity_expansion_pypsa_file = get_capacity_expansion_pypsa_file()
+    pypsa_friendly_dir = get_pypsa_friendly_directory()
+    capacity_expansion_timeseries_location = (
+        get_capacity_expansion_timeseries_location()
+    )
+
+    # Get dont_run flag from doit variables
+    dont_run = get_var("dont_run_capacity_expansion", "False") == "True"
+
     create_or_clean_task_output_folder(capacity_expansion_pypsa_file.parent)
 
-    pypsa_friendly_input_tables = read_csvs(_PYPSA_FRIENDLY_DIRECTORY)
+    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
     network = build_pypsa_network(
         pypsa_friendly_input_tables,
-        path_to_pypsa_friendly_timeseries_data=_CAPACITY_EXPANSION_TIMESERIES_LOCATION,
+        capacity_expansion_timeseries_location,
     )
 
     if not dont_run:
         # Never use network.optimize() as this will remove custom constraints.
-        network.optimize.solve_model(solver_name=config.solver)
+        # network.optimize.solve_model(solver_name=config.solver)
+        pass  # TODO: Implement optimization
 
     network.export_to_netcdf(capacity_expansion_pypsa_file)
 
 
 def create_operational_timeseries() -> None:
     """Create operational timeseries inputs."""
+    check_config_present()
+    configure_logging_for_run()
+    input_tables_dir = get_ispypsa_input_tables_directory()
+    parsed_trace_dir = get_parsed_trace_directory()
+    operational_timeseries_location = get_operational_timeseries_location()
+
     # Load tables
-    ispypsa_tables = read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY)
+    ispypsa_tables = read_csvs(input_tables_dir)
 
     # Create operational snapshots
     operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
@@ -203,17 +319,25 @@ def create_operational_timeseries() -> None:
         "operational",
         ispypsa_tables,
         operational_snapshots,
-        _PARSED_TRACE_DIRECTORY,
-        _OPERATIONAL_TIMESERIES_LOCATION,
+        parsed_trace_dir,
+        operational_timeseries_location,
     )
 
 
-def create_and_run_operational_model(
-    dont_run: bool = False,
-) -> None:
+def create_and_run_operational_model() -> None:
     """Create PyPSA network object for operational model."""
+    check_config_present()
+    configure_logging_for_run()
+    pypsa_friendly_dir = get_pypsa_friendly_directory()
+    capacity_expansion_pypsa_file = get_capacity_expansion_pypsa_file()
+    operational_timeseries_location = get_operational_timeseries_location()
+    operational_pypsa_file = get_operational_pypsa_file()
+
+    # Get dont_run flag from doit variables
+    dont_run = get_var("dont_run_operational", "False") == "True"
+
     # Load tables
-    pypsa_friendly_input_tables = read_csvs(_PYPSA_FRIENDLY_DIRECTORY)
+    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
     # Create operational snapshots (needed for update_network_timeseries)
     operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
@@ -226,7 +350,7 @@ def create_and_run_operational_model(
         network,
         pypsa_friendly_input_tables,
         operational_snapshots,
-        _OPERATIONAL_TIMESERIES_LOCATION,
+        operational_timeseries_location,
     )
 
     # Fix optimal capacities from capacity expansion
@@ -240,33 +364,62 @@ def create_and_run_operational_model(
         )
 
     # Save the network for operational optimization
-    network.export_to_hdf5(operational_pypsa_file)
+    network.export_to_netcdf(operational_pypsa_file)
 
 
+def remove_deps_and_targets_if_no_config(func):
+    """Using this as a decorator on the tasks stops them throwing errors when
+    ispypsa or doit is called on the CLI without a config specified. For example,
+    when calling "ispypsa list"
+    """
+
+    def wrapper(*args, **kwargs):
+        # Check config availability when the task is evaluated, not at import time
+        if not config:
+            task = func(*args, **kwargs)
+            return {"actions": task["actions"]}
+        else:
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+@remove_deps_and_targets_if_no_config
+def task_save_config():
+    """Save configuration file to run directory."""
+    return {
+        "actions": [save_config_file],
+        "targets": [get_config_save_path()],
+        "uptodate": [False],  # Always run this task
+    }
+
+
+@remove_deps_and_targets_if_no_config
 def task_cache_required_iasr_workbook_tables():
     return {
         "actions": [build_parsed_workbook_cache],
-        "targets": local_cache_files,
+        "targets": get_local_cache_files(),
+        "task_dep": ["save_config"],
         # force doit to always mark the task as up-to-date (unless target removed)
         # N.B. this will NOT run if target exists but has been modified
         "uptodate": [True],
     }
 
 
+@remove_deps_and_targets_if_no_config
 def task_create_ispypsa_inputs():
     return {
         "actions": [create_ispypsa_inputs_from_config],
-        "file_dep": local_cache_files,
-        "targets": ispypsa_input_files,
+        "file_dep": get_local_cache_files(),
+        "targets": get_ispypsa_input_files(),
     }
 
 
+@remove_deps_and_targets_if_no_config
 def task_create_pypsa_friendly_inputs():
     def check_targets():
-        targets = pypsa_friendly_input_files + list_timeseries_files(
-            config,
-            read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY),
-            _CAPACITY_EXPANSION_TIMESERIES_LOCATION,
+        targets = (
+            get_pypsa_friendly_input_files() + get_capacity_expansion_timeseries_files()
         )
 
         for target in targets:
@@ -277,41 +430,31 @@ def task_create_pypsa_friendly_inputs():
 
     return {
         "actions": [create_pypsa_inputs_for_capacity_expansion_model],
-        "file_dep": ispypsa_input_files,
+        "file_dep": get_ispypsa_input_files(),
         "uptodate": [check_targets],
     }
 
 
 @create_after(executed="create_pypsa_friendly_inputs")
+@remove_deps_and_targets_if_no_config
 def task_create_and_run_capacity_expansion_model():
-    deps = pypsa_friendly_input_files + list_timeseries_files(
-        config,
-        read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY),
-        _CAPACITY_EXPANSION_TIMESERIES_LOCATION,
+    capacity_expansion_deps = (
+        get_pypsa_friendly_input_files() + get_capacity_expansion_timeseries_files()
     )
 
     return {
-        "actions": [create_and_run_capacity_expansion_model],
-        "params": [
-            {
-                "name": "dont_run",
-                "default": False,
-            }
-        ],
+        "actions": [(create_and_run_capacity_expansion_model,)],
         "task_dep": ["create_pypsa_friendly_inputs"],
-        "file_dep": deps,
-        "targets": [capacity_expansion_pypsa_file],
+        "file_dep": capacity_expansion_deps,
+        "targets": [get_capacity_expansion_pypsa_file()],
     }
 
 
 @create_after(executed="create_and_run_capacity_expansion_model")
+@remove_deps_and_targets_if_no_config
 def task_create_operational_timeseries():
     def check_targets():
-        targets = pypsa_friendly_input_files + list_timeseries_files(
-            config,
-            read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY),
-            _OPERATIONAL_TIMESERIES_LOCATION,
-        )
+        targets = get_pypsa_friendly_input_files() + get_operational_timeseries_files()
 
         for target in targets:
             if not target.exists():
@@ -321,21 +464,19 @@ def task_create_operational_timeseries():
 
     return {
         "actions": [create_operational_timeseries],
-        "file_dep": ispypsa_input_files,
+        "file_dep": get_ispypsa_input_files(),
         "uptodate": [check_targets],
     }
 
 
 @create_after(executed="create_operational_timeseries")
+@remove_deps_and_targets_if_no_config
 def task_create_and_run_operational_model():
-    deps = pypsa_friendly_input_files + list_timeseries_files(
-        config,
-        read_csvs(_ISPYPSA_INPUT_TABLES_DIRECTORY),
-        _OPERATIONAL_TIMESERIES_LOCATION,
+    operational_deps = (
+        get_pypsa_friendly_input_files() + get_operational_timeseries_files()
     )
-
     return {
         "actions": [create_and_run_operational_model],
-        "file_dep": deps,
-        "targets": [operational_pypsa_file],
+        "file_dep": operational_deps,
+        "targets": [get_operational_pypsa_file()],
     }

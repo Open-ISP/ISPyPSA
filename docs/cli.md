@@ -14,7 +14,7 @@ The `ispypsa` command allows you to:
   - Manage workflow outputs
 
 All commands require a configuration file that specifies paths and model parameters.
-See the [Workflow overview](workflow/workflow.md) section for a high-level overview of
+See the [Workflow overview](workflow.md) section for a high-level overview of
 the default ISPyPSA workflow.
 
 ## Installation
@@ -28,16 +28,16 @@ The basic command structure is:
 === "uv"
 
     ```commandline
-    uv run ispypsa --config <config_file> <task>
+    uv run ispypsa config=<config_file> [task]
     ```
 
 === "plain python"
 
     ```commandline
-    ispypsa --config <config_file> <task>
+    ispypsa config=<config_file> [task]
     ```
 
-The `--config` argument is required and must point to a valid ISPyPSA configuration YAML file.
+The `config=<config_file>` argument is required for task execution and must point to a valid ISPyPSA configuration YAML file.
 
 !!! important
 
@@ -47,14 +47,15 @@ The `--config` argument is required and must point to a valid ISPyPSA configurat
 ### Examples
 
 ```bash
-# Run the complete up to and including capacity expansion
-ispypsa --config my_config.yaml run_capacity_expansion
+# List available tasks (no config required)
+ispypsa list
 
-# List available tasks
-ispypsa --config my_config.yaml list
+# Run a specific task with config
+ispypsa config=my_config.yaml create_and_run_capacity_expansion_model
 
-# Clean output files
-ispypsa --config my_config.yaml clean
+# Run all tasks with config
+ispypsa config=my_config.yaml
+
 ```
 
 ## Tasks
@@ -64,43 +65,38 @@ outputs of previous tasks. The following diagram shows the task dependency
 graph:
 
 ```
-cache_required_iasr_workbook_tables
+save_config
 │
-└──> create_ispypsa_inputs
+└──> cache_required_iasr_workbook_tables
      │
-     ├──> create_pypsa_friendly_inputs
-     │    │
-     │    └──> create_pypsa_network_object_for_capacity_expansion_modelling
-     │         │
-     │         └──> run_capacity_expansion
-     │                                  │
-     └──> create_operational_timeseries │
-          │                             │
-          └───────────────────────────────┴──> create_pypsa_object_for_operational_modelling
-                                            │
-                                            └──> run_operational_model
+     └──> create_ispypsa_inputs
+          │
+          ├──> create_pypsa_friendly_inputs
+          │    │
+          │    ├──> create_and_run_capacity_expansion_model
+          │    │    │
+          └────┼────┼──> create_operational_timeseries
+               │    │    │
+               └────┴────┴──> create_and_run_operational_model
+
 ```
-
-Note: `create_pypsa_object_for_operational_modelling` depends on:
-
-- `run_capacity_expansion` (for the optimized capacity expansion network)
-- `create_operational_timeseries` (for the operational time series data)
-- `create_pypsa_friendly_inputs` (for the PyPSA-friendly tables)
 
 !!! important
 
     Each task depends on the outputs of previous tasks. If a particular task is run, but the
-    previous tasks on which it depends haven't been run yet, then the CLI will detect this
-    and also run the previous tasks. The detection of a previous task's completeness is
-    based on if the files it outputs have been created. Deleting task output files will
-    trigger reruns of a task, but editing files will not.
+    previous tasks' runs on which it depends isn't up to date, then the CLI will
+    detect this and also run the previous tasks. The detection of a previous task's
+    being 'up to date' is based on two checks 1) its input files haven't been modified
+    since it last ran and 2) its output files exist. If either 1) or 2) aren't true then
+    a task is not up to date and will be rerun. This applies to both the primary target
+    task and all of its dependencies.
 
 ### cache_required_iasr_workbook_tables
 
 Extracts data from the ISP Excel workbook and caches it as CSV files.
 
 ```bash
-ispypsa --config config.yaml cache_required_iasr_workbook_tables
+ispypsa config=config.yaml cache_required_iasr_workbook_tables
 ```
 
 **Inputs:**
@@ -117,7 +113,7 @@ ispypsa --config config.yaml cache_required_iasr_workbook_tables
 Generates ISPyPSA format input tables from the cached workbook data.
 
 ```bash
-ispypsa --config config.yaml create_ispypsa_inputs
+ispypsa config=config.yaml create_ispypsa_inputs
 ```
 
 **Inputs:**
@@ -135,7 +131,7 @@ ispypsa --config config.yaml create_ispypsa_inputs
 Converts ISPyPSA format tables to PyPSA-compatible format and generates time series data for capacity expansion.
 
 ```bash
-ispypsa --config config.yaml create_pypsa_friendly_inputs
+ispypsa config=config.yaml create_pypsa_friendly_inputs
 ```
 
 **Inputs:**
@@ -152,12 +148,12 @@ ispypsa --config config.yaml create_pypsa_friendly_inputs
 - Time series data in `{run_directory}/{run_name}/pypsa_friendly/capacity_expansion_timeseries/`
   (run_directory and run_name specified in config)
 
-### create_pypsa_network_object_for_capacity_expansion_modelling
+### create_and_run_capacity_expansion_model
 
-Creates the PyPSA network object for capacity expansion modeling.
+Creates the PyPSA network object and runs the capacity expansion optimization.
 
 ```bash
-ispypsa --config config.yaml create_pypsa_network_object_for_capacity_expansion_modelling
+ispypsa config=config.yaml create_and_run_capacity_expansion_model
 ```
 
 **Inputs:**
@@ -169,30 +165,33 @@ ispypsa --config config.yaml create_pypsa_network_object_for_capacity_expansion_
 
 **Outputs:**
 
-- PyPSA network object in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.h5`
+- Optimized capacity expansion results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.nc`
 
-### run_capacity_expansion
+**Skip Optimization Option:**
 
-Runs the capacity expansion optimization model on the prepared network.
+You can skip the optimization step and only build the network using the `dont_run_capacity_expansion` flag:
 
 ```bash
-ispypsa --config config.yaml run_capacity_expansion
+ispypsa config=config.yaml dont_run_capacity_expansion=True create_and_run_capacity_expansion_model
 ```
 
-**Inputs:**
+This is particularly useful for:
+- Testing that your model configuration is valid
+- Verifying network construction without waiting for optimization
+- Debugging model setup issues
+- Creating a network file for manual inspection or custom optimization
 
-- PyPSA network object in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.h5`
-
-**Outputs:**
-
-- Optimized model results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.h5`
+When this flag is set to `True`, the task will:
+1. Build the complete PyPSA network with all components and constraints
+2. Save the unoptimized network to the output file
+3. Skip the potentially time-consuming optimization step
 
 ### create_operational_timeseries
 
 Creates time series data for operational modeling.
 
 ```bash
-ispypsa --config config.yaml create_operational_timeseries
+ispypsa config=config.yaml create_operational_timeseries
 ```
 
 **Inputs:**
@@ -206,76 +205,101 @@ ispypsa --config config.yaml create_operational_timeseries
 
 - Operational time series data in `{run_directory}/{run_name}/pypsa_friendly/operational_timeseries/`
 
-### create_pypsa_object_for_operational_modelling
+### create_and_run_operational_model
 
-Prepares the PyPSA network object for operational modeling using fixed capacities from capacity expansion.
+Prepares the PyPSA network object for operational modeling using fixed capacities from capacity expansion and runs the operational optimization.
 
 ```bash
-ispypsa --config config.yaml create_pypsa_object_for_operational_modelling
+ispypsa config=config.yaml create_and_run_operational_model
 ```
 
 **Inputs:**
 
-- Capacity expansion results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.h5`
+- Capacity expansion results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.nc`
 - PyPSA-friendly tables in `{run_directory}/{run_name}/pypsa_friendly/`
 - Operational time series data in `{run_directory}/{run_name}/pypsa_friendly/operational_timeseries/`
 
 **Outputs:**
 
-- Operational network object in `{run_directory}/{run_name}/outputs/{run_name}_operational.h5`
+- Operational optimization results in `{run_directory}/{run_name}/outputs/{run_name}_operational.h5`
 
-### run_operational_model
+!!! note "Running Without Capacity Expansion"
 
-Runs the operational optimization with rolling horizon on the prepared operational network.
+    The operational model can be built and run even if the capacity expansion optimization was
+    skipped (using `dont_run_capacity_expansion=True`). However, this will significantly affect
+    the operational model outputs because:
+
+    - The network will use initial capacities rather than optimized capacities
+    - No new generation or transmission capacity will have been added
+    - The operational model may be infeasible if initial capacities are insufficient
+    - Results will not reflect least-cost capacity investment decisions
+
+    This can be useful for testing but should not be used for final analysis.
+
+**Skip Optimization Option:**
+
+You can skip the optimization step and only prepare the network using the `dont_run_operational` flag:
 
 ```bash
-ispypsa --config config.yaml run_operational_model
+ispypsa config=config.yaml dont_run_operational=True create_and_run_operational_model
+```
+
+This is particularly useful for:
+
+- Testing operational model setup without running the full optimization
+- Verifying that capacity expansion results load correctly
+- Debugging time series data integration
+- Creating a prepared network for custom operational analysis
+
+When this flag is set to `True`, the task will:
+
+1. Load the capacity expansion results
+2. Update the network with operational time series data
+3. Fix the optimal capacities from capacity expansion
+4. Save the prepared network without running the rolling horizon optimization
+5. Skip the potentially very long operational optimization process
+
+### list
+
+Shows all available tasks and their status. No config file required.
+
+```bash
+ispypsa list
+```
+
+### save_config
+
+Saves a copy of the configuration file to the run directory. This task runs automatically as a dependency of other tasks to preserve the exact configuration used for reproducibility.
+
+```bash
+ispypsa config=config.yaml save_config
 ```
 
 **Inputs:**
 
-- Operational network object in `{run_directory}/{run_name}/outputs/{run_name}_operational.h5`
+- Configuration YAML file (specified with `config=`)
 
 **Outputs:**
-- Operational results in `{run_directory}/{run_name}/outputs/{run_name}_operational.h5`
 
-### list
+- Copy of the configuration file in `{run_directory}/{run_name}/`
+  (preserves the exact config used for the run)
 
-Shows all available tasks and their status.
-
-```bash
-ispypsa --config config.yaml list
-```
-
-### clean
-
-Removes all generated files (targets) from all tasks. This is a built-in doit command.
-
-```bash
-ispypsa --config config.yaml clean
-```
-
-**Note:** This will delete all files that were created as targets by the tasks, including:
-
-- Cached workbook tables
-- ISPyPSA input tables
-- PyPSA-friendly tables
-- Time series data
-- Model output files
+**Note:** This task always runs (never considers itself up-to-date) to ensure the config file is always current.
 
 ## Configuration
 
-The `--config` argument accepts either absolute or relative paths:
+The `config=` argument is required for task execution. It accepts either absolute or relative
+paths:
 
 ```bash
 # Absolute path
-ispypsa --config /home/user/projects/my_config.yaml list
+ispypsa config=/home/user/projects/my_config.yaml task_name
 
 # Relative path (from current directory)
-ispypsa --config ../configs/my_config.yaml list
+ispypsa config=../configs/my_config.yaml task_name
 
 # File in current directory
-ispypsa --config my_config.yaml list
+ispypsa config=my_config.yaml task_name
 ```
 
 See the [example configuration file](examples/ispypsa_config.yaml) for the required format.
@@ -288,68 +312,57 @@ Run all tasks one by one to generate model results:
 
 ```bash
 # Extract workbook data
-ispypsa --config config.yaml cache_required_iasr_workbook_tables
+ispypsa config=config.yaml cache_required_iasr_workbook_tables
 
 # Generate ISPyPSA inputs
-ispypsa --config config.yaml create_ispypsa_inputs
+ispypsa config=config.yaml create_ispypsa_inputs
 
 # At this stage the ISPyPSA inputs could be edited to adjust build cost or any other
 # inputs set out in {run_directory}/{run_name}/ispypsa_inputs/tables/
 
-# Convert to PyPSA format
-ispypsa --config config.yaml create_pypsa_friendly_inputs
-
-# At this stage the PyPSA format inputs could also be edited to achieve fine grained
-# control of the model formulation. However, for most use case we recommend editing the
-# ISPyPSA inputs.
-
-# Create capacity expansion network
-ispypsa --config config.yaml create_pypsa_network_object_for_capacity_expansion_modelling
-
-# Run capacity expansion optimization
-ispypsa --config config.yaml run_capacity_expansion
+# Convert to PyPSA format and run capacity expansion
+ispypsa config=config.yaml create_and_run_capacity_expansion_model
 
 # Create operational time series
-ispypsa --config config.yaml create_operational_timeseries
-
-# Create operational network
-ispypsa --config config.yaml create_pypsa_object_for_operational_modelling
+ispypsa config=config.yaml create_operational_timeseries
 
 # Run operational optimization
-ispypsa --config config.yaml run_operational_model
+ispypsa config=config.yaml create_and_run_operational_model
 ```
 
 ### Simplified Complete Workflow
 
-The complete workflow can be run in two stages, the intermediate step run
-automatically with CLI detecting that they are required. Running in two steps allows the
-ISPyPSA inputs to be edited before capacity expansion and operational modelling are run.
+The complete workflow can be run in fewer steps, with intermediate tasks run
+automatically when their outputs are required.
 
 ```bash
 # Generate ISPyPSA inputs
-ispypsa --config config.yaml create_ispypsa_inputs
+ispypsa config=config.yaml create_ispypsa_inputs
 
 # At this stage the ISPyPSA inputs could be edited to adjust build cost or any other
 # inputs set out in {run_directory}/{run_name}/ispypsa_inputs/tables/
 
-# Optionally run operational model
-ispypsa --config config.yaml run_operational_model
+# Run complete workflow (all remaining tasks)
+ispypsa config=config.yaml create_and_run_operational_model
 ```
 
 ### Running from Different Directories
 
-The CLI correctly handles relative paths when run from different directories:
+The CLI works correctly from any directory and handles relative paths appropriately:
 
 ```bash
-# From project root
-ispypsa --config ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml list
+# From project root - no config needed for list
+ispypsa list
+
+# From project root - config for task execution
+ispypsa config=ispypsa_config.yaml create_ispypsa_inputs
 
 # From a subdirectory
 cd analysis
-ispypsa --config ../ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml list
+ispypsa config=../ispypsa_config.yaml create_ispypsa_inputs
 
 # Using an absolute path (works from anywhere)
-ispypsa --config /home/user/ispypsa/config.yaml list
+ispypsa config=/home/user/ispypsa/config.yaml create_ispypsa_inputs
 ```
 
 ### Using Different Configurations
@@ -358,34 +371,54 @@ You can easily switch between different model configurations:
 
 ```bash
 # Development configuration
-ispypsa --config configs/dev_config.yaml run_capacity_expansion
+ispypsa config=configs/dev_config.yaml create_and_run_capacity_expansion_model
 
 # Production configuration with different parameters
-ispypsa --config configs/prod_config.yaml run_capacity_expansion
+ispypsa config=configs/prod_config.yaml create_and_run_capacity_expansion_model
 
 # Test configuration with smaller dataset
-ispypsa --config configs/test_config.yaml run_capacity_expansion
+ispypsa config=configs/test_config.yaml create_and_run_capacity_expansion_model
 ```
 
 ### Debug Mode
 
-Use the `--debug` flag to see detailed information about path resolution and command execution:
+Use the `debug=True` flag to see detailed information about config file resolution:
 
 ```bash
-ispypsa --debug --config config.yaml list
+ispypsa config=config.yaml debug=True create_ispypsa_inputs
 ```
 
 Debug output includes:
-- Where dodo.py was found
-- Working directory information
+
 - Resolved config file path
-- Environment variables being set
+- Working directory information
+
+### Skip Optimization Flags
+
+You can skip the optimization step in modeling tasks using these flags:
+
+```bash
+# Skip capacity expansion optimization (only build the network)
+ispypsa config=config.yaml dont_run_capacity_expansion=True create_and_run_capacity_expansion_model
+
+# Skip operational optimization (only prepare the network)
+ispypsa config=config.yaml dont_run_operational=True create_and_run_operational_model
+
+# Run both optimizations normally (default behavior)
+ispypsa config=config.yaml dont_run_capacity_expansion=False dont_run_operational=False create_and_run_operational_model
+```
+
+These flags are useful for:
+
+- Debugging network construction without waiting for optimization
+- Testing model setup and configuration
+- Preparing networks for manual optimization or analysis
 
 ### Path Issues
 
 If you encounter path-related errors:
 
-1. Use `--debug` to see how paths are being resolved
+1. Use `debug=True` to see how paths are being resolved
 2. Try using absolute paths in your config file
 3. Ensure all directories exist before running tasks
 4. Check file permissions for input/output directories
@@ -394,46 +427,54 @@ If you encounter path-related errors:
 
 ### How ispypsa Works
 
-The `ispypsa` command is a wrapper around the `doit` task automation tool. When you run `ispypsa`, it:
+The `ispypsa` command is built on the `doit` task automation tool with ISPyPSA-specific enhancements:
 
-1. Locates the dodo.py file (either in current directory or package installation)
-2. Changes to the directory containing dodo.py
-3. Sets environment variables for path resolution
-4. Executes `doit` with your specified task
+1. **run command**: Uses doit's native run command with `config=value` parameter support
+2. **Other commands**: Uses doit's built-in commands (list, help, etc.) directly
+3. **Lazy loading**: Configuration is only loaded when tasks actually execute
+4. **Path resolution**: All paths work relative to where you run the command
 
 ### Passing Additional doit Options
 
-You can pass any doit option after the task name:
+You can pass any doit option to the run command:
 
 ```bash
 # Run with verbose output
-ispypsa --config config.yaml run_capacity_expansion -v
+ispypsa config=config.yaml -v create_and_run_capacity_expansion_model
 
-# Show task details without running
-ispypsa --config config.yaml run_capacity_expansion -n
+# Always execute task ignoring up-to-date checks
+ispypsa config=config.yaml -a create_ispypsa_inputs
 
-# Run specific task ignoring dependencies
-ispypsa --config config.yaml run_capacity_expansion -a
+# Continue executing even after task failure
+ispypsa config=config.yaml --continue create_and_run_operational_model
 ```
 
-Common doit options:
+Common doit options for the run command:
+
 - `-v` / `--verbosity`: Set verbosity level (0-2)
-- `-n` / `--dry-run`: Show tasks without executing
-- `-a` / `--always-execute`: Ignore task dependencies
+- `-a` / `--always-execute`: Always execute tasks even if up-to-date
 - `--continue`: Continue executing tasks even after failure
+- `-s` / `--single`: Execute only specified tasks ignoring their dependencies
 
-### Environment Variables
+### Commands Without Config
 
-The CLI uses these environment variables internally:
+Some commands work without requiring a config file:
 
-- `ISPYPSA_CONFIG_PATH`: Resolved path to the config file
-- `ISPYPSA_ORIGINAL_CWD`: Original working directory (for relative path resolution)
+```bash
+# List all available tasks
+ispypsa list
 
-These are set automatically and should not be modified directly.
+# Show help
+ispypsa help
+
+# Show help for specific command
+ispypsa help run
+```
 
 ### Working Directory Behavior
 
-The CLI handles working directory changes transparently:
-- Commands are always executed in the directory containing dodo.py
-- Relative paths in configs are resolved from where you run the command
+The CLI maintains your current working directory:
+
+- All paths in config files work relative to where you run the command
+- No directory changes occur during execution
 - Output files are created according to paths in your config file

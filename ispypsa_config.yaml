@@ -1,6 +1,6 @@
 # The name of the ISPyPSA model run
 # This name is used to select the output folder within `ispypsa_runs`
-ispypsa_run_name: new_test_run
+ispypsa_run_name: development
 
 # ===== Path configuration =============================================================
 
