@@ -97,7 +97,6 @@ Extracts data from the ISP Excel workbook and caches it as CSV files.
 
 ```bash
 ispypsa config=config.yaml cache_required_iasr_workbook_tables
-
 ```
 
 **Inputs:**
@@ -177,12 +176,14 @@ ispypsa config=config.yaml run_optimisation=False create_and_run_capacity_expans
 ```
 
 This is particularly useful for:
+
 - Testing that your model configuration is valid
 - Verifying network construction without waiting for optimization
 - Debugging model setup issues
 - Creating a network file for manual inspection or custom optimization
 
 When this flag is set to `False`, the task will:
+
 1. Build the complete PyPSA network with all components and constraints
 2. Save the unoptimized network to the output file
 3. Skip the potentially time-consuming optimization step
