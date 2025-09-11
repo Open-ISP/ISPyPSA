@@ -262,6 +262,7 @@ def sample_model_config():
     from ispypsa.config.validators import (
         NetworkConfig,
         NodesConfig,
+        PathsConfig,
         TemporalAggregationConfig,
         TemporalCapacityInvestmentConfig,
         TemporalConfig,
@@ -272,13 +273,18 @@ def sample_model_config():
 
     return ModelConfig(
         ispypsa_run_name="test_run",
+        paths=PathsConfig(
+            parsed_traces_directory="NOT_SET_FOR_TESTING",
+            parsed_workbook_cache="",
+            workbook_path="",
+            run_directory="",
+        ),
         scenario="Step Change",
         wacc=0.06,
         discount_rate=0.05,
         iasr_workbook_version="6.0",
         solver="highs",
         temporal=TemporalConfig(
-            path_to_parsed_traces="NOT_SET_FOR_TESTING",
             year_type="fy",
             range=TemporalRangeConfig(start_year=2026, end_year=2028),
             capacity_expansion=TemporalCapacityInvestmentConfig(
