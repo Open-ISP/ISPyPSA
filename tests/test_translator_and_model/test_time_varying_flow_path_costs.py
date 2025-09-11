@@ -40,6 +40,12 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     # Create a mock config
     config_dict = {
         "ispypsa_run_name": "test",
+        "paths": {
+            "parsed_traces_directory": "ENV",
+            "parsed_workbook_cache": "",
+            "workbook_path": "",
+            "run_directory": "",
+        },
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -56,7 +62,6 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
             "rez_to_sub_region_transmission_default_limit": 1e5,
         },
         "temporal": {
-            "path_to_parsed_traces": "ENV",
             "year_type": "fy",
             "range": {
                 "start_year": 2025,
