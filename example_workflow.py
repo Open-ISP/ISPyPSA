@@ -19,13 +19,13 @@ from ispypsa.translator import (
 )
 
 # Load model config.
-config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+config_path = Path("ispypsa_config.yaml")
 config = load_config(config_path)
 
 # Load base paths from config
 parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
 parsed_traces_directory = Path(config.paths.parsed_traces_directory)
-workbook_path = Path(config.paths.workbook_path) if config.paths.workbook_path else None
+workbook_path = Path(config.paths.workbook_path)
 run_directory = Path(config.paths.run_directory)
 
 # Construct full paths from base paths
@@ -52,10 +52,6 @@ operational_timeseries_location.mkdir(parents=True, exist_ok=True)
 pypsa_outputs_directory.mkdir(parents=True, exist_ok=True)
 
 configure_logging()
-
-# Verify the workbook file exists
-if not workbook_path.exists():
-    raise FileNotFoundError(f"Workbook file not found: {workbook_path}")
 
 # Build the local cache from the workbook
 build_local_cache(parsed_workbook_cache, workbook_path, config.iasr_workbook_version)
@@ -97,7 +93,7 @@ create_pypsa_friendly_timeseries_inputs(
 # Build a PyPSA network object.
 network = build_pypsa_network(
     pypsa_friendly_input_tables,
-    path_to_pypsa_friendly_timeseries_data=capacity_expansion_timeseries_location,
+    capacity_expansion_timeseries_location,
 )
 
 # Solve for least cost operation/expansion

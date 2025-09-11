@@ -50,6 +50,5 @@ nav:
   - API: api.md
   - CLI: cli.md
   - Examples:
-      - Parsing IASR tables: examples/parsing_iasr_workbook_tables.md
-      - Parsing trace data: examples/parsing_trace_data.md
-      - Default configuration capacity expansion: examples/default_capacity_expansion.md
+      - Default workflow: examples/example_api_workflow.md
+      - Default config file: examples/example_config.md

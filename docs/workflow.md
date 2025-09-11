@@ -4,6 +4,10 @@ Once the PyPSA friendly inputs are created then a PyPSA network object is create
 and optimised to run the capacity expansion and operational modelling results. The
 steps of the workflow are outlined below.
 
+## Input data downloading
+
+To document once added to ISPyPSA CLI and API.
+
 ## Workbook parsing
 
 AEMO provides many of the inputs for its ISP models in the
@@ -18,7 +22,7 @@ parsing can be run using either the ISPyPSA CLI or API:
 === "CLI"
 
     ```commandline
-    uv run ispypsa --config ispypsa_config.yaml cache_required_tables
+    uv run ispypsa config=ispypsa_config.yaml cache_required_iasr_workbook_tables
     ```
 
 === "API"
@@ -35,15 +39,13 @@ parsing can be run using either the ISPyPSA CLI or API:
 
 ## Wind, solar, and demand trace data parsing
 
-Wind, solar, and demand trace data parsing**: AEMO provides time series data for
-wind and solar resource availability, and demand as CSVs. The trace parsing
-performs data format and naming conventions adjustments to integrate the data
-smoothly with the rest of the ISPyPSA workflow. The parsing is handled by the
-external package [isp-trace-parser](https://github.com/Open-ISP/isp-trace-parser),
-the trace parsing is not integrated directly into teh ISPyPSA workflow due to the
-long computational time required, instead pre-parsed trace data is made available
-[here]() which the user can download to their local machine, for ISPyPSA to query as
-needed.
+AEMO provides time series data for wind and solar resource availability, and demand as
+CSVs. The trace parsing performs data format and naming conventions adjustments to
+integrate the data smoothly with the rest of the ISPyPSA workflow. The parsing is
+handled by the external package [isp-trace-parser](https://github.
+com/Open-ISP/isp-trace-parser), the trace parsing is not integrated directly into
+the ISPyPSA workflow due to the long computational time required, instead pre-parsed
+trace data is provided during the initial input downloading workflow step.
 
 ## Templating
 
@@ -59,7 +61,7 @@ run using either ISPyPSA CLI or API.
 === "CLI"
 
     ```commandline
-    uv run ispypsa --config config.yaml create_ispypsa_inputs
+    uv run ispypsa config=config.yaml create_ispypsa_inputs
     ```
 
 === "API"
@@ -101,12 +103,14 @@ run using either ISPyPSA CLI or API.
 
 The translating step of the workflow converts ISPyPSA inputs tables and parsed trace
 data into a format consistent with the structure of the PyPSA API, these are referred to
-as the PyPSA friendly inputs. The translating step is used
+as the PyPSA friendly inputs. This is referred to as the translating step because we
+are translating the inputs from ISPyPSA format to PyPSA friendly format. The translating
+step can be run using either the ISPyPSA CLI or API.
 
 === "CLI"
 
     ```commandline
-    uv run ispypsa --config config.yaml create_pypsa_inputs
+    uv run ispypsa config=config.yaml create_pypsa_friendly_inputs
     ```
 
 === "API"
@@ -145,5 +149,190 @@ as the PyPSA friendly inputs. The translating step is used
         pypsa_friendly_input_tables["snapshots"],
         parsed_traces_directory,
         capacity_expansion_timeseries_location,
+    )
+    ```
+
+### Create operational timeseries data
+
+Optionally, if you want to run the operational model after running capacity expansion
+you can also create the PyPSA friendly operational timeseries data at this stage.
+
+=== "CLI"
+
+    ```commandline
+    uv run ispypsa config=config.yaml create_operational_timeseries
+    ```
+
+=== "API"
+
+    ```Python
+    from ispypsa.config import load_config
+    from ispypsa.data_fetch import read_csvs, write_csvs
+    from ispypsa.templater import (
+        create_ispypsa_inputs_template,
+        load_manually_extracted_tables,
+    )
+
+    config_path = Path("ispypsa_config.yaml")
+    config = load_config(config_path)
+
+    parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
+    run_directory = Path(config.paths.run_directory)
+    ispypsa_input_tables_directory = (
+        run_directory / config.run_name / "ispypsa_inputs" / "tables"
+    )
+    pypsa_friendly_inputs_location = (
+        run_directory / config.run_name / "pypsa_friendly"
+    )
+    operational_timeseries_location = (
+        pypsa_friendly_inputs_location / "operational_timeseries"
+    )
+
+    # Translate ISPyPSA format to a PyPSA friendly format.
+    pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
+    write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
+
+    operational_snapshots = create_pypsa_friendly_snapshots(
+        config,
+        "operational"
+    )
+
+    create_pypsa_friendly_timeseries_inputs(
+        config,
+        "operational",
+        ispypsa_tables,
+        operational_snapshots,
+        parsed_traces_directory,
+        operational_timeseries_location,
+    )
+    ```
+
+## PyPSA building and run
+
+### Capacity expansion model
+
+Once the PyPSA friendly inputs have been created a PyPSA network object can be created,
+inputs loaded into the network object, and the capacity expansion optimisation run. The
+PyPSA object needs to be built and run within a single workflow step as custom
+constraints are not preserved when the PyPSA network object is saved to disk.
+
+=== "CLI"
+
+    ```commandline
+    uv run ispypsa config=config.yaml create_and_run_capacity_expansion_model
+    ```
+
+=== "API"
+
+    ```Python
+
+    from ispypsa.data_fetch import read_csvs
+    from ispypsa.model import build_pypsa_network, save_results
+
+    # Load model config.
+    config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+    config = load_config(config_path)
+
+    # Load base paths from config
+    run_directory = Path(config.paths.run_directory)
+
+    # Construct full paths from base paths
+    pypsa_friendly_inputs_location = (
+        run_directory / config.ispypsa_run_name / "pypsa_friendly"
+    )
+    capacity_expansion_timeseries_location = (
+        pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
+    )
+    pypsa_outputs_directory = run_directory / "outputs"
+
+    # Load the capacity expansion network
+    network = pypsa.Network(capacity_expansion_pypsa_file)
+
+    # Build a PyPSA network object.
+    network = build_pypsa_network(
+        pypsa_friendly_input_tables,
+        capacity_expansion_timeseries_location,
+    )
+
+    # Solve for least cost operation/expansion
+    # Never use network.optimize() as this will remove custom constraints.
+    network.optimize.solve_model(solver_name=config.solver)
+
+    # Save results.
+    save_results(
+        network,
+        pypsa_outputs_directory,
+        config.ispypsa_run_name + "_capacity_expansion"
+    )
+    ```
+
+### Operational model
+
+After the capacity expansion model has run, an operational model, usually with a higher
+temporal resolution, can be built and run. The operational model build takes the PyPSA
+network object used for capacity expansion and fixes generator, storage, and
+transmission line capacities at their optimal values. Then the timeseries load and
+resource availability timeseries data is updated to match the operational model
+temporal resolution, custom constraints are rebuilt, and the optimisation rerun. Note,
+the operational optimisation uses rolling horizon to allow for greater temporal
+resolution, the fixing of the unit and transmission capacities also help limit
+computational complexity.
+
+=== "CLI"
+
+    ```commandline
+    uv run ispypsa config=config.yaml create_and_run_operational_model
+    ```
+
+=== "API"
+
+    ```Python
+    from ispypsa.data_fetch import read_csvs
+    from ispypsa.model import update_network_timeseries, save_results
+
+    # Load model config.
+    config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+    config = load_config(config_path)
+
+    # Load base paths from config
+    run_directory = Path(config.paths.run_directory)
+
+    # Construct full paths from base paths
+    pypsa_friendly_inputs_location = (
+        run_directory / config.ispypsa_run_name / "pypsa_friendly"
+    )
+    operational_timeseries_location = (
+        pypsa_friendly_inputs_location / "operational_timeseries"
+    )
+    pypsa_outputs_directory = run_directory / "outputs"
+    capacity_expansion_pypsa_file = (
+        pypsa_outputs_directory / config.ispypsa_run_name + "_capacity_expansion"
+    )
+
+    # Get PyPSA freindly inputs as pd.DataFrames
+    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_inputs_location)
+
+    # Create operational snapshots (needed for update_network_timeseries)
+    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
+
+    update_network_timeseries(
+        network,
+        pypsa_friendly_input_tables,
+        operational_snapshots,
+        operational_timeseries_location,
+    )
+
+    network.optimize.fix_optimal_capacities()
+
+    # Never use network.optimize() as this will remove custom constraints.
+    network.optimize.optimize_with_rolling_horizon(
+        horizon=config.temporal.operational.horizon,
+        overlap=config.temporal.operational.overlap,
+    )
+
+    save_results(
+        network,
+        pypsa_outputs_directory,
+        config.ispypsa_run_name + "_operational"
     )
     ```
