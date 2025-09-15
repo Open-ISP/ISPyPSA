@@ -70,6 +70,7 @@ create_pypsa_friendly_timeseries_inputs(
 )
 create_pypsa_friendly_dynamic_marginal_costs(
     ispypsa_tables,
+    pypsa_friendly_input_tables["generators"],
     pypsa_friendly_input_tables["snapshots"],
     pypsa_friendly_inputs_location,
 )

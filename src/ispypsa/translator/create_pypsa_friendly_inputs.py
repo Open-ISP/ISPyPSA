@@ -21,7 +21,9 @@ from ispypsa.translator.generators import (
     _create_unserved_energy_generators,
     _translate_ecaa_generators,
     _translate_new_entrant_generators,
-    create_pypsa_friendly_existing_generator_timeseries,
+    create_pypsa_friendly_dynamic_marginal_costs,
+    create_pypsa_friendly_ecaa_generator_timeseries,
+    create_pypsa_friendly_new_entrant_generator_timeseries,
 )
 from ispypsa.translator.links import _translate_flow_paths_to_links
 from ispypsa.translator.renewable_energy_zones import (
@@ -92,14 +94,14 @@ def create_pypsa_friendly_inputs(
 
     translated_ecaa_generators = _translate_ecaa_generators(
         ispypsa_tables,
-        config.temporal.investment_periods,
+        config.temporal.capacity_expansion.investment_periods,
         config.network.nodes.regional_granularity,
         config.temporal.year_type,
     )
 
     translated_new_entrant_generators = _translate_new_entrant_generators(
         ispypsa_tables,
-        config.temporal.investment_periods,
+        config.temporal.capacity_expansion.investment_periods,
         config.discount_rate,
         config.network.nodes.regional_granularity,
     )
@@ -162,6 +164,7 @@ def create_pypsa_friendly_timeseries_inputs(
     model_phase: Literal["capacity_expansion", "operational"],
     ispypsa_tables: dict[str, pd.DataFrame],
     snapshots: pd.DataFrame,
+    generators: pd.DataFrame,
     parsed_traces_directory: Path,
     pypsa_friendly_timeseries_inputs_location: Path,
 ) -> None:
@@ -172,6 +175,13 @@ def create_pypsa_friendly_timeseries_inputs(
     ecaa_generators table (table in ispypsa_tables dict). The time series data is saved
     in parquet files in the 'solar_traces' and 'wind_traces' directories with the
     columns "snapshots" (datetime) and "p_max_pu" (float specifying availability in MW).
+
+    - a time series file is created for each wind and solar generator in the new_entrant_generators
+    table (table in ispypsa_tables dict). The time series data is saved in parquet files
+    in the 'solar_traces' and 'wind_traces' directories with the columns "snapshots"
+    (datetime) and "p_max_pu" (float specifying availability in MW).
+
+    - a time series file is created for each generator
 
     - a time series file is created for each model region specifying the load in that
     region (regions set by config.network.nodes.regional_granularity). The time series
@@ -191,8 +201,8 @@ def create_pypsa_friendly_timeseries_inputs(
 
         >>> config = load_config(Path("path/to/config/file.yaml"))
 
-        Get ISPyPSA inputs (in particular these need to contain the ecaa_generators and
-        sub_regions tables).
+        Get ISPyPSA inputs (in particular these need to contain the ecaa_generators,
+        new_entrant_generators and sub_regions tables).
 
         >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
 
@@ -222,16 +232,22 @@ def create_pypsa_friendly_timeseries_inputs(
             capacity expansion phase of the modelling. This allows the correct temporal
             config inputs to be used from the ModelConfig instance.
         ispypsa_tables: dict of pd.DataFrames defining the ISPyPSA input tables.
-            Inparticular the dict needs to contain the ecaa_generators and
-            sub_regions tables, the other tables aren't required for the time series
-            data creation. The ecaa_generators table needs the columns 'generator' (name
-            or generator as str) and 'fuel_type' (str with 'Wind' and 'Solar' fuel types
-            as appropraite). The sub_regions table needs to have the columns
-            'isp_sub_region_id' (str) and 'nem_region_id' (str) if a 'regional'
-            granuality is used.
+            In particular the dict needs to contain the ecaa_generators, new_entrant_generators
+            and sub_regions tables, as well as fuel cost tables for fuel types present in
+            either generator table - the other tables aren't required for the time series
+            data creation. The ecaa_generators and new_entrant_generators tables need
+            the columns 'generator' or 'generator_name' respectively (name or generator
+            as str) and 'fuel_type' (str with 'Wind' and 'Solar' fuel types as appropriate).
+            The sub_regions table needs to have the columns 'isp_sub_region_id' (str) and
+            'nem_region_id' (str) if a 'regional' granularity is used.
         snapshots: a pd.DataFrame with the columns 'period' (int) and 'snapshots'
             (datetime) defining the time intervals and coresponding investment periods
             to be modelled.
+        generators: a pd.DataFrame containing PyPSA-friendly generator data, including
+            columns 'marginal_cost' (str with snake-case name of generator), 'carrier'
+            (str), 'isp_fuel_cost_mapping' (str), 'isp_heat_rate_gj/mwh' (float)
+            and 'isp_vom_$/mwh_sent_out' (float). These columns are required for the
+            calculation of dynamic marginal costs for each generator.
         parsed_traces_directory: a pathlib.Path defining where the trace data which
             has been parsed using isp-trace-parser is located.
         pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
@@ -250,7 +266,7 @@ def create_pypsa_friendly_timeseries_inputs(
         end_year=config.temporal.range.end_year,
         reference_years=reference_year_cycle,
     )
-    create_pypsa_friendly_existing_generator_timeseries(
+    create_pypsa_friendly_ecaa_generator_timeseries(
         ispypsa_tables["ecaa_generators"],
         parsed_traces_directory,
         pypsa_friendly_timeseries_inputs_location,
@@ -258,6 +274,23 @@ def create_pypsa_friendly_timeseries_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
         snapshots=snapshots,
+    )
+    create_pypsa_friendly_new_entrant_generator_timeseries(
+        ispypsa_tables["new_entrant_generators"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        generator_types=["solar", "wind"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
+    # NOTE - maybe this function needs to be somewhere separate/handled a little
+    # different because it currently requires the translated generator table as input?
+    create_pypsa_friendly_dynamic_marginal_costs(
+        ispypsa_tables,
+        generators,
+        snapshots,
+        pypsa_friendly_timeseries_inputs_location,
     )
     create_pypsa_friendly_bus_demand_timeseries(
         ispypsa_tables["sub_regions"],

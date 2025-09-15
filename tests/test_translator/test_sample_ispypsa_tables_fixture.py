@@ -13,6 +13,15 @@ def test_sample_ispypsa_tables_fixture(sample_ispypsa_tables):
         "renewable_energy_zones",
         "flow_paths",
         "ecaa_generators",
+        "new_entrant_generators",
+        "coal_prices",
+        "gas_prices",
+        "biomethane_prices",
+        "gpg_emissions_reduction_biomethane",
+        "new_entrant_build_costs",
+        "closure_years",
+        "new_entrant_wind_and_solar_connection_costs",
+        "new_entrant_non_vre_connection_costs",
         "custom_constraints_lhs",
         "custom_constraints_rhs",
     ]
@@ -47,7 +56,6 @@ def test_create_pypsa_friendly_inputs_with_fixture(
         "custom_constraints_lhs",
         "custom_constraints_rhs",
     ]
-
     for output in expected_outputs:
         assert output in result
         assert isinstance(result[output], pd.DataFrame)
@@ -61,8 +69,8 @@ def test_create_pypsa_friendly_inputs_with_fixture(
     # Buses should include sub-regions and REZs
     assert len(result["buses"]) == 4  # 2 sub-regions + 2 REZs
 
-    # Generators should include ECAA generators + unserved energy generators
-    assert len(result["generators"]) >= 8  # 6 ECAA + 2 unserved energy
+    # Generators should include ECAA generators + new entrants per build year + unserved energy generators
+    assert len(result["generators"]) >= 16  # 6 ECAA + 2 unserved energy
 
     # Links should include flow paths and REZ connections
     assert len(result["links"]) >= 3  # 1 flow path + 2 REZ connections

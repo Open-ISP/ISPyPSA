@@ -73,9 +73,9 @@ def _template_regional_interconnectors(
         )
     )
     regional_capabilities["forward_direction_mw_summer_typical"] = pd.to_numeric(
-        regional_capabilities["forward_direction_mw_summer_typical"].str.replace(
-            ",", ""
-        )
+        regional_capabilities["forward_direction_mw_summer_typical"]
+        .astype(str)
+        .replace(",", "")
     )
     # Only keep forward_direction_mw_summer_typical limit col as that all that's
     # being used for now.

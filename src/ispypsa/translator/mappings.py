@@ -1,5 +1,4 @@
 _ECAA_GENERATOR_ATTRIBUTES = {
-    "generator_name": "isp_name",
     "generator": "name",
     "maximum_capacity_mw": "p_nom",
     "minimum_load_mw": "p_min_pu",
@@ -14,7 +13,6 @@ _ECAA_GENERATOR_ATTRIBUTES = {
 }
 
 _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
-    "generator_name": "isp_name",
     "generator": "name",
     "maximum_capacity_mw": "p_nom_max",
     "unit_capacity_mw": "p_nom_mod",
@@ -24,6 +22,7 @@ _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
     "lifetime": "lifetime",
     "capital_cost": "capital_cost",
     "marginal_cost": "marginal_cost",
+    "generator_name": "isp_name",
     "technology_type": "isp_technology_type",
     "fuel_cost_mapping": "isp_fuel_cost_mapping",
     "vom_$/mwh_sent_out": "isp_vom_$/mwh_sent_out",

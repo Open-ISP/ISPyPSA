@@ -171,7 +171,7 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
-    df = _add_technology_rez_subregion_column(df, iasr_tables, "generator")
+    df = _add_technology_rez_subregion_column(df, iasr_tables, new_col_name="generator")
     # replace remaining string values in static property columns
     df = df.infer_objects()
     for col in [col for col in merged_static_cols if df[col].dtype == "object"]:

@@ -14,6 +14,10 @@ from ispypsa.translator import (
     create_pypsa_friendly_timeseries_inputs,
     list_translator_output_files,
 )
+from ispypsa.translator.generators import (
+    _translate_ecaa_generators,
+    _translate_new_entrant_generators,
+)
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
@@ -153,7 +157,7 @@ def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
     assert "Central-West Orana REZ" not in pypsa_tables["buses"]["name"].values
 
 
-def test_create_ispypsa_inputs_template_single_regions(
+def test_create_pypsa_inputs_template_single_regions(
     sample_ispypsa_tables: dict[str, pd.DataFrame],
     sample_model_config: ModelConfig,
 ):
@@ -176,6 +180,7 @@ class DummyConfigTwo:
     def __init__(self):
         # Default configuration that can be modified by tests
         self.scenario = "Step Change"
+        self.discount_rate = 0.05
         self.temporal = type(
             "obj",
             (object,),
@@ -215,7 +220,10 @@ class DummyConfigTwo:
         )
 
 
-def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
+def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
+    tmp_path,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
     """Test create_pypsa_friendly_timeseries_inputs for capacity expansion mode."""
 
     # Setup
@@ -224,22 +232,6 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     # Use the trace data that ships with the tests
     parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
     config.temporal.path_to_parsed_traces = parsed_trace_path
-
-    # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
-    ispypsa_tables = {
-        "ecaa_generators": pd.DataFrame(
-            {
-                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
-                "fuel_type": ["Solar", "Wind"],
-            }
-        ),
-        "sub_regions": pd.DataFrame(
-            {
-                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
-            }
-        ),
-    }
 
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
@@ -251,6 +243,41 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
 
     snapshots = _add_investment_periods(snapshots, [2025], "fy")
 
+    # only keep the generators that we have test traces for from the fixtures:
+    ecaa_generators = sample_ispypsa_tables["ecaa_generators"]
+    filtered_ecaa_generators = (
+        ecaa_generators.loc[
+            ecaa_generators["generator"].isin(
+                ["Moree Solar Farm", "Bodangora Wind Farm", "Bayswater", "Eraring"]
+            ),
+            :,
+        ]
+        .copy()
+        .reset_index()
+    )
+    sample_ispypsa_tables["ecaa_generators"] = filtered_ecaa_generators
+
+    translated_ecaa_generators = _translate_ecaa_generators(
+        sample_ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.network.nodes.regional_granularity,
+        config.temporal.year_type,
+    )
+
+    translated_new_entrant_generators = _translate_new_entrant_generators(
+        sample_ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.discount_rate,
+        config.network.nodes.regional_granularity,
+    )
+
+    generators = pd.concat(
+        [translated_ecaa_generators, translated_new_entrant_generators],
+        axis=0,
+        ignore_index=True,
+    )
+    generators.to_csv("TEST_TO_SEE.csv")
+
     # Create output directory
     output_dir = tmp_path / "timeseries_output"
 
@@ -258,8 +285,9 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
-        ispypsa_tables,
+        sample_ispypsa_tables,
         snapshots,
+        generators,
         parsed_trace_path,
         output_dir,
     )
@@ -273,17 +301,29 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
-    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+    assert (wind_dir / "Bodangora Wind Farm.parquet").exists()
 
-    # 3. Check that demand_traces directory was created with the right files
+    # 3. Check that marginal cost timeseries directory was created with the right files
+    marginal_cost_dir = output_dir / "marginal_cost_timeseries"
+    assert marginal_cost_dir.exists()
+    assert (marginal_cost_dir / "ccgt_cnsw.parquet").exists()
+    assert (marginal_cost_dir / "ocgt_small_gt_cnsw.parquet").exists()
+    assert (marginal_cost_dir / "large_scale_solar_pv_n3_sat.parquet").exists()
+    assert (marginal_cost_dir / "wind_n3_wh.parquet").exists()
+    assert (marginal_cost_dir / "large_scale_solar_pv_n2_sat.parquet").exists()
+    assert (marginal_cost_dir / "wind_n2_wh.parquet").exists()
+    assert (marginal_cost_dir / "bayswater.parquet").exists()
+    assert (marginal_cost_dir / "eraring.parquet").exists()
+    assert (marginal_cost_dir / "bodangora_wind_farm.parquet").exists()
+    assert (marginal_cost_dir / "moree_solar_farm.parquet").exists()
+
+    # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
     assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
-    assert (demand_dir / "CQ.parquet").exists()
-    assert (demand_dir / "NQ.parquet").exists()
 
-    # 4. Load and check content of one of the files to verify basic structure
+    # 5. Load and check content of one of the generation files to verify basic structure
     solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
 
     # Check structure of the output
@@ -294,8 +334,22 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     # Verify matching of snapshots to investment periods
     assert set(solar_trace["investment_periods"].unique()) == {2025}
 
+    # 6. And do the same for one of the marginal cost files
+    marginal_cost_trace = pd.read_parquet(marginal_cost_dir / "bayswater.parquet")
 
-def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
+    # Check structure of the output
+    assert "snapshots" in marginal_cost_trace.columns
+    assert "marginal_cost" in marginal_cost_trace.columns
+    assert "investment_periods" in marginal_cost_trace.columns
+
+    # Verify matching of snapshots to investment periods
+    assert set(marginal_cost_trace["investment_periods"].unique()) == {2025}
+
+
+def test_create_pypsa_friendly_timeseries_inputs_operational(
+    tmp_path,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
     """Test create_pypsa_friendly_timeseries_inputs for operational mode."""
 
     # Setup
@@ -305,21 +359,39 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
     parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
-    # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
-    ispypsa_tables = {
-        "ecaa_generators": pd.DataFrame(
-            {
-                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
-                "fuel_type": ["Solar", "Wind"],
-            }
-        ),
-        "sub_regions": pd.DataFrame(
-            {
-                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
-            }
-        ),
-    }
+    # only keep the generators that we have test traces for from the fixtures:
+    ecaa_generators = sample_ispypsa_tables["ecaa_generators"]
+    filtered_ecaa_generators = (
+        ecaa_generators.loc[
+            ecaa_generators["generator"].isin(
+                ["Moree Solar Farm", "Bodangora Wind Farm", "Bayswater", "Eraring"]
+            ),
+            :,
+        ]
+        .copy()
+        .reset_index()
+    )
+    sample_ispypsa_tables["ecaa_generators"] = filtered_ecaa_generators
+
+    translated_ecaa_generators = _translate_ecaa_generators(
+        sample_ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.network.nodes.regional_granularity,
+        config.temporal.year_type,
+    )
+
+    translated_new_entrant_generators = _translate_new_entrant_generators(
+        sample_ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.discount_rate,
+        config.network.nodes.regional_granularity,
+    )
+
+    generators = pd.concat(
+        [translated_ecaa_generators, translated_new_entrant_generators],
+        axis=0,
+        ignore_index=True,
+    )
 
     # Create snapshots for operational model (half-hourly)
     snapshots = _create_complete_snapshots_index(
@@ -336,7 +408,13 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
 
     # Call the function
     create_pypsa_friendly_timeseries_inputs(
-        config, "operational", ispypsa_tables, snapshots, parsed_trace_path, output_dir
+        config,
+        "operational",
+        sample_ispypsa_tables,
+        snapshots,
+        generators,
+        parsed_trace_path,
+        output_dir,
     )
 
     # Verify outputs
@@ -348,17 +426,29 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
-    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+    assert (wind_dir / "Bodangora Wind Farm.parquet").exists()
 
-    # 3. Check that demand_traces directory was created with the right files
+    # 3. Check that marginal cost timeseries directory was created with the right files
+    marginal_cost_dir = output_dir / "marginal_cost_timeseries"
+    assert marginal_cost_dir.exists()
+    assert (marginal_cost_dir / "ccgt_cnsw.parquet").exists()
+    assert (marginal_cost_dir / "ocgt_small_gt_cnsw.parquet").exists()
+    assert (marginal_cost_dir / "large_scale_solar_pv_n3_sat.parquet").exists()
+    assert (marginal_cost_dir / "wind_n3_wh.parquet").exists()
+    assert (marginal_cost_dir / "large_scale_solar_pv_n2_sat.parquet").exists()
+    assert (marginal_cost_dir / "wind_n2_wh.parquet").exists()
+    assert (marginal_cost_dir / "bayswater.parquet").exists()
+    assert (marginal_cost_dir / "eraring.parquet").exists()
+    assert (marginal_cost_dir / "bodangora_wind_farm.parquet").exists()
+    assert (marginal_cost_dir / "moree_solar_farm.parquet").exists()
+
+    # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
     assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
-    assert (demand_dir / "CQ.parquet").exists()
-    assert (demand_dir / "NQ.parquet").exists()
 
-    # 4. Load and check content of one of the files to verify basic structure
+    # 5. Load and check content of one of the files to verify basic structure
     solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
 
     # Check structure of the output
@@ -368,3 +458,14 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
 
     # Verify only one investment period for operational
     assert set(solar_trace["investment_periods"].unique()) == {2025}
+
+    # 6. And do the same for one of the marginal cost files
+    marginal_cost_trace = pd.read_parquet(marginal_cost_dir / "bayswater.parquet")
+
+    # Check structure of the output
+    assert "snapshots" in marginal_cost_trace.columns
+    assert "marginal_cost" in marginal_cost_trace.columns
+    assert "investment_periods" in marginal_cost_trace.columns
+
+    # Verify matching of snapshots to investment periods
+    assert set(marginal_cost_trace["investment_periods"].unique()) == {2025}

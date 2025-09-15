@@ -3,6 +3,7 @@ from hmac import new
 from pathlib import Path
 from typing import List, Literal
 
+import numpy as np
 import pandas as pd
 from isp_trace_parser import get_data
 
@@ -69,6 +70,7 @@ def _translate_ecaa_generators(
 
     if regional_granularity == "single_region":
         ecaa_generators["bus"] = "NEM"
+        gen_attributes["bus"] = "bus"
 
     ecaa_generators["commissioning_date"] = ecaa_generators["commissioning_date"].apply(
         _get_commissioning_date_year_as_int, args=(year_type,)
@@ -87,9 +89,24 @@ def _translate_ecaa_generators(
     ecaa_generators_pypsa_format["p_nom_extendable"] = False
     ecaa_generators_pypsa_format["capital_cost"] = 0.0
 
-    column_order = []
+    ecaa_column_order = [
+        "name",
+        "bus",
+        "p_nom",
+        "p_nom_extendable",
+        "p_min_pu",
+        "carrier",
+        "marginal_cost",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+        "isp_technology_type",
+        "isp_fuel_cost_mapping",
+        "isp_vom_$/mwh_sent_out",
+        "isp_heat_rate_gj/mwh",
+    ]
 
-    return ecaa_generators_pypsa_format
+    return ecaa_generators_pypsa_format[ecaa_column_order]
 
 
 def _create_unserved_energy_generators(
@@ -154,6 +171,7 @@ def _translate_new_entrant_generators(
 
     if regional_granularity == "single_region":
         new_entrant_generators["bus"] = "NEM"
+        gen_attributes["bus"] = "bus"
 
     # create a row for each new entrant gen in each possible build year (investment period)
     new_entrant_generators["build_year"] = "investment_periods"
@@ -193,6 +211,7 @@ def _translate_new_entrant_generators(
         + "_"
         + gen_df_with_capital_costs["build_year"].astype(str)
     )
+
     # filter and rename columns to PyPSA format
     new_entrant_generators_pypsa_format = gen_df_with_capital_costs.loc[
         :, gen_attributes.keys()
@@ -202,7 +221,32 @@ def _translate_new_entrant_generators(
     new_entrant_generators_pypsa_format["p_min_pu"] /= 100.0
     new_entrant_generators_pypsa_format["p_nom_extendable"] = True
 
-    return new_entrant_generators_pypsa_format
+    # fill NaNs with PyPSA default values for p_nom_max and p_nom_mod
+    pypsa_default_p_noms = {"p_nom_max": np.inf, "p_nom_mod": 0.0}
+    new_entrant_generators_pypsa_format = new_entrant_generators_pypsa_format.fillna(
+        pypsa_default_p_noms
+    )
+
+    new_entrant_column_order = [
+        "name",
+        "bus",
+        "p_nom_mod",
+        "p_nom_extendable",
+        "p_nom_max",
+        "p_min_pu",
+        "carrier",
+        "marginal_cost",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+        "isp_name",
+        "isp_technology_type",
+        "isp_fuel_cost_mapping",
+        "isp_vom_$/mwh_sent_out",
+        "isp_heat_rate_gj/mwh",
+    ]
+
+    return new_entrant_generators_pypsa_format[new_entrant_column_order]
 
 
 def _add_closure_year_column(
@@ -222,7 +266,8 @@ def _add_closure_year_column(
         closure_years: `ISPyPSA` formatted pd.Dataframe containing expected closure years
             for the ECAA generators, by unit. Given as integers.
         investment_periods: list of years in which investment periods start obtained
-            from the model configuration.
+            from the model configuration. Used in this function to set the default
+            closure year to 100 years beyond the last investment period.
 
     Returns:
         `pd.DataFrame`: ECAA generator attributes table with additional closure year column.
@@ -292,7 +337,7 @@ def _add_new_entrant_generator_build_costs(
         raise ValueError(
             "new_entrant_generators_table must have column 'build_year' to merge in build costs."
         )
-    # line up "technology" names with "generator_name" options
+    # line up "technology_type" names with "generator_name" options
     new_entrant_build_costs.loc[:, "technology"] = _fuzzy_match_names(
         new_entrant_build_costs.loc[:, "technology"],
         new_entrant_generators_table["generator_name"].unique(),
@@ -616,8 +661,8 @@ def _calculate_dynamic_marginal_costs_single_generator(
     heat rate and VOM.
 
     Args:
-        generator_row: pd.Series detailing the generator attributes `"isp_heat_rate_gj/mwh"`
-            and `"isp_vom_$/mwh_sent_out"`.
+        generator_row: pd.Series detailing the generator attributes 'isp_heat_rate_gj/mwh'
+            and 'isp_vom_$/mwh_sent_out'.
         gen_fuel_prices: pd.Series detailing the fuel prices applicable to the generator,
             with index values formatted as `YYYY_YY_$/gj` (FY) and given in $/GJ.
         snapshots: `PyPSA` formatted dataframe containing all snapshots for the model.
@@ -646,7 +691,7 @@ def _calculate_dynamic_marginal_costs_single_generator(
         financial_year_int = _get_financial_year_int_from_string(
             fy_cost_string, "generator marginal costs", "fy"
         )
-        july_1st_date = pd.to_datetime(f"{financial_year_int}-07-01")
+        july_1st_date = pd.to_datetime(f"{financial_year_int - 1}-07-01")
         return july_1st_date
 
     dynamic_marginal_costs["start_date"] = dynamic_marginal_costs.index
@@ -754,7 +799,7 @@ def _get_single_carrier_fuel_prices(
     # Calculate prices for fuels that are blended with low-emissions alternatives
     # over time (in v6.0, hyblend, gas)
     if "blend_table" in table_mapping.keys():
-        generator_to_fuel_cost_mapping_dict = {}
+        generator_to_fuel_cost_mapping_dict = None
         if carrier == "Hyblend":
             generator_to_fuel_cost_mapping_dict = (
                 generators_df.loc[
