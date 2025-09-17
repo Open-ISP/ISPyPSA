@@ -249,6 +249,17 @@ def invalid_missing_workbook_path(config):
     return config, ValidationError
 
 
+def invalid_env_variable_not_set(config):
+    # Set parsed_traces_directory to "ENV" to trigger the environment variable check
+    config["paths"]["parsed_traces_directory"] = "ENV"
+    # Ensure the environment variable is not set (it shouldn't be in test environment)
+    import os
+
+    if "PATH_TO_PARSED_TRACES" in os.environ:
+        del os.environ["PATH_TO_PARSED_TRACES"]
+    return config, ValueError
+
+
 @pytest.mark.parametrize(
     "modifier_func",
     [
@@ -282,6 +293,7 @@ def invalid_missing_workbook_path(config):
         invalid_missing_parsed_workbook_cache,
         invalid_missing_run_directory,
         invalid_missing_workbook_path,
+        invalid_env_variable_not_set,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
