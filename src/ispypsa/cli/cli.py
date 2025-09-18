@@ -16,7 +16,7 @@ from pathlib import Path
 from doit.doit_cmd import DoitMain
 
 # Get the path to the dodo.py file in the ISPyPSA package
-DODO_FILE = Path(__file__).parent.parent.parent / "dodo.py"
+DODO_FILE = Path(__file__).parent / "dodo.py"
 
 
 def main():
