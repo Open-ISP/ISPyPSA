@@ -394,11 +394,11 @@ def _expand_link_flow_lhs_terms(
 
 
 def _create_expansion_limit_constraints(
-    links,
-    constraint_generators,
-    flow_paths,
-    rez_connections,
-):
+    links: pd.DataFrame,
+    constraint_generators: pd.DataFrame,
+    flow_paths: pd.DataFrame,
+    rez_connections: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Create custom constraint lhs and rhs definitions to limit the total expansion
     on rez and flow links
 
@@ -419,7 +419,7 @@ def _create_expansion_limit_constraints(
     _append_if_not_empty(lhs_parts, links_lhs)
     generators_lhs = _create_expansion_limit_lhs_for_generators(constraint_generators)
     _append_if_not_empty(lhs_parts, generators_lhs)
-    lhs = _finalize_expansion_limit_lhs(lhs_parts)
+    lhs = _finalise_expansion_limit_lhs(lhs_parts)
 
     rhs_parts = []
     flow_path_rhs = _process_rhs_components(flow_paths)
@@ -427,7 +427,7 @@ def _create_expansion_limit_constraints(
     rez_connections = _get_isp_names_for_rez_connection(rez_connections, links)
     rez_rhs = _process_rhs_components(rez_connections)
     _append_if_not_empty(rhs_parts, rez_rhs)
-    rhs = _finalize_expansion_limit_rhs(rhs_parts)
+    rhs = _finalise_expansion_limit_rhs(rhs_parts)
     rhs = _filter_rhs_by_lhs_constraints(rhs, lhs)
 
     return lhs, rhs
@@ -511,7 +511,7 @@ def _create_expansion_limit_lhs_for_links(
         links: DataFrame with link information
 
     Returns:
-        DataFrame with LHS constraint definitions for links
+        DataFrame with LHS constraint definitions for links, empty if input is None
     """
     if links is None or links.empty:
         return pd.DataFrame()
@@ -546,16 +546,16 @@ def _create_expansion_limit_lhs_for_generators(
     return generators_lhs
 
 
-def _finalize_expansion_limit_rhs(
+def _finalise_expansion_limit_rhs(
     rhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
-    """Combine and finalize RHS constraint parts.
+    """Combine and finalise RHS constraint parts.
 
     Args:
         rhs_parts: List of DataFrames with RHS constraint definitions
 
     Returns:
-        Combined DataFrame with finalized RHS constraints, empty if no parts
+        Combined DataFrame with finalised RHS constraints, empty if no parts
     """
     if not rhs_parts:
         return pd.DataFrame()
@@ -566,16 +566,16 @@ def _finalize_expansion_limit_rhs(
     return rhs
 
 
-def _finalize_expansion_limit_lhs(
+def _finalise_expansion_limit_lhs(
     lhs_parts: list[pd.DataFrame],
 ) -> pd.DataFrame:
-    """Combine and finalize LHS constraint parts.
+    """Combine and finalise LHS constraint parts.
 
     Args:
         lhs_parts: List of DataFrames with LHS constraint definitions
 
     Returns:
-        Combined DataFrame with finalized LHS constraints, empty if no parts
+        Combined DataFrame with finalised LHS constraints, empty if no parts
     """
     if not lhs_parts:
         return pd.DataFrame()

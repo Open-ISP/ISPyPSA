@@ -230,15 +230,53 @@ def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _strip_all_text_after_numeric_value(
-    series: pd.Index | pd.Series,
-) -> pd.Index | pd.Series:
+    series: pd.Series,
+) -> pd.Series:
     """
-    Removes all text after the first numeric value.
+    Extracts numeric values from the start of strings and removes any trailing text.
 
-    Numeric value can contain commas and one period.
+    This function is designed to clean data from IASR workbook tables where numeric
+    values may be followed by units or descriptive text (e.g., "1,500 MW" → "1,500").
+
+    Args:
+        series: A pandas Series with object dtype containing strings to process.
+                Non-object dtype Series are returned unchanged.
+
+    Returns:
+        A pandas Series with numeric values extracted and trailing text removed.
+
+    Supported numeric formats:
+        - Unsigned integers: "123", "1234"
+        - Signed integers: "+123", "-123"
+        - Numbers with commas: "1,234", "12,345,678"
+        - Decimal numbers: "123.45", "1,234.56"
+        - Numbers without proper comma formatting: "1500" (not "1,500")
+
+    Behavior:
+        - Extracts only from the beginning of the string
+        - Stops at the first valid number found
+        - Requires zero or more whitespace between number and text
+        - Returns the original string if no valid number is found at the start
+        - Only processes object dtype Series
+
+    Examples:
+        "100 MW capacity" → "100"
+        "1,500 units" → "1,500"
+        "-123.45 deficit" → "-123.45"
+        "100MW" → "100" (no space required)
+        "Text 100" → "Text 100" (number not at start)
+        "++100" → "++100" (invalid format)
+        "1.2.3" → "1.2" (extracts first valid number)
     """
     if series.dtypes == "object":
+        # This regex matches:
+        # - Optional plus or minus sign at start
+        # - Either properly formatted numbers with commas (1,234) or simple numbers (1234)
+        # - Optional decimal part with one period
+        # - Followed by optional whitespace and any other text
         series = series.astype(str).str.replace(
-            r"^([0-9\.\,+]+)\s+.*", r"\1", regex=True
+            r"^([+-]?(?:[0-9]{1,3}(?:,[0-9]{3})*|[0-9]+)(?:\.[0-9]+)?)\s*.*",
+            r"\1",
+            regex=True,
         )
     return series
