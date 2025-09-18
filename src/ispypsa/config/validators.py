@@ -136,6 +136,7 @@ class UnservedEnergyConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     ispypsa_run_name: str
+    paths: PathsConfig
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     wacc: float
     discount_rate: float
@@ -143,7 +144,8 @@ class ModelConfig(BaseModel):
     temporal: TemporalConfig
     iasr_workbook_version: str
     unserved_energy: UnservedEnergyConfig
-    paths: PathsConfig
+    filter_by_nem_regions: list[str] | None = None
+    filter_by_isp_sub_regions: list[str] | None = None
     solver: Literal[
         "highs",
         "cbc",
@@ -157,3 +159,14 @@ class ModelConfig(BaseModel):
         "mindopt",
         "pips",
     ]
+
+    @model_validator(mode="after")
+    def validate_region_filters(self):
+        if (
+            self.filter_by_nem_regions is not None
+            and self.filter_by_isp_sub_regions is not None
+        ):
+            raise ValueError(
+                "Cannot specify both filter_by_nem_regions and filter_by_isp_sub_regions"
+            )
+        return self
