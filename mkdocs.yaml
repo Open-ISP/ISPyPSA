@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
+site_name: ISPyPSA Documentation
+site_url: https://ispypsa.github.io
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+
+extra_css:
+  - extra.css
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options.extra:
+            docstring_style: google
+            docstring_section_style: list
+          rendering:
+            show_root_heading: true
+            show_source: true
+            show_signature: true  # This is key for displaying signatures
+            show_signature_annotations: true
+            separate_signature: true
+
+nav:
+  - Introduction: index.md
+  - Documentation guide: guide.md
+  - Getting started: getting_started.md
+  - Workflow: workflow.md
+  - Modelling methodology: methodology.md
+  - Config: config.md
+  - Tables:
+      - ISPyPSA input tables: tables/ispypsa.md
+      - PyPSA friendly Tables: tables/pypsa_friendly.md
+  - API: api.md
+  - CLI: cli.md
+  - Examples:
+      - Default workflow: examples/example_api_workflow.md
+      - Default config file: examples/example_config.md

@@ -3,6 +3,7 @@ import pytest
 
 from ispypsa.templater.helpers import (
     _snakecase_string,
+    _strip_all_text_after_numeric_value,
     _where_any_substring_appears,
 )
 
@@ -68,3 +69,80 @@ def test_where_any_substring_appears():
     assert (output == [True, True, False, True, True, True]).all()
     output_2 = _where_any_substring_appears(pd.Series(test_input), ["solar"])
     assert (output_2 == [False, False, False, True, False, True]).all()
+
+
+def test_strip_all_text_after_numeric_value_series():
+    """Test stripping text after numeric values in pandas Series."""
+    # Test with Series containing various numeric formats
+    test_series = pd.Series(
+        [
+            "100 MW capacity",
+            "1,500 units available",
+            "2.5 percent increase",
+            "3,000.50 total cost",
+            "No numeric value here",
+            "500",  # Just a number
+            "",  # Empty string
+            "123.45 some text 678",  # Multiple numbers
+            "+1,234.56 positive value",
+            "100MW",  # No space between number and text
+            "2.5%",  # No space, percentage
+            "1,000units",  # No space, with comma
+            # Negative numbers
+            "-100 MW",
+            "-1,234.56 units",
+            "-500",
+            # Edge cases
+            "++123 invalid",  # Invalid: multiple plus signs
+            "1.2.3 multiple dots",  # Partially valid: extracts "1.2"
+            "1,23 wrong comma placement",  # Partially valid: extracts "1"
+            "...123",  # Invalid: starts with dots
+            "+-123",  # Invalid: plus and minus together
+            ",,,123",  # Invalid: starts with commas
+        ]
+    )
+
+    result = _strip_all_text_after_numeric_value(test_series)
+
+    expected = pd.Series(
+        [
+            "100",
+            "1,500",
+            "2.5",
+            "3,000.50",
+            "No numeric value here",
+            "500",
+            "",
+            "123.45",
+            "+1,234.56",
+            "100",  # Should now work without space
+            "2.5",  # Should now work without space
+            "1,000",  # Should now work without space
+            # Negative numbers
+            "-100",
+            "-1,234.56",
+            "-500",
+            # Edge cases
+            "++123 invalid",  # Remains unchanged (invalid format)
+            "1.2",  # Extracts valid number at start
+            "1",  # Extracts valid number at start
+            "...123",  # Remains unchanged (invalid format)
+            "+-123",  # Remains unchanged (invalid format)
+            ",,,123",  # Remains unchanged (invalid format)
+        ]
+    )
+
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_strip_all_text_after_numeric_value_non_object_dtype():
+    """Test that non-object dtype Series are returned unchanged."""
+    # Test with numeric Series (non-object dtype)
+    numeric_series = pd.Series([1, 2, 3, 4, 5])
+    result = _strip_all_text_after_numeric_value(numeric_series)
+    pd.testing.assert_series_equal(result, numeric_series)
+
+    # Test with float Series
+    float_series = pd.Series([1.5, 2.7, 3.9])
+    result = _strip_all_text_after_numeric_value(float_series)
+    pd.testing.assert_series_equal(result, float_series)

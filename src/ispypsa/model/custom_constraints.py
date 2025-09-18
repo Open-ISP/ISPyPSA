@@ -80,9 +80,12 @@ def _add_custom_constraints(
 
         # Retrieve the variable objects needed on the constraint lhs from the linopy
         # model used by the pypsa.Network
-        variables = constraint_lhs.apply(
-            lambda row: _get_variables(
-                network.model, row["variable_name"], row["component"], row["attribute"]
+        model_variables = constraint_lhs.apply(
+            lambda lhs_var: _get_variables(
+                network.model,
+                lhs_var["variable_name"],
+                lhs_var["component"],
+                lhs_var["attribute"],
             ),
             axis=1,
         )
@@ -90,11 +93,11 @@ def _add_custom_constraints(
         # Some variables may not be present in the modeled so these a filtered out.
         # variables that couldn't be found are logged in _get_variables so this doesn't
         # result in 'silent failure'.
-        retrieved_vars = ~variables.isna()
-        variables = variables.loc[retrieved_vars]
+        retrieved_vars = ~model_variables.isna()
+        model_variables = model_variables.loc[retrieved_vars]
         coefficients = constraint_lhs.loc[retrieved_vars, "coefficient"]
 
-        x = tuple(zip(coefficients, variables))
+        x = tuple(zip(coefficients, model_variables))
         linear_expression = network.model.linexpr(*x)
         if row["constraint_type"] == "<=":
             network.model.add_constraints(
