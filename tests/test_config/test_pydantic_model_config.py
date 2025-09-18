@@ -234,6 +234,12 @@ def invalid_unserved_energy_generator_size(config):
     return config, ValidationError
 
 
+def invalid_both_region_filters(config):
+    config["filter_by_nem_regions"] = ["NSW"]
+    config["filter_by_isp_sub_regions"] = ["CNSW"]
+    return config, ValidationError
+
+
 def invalid_missing_parsed_workbook_cache(config):
     del config["paths"]["parsed_workbook_cache"]  # Required field
     return config, ValidationError
@@ -290,6 +296,7 @@ def invalid_env_variable_not_set(config):
         invalid_overlap,
         invalid_unserved_energy_cost,
         invalid_unserved_energy_generator_size,
+        invalid_both_region_filters,
         invalid_missing_parsed_workbook_cache,
         invalid_missing_run_directory,
         invalid_missing_workbook_path,
@@ -345,6 +352,35 @@ def test_path_to_parsed_traces_not_set_for_testing():
     config["paths"]["parsed_traces_directory"] = "NOT_SET_FOR_TESTING"
     # This should not raise an error
     ModelConfig(**config)
+
+
+def test_filter_by_nem_regions():
+    """Test that filter_by_nem_regions accepts valid input."""
+    config = get_valid_config()
+    config["filter_by_nem_regions"] = ["NSW", "VIC"]
+    # This should not raise an error
+    model = ModelConfig(**config)
+    assert model.filter_by_nem_regions == ["NSW", "VIC"]
+    assert model.filter_by_isp_sub_regions is None
+
+
+def test_filter_by_isp_sub_regions():
+    """Test that filter_by_isp_sub_regions accepts valid input."""
+    config = get_valid_config()
+    config["filter_by_isp_sub_regions"] = ["CNSW", "VIC", "TAS"]
+    # This should not raise an error
+    model = ModelConfig(**config)
+    assert model.filter_by_isp_sub_regions == ["CNSW", "VIC", "TAS"]
+    assert model.filter_by_nem_regions is None
+
+
+def test_no_region_filters():
+    """Test that both region filters can be None."""
+    config = get_valid_config()
+    # Don't add any region filters
+    model = ModelConfig(**config)
+    assert model.filter_by_nem_regions is None
+    assert model.filter_by_isp_sub_regions is None
 
 
 def test_base_paths_only():
