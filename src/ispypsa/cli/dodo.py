@@ -258,7 +258,6 @@ def create_ispypsa_inputs_from_config() -> None:
         filter_to_nem_regions=config.filter_by_nem_regions,
         filter_to_isp_sub_regions=config.filter_by_isp_sub_regions,
     )
-    logging.info(template["gas_prices"]["generator"].unique())
     write_csvs(template, input_tables_dir)
 
 
@@ -278,6 +277,8 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
+
+    # Create capacity expansion timeseries
     create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
