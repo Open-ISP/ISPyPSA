@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from pathlib import Path
 from shutil import copy2, rmtree
 
@@ -192,6 +194,23 @@ def build_parsed_workbook_cache() -> None:
     parsed_workbook_cache = get_parsed_workbook_cache()
     workbook_path = get_workbook_path()
     version = config.iasr_workbook_version
+
+    # Check if we're in test mode and should skip actual workbook parsing
+    if os.environ.get("ISPYPSA_TEST_MOCK_CACHE", "").lower() == "true":
+        # In test mode, just ensure cache directory exists and copy pre-existing files
+        parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
+        # Copy any existing test cache files if they don't already exist
+        test_cache_dir = (
+            Path(__file__).parent.parent.parent.parent
+            / "tests"
+            / "test_workbook_table_cache"
+        )
+        if test_cache_dir.exists():
+            for csv_file in test_cache_dir.glob("*.csv"):
+                target_file = parsed_workbook_cache / csv_file.name
+                if not target_file.exists():
+                    shutil.copy2(csv_file, target_file)
+        return
 
     # Verify the workbook file exists
     if not workbook_path.exists():

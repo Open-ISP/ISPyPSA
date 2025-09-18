@@ -1,0 +1,22 @@
+REZ / Constraint ID,REZ Name,Option,Description,Additional network capacity (MW),Expected cost ($ million),Estimate source,Cost estimate class,$M/MW,Easement Length (km),Lead time,System strength connection costs ($M/MW)
+V2,Murray River,Option 1,• New 220 kV double-circuit line between Red Cliffs – Wemen – Kerang. • Establish new substations close to Redcliff and Kerang. Pre-requisite: VNI West (Bulgana),800.0,912.0,AEMO TCD,Class 5b,1.14,275.0,Long,Included as connection cost
+V3,Western Victoria,See V3-EAST secondary transmission limit constraint augmentations,,,,,,,,,
+V4,South West Victoria,See SWV1 group constraint augmentations,,,,,,,,,
+V5,Gippsland,See SEVIC1 transmission limit constraint augmentations,,,,,,,,,
+V6,Central North Vic,Option 1,• New double-circuit 220 kV line from Shepparton to Dederang via Glenrowan.,250.0,709.0,AEMO TCD,Class 5b,2.836,175.0,Long,Included as connection cost
+V6,Central North Vic,Option 2,• New double-circuit 220 kV line from Near Shepparton – Near Bendigo – Near Kerang.,500.0,1110.0,AEMO TCD,Class 5b,2.22,290.0,Long,
+V6,Central North Vic,Option 3,• New double-circuit 500 kV line from Shepparton – Near Kerang.,1500.0,1077.0,AEMO TCD,Class 5b,0.718,160.0,Long,
+V7,Gippsland Coast,Option 1,•	New 500 kV double-circuit line from Hazelwood to vicinity of Gippsland coast. •	Two 500/220 kV transformers.,2000.0,684.0,AEMO TCD,Class 5b,0.342,16.0,Long,Included as connection cost
+V7,Gippsland Coast,Option 2,•	New 500 kV double-circuit line from Hazelwood to vicinity of Gippsland coast. •	Two 500/220 kV transformers. Pre requisite: Option 1,6000.0,684.0,AEMO TCD,Class 5b,0.114,16.0,Long,
+V8,Southern Ocean,See SWV1 group constraint augmentations,,,,,,,,,
+SWV1,Group Constraint - South West Victoria,Option 1,•	Moorabool-Geelong 220 kV line upratings via terminal station augmentations. Pre-requisite: Mortlake turn-in,,64.0,AEMO Victorian Planning,Class 5a,,0.0,Long,Included as connection cost
+SWV1,Group Constraint - South West Victoria,Option 1A,•	New 500 kV single-circuit line from Mortlake – Moorabool •	Sydenham line upratings Pre requisite: Option 1,1500.0,725.0,AEMO Victorian Planning,Class 5a,0.526,170.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 1B,•	Moorabool-Sydenham 500 kV single-circuit Pre requisite: Option 1A,1750.0,1013.0,AEMO Victorian Planning,Class 5a,0.5788571428571428,64.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 1C,•	Heywood- Mortlake 500 kV single-circuit Pre requisite: Option 1B,1750.0,1372.0,AEMO Victorian Planning,Class 5a,0.784,96.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 2A,•	New Mortlake – Bulgana 500 kV single circuit Pre requisite: Option 1,1950.0,618.0,AEMO Victorian Planning,Class 5a,0.34974358974358977,147.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 2B,•	New Mortlake – Bulgana 500 kV double circuit Pre requisite: Option 1,2900.0,803.0,AEMO Victorian Planning,Class 5a,0.2989655172413793,147.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 3A,•	New Heywood - Bulgana 500 kV single-circuit  •	New Alcoa Portland - Heywood 500 kV single circuit Pre requisite: Option 1,1800.0,1076.0,AEMO Victorian Planning,Class 5a,0.6333333333333333,271.0,Long,
+SWV1,Group Constraint - South West Victoria,Option 3B,•	New Heywood - Bulgana 500 kV double-circuit •	New Alcoa Portland - Heywood 500 kV single circuit Pre requisite: Option 1,2800.0,1325.0,AEMO Victorian Planning,Class 5a,0.49607142857142855,271.0,Long,
+SEVIC1,Transmission Limit Constraint - Gippsland,Option 1,•Modified parallel switching arrangement at Hazelwood 220 kV switchyard (for details refer 2023 Victorian Annual Planning Report). •New 220 kV double circuit line between Hazelwood and Yallourn (~10 km). •New additional 500/220 kV transformer in Melbourne eastern metropolitan area.,2000.0,297.0,AEMO TCD,Class 5b,0.1485,10.0,Medium,Included as connection cost
+SEVIC1,Transmission Limit Constraint - Gippsland,Option 2,•	New 500 kV single circuit from Loy Yang – South Morang within the existing easement corridor. •	250 MVAr dynamic reactive compensation Pre requisite: Option 1,1700.0,948.0,AEMO TCD,Class 5b,0.5576470588235294,0.0,Long,
+V3-East,Secondary Transmission Limit - Western Victoria,Option 1,• New 220 kV single-circuit line from Elaine to Moorabool.,600.0,163.0,AEMO TCD,Class 5b,0.27166666666666667,43.0,Medium,Included as connection cost
