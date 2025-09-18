@@ -159,7 +159,6 @@ class ModelConfig(BaseModel):
         "mindopt",
         "pips",
     ]
-     
 
     @model_validator(mode="after")
     def validate_region_filters(self):
@@ -171,4 +170,3 @@ class ModelConfig(BaseModel):
                 "Cannot specify both filter_by_nem_regions and filter_by_isp_sub_regions"
             )
         return self
-
