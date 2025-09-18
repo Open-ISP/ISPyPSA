@@ -233,13 +233,13 @@ def invalid_unserved_energy_generator_size(config):
     config["unserved_energy"] = {"generator_size_mw": "large"}  # Should be a float
     return config, ValidationError
 
-  
+
 def invalid_both_region_filters(config):
     config["filter_by_nem_regions"] = ["NSW"]
     config["filter_by_isp_sub_regions"] = ["CNSW"]
     return config, ValidationError
-    
-    
+
+
 def invalid_missing_parsed_workbook_cache(config):
     del config["paths"]["parsed_workbook_cache"]  # Required field
     return config, ValidationError
@@ -354,7 +354,6 @@ def test_path_to_parsed_traces_not_set_for_testing():
     ModelConfig(**config)
 
 
-
 def test_filter_by_nem_regions():
     """Test that filter_by_nem_regions accepts valid input."""
     config = get_valid_config()
@@ -383,7 +382,7 @@ def test_no_region_filters():
     assert model.filter_by_nem_regions is None
     assert model.filter_by_isp_sub_regions is None
 
-    
+
 def test_base_paths_only():
     """Test that only the four base paths are present in the config."""
     config = get_valid_config()
@@ -402,4 +401,3 @@ def test_base_paths_only():
     assert not hasattr(model.paths, "capacity_expansion_timeseries_location")
     assert not hasattr(model.paths, "operational_timeseries_location")
     assert not hasattr(model.paths, "pypsa_outputs_directory")
-
