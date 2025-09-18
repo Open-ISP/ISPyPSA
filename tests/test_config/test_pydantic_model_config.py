@@ -239,6 +239,7 @@ def invalid_both_region_filters(config):
     config["filter_by_isp_sub_regions"] = ["CNSW"]
     return config, ValueError
 
+
 def invalid_missing_parsed_workbook_cache(config):
     del config["paths"]["parsed_workbook_cache"]  # Required field
     return config, ValidationError
