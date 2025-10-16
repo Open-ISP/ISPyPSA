@@ -27,7 +27,7 @@ class PathsConfig(BaseModel):
         trace_path = Path(parsed_traces_directory)
         if not trace_path.exists():
             raise NotADirectoryError(
-                f"The parsed traces directory specified in the config ({trace_path})"
+                f"The parsed traces directory specified in the config1 ({parsed_traces_directory})"
                 + " does not exist"
             )
         # check this folder contains sub-folders named solar, wind and demand

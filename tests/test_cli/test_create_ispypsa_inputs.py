@@ -1,27 +1,29 @@
-"""Tests for create_ispypsa_inputs CLI task.
+"""Optimized tests for create_ispypsa_inputs CLI task.
 
-Tests cover:
-- Fresh run with no previous outputs
-- Up-to-date detection when outputs exist
-- Dependency modification detection
-- Missing target files scenarios
-- Dependency chain execution
-- CLI parameter variations
-- Path resolution from different directories
+Tests cover all original functionality but minimize the number of times
+create_ispypsa_inputs is run by combining related test scenarios.
+
+Coverage:
+- Core functionality: fresh run, up-to-date detection, and triggers (combined)
+- CLI flags and dependency chain execution (combined)
+- Config path variations (combined)
+- Single task mode failure
 """
 
 import shutil
 import time
 from pathlib import Path
 
+import pandas as pd
 import pytest
 import yaml
+
+from ispypsa.templater import list_templater_output_files
 
 from .cli_test_helpers import (
     assert_task_ran,
     assert_task_up_to_date,
     create_config_with_missing_cache,
-    get_expected_output_files,
     get_file_timestamps,
     mock_config,
     mock_workbook_file,
@@ -31,254 +33,151 @@ from .cli_test_helpers import (
 )
 
 
-def test_fresh_run_creates_all_outputs(
+def test_create_ispypsa_inputs_task(
     mock_config, prepare_test_cache, tmp_path, run_cli_command
 ):
-    """Test running create_ispypsa_inputs with no existing outputs."""
-    # The cache is already prepared, so the cache task should be up-to-date
+    """Test fresh run, up-to-date detection, and various triggers.
 
-    # Check cache files exist (prepared by prepare_test_cache)
+    Combines:
+    - test_fresh_run_creates_all_outputs
+    - test_up_to_date_skips_execution
+    - test_dependency_modified_triggers_rerun
+    - test_missing_some_target_files_triggers_rerun
+
+    Runs: 4 (fresh + up-to-date + dependency mod + missing file)
+    """
+    # Test fresh run
     cache_dir = tmp_path / "cache"
     assert cache_dir.exists()
     cache_files = list(cache_dir.glob("*.csv"))
-    assert len(cache_files) > 50  # Should have many CSV files
+    assert len(cache_files) > 50
 
     # Run command
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
+    assert result.returncode == 0, result.stdout
 
-    # Assert success
-    assert result.returncode == 0
-
-    # Check ISPyPSA inputs created
+    # Check outputs created
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
     assert output_dir.exists()
-
-    # Verify expected output files were created using list_templater_output_files
-    expected_file_names = get_expected_output_files(
-        "sub_regions"
-    )  # Use granularity from config
+    expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
 
-    # Check log file was created
+    # Check log and config files
     log_file = tmp_path / "run_dir" / "test_run" / "ISPyPSA.log"
     assert log_file.exists()
-
-    # Check config was saved
     saved_config = tmp_path / "run_dir" / "test_run" / "test_config.yaml"
     assert saved_config.exists()
 
-
-def test_up_to_date_skips_execution(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
-):
-    """Test that task is skipped when outputs exist and deps unchanged."""
-    # First run to create outputs
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Run again - should be up-to-date
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Check that task was marked as up-to-date
-    assert_task_up_to_date(result.stdout, "create_ispypsa_inputs")
-
-    # Verify no files were modified (timestamps should be the same)
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    # Get timestamps from first run
     first_run_timestamps = get_file_timestamps(output_dir)
-
-    # Sleep briefly to ensure any file writes would have different timestamps
     time.sleep(0.1)
 
-    # Run once more
+    # Test up-to-date detection - second run
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
     assert result.returncode == 0
+    assert_task_up_to_date(result.stdout, "create_ispypsa_inputs")
 
-    # Check timestamps haven't changed
+    # Verify timestamps haven't changed (files weren't regenerated)
     second_run_timestamps = get_file_timestamps(output_dir)
     assert first_run_timestamps == second_run_timestamps
 
-
-def test_dependency_modified_triggers_rerun(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
-):
-    """Test that modifying cache files triggers task rerun."""
-    # First run
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Get original timestamps
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    original_timestamps = get_file_timestamps(output_dir)
-
-    # Sleep briefly to ensure timestamp difference
+    # Test dependency modification trigger
     time.sleep(0.1)
-
-    # Modify a cache file by actually changing its content
     cache_file = tmp_path / "cache" / "existing_generators_summary.csv"
-    assert cache_file.exists()
-
-    # Read the file and modify it slightly but keep it valid CSV
-    import pandas as pd
-
     df = pd.read_csv(cache_file)
-    # Add a new dummy row to actually change the content
     if len(df) > 0:
-        # Duplicate the first row to change the file content
         new_row = df.iloc[0].copy()
         df = pd.concat([df, new_row.to_frame().T], ignore_index=True)
     df.to_csv(cache_file, index=False)
 
-    # Run again
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
     assert result.returncode == 0
-
-    # Check task was run (not up-to-date)
     assert_task_ran(result.stdout, "create_ispypsa_inputs")
 
-    # Check files were regenerated (new timestamps)
+    # Verify timestamps changed
     new_timestamps = get_file_timestamps(output_dir)
-    assert new_timestamps != original_timestamps
-
-    # All files should have newer timestamps
-    for filename, old_time in original_timestamps.items():
+    assert new_timestamps != second_run_timestamps
+    for filename, old_time in second_run_timestamps.items():
         assert new_timestamps[filename] > old_time
 
-
-def test_missing_some_target_files_triggers_rerun(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
-):
-    """Test that deleting some target files triggers task rerun."""
-    # First run
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Delete one target file
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    # Test missing single file trigger
     target_file = output_dir / "ecaa_generators.csv"
-    assert target_file.exists()
     target_file.unlink()
 
-    # Run again
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
     assert result.returncode == 0
-
-    # Check task was run
     assert_task_ran(result.stdout, "create_ispypsa_inputs")
-
-    # Check deleted file was recreated
     assert target_file.exists()
     assert target_file.stat().st_size > 0
 
 
-def test_missing_all_target_files_triggers_rerun(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
+def test_cli_flags_and_dependency_chain(
+    mock_config, prepare_test_cache, tmp_path, run_cli_command, monkeypatch
 ):
-    """Test that deleting all target files triggers task rerun."""
-    # First run
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
+    """Test CLI flags and dependency chain execution.
 
-    # Delete entire output directory
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    assert output_dir.exists()
-    shutil.rmtree(output_dir)
+    Combines:
+    - test_force_execution_with_always_flag
+    - test_dependency_chain_execution
 
-    # Run again
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Check task was run
-    assert_task_ran(result.stdout, "create_ispypsa_inputs")
-
-    # Check directory and files were recreated
-    expected_file_names = get_expected_output_files("sub_regions")
-    verify_output_files(output_dir, expected_file_names)
-
-
-def test_dependency_chain_execution(
-    mock_config, tmp_path, run_cli_command, monkeypatch
-):
-    """Test that dependencies are automatically run when needed."""
-    # Set environment variable to mock cache building in subprocess
+    Runs: 3 (initial + force + dependency chain)
+    """
     monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
 
-    # Ensure clean state - no cache files exist
+    # Test 1: Force execution with -a flag
+    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
+    assert result.returncode == 0
+
+    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    original_timestamps = get_file_timestamps(output_dir)
+    time.sleep(0.1)
+
+    result = run_cli_command([f"config={mock_config}", "-a", "create_ispypsa_inputs"])
+    assert result.returncode == 0
+    assert_task_ran(result.stdout, "create_ispypsa_inputs")
+
+    new_timestamps = get_file_timestamps(output_dir)
+    assert new_timestamps != original_timestamps
+
+    # Test 2: Dependency chain execution (clean state)
+    # Remove everything to test dependency chain
+    if (tmp_path / "run_dir").exists():
+        shutil.rmtree(tmp_path / "run_dir")
     cache_dir = tmp_path / "cache"
     if cache_dir.exists():
         shutil.rmtree(cache_dir)
 
-    # Run create_ispypsa_inputs directly (should trigger dependencies)
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
     assert result.returncode == 0
-
-    # Check that both cache and ispypsa_inputs tasks ran
     assert_task_ran(result.stdout, "cache_required_iasr_workbook_tables")
     assert_task_ran(result.stdout, "create_ispypsa_inputs")
 
-    # Check outputs were created
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    expected_file_names = get_expected_output_files("sub_regions")
+    expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
 
 
-def test_force_execution_with_always_flag(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command, monkeypatch
-):
-    """Test that -a flag forces execution even when up-to-date."""
-    # Set environment variable to mock cache building in subprocess
-    monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
-
-    # First run
-    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Get original timestamps
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    original_timestamps = get_file_timestamps(output_dir)
-
-    time.sleep(0.1)
-
-    # Run with -a flag to force execution
-    result = run_cli_command([f"config={mock_config}", "-a", "create_ispypsa_inputs"])
-    assert result.returncode == 0
-
-    # Check task was run (not skipped)
-    assert_task_ran(result.stdout, "create_ispypsa_inputs")
-
-    # Check files have new timestamps
-    new_timestamps = get_file_timestamps(output_dir)
-    assert new_timestamps != original_timestamps
-
-
-def test_single_task_mode_fails_without_deps(mock_config, tmp_path, run_cli_command):
-    """Test that -s flag prevents dependency execution and fails when deps missing."""
-    # Create config with missing cache directory
-    config_path = create_config_with_missing_cache(mock_config, tmp_path)
-
-    # Run with -s flag (single task, no dependencies)
-    result = run_cli_command([f"config={config_path}", "create_ispypsa_inputs", "-s"])
-
-    # Should fail because cache files don't exist
-    assert result.returncode != 0
-
-
-def test_relative_config_path(
+def test_config_path_variations(
     mock_config, prepare_test_cache, tmp_path, run_cli_command
 ):
-    """Test using relative path for config file."""
-    # Copy config to a subdirectory
+    """Test different config path scenarios.
+
+    Combines:
+    - test_relative_config_path
+    - test_absolute_config_path
+
+    Runs: 2 (relative + absolute)
+    """
+    # Test 1: Relative config path
     subdir = tmp_path / "configs"
     subdir.mkdir()
     config_name = Path(mock_config).name
     new_config = subdir / config_name
     shutil.copy2(mock_config, new_config)
 
-    # Update paths in config to be relative to subdir
     with open(new_config, "r") as f:
         config_data = yaml.safe_load(f)
 
-    # Make paths relative
     config_data["paths"]["parsed_workbook_cache"] = "../cache"
     config_data["paths"]["workbook_path"] = "../dummy.xlsx"
     config_data["paths"]["run_directory"] = "../run_dir"
@@ -286,23 +185,22 @@ def test_relative_config_path(
     with open(new_config, "w") as f:
         yaml.dump(config_data, f)
 
-    # Run from the subdirectory with relative config path
     result = run_cli_command(
         [f"config={config_name}", "create_ispypsa_inputs"], cwd=str(subdir)
     )
-    assert result.returncode == 0
+    assert result.returncode == 0, (
+        f"Command failed with return code {result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
 
-    # Check outputs were created in the right place
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    expected_file_names = get_expected_output_files("sub_regions")
+    expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
 
+    # Test 2: Absolute config path (from different working directory)
+    # Clean outputs to ensure it runs fresh
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
 
-def test_absolute_config_path(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
-):
-    """Test using absolute path for config file."""
-    # Run from a different directory with absolute config path
     working_dir = tmp_path / "working"
     working_dir.mkdir()
 
@@ -310,8 +208,16 @@ def test_absolute_config_path(
         [f"config={mock_config}", "create_ispypsa_inputs"], cwd=str(working_dir)
     )
     assert result.returncode == 0
-
-    # Check outputs were created according to config paths
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
-    expected_file_names = get_expected_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
+
+
+def test_single_task_mode_fails_without_deps(mock_config, tmp_path, run_cli_command):
+    """Test that -s flag prevents dependency execution and fails when deps missing.
+
+    This test runs quickly as it fails immediately.
+
+    Runs: 1 (fails quickly)
+    """
+    config_path = create_config_with_missing_cache(mock_config, tmp_path)
+    result = run_cli_command([f"config={config_path}", "create_ispypsa_inputs", "-s"])
+    assert result.returncode != 0

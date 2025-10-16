@@ -1,14 +1,2 @@
 Policy,Project,Region,Installed capacity (MW),Energy (MWh),Indicative commissioning date
-LTESA Round 1,Coppabella Wind Farm,NSW,289.8,,2025-07-01
-VRET2,Derby Solar Project BESS,VIC,85.0,100.0,2025-07-01
-VRET2,Fulham Solar Farm BESS,VIC,64.8,116.0,2025-07-01
-VRET2,Fulham Solar Farm,VIC,100.8,,2025-07-01
-LTESA Round 1,Goulburn River BESS,NSW,49.0,392.0,2025-07-01
-VRET2,Horsham Solar Farm BESS,VIC,50.01,100.0,2025-07-01
-VRET2,Kiamal Solar Farm – Stage 2,VIC,150.04,,2026-04-01
-VRET2,Kiamal Solar Farm – Stage 2 BESS,VIC,150.04,300.0,2026-04-01
-QEJP,Kogan Gas,QLD,200.0,,2026-07-01
-LTESA Round 1,Limondale BESS,NSW,50.0,400.0,2025-07-01
-LTESA Round 1,New England Solar Farm - stage 2,NSW,320.0,,2025-07-01
-LTESA Round 1,Silver City Energy Storage,NSW,200.0,1600.0,2025-07-01
-CIS,Smithfield BESS,NSW,65.0,130.0,2025-07-01
+LTESA Round 1,New England Solar Farm - stage 2,NSW,320,,1/07/2025

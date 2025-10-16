@@ -217,7 +217,8 @@ def _merge_table_data(
     replacement_dict = (
         table_data.loc[:, [table_attrs["table_lookup"], table_attrs["table_value"]]]
         .set_index(table_attrs["table_lookup"])
-        .squeeze()
+        # changed from .squeeze() to handle 1 row tables.
+        .loc[:, table_attrs["table_value"]]
         .to_dict()
     )
     # handles differences of mapping values between summmary and outage tables

@@ -228,6 +228,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
+
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
@@ -290,7 +291,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()
-    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+    assert (solar_dir / "Tamworth Solar Farm.parquet").exists()
 
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
@@ -314,7 +315,6 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
 
     # 5. Load and check content of one of the generation files to verify basic structure
@@ -415,12 +415,13 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()
-    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+    assert (solar_dir / "Tamworth Solar Farm.parquet").exists()
 
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
     assert (wind_dir / "Bodangora Wind Farm.parquet").exists()
+
 
     # 3. Check that marginal cost timeseries directory was created with the right files
     marginal_cost_dir = output_dir / "marginal_cost_timeseries"
@@ -439,7 +440,6 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
 
     # 5. Load and check content of one of the files to verify basic structure

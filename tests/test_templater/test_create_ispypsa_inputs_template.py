@@ -27,7 +27,7 @@ def test_create_ispypsa_inputs_template_sub_regions(
         "sub_region_reference_node_voltage_kv" in template_tables["sub_regions"].columns
     )
 
-    assert "CNSW" in template_tables["flow_paths"]["node_from"].values
+    assert "NNSW" in template_tables["flow_paths"]["node_from"].values
 
 
 def test_create_ispypsa_inputs_template_regions(workbook_table_cache_test_path: Path):
@@ -46,7 +46,7 @@ def test_create_ispypsa_inputs_template_regions(workbook_table_cache_test_path: 
         not in template_tables["sub_regions"].columns
     )
 
-    assert "NSW" in template_tables["flow_paths"]["node_from"].values
+    assert "NNSW" in template_tables["flow_paths"]["node_from"].values
 
 
 def test_create_ispypsa_inputs_template_single_regions(

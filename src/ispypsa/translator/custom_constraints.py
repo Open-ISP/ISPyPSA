@@ -107,6 +107,36 @@ def _translate_custom_constraints(
             pypsa_inputs["custom_constraints_rhs"],
         )
 
+    if "custom_constraints_rhs" not in pypsa_inputs:
+        pypsa_inputs["custom_constraints_rhs"] = pd.DataFrame(
+            columns=["constraint_name", "rhs", "constraint_type"]
+        )
+
+    if "custom_constraints_lhs" not in pypsa_inputs:
+        pypsa_inputs["custom_constraints_lhs"] = pd.DataFrame(
+            columns=[
+                "constraint_name",
+                "variable_name",
+                "coefficient",
+                "component",
+                "attribute",
+            ]
+        )
+
+    if "custom_constraints_generators" not in pypsa_inputs:
+        pypsa_inputs["custom_constraints_generators"] = pd.DataFrame(
+            columns=[
+                "name",
+                "isp_name",
+                "bus",
+                "p_nom",
+                "p_nom_extendable",
+                "build_year",
+                "lifetime",
+                "capital_cost",
+            ]
+        )
+
     return pypsa_inputs
 
 
