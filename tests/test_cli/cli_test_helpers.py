@@ -125,7 +125,7 @@ def mock_config(tmp_path, mock_workbook_file):
         "solver": "highs",
         "iasr_workbook_version": "6.0",
         "paths": {
-            "parsed_traces_directory": "C:/Users/nick/Documents/GitHub/ISPyPSA/tests/trace_data",
+            "parsed_traces_directory": "tests/trace_data",
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
