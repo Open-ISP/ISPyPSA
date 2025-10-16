@@ -125,11 +125,12 @@ def mock_config(tmp_path, mock_workbook_file):
         "solver": "highs",
         "iasr_workbook_version": "6.0",
         "paths": {
-            "parsed_traces_directory": "NOT_SET_FOR_TESTING",
+            "parsed_traces_directory": "C:/Users/nick/Documents/GitHub/ISPyPSA/tests/trace_data",
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
         },
+        "filter_by_isp_sub_regions": ["NNSW", "SQ"],
     }
     # Write YAML config
     with open(config_path, "w") as f:
@@ -218,12 +219,13 @@ def assert_task_up_to_date(output, task_name):
     )
 
 
-def verify_output_files(output_dir, expected_files):
+def verify_output_files(output_dir, expected_files, extension="csv"):
     """Verify that expected output files exist and are non-empty.
 
     Args:
         output_dir: Path to directory containing output files
         expected_files: List of expected file names
+        extension: file type extension, csv by default
 
     Raises:
         AssertionError: If files don't exist or are empty
@@ -233,6 +235,7 @@ def verify_output_files(output_dir, expected_files):
 
     # Check expected files exist and are non-empty
     for file_name in expected_files:
+        file_name = file_name + "." + extension
         file_path = output_dir / file_name
         assert file_path.exists(), f"Expected file {file_name} not found"
         assert file_path.stat().st_size > 0, f"File {file_name} is empty"
@@ -290,6 +293,7 @@ def create_config_with_granularity(tmp_path, mock_workbook_file, granularity):
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
         },
+        "filter_by_nem_regions": ["NSW"],
     }
 
     with open(config_path, "w") as f:
@@ -350,18 +354,3 @@ def create_config_with_missing_cache(base_config_path, tmp_path):
         yaml.dump(config_data, f)
 
     return config_path
-
-
-def get_expected_output_files(regional_granularity):
-    """Get expected output files for a given regional granularity.
-
-    Args:
-        regional_granularity: Regional granularity ("sub_regions", "nem_regions", "single_region")
-
-    Returns:
-        list: List of expected CSV filenames
-    """
-    from ispypsa.templater import list_templater_output_files
-
-    expected_files = list_templater_output_files(regional_granularity)
-    return [f"{file}.csv" for file in expected_files]

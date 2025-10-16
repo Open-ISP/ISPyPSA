@@ -1,26 +1,4 @@
 Generator Station,Generating Unit,Technology Type,Min Stable Level (MW)
-Condamine,CPSA_GT1,CCGT - Gas Turbine,20.0
-Condamine,CPSA_GT2,CCGT - Gas Turbine,20.0
+Condamine,CPSA_GT1,CCGT - Gas Turbine,20
+Condamine,CPSA_GT2,CCGT - Gas Turbine,20
 Condamine,CPSA_ST,CCGT - Steam Turbine,13.1
-Darling Downs,DDPS1_GT1,CCGT - Gas Turbine,58.3
-Darling Downs,DDPS1_GT2,CCGT - Gas Turbine,58.3
-Darling Downs,DDPS1_GT3,CCGT - Gas Turbine,58.3
-Darling Downs,DDPS1_ST,CCGT - Steam Turbine,38.9
-Newport,NPS,Gas-powered steam turbine,100.0
-Osborne,OsborneGT,CCGT - Gas Turbine,90.0
-Osborne,OsborneST,CCGT - Steam Turbine,20.0
-Pelican Point,PPCCGTGT1,CCGT - Gas Turbine,60.0
-Pelican Point,PPCCGTGT2,CCGT - Gas Turbine,60.0
-Pelican Point,PPCCGTST,CCGT - Steam Turbine,42.0
-Quarantine,QPS5,OCGT,73.5
-Swanbank E GT,SWAN_E,CCGT,95.0
-Tallawarra,TALWA1,CCGT,190.0
-Torrens Island B,TORRB1,Gas-powered steam turbine,40.0
-Torrens Island B,TORRB2,Gas-powered steam turbine,40.0
-Torrens Island B,TORRB3,Gas-powered steam turbine,40.0
-Torrens Island B,TORRB4,Gas-powered steam turbine,40.0
-Tamar Valley,TVCC201_GT,CCGT - Gas Turbine,70.8
-Tamar Valley,TVCC201_ST,CCGT - Steam Turbine,41.4
-Townsville Power Station,YABULU,CCGT - Gas Turbine,83.0
-Townsville Power Station,YABULU2,CCGT - Steam Turbine,57.0
-Yarwun Cogen,YARWUN_1,CCGT,106.0

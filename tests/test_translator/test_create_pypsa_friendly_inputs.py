@@ -229,14 +229,14 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     ispypsa_tables = {
         "ecaa_generators": pd.DataFrame(
             {
-                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+                "generator": ["Tamworth Solar Farm", "Wambo Wind Farm"],
                 "fuel_type": ["Solar", "Wind"],
             }
         ),
         "sub_regions": pd.DataFrame(
             {
-                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+                "isp_sub_region_id": ["NNSW", "SQ"],
+                "nem_region_id": ["NSW", "QLD"],
             }
         ),
     }
@@ -268,23 +268,21 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()
-    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+    assert (solar_dir / "Tamworth Solar Farm.parquet").exists()
 
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
-    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+    assert (wind_dir / "Wambo Wind Farm.parquet").exists()
 
     # 3. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
-    assert (demand_dir / "CQ.parquet").exists()
-    assert (demand_dir / "NQ.parquet").exists()
+    assert (demand_dir / "SQ.parquet").exists()
 
     # 4. Load and check content of one of the files to verify basic structure
-    solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
+    solar_trace = pd.read_parquet(solar_dir / "Tamworth Solar Farm.parquet")
 
     # Check structure of the output
     assert "snapshots" in solar_trace.columns
@@ -309,14 +307,14 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
     ispypsa_tables = {
         "ecaa_generators": pd.DataFrame(
             {
-                "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+                "generator": ["Tamworth Solar Farm", "Wambo Wind Farm"],
                 "fuel_type": ["Solar", "Wind"],
             }
         ),
         "sub_regions": pd.DataFrame(
             {
-                "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-                "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+                "isp_sub_region_id": ["NNSW", "SQ"],
+                "nem_region_id": ["NSW", "QLD"],
             }
         ),
     }
@@ -343,23 +341,21 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()
-    assert (solar_dir / "Moree Solar Farm.parquet").exists()
+    assert (solar_dir / "Tamworth Solar Farm.parquet").exists()
 
     # 2. Check that wind_traces directory was created with the right files
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
-    assert (wind_dir / "Canunda Wind Farm.parquet").exists()
+    assert (wind_dir / "Wambo Wind Farm.parquet").exists()
 
     # 3. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
-    assert (demand_dir / "CQ.parquet").exists()
-    assert (demand_dir / "NQ.parquet").exists()
+    assert (demand_dir / "SQ.parquet").exists()
 
     # 4. Load and check content of one of the files to verify basic structure
-    solar_trace = pd.read_parquet(solar_dir / "Moree Solar Farm.parquet")
+    solar_trace = pd.read_parquet(solar_dir / "Tamworth Solar Farm.parquet")
 
     # Check structure of the output
     assert "snapshots" in solar_trace.columns
