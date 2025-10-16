@@ -114,16 +114,13 @@ def get_config_save_path():
 @return_empty_list_if_no_config
 def get_capacity_expansion_pypsa_file():
     """Get capacity expansion PyPSA file path."""
-    return (
-        get_pypsa_outputs_directory()
-        / f"{config.ispypsa_run_name}_capacity_expansion.nc"
-    )
+    return get_pypsa_outputs_directory() / "capacity_expansion.nc"
 
 
 @return_empty_list_if_no_config
 def get_operational_pypsa_file():
     """Get operational PyPSA file path."""
-    return get_pypsa_outputs_directory() / f"{config.ispypsa_run_name}_operational.nc"
+    return get_pypsa_outputs_directory() / "operational.nc"
 
 
 @return_empty_list_if_no_config
@@ -258,6 +255,8 @@ def create_ispypsa_inputs_from_config() -> None:
         config.network.nodes.regional_granularity,
         iasr_tables,
         manually_extracted_tables,
+        filter_to_nem_regions=config.filter_by_nem_regions,
+        filter_to_isp_sub_regions=config.filter_by_isp_sub_regions,
     )
     write_csvs(template, input_tables_dir)
 
@@ -312,8 +311,7 @@ def create_and_run_capacity_expansion_model() -> None:
 
     if not dont_run:
         # Never use network.optimize() as this will remove custom constraints.
-        # network.optimize.solve_model(solver_name=config.solver)
-        pass  # TODO: Implement optimization
+        network.optimize.solve_model(solver_name=config.solver)
 
     network.export_to_netcdf(capacity_expansion_pypsa_file)
 

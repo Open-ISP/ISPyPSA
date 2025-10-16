@@ -106,6 +106,9 @@ def _filter_template(
         "new_entrant_build_costs",
         "new_entrant_wind_and_solar_connection_costs",
         "powering_australia_plan",
+        "full_outage_forecasts",
+        "liquid_fuel_prices",
+        "partial_outage_forecasts",
     ]
 
     for table_name in tables_no_filtering:

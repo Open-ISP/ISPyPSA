@@ -87,7 +87,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     ecaa_ispypsa = pd.DataFrame(
         {
-            "generator": ["Moree Solar Farm", "Canunda Wind Farm"],
+            "generator": ["Tamworth Solar Farm", "Wambo Wind Farm"],
             "fuel_type": ["Solar", "Wind"],
         }
     )
@@ -112,10 +112,10 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
     )
 
     files = [
-        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
-        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2025-1.parquet",
-        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2025-2.parquet",
-        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2026-1.parquet",
+        "solar/RefYear2011/Project/Tamworth_Solar_Farm/RefYear2011_Tamworth_Solar_Farm_SAT_HalfYear2024-2.parquet",
+        "solar/RefYear2011/Project/Tamworth_Solar_Farm/RefYear2011_Tamworth_Solar_Farm_SAT_HalfYear2025-1.parquet",
+        "solar/RefYear2018/Project/Tamworth_Solar_Farm/RefYear2018_Tamworth_Solar_Farm_SAT_HalfYear2025-2.parquet",
+        "solar/RefYear2018/Project/Tamworth_Solar_Farm/RefYear2018_Tamworth_Solar_Farm_SAT_HalfYear2026-1.parquet",
     ]
 
     files = [parsed_trace_path / Path(file) for file in files]
@@ -132,16 +132,16 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
     expected_trace = expected_trace.reset_index(drop=True)
 
     got_trace = pd.read_parquet(
-        tmp_path / Path("solar_traces/Moree Solar Farm.parquet")
+        tmp_path / Path("solar_traces/Tamworth Solar Farm.parquet")
     )
 
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
     files = [
-        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2024-2.parquet",
-        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2025-1.parquet",
-        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2025-2.parquet",
-        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2026-1.parquet",
+        "wind/RefYear2011/Project/Wambo_Wind_Farm/RefYear2011_Wambo_Wind_Farm_HalfYear2024-2.parquet",
+        "wind/RefYear2011/Project/Wambo_Wind_Farm/RefYear2011_Wambo_Wind_Farm_HalfYear2025-1.parquet",
+        "wind/RefYear2018/Project/Wambo_Wind_Farm/RefYear2018_Wambo_Wind_Farm_HalfYear2025-2.parquet",
+        "wind/RefYear2018/Project/Wambo_Wind_Farm/RefYear2018_Wambo_Wind_Farm_HalfYear2026-1.parquet",
     ]
 
     files = [parsed_trace_path / Path(file) for file in files]
@@ -157,8 +157,6 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
     ]
     expected_trace = expected_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(
-        tmp_path / Path("wind_traces/Canunda Wind Farm.parquet")
-    )
+    got_trace = pd.read_parquet(tmp_path / Path("wind_traces/Wambo Wind Farm.parquet"))
 
     pd.testing.assert_frame_equal(expected_trace, got_trace)

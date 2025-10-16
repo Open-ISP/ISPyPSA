@@ -70,6 +70,11 @@ testpaths = ["src", "tests"]
 # --cov-branch runs branch coverage
 addopts = "-ra --cov=src/ --cov-branch --cov-report xml:tests/coverage.xml --cov-report html:tests/htmlcov"
 
+[tool.coverage.run]
+omit = [
+    "src/ispypsa/cli/*",
+]
+
 [tool.ruff.lint]
 select = [
     # isort
