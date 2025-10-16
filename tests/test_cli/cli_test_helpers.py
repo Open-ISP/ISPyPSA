@@ -131,7 +131,6 @@ def mock_config(tmp_path, mock_workbook_file):
             "run_directory": str(tmp_path / "run_dir"),
         },
         "filter_by_isp_sub_regions": ["NNSW", "SQ"],
-
     }
     # Write YAML config
     with open(config_path, "w") as f:
