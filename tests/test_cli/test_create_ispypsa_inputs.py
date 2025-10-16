@@ -178,6 +178,9 @@ def test_config_path_variations(
     with open(new_config, "r") as f:
         config_data = yaml.safe_load(f)
 
+    config_data["paths"]["parsed_traces_directory"] = str(
+        Path(config_data["paths"]["parsed_traces_directory"]).absolute()
+    )
     config_data["paths"]["parsed_workbook_cache"] = "../cache"
     config_data["paths"]["workbook_path"] = "../dummy.xlsx"
     config_data["paths"]["run_directory"] = "../run_dir"
@@ -205,7 +208,8 @@ def test_config_path_variations(
     working_dir.mkdir()
 
     result = run_cli_command(
-        [f"config={mock_config}", "create_ispypsa_inputs"], cwd=str(working_dir)
+        [f"config={new_config.absolute()}", "create_ispypsa_inputs"],
+        cwd=str(working_dir),
     )
     assert result.returncode == 0
     verify_output_files(output_dir, expected_file_names)
