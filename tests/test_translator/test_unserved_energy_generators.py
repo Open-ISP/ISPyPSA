@@ -21,7 +21,7 @@ def test_unserved_energy_generator_creation(
     """Test that unserved energy generators are created when cost is specified."""
     # Set unserved energy cost for testing
     sample_model_config.unserved_energy.cost = 10000.0
-    sample_model_config.unserved_energy.generator_size_mw = 5000.0
+    sample_model_config.unserved_energy.max_per_node = 5000.0
 
     pypsa_tables = create_pypsa_friendly_inputs(
         sample_model_config, sample_ispypsa_tables

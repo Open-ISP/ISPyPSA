@@ -19,7 +19,6 @@ paths:
   # This name is used to select the output folder within `ispypsa_runs`
   ispypsa_run_name: development
 
-
 # ===== Trace Data =====================================================================
 
 trace_data:
@@ -32,7 +31,6 @@ trace_data:
   # Currently only 2024 is supported
   # Default: 2024
   dataset_year: 2024
-
 
 # ===== ISPyPSA templating =============================================================
 
@@ -51,6 +49,7 @@ wacc: 0.07
 # Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
 discount_rate: 0.05
 
+<<<<<<< HEAD
 
 # ===== Unserved energy ================================================================
 
@@ -61,6 +60,16 @@ unserved_energy:
   max_per_node: 100000.0
 
 
+=======
+# ===== Unserved energy ================================================================
+
+unserved_energy:
+  # Cost of unserved energy in $/MWh.
+  cost: 10000.0
+  # Maximum allowed unserved demand MW per demand network node.
+  max_per_node: 100000.0
+
+>>>>>>> fcd943e (update docs, input naming, and structure)
 # ===== Network ========================================================================
 
 network:
@@ -73,16 +82,27 @@ network:
   # Years to annuitise transmission project capital costs over.
   annuitisation_lifetime: 30
   nodes:
+<<<<<<< HEAD
     # The regional granularity of the nodes in the modelled network (only sub_regions is implemented)
     regional_granularity: sub_regions
     # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
     # Only discrete_nodes implemented
+=======
+    # The regional granularity of the nodes in the modelled network.  Only implemented
+    # option is sub_regions.
+    regional_granularity: sub_regions
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes. Only
+    # implemented option is discrete_nodes.
+>>>>>>> fcd943e (update docs, input naming, and structure)
     rezs: discrete_nodes
   # Line capacity limit for rez to node connections that have their limit's modelled
   # through custom constraint (MW).
   rez_to_sub_region_transmission_default_limit: 1e5
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fcd943e (update docs, input naming, and structure)
 # ===== Temporal =======================================================================
 
 temporal:
@@ -96,6 +116,10 @@ temporal:
     end_year: 2027
   capacity_expansion:
     resolution_min: 30
+<<<<<<< HEAD
+=======
+    # Order to use reference years in, repeated if necessary.
+>>>>>>> fcd943e (update docs, input naming, and structure)
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs from the beginning
     # of the year (financial or calendar depending on the config) until the next the
@@ -103,6 +127,7 @@ temporal:
     investment_periods: [2025, 2026]
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
+<<<<<<< HEAD
       # Options:
       #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
@@ -146,3 +171,22 @@ solver: highs
 
 # ===== Plotting =====================================================================
 create_plots: True
+=======
+      representative_weeks: [12]
+  operational:
+    resolution_min: 30
+    # Order to use reference years in, repeated if necessary.
+    reference_year_cycle: [2018]
+    # Length of window for rolling horizon optimisation.
+    horizon: 336
+    # Overlap between rolling horizon optimisation windows.
+    overlap: 48
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      representative_weeks: [12]
+
+# ===== Solver =======================================================================
+
+# Optimisation solver to use
+solver: highs
+>>>>>>> fcd943e (update docs, input naming, and structure)

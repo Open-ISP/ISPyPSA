@@ -44,7 +44,7 @@ def check_config_present():
 
 def get_run_directory():
     """Get run directory path."""
-    return Path(config.paths.run_directory) / config.ispypsa_run_name
+    return Path(config.paths.run_directory) / config.paths.ispypsa_run_name
 
 
 def get_workbook_path():
@@ -69,7 +69,7 @@ def get_ispypsa_input_directory():
 
 def get_ispypsa_input_tables_directory():
     """Get ISPyPSA input tables directory path."""
-    return get_ispypsa_input_directory() / "tables"
+    return get_ispypsa_input_directory()
 
 
 def get_pypsa_friendly_directory():

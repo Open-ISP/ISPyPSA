@@ -95,7 +95,7 @@ def test_core_functionality_and_triggers(
     time.sleep(0.1)
 
     # Modify an ISPyPSA input file (dependency)
-    ispypsa_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    ispypsa_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     generators_file = ispypsa_dir / "ecaa_generators.csv"
 
     # Add a dummy row to trigger regeneration

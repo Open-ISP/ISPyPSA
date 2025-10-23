@@ -272,8 +272,8 @@ def sample_model_config():
     )
 
     return ModelConfig(
-        ispypsa_run_name="test_run",
         paths=PathsConfig(
+            ispypsa_run_name="test_run",
             parsed_traces_directory="NOT_SET_FOR_TESTING",
             parsed_workbook_cache="",
             workbook_path="",
@@ -310,7 +310,7 @@ def sample_model_config():
             rez_transmission_expansion=True,
             rez_to_sub_region_transmission_default_limit=1000000.0,
         ),
-        unserved_energy=UnservedEnergyConfig(cost=10000, generator_size_mw=10000),
+        unserved_energy=UnservedEnergyConfig(cost=10000, max_per_node=10000),
     )
 
 

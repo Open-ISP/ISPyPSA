@@ -914,7 +914,7 @@ def _calculate_blended_fuel_prices(
 
 
 def _create_unserved_energy_generators(
-    buses: pd.DataFrame, cost: float, generator_size_mw: float
+    buses: pd.DataFrame, cost: float, max_per_node: float
 ) -> pd.DataFrame:
     """Create unserved energy generators for each bus in the network.
 
@@ -923,8 +923,8 @@ def _create_unserved_energy_generators(
 
     Args:
         buses: DataFrame containing bus information with a 'name' column
-        cost: Marginal cost of unserved energy ($/MWh).
-        generator_size_mw: Size of unserved energy generators (MW)
+        cost: Marginal cost of unserved energy ($/MWh)
+        max_per_node: Size of unserved energy generators (MW)
 
     Returns:
         DataFrame containing unserved energy generators in PyPSA format
@@ -935,7 +935,7 @@ def _create_unserved_energy_generators(
             "name": "unserved_energy_" + buses["name"],
             "carrier": "Unserved Energy",
             "bus": buses["name"],
-            "p_nom": generator_size_mw,
+            "p_nom": max_per_node,
             "p_nom_extendable": False,
             "p_min_pu": 0.0,
             "build_year": 0,

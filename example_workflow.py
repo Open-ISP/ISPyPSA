@@ -30,10 +30,10 @@ run_directory = Path(config.paths.run_directory)
 
 # Construct full paths from base paths
 ispypsa_input_tables_directory = (
-    run_directory / config.ispypsa_run_name / "ispypsa_inputs" / "tables"
+    run_directory / config.paths.ispypsa_run_name / "ispypsa_inputs"
 )
 pypsa_friendly_inputs_location = (
-    run_directory / config.ispypsa_run_name / "pypsa_friendly"
+    run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
 )
 capacity_expansion_timeseries_location = (
     pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
@@ -101,7 +101,7 @@ network = build_pypsa_network(
 network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
-save_results(network, pypsa_outputs_directory, config.ispypsa_run_name)
+save_results(network, pypsa_outputs_directory, "capacity_expansion")
 
 # Operational modelling extension
 operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
@@ -131,5 +131,4 @@ network.optimize.optimize_with_rolling_horizon(
     overlap=config.temporal.operational.overlap,
 )
 
-save_results(network, pypsa_outputs_directory, config.ispypsa_run_name + "_operational")
-
+save_results(network, pypsa_outputs_directory, "operational")

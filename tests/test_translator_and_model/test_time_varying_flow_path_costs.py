@@ -39,8 +39,8 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
 
     # Create a mock config
     config_dict = {
-        "ispypsa_run_name": "test",
         "paths": {
+            "ispypsa_run_name": "test",
             "parsed_traces_directory": "ENV",
             "parsed_workbook_cache": "",
             "workbook_path": "",
@@ -78,7 +78,7 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
         },
         "unserved_energy": {
             "cost": 10000.0,
-            "generator_size_mw": 1000.0,
+            "max_per_node": 1000.0,
         },
         "solver": "highs",
         "iasr_workbook_version": "6.0",

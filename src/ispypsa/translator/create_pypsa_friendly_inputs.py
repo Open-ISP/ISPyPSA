@@ -137,7 +137,7 @@ def create_pypsa_friendly_inputs(
         unserved_energy_generators = _create_unserved_energy_generators(
             buses[0],  # create generators for just demand buses not rez buses too.
             config.unserved_energy.cost,
-            config.unserved_energy.generator_size_mw,
+            config.unserved_energy.max_per_node,
         )
         pypsa_inputs["generators"] = pd.concat(
             [pypsa_inputs["generators"], unserved_energy_generators], ignore_index=True

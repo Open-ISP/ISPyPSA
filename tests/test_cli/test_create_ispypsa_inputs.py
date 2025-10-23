@@ -57,7 +57,7 @@ def test_create_ispypsa_inputs_task(
     assert result.returncode == 0, result.stdout
 
     # Check outputs created
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     assert output_dir.exists()
     expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
@@ -128,7 +128,7 @@ def test_cli_flags_and_dependency_chain(
     result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
     assert result.returncode == 0
 
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     original_timestamps = get_file_timestamps(output_dir)
     time.sleep(0.1)
 
@@ -152,7 +152,7 @@ def test_cli_flags_and_dependency_chain(
     assert_task_ran(result.stdout, "cache_required_iasr_workbook_tables")
     assert_task_ran(result.stdout, "create_ispypsa_inputs")
 
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
 
@@ -195,7 +195,7 @@ def test_config_path_variations(
         f"Command failed with return code {result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
 
-    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs" / "tables"
+    output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     expected_file_names = list_templater_output_files("sub_regions")
     verify_output_files(output_dir, expected_file_names)
 

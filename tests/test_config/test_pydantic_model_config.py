@@ -44,7 +44,6 @@ def get_valid_config():
     and is used by both test_valid_config and test_invalid_config.
     """
     return {
-        "ispypsa_run_name": "test",
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -84,10 +83,11 @@ def get_valid_config():
                 },
             },
         },
-        "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
+        "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
         "paths": {
+            "ispypsa_run_name": "test",
             "parsed_traces_directory": "tests/test_traces",
             "parsed_workbook_cache": "ispypsa_runs/workbook_table_cache",
             "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
@@ -230,7 +230,7 @@ def invalid_unserved_energy_cost(config):
 
 
 def invalid_unserved_energy_generator_size(config):
-    config["unserved_energy"] = {"generator_size_mw": "large"}  # Should be a float
+    config["unserved_energy"] = {"max_per_node": "large"}  # Should be a float
     return config, ValidationError
 
 
@@ -338,11 +338,11 @@ def test_unserved_energy_defaults():
     config = get_valid_config()
     # Remove unserved_energy fields entirely
     del config["unserved_energy"]["cost"]
-    del config["unserved_energy"]["generator_size_mw"]
+    del config["unserved_energy"]["max_per_node"]
     # This should not raise an error and use defaults
     model = ModelConfig(**config)
     # Verify default values are used
-    assert model.unserved_energy.generator_size_mw == 1e5
+    assert model.unserved_energy.max_per_node == 1e5
     assert model.unserved_energy.cost is None
 
 
