@@ -2,8 +2,6 @@
 
 paths:
   # The path to the folder containing parsed demand, wind and solar traces.
-  # If set to ENV the path will be retrieved from the environment variable
-  # "PATH_TO_PARSED_TRACES"
   parsed_traces_directory: ENV
 
   # The path to the ISP workbook Excel file
@@ -82,6 +80,7 @@ temporal:
     end_year: 2027
   capacity_expansion:
     resolution_min: 30
+    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs from the beginning
     # of the year (financial or calendar depending on the config) until the next the
@@ -92,8 +91,11 @@ temporal:
       representative_weeks: [12]
   operational:
     resolution_min: 30
+    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
+    # Length of window for rolling horizon optimisation.
     horizon: 336
+    # Overlap between rolling horizon optimisation windows.
     overlap: 48
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.

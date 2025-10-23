@@ -247,3 +247,4 @@ the second optimisations decisions are recorded as the model dispatch values. Th
 ahead so it is not completely naive to future conditions.
 - Fixing investment decisions and using rolling horizons reduce model complexity and speed up run time, allowing for
 operation to be modelled with greater temporal resolution than capacity expansion.
+
