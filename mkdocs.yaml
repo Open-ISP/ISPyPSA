@@ -42,7 +42,7 @@ nav:
   - Documentation guide: guide.md
   - Getting started: getting_started.md
   - Workflow: workflow.md
-  - Modelling methodology: methodology.md
+  - Modelling method: method.md
   - Config: config.md
   - Tables:
       - ISPyPSA input tables: tables/ispypsa.md

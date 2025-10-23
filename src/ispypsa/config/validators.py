@@ -8,6 +8,7 @@ from ..templater.lists import _ISP_SCENARIOS
 
 
 class PathsConfig(BaseModel):
+    ispypsa_run_name: str
     parsed_traces_directory: str
     parsed_workbook_cache: str
     workbook_path: str | None
@@ -131,11 +132,10 @@ class TemporalConfig(BaseModel):
 
 class UnservedEnergyConfig(BaseModel):
     cost: float = None
-    generator_size_mw: float = 1e5  # Default to a very large value (100,000 MW)
+    max_per_node: float = 1e5  # Default to a very large value (100,000 MW)
 
 
 class ModelConfig(BaseModel):
-    ispypsa_run_name: str
     paths: PathsConfig
     scenario: Literal[tuple(_ISP_SCENARIOS)]
     wacc: float

@@ -13,7 +13,7 @@ workflow, which converts AEMO inputs and data into a PyPSA model.
 
 ## Modelling methodology
 
-The [Methodology](methodology.md) explains the conceptual details of the model ISPyPSA
+The [Methodology](method.md) explains the conceptual details of the model ISPyPSA
 builds in PyPSA, and how this is controlled through user settings (config). By
 *conceptual*, we mean the descriptions are intended to describe the model in terms any
 modeller or analyst can understand, rather than explaining the Python code or the data
@@ -41,7 +41,7 @@ the required columns, their units, and their effect on the model.
 
 - [ISPyPSA input tables](tables/ispypsa.md) describe the set of tables taken as inputs
   to the [translater](workflow/translater.md), these tables are the recommended inputs
-  for must users to edit to create custom ISP scenarios.
+  for most users to edit and create custom ISP scenarios.
 - [PyPSA friendly inputs](tables/ispypsa.md) describe the set of tables taken as inputs
   to the [model](workflow/model.md), these tables are provided as audit points, but
   may also be useful for advanced users looking for fine tuned model control.
@@ -49,7 +49,7 @@ the required columns, their units, and their effect on the model.
 ## API
 
 The [API](api.md) section explains the different ISPyPSA functions used to implement
-the modelling workflow. This documentation is will helpful for users creating custom
+the modelling workflow. This documentation is helpful for users creating custom
 workflows, or looking to reuse individual elements of the ISPyPSA functionality within
 their own projects.
 
