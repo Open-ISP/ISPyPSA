@@ -71,13 +71,13 @@ traces and workbooks from.
      The top of your yaml file should look something like this:
 
      ```yaml
-      # The name of the ISPyPSA model run
-      # This name is used to select the output folder within `ispypsa_runs`
-      ispypsa_run_name: example_model_run
-
       # ===== Path configuration =============================================================
 
       paths:
+        # The name of the ISPyPSA model run
+        # This name is used to select the output folder within `ispypsa_runs`
+        ispypsa_run_name: example_model_run
+
         # The path to the folder containing parsed demand, wind and solar traces.
         # If set to ENV the path will be retrieved from the environment variable "PATH_TO_PARSED_TRACES"
         parsed_traces_directory: "D:/isp_2024_data/parsed_trace_data"
@@ -90,7 +90,7 @@ traces and workbooks from.
 
         # The run directory where all inputs and outputs will be stored
         # Subdirectories will be created automatically:
-        #   - {run_directory}/{ispypsa_run_name}/ispypsa_inputs/tables
+        #   - {run_directory}/{ispypsa_run_name}/ispypsa_inputs
         #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly
         #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries
         #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries
@@ -122,9 +122,8 @@ traces and workbooks from.
        <run_directory>/
        └── <ispypsa_run_name>/
            ├── ispypsa_inputs/
-           │   ├── tables/
-           │   │   ├── build_costs.csv
-           │   │   ├── ...
+           │   ├── build_costs.csv
+           │   ├── ...
            ├── pypsa_friendly/
            │   ├── buses.csv
            │   ├── ...
@@ -147,7 +146,7 @@ traces and workbooks from.
 
 4. The previous model run used the default inputs for the ISP scenario specified in the
    yaml file. To run model with different inputs you can edit the csv files in
-   `<run_directory>/<ispypsa_run_name>/ispypsa_inputs/tables/`. To rerun the model
+   `<run_directory>/<ispypsa_run_name>/ispypsa_inputs/`. To rerun the model
    with the new inputs, use the same commands as before to rerun the
    model. By default, `ispypsa` will detect that the inputs have changed and rerun only
    modelling workflow steps which depend on the changed inputs, but not workflow steps

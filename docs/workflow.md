@@ -1,7 +1,7 @@
 The ISPyPSA workflow consists of a series of data handling and manipulation steps to
-take input data from AEMO provided formats to formats consistent with the PyPSA API.
-Once the PyPSA friendly inputs are created then a PyPSA network object is created
-and optimised to run the capacity expansion and operational modelling results. The
+convert input data from the AEMO provided format to a format consistent with the PyPSA
+API. Once the PyPSA friendly inputs are created then a PyPSA network object is created
+and optimised to run the capacity expansion and operational modelling. The
 steps of the workflow are outlined below.
 
 ## Input data downloading
@@ -15,7 +15,7 @@ Inputs Assumptions Scenarios Report (IASR) MS Excel workbook. The workbook parsi
 step of the workflow extracts this data from the workbook and saves the data in a set of
 CSV files, with each CSV file corresponding to a table from the workbook. The parsing
 is handled by the external package [isp-workbook-parser](https://github.
-com/Open-ISP/isp-workbook-parser), but running of the parser is integrated directly
+com/Open-ISP/isp-workbook-parser), but running the parser is integrated directly
 into the ISPyPSA workflow via a call to the isp-workbook-parser API. The workbook
 parsing can be run using either the ISPyPSA CLI or API:
 
@@ -80,7 +80,7 @@ run using either ISPyPSA CLI or API.
     parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.run_name / "ispypsa_inputs" / "tables"
+        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
     )
 
     # Get raw IASR tables
@@ -129,10 +129,10 @@ step can be run using either the ISPyPSA CLI or API.
     parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.run_name / "ispypsa_inputs" / "tables"
+        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
     )
     pypsa_friendly_inputs_location = (
-        run_directory / config.run_name / "pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name /"pypsa_friendly"
     )
     capacity_expansion_timeseries_location = (
         pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
@@ -179,10 +179,10 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.run_name / "ispypsa_inputs" / "tables"
+        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
     )
     pypsa_friendly_inputs_location = (
-        run_directory / config.run_name / "pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name /"pypsa_friendly"
     )
     operational_timeseries_location = (
         pypsa_friendly_inputs_location / "operational_timeseries"
@@ -262,7 +262,7 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     save_results(
         network,
         pypsa_outputs_directory,
-        config.ispypsa_run_name + "_capacity_expansion"
+        config.paths.ispypsa_run_name +"_capacity_expansion"
     )
     ```
 
@@ -306,7 +306,7 @@ computational complexity.
     )
     pypsa_outputs_directory = run_directory / "outputs"
     capacity_expansion_pypsa_file = (
-        pypsa_outputs_directory / config.ispypsa_run_name + "_capacity_expansion"
+        pypsa_outputs_directory / config.paths.ispypsa_run_name +"_capacity_expansion"
     )
 
     # Get PyPSA freindly inputs as pd.DataFrames
@@ -333,6 +333,6 @@ computational complexity.
     save_results(
         network,
         pypsa_outputs_directory,
-        config.ispypsa_run_name + "_operational"
+        config.paths.ispypsa_run_name +"_operational"
     )
     ```

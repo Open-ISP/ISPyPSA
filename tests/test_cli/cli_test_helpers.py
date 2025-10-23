@@ -91,7 +91,6 @@ def mock_config(tmp_path, mock_workbook_file):
     """
     config_path = tmp_path / "test_config.yaml"
     config_content = {
-        "ispypsa_run_name": "test_run",
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -121,10 +120,11 @@ def mock_config(tmp_path, mock_workbook_file):
                 "aggregation": {"representative_weeks": [0]},
             },
         },
-        "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
+        "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
         "paths": {
+            "ispypsa_run_name": "test_run",
             "parsed_traces_directory": "tests/trace_data",
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),
@@ -254,7 +254,6 @@ def create_config_with_granularity(tmp_path, mock_workbook_file, granularity):
     """
     config_path = tmp_path / f"config_{granularity}.yaml"
     config_content = {
-        "ispypsa_run_name": "test_run",
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -284,10 +283,11 @@ def create_config_with_granularity(tmp_path, mock_workbook_file, granularity):
                 "aggregation": {"representative_weeks": [0]},
             },
         },
-        "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
+        "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
         "paths": {
+            "ispypsa_run_name": "test_run",
             "parsed_traces_directory": "NOT_SET_FOR_TESTING",
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),

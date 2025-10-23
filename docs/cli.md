@@ -165,7 +165,7 @@ ispypsa config=config.yaml create_and_run_capacity_expansion_model
 
 **Outputs:**
 
-- Optimized capacity expansion results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.nc`
+- Optimized capacity expansion results in `{run_directory}/{run_name}/outputs/capacity_expansion.nc`
 
 **Skip Optimization Option:**
 
@@ -215,13 +215,13 @@ ispypsa config=config.yaml create_and_run_operational_model
 
 **Inputs:**
 
-- Capacity expansion results in `{run_directory}/{run_name}/outputs/{run_name}_capacity_expansion.nc`
+- Capacity expansion results in `{run_directory}/{run_name}/outputs/capacity_expansion.nc`
 - PyPSA-friendly tables in `{run_directory}/{run_name}/pypsa_friendly/`
 - Operational time series data in `{run_directory}/{run_name}/pypsa_friendly/operational_timeseries/`
 
 **Outputs:**
 
-- Operational optimization results in `{run_directory}/{run_name}/outputs/{run_name}_operational.h5`
+- Operational optimization results in `{run_directory}/{run_name}/outputs/operational.h5`
 
 !!! note "Running Without Capacity Expansion"
 

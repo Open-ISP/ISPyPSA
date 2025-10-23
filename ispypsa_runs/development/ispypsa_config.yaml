@@ -2,8 +2,6 @@
 
 paths:
   # The path to the folder containing parsed demand, wind and solar traces.
-  # If set to ENV the path will be retrieved from the environment variable
-  # "PATH_TO_PARSED_TRACES"
   parsed_traces_directory: ENV
 
   # The path to the ISP workbook Excel file
@@ -13,16 +11,9 @@ paths:
   parsed_workbook_cache: "ispypsa_runs/workbook_table_cache"
 
   # The run directory where all inputs and outputs will be stored
-  # Subdirectories will be created automatically:
-  #   - {run_directory}/ispypsa_inputs
-  #   - {run_directory}/pypsa_friendly
-  #   - {run_directory}/pypsa_friendly/capacity_expansion_timeseries
-  #   - {run_directory}/pypsa_friendly/operational_timeseries
-  #   - {run_directory}/outputs
-  run_directory: "ispypsa_runs"
+  run_directory: ispypsa_runs
 
-  # The name of the ISPyPSA model run
-  # This name is used to select the output folder within `ispypsa_runs`
+  # Used to name the subdirectory within `ispypsa_runs` where inputs/outputs are saved.
   ispypsa_run_name: development
 
 
@@ -32,12 +23,6 @@ paths:
 iasr_workbook_version: "6.0"
 
 # The ISP scenario for which to generate ISPyPSA inputs
-# Options (descriptions lifted from the 2024 ISP):
-#   "Progressive Change": Reflects slower economic growth and energy investment with
-#       economic and international factors placing industrial demands at greater risk and slower
-#       decarbonisation action beyond current commitments
-#   "Step Change": Fulfils Australia’s emission reduction commitments in a growing economy
-#   "Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports
 scenario: Step Change
 
 # ===== Financial/Economic =============================================================
@@ -51,9 +36,9 @@ discount_rate: 0.05
 # ===== Unserved energy ================================================================
 
 unserved_energy:
-  # Cost of unserved energy in $/MWh. Set to 'None' to disable unserved energy generators.
+  # Cost of unserved energy in $/MWh.
   cost: 10000.0
-  # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
+  # Maximum allowed unserved demand MW per demand network node.
   max_per_node: 100000.0
 
 # ===== Network ========================================================================
@@ -68,17 +53,11 @@ network:
   # Years to annuitise transmission project capital costs over.
   annuitisation_lifetime: 30
   nodes:
-    # The regional granularity of the nodes in the modelled network
-    # Options:
-    #   "sub_regions": ISP sub-regions are added as network nodes (12 nodes)
-    #   "nem_regions": NEM regions are added as network nodes (5 nodes)
-    #   "single_region": A single node, the Victorian sub-region, is added as a network node (1 node)
-    #   TODO: Clarify `single_region`/`copper_plate` implementation
+    # The regional granularity of the nodes in the modelled network.  Only implemented
+    # option is sub_regions.
     regional_granularity: sub_regions
-    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
-    # Options:
-    #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
-    #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes. Only
+    # implemented option is discrete_nodes.
     rezs: discrete_nodes
   # Line capacity limit for rez to node connections that have their limit's modelled
   # through custom constraint (MW).
@@ -97,6 +76,7 @@ temporal:
     end_year: 2027
   capacity_expansion:
     resolution_min: 30
+    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs from the beginning
     # of the year (financial or calendar depending on the config) until the next the
@@ -104,42 +84,20 @@ temporal:
     investment_periods: [2025, 2026]
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
-      # Options:
-      #   "None": Full yearly temporal representation is used.
-      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
-      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
-      #   first full week of each modelled year.
       representative_weeks: [12]
   operational:
     resolution_min: 30
+    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
+    # Length of window for rolling horizon optimisation.
     horizon: 336
+    # Overlap between rolling horizon optimisation windows.
     overlap: 48
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
-      # Options:
-      #   "None": Full yearly temporal representation is used.
-      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
-      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
-      #   first full week of each modelled year.
       representative_weeks: [12]
 
 # ===== Solver =======================================================================
 
-# External solver to use
-# Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):
-#   Free, and by default, installed with ISPyPSA:
-#     "highs"
-#   Free, but must be installed by the user:
-#     "cbc"
-#     "glpk"
-#     "scip"
-#   Not free and must be installed by the user:
-#     "cplex"
-#     "gurobi"
-#     "xpress"
-#     "mosek"
-#     "copt"
-#     "mindopt"
-#     "pips"
+# Optimisation solver to use
 solver: highs
