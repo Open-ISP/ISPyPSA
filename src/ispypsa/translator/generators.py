@@ -742,7 +742,7 @@ def _get_dynamic_fuel_prices(
             )
             all_dynamic_fuel_prices.append(carrier_prices_table)
 
-    non_fuel_carriers = ["Wind", "Water", "Solar"]
+    non_fuel_carriers = ["Wind", "Water", "Solar", "Unserved Energy"]
     non_fuel_prices_df = pd.DataFrame(
         generators_df.loc[
             generators_df["carrier"].isin(non_fuel_carriers),
@@ -933,6 +933,41 @@ def _calculate_blended_fuel_prices(
     blended_fuel_prices_df.index.name = "isp_fuel_cost_mapping"
 
     return blended_fuel_prices_df
+
+
+def _create_unserved_energy_generators(
+    buses: pd.DataFrame, cost: float, generator_size_mw: float
+) -> pd.DataFrame:
+    """Create unserved energy generators for each bus in the network.
+
+    These generators allow the model to opt for unserved energy at a very high cost
+    when other options are exhausted or infeasible, preventing model infeasibility.
+
+    Args:
+        buses: DataFrame containing bus information with a 'name' column
+        cost: Marginal cost of unserved energy ($/MWh). Passed as `isp_vom_$/mwh_sent_out`
+            as the time-independent, non-zero marginal cost component in calculations.
+        generator_size_mw: Size of unserved energy generators (MW)
+
+    Returns:
+        DataFrame containing unserved energy generators in PyPSA format
+    """
+
+    generators = pd.DataFrame(
+        {
+            "name": "unserved_energy_" + buses["name"],
+            "carrier": "Unserved Energy",
+            "bus": buses["name"],
+            "p_nom": generator_size_mw,
+            "p_nom_extendable": False,
+            "marginal_cost": "unserved_energy_" + buses["name"],
+            "isp_fuel_cost_mapping": "Unserved Energy",
+            "isp_vom_$/mwh_sent_out": cost,
+            "isp_heat_rate_gj/mwh": 0.0,
+        }
+    )
+
+    return generators
 
 
 def create_pypsa_friendly_ecaa_generator_timeseries(

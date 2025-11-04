@@ -181,7 +181,11 @@ def create_pypsa_friendly_timeseries_inputs(
     in the 'solar_traces' and 'wind_traces' directories with the columns "snapshots"
     (datetime) and "p_max_pu" (float specifying availability in MW).
 
-    - a time series file is created for each generator
+    - a time series file is created for each generator in the translated generators table
+    (table in pypsa_inputs dict) containing the marginal costs for each generator in each
+    snapshot. The time series data is saved in parquet files in the 'marginal_costs' directory
+    with the columns "snapshots" (datetime) and "marginal_cost" (float specifying marginal
+    cost in $/MWh).
 
     - a time series file is created for each model region specifying the load in that
     region (regions set by config.network.nodes.regional_granularity). The time series

@@ -40,7 +40,8 @@ def test_unserved_energy_generator_creation(
         assert gen["name"].startswith("unserved_energy_")
         assert gen["p_nom"] == 5000.0
         assert gen["p_nom_extendable"] == False
-        assert gen["marginal_cost"] == 10000.0
+        assert gen["marginal_cost"].startswith("unserved_energy_")
+        assert gen["isp_vom_$/mwh_sent_out"] == 10000.0
         assert gen["bus"] in pypsa_tables["buses"]["name"].values
 
 
@@ -70,6 +71,6 @@ def test_create_unserved_energy_generators():
     # Test with cost specified
     unserved_generators = _create_unserved_energy_generators(buses, 5000.0, 1000.0)
     assert len(unserved_generators) == 3
-    assert all(unserved_generators["marginal_cost"] == 5000.0)
+    assert all(unserved_generators["isp_vom_$/mwh_sent_out"] == 5000.0)
     assert all(unserved_generators["p_nom"] == 1000.0)
     assert all(unserved_generators["carrier"] == "Unserved Energy")

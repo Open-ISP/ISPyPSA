@@ -1,7 +1,5 @@
 import logging
 import re
-from heapq import merge
-from pathlib import Path
 
 import pandas as pd
 
@@ -45,17 +43,39 @@ def _template_ecaa_generators_static_properties(
     cleaned_ecaa_generator_summaries = _clean_generator_summary(
         ecaa_generator_summaries
     )
-    # drop any energy storage
-    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.loc[
-        ~cleaned_ecaa_generator_summaries["technology_type"].str.contains("Battery"),
-        :,
-    ].reset_index(drop=True)
-    merged_cleaned_ecaa_generator_summaries = (
+
+    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.reset_index(
+        drop=True
+    )
+    merged_cleaned_ecaa_generator_and_storage_summaries = (
         _merge_and_set_ecaa_generators_static_properties(
             cleaned_ecaa_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_ecaa_generator_summaries
+
+    ecaa_storage_summaries = (
+        merged_cleaned_ecaa_generator_and_storage_summaries.loc[
+            merged_cleaned_ecaa_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    ecaa_generator_summaries = (
+        merged_cleaned_ecaa_generator_and_storage_summaries.loc[
+            ~merged_cleaned_ecaa_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    return ecaa_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:

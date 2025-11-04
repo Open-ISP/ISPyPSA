@@ -1,6 +1,5 @@
 import logging
 import re
-from pathlib import Path
 
 import pandas as pd
 
@@ -45,17 +44,39 @@ def _template_new_generators_static_properties(
         drop=True
     )
     cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
-    # drop any battery storage
-    cleaned_new_generator_summaries = cleaned_new_generator_summaries.loc[
-        ~cleaned_new_generator_summaries["technology_type"].str.contains("Battery"),
-        :,
-    ].reset_index(drop=True)
-    merged_cleaned_new_generator_summaries = (
+
+    cleaned_new_generator_summaries = cleaned_new_generator_summaries.reset_index(
+        drop=True
+    )
+    merged_cleaned_new_generator_and_storage_summaries = (
         _merge_and_set_new_generators_static_properties(
             cleaned_new_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_new_generator_summaries
+
+    new_storage_summaries = (
+        merged_cleaned_new_generator_and_storage_summaries.loc[
+            merged_cleaned_new_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    new_generator_summaries = (
+        merged_cleaned_new_generator_and_storage_summaries.loc[
+            ~merged_cleaned_new_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    return new_generator_summaries
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
