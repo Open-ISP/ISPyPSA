@@ -11,6 +11,10 @@ theme:
 extra_css:
   - extra.css
 
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -21,12 +25,16 @@ markdown_extensions:
       alternate_style: true
   - admonition
   - pymdownx.details
+  - pymdownx.arithmatex:
+      generic: true
 
 plugins:
   - search
   - mkdocstrings:
       handlers:
         python:
+#          options:
+#            preload_modules: []
           options.extra:
             docstring_style: google
             docstring_section_style: list
@@ -52,3 +60,8 @@ nav:
   - Examples:
       - Default workflow: examples/example_api_workflow.md
       - Default config file: examples/example_config.md
+
+
+watch:
+  - src
+  - docs
