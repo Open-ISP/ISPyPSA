@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from ispypsa.translator.create_pypsa_friendly_inputs import list_timeseries_files
+from ispypsa.translator.create_pypsa_friendly import list_timeseries_files
 
 
 class MockNetworkConfig:
