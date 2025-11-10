@@ -22,7 +22,6 @@ def update_network_timeseries(
     expansion model with different reference year cycles.
 
     Examples:
-
         >>> import pandas as pd
         >>> from pathlib import Path
         >>> from ispypsa.data_fetch import read_csvs

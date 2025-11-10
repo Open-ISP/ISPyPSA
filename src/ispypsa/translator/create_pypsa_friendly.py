@@ -54,25 +54,24 @@ def create_pypsa_friendly_inputs(
     """Creates a set of tables for defining a `PyPSA` network from a set `ISPyPSA` tables.
 
     Examples:
+        Perform requried imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs, write_csvs
+        >>> from ispypsa.translator import create_pypsa_friendly_inputs
 
-    # Perform requried imports.
-    >>> from pathlib import Path
-    >>> from ispypsa.config import load_config
-    >>> from ispypsa.data_fetch import read_csvs, write_csvs
-    >>> from ispypsa.translator import create_pypsa_friendly_inputs
+        Load ISPyPSA model config file and input tables.
+        >>> config = load_config(Path("ispypsa_config.yaml"))
+        >>> ispypsa_input_tables = read_csvs(Path("ispypsa_inputs_directory"))
 
-    # Load ISPyPSA model config file and input tables.
-    >>> config = load_config(Path("ispypsa_config.yaml"))
-    >>> ispypsa_input_tables = read_csvs(Path("ispypsa_inputs_directory"))
+        Make the PyPSA friendly inputs!
+        >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(
+        ... config=config,
+        ... ispypsa_tables=ispypsa_input_tables
+        ... )
 
-    # Make the PyPSA friendly inputs!
-    >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(
-    ... config=config,
-    ... ispypsa_tables=ispypsa_input_tables
-    ... )
-
-    # Write the resulting dataframes to CSVs.
-    >>> write_csvs(pypsa_friendly_inputs)
+        Write the resulting dataframes to CSVs.
+        >>> write_csvs(pypsa_friendly_inputs)
 
     Args:
         config: `ISPyPSA` `ispypsa.config.ModelConfig` object (add link to config docs).

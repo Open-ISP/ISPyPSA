@@ -21,25 +21,24 @@ def build_pypsa_network(
     """Creates a `pypsa.Network` based on set of pypsa friendly input tables.
 
     Examples:
+        Peform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs, write_csvs
+        >>> from ispypsa.model import build_pypsa_network
 
-    # Peform required imports.
-    >>> from pathlib import Path
-    >>> from ispypsa.data_fetch import read_csvs, write_csvs
-    >>> from ispypsa.model import build_pypsa_network
+        Read in PyPSA friendly tables from CSV.
+        >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))
 
-    # Read in PyPSA friendly tables from CSV.
-    >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))
+        >>> pypsa_friendly_inputs = build_pypsa_network(
+        ... pypsa_friendly_tables=pypsa_input_tables,
+        ... path_to_pypsa_friendly_timeseries_data=Path("pypsa_friendly_timeseries_data")
+        ... )
 
-    >>> pypsa_friendly_inputs = build_pypsa_network(
-    ... pypsa_friendly_tables=pypsa_input_tables,
-    ... path_to_pypsa_friendly_timeseries_data=Path("pypsa_friendly_timeseries_data")
-    ... )
+        Then the model can be run in PyPSA
+        >>> network.optimize.solve_model(solver_name="highs")
 
-    # Then the model can be run in PyPSA
-    >>> network.optimize.solve_model(solver_name="highs")
-
-    # And the results saved to disk.
-    >>> network.export_to_hdf5(Path("model_results.hdf5"))
+        And the results saved to disk.
+        >>> network.export_to_netcdf(Path("model_results.nc"))
 
     Args:
         pypsa_friendly_tables: dictionary of dataframes in the `PyPSA` friendly format.

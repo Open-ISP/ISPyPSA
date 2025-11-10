@@ -1,5 +1,5 @@
 from ispypsa.translator.buses import create_pypsa_friendly_bus_demand_timeseries
-from ispypsa.translator.create_pypsa_friendly_inputs import (
+from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,
     list_timeseries_files,
