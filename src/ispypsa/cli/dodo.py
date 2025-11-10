@@ -8,7 +8,12 @@ import pypsa
 from doit import create_after, get_var
 
 from ispypsa.config import load_config
-from ispypsa.data_fetch import read_csvs, write_csvs
+from ispypsa.data_fetch import (
+    fetch_trace_data,
+    fetch_workbook,
+    read_csvs,
+    write_csvs,
+)
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, update_network_timeseries
@@ -30,7 +35,7 @@ config_path = get_var("config", None)
 if config_path:
     config = load_config(Path(config_path))
 else:
-    config_path = None
+    config = None
 
 
 def check_config_present():
@@ -47,19 +52,16 @@ def get_run_directory():
     return Path(config.paths.run_directory) / config.paths.ispypsa_run_name
 
 
-def get_workbook_path():
-    """Get parsed workbook cache path."""
-    return Path(config.paths.workbook_path)
-
-
 def get_parsed_workbook_cache():
     """Get parsed workbook cache path."""
     return Path(config.paths.parsed_workbook_cache)
 
 
 def get_parsed_trace_directory():
-    """Get parsed trace directory path."""
-    return Path(config.paths.parsed_traces_directory)
+    """Get parsed trace directory path with isp_{year} appended."""
+    base_path = Path(config.paths.parsed_traces_directory)
+    year_suffix = f"isp_{config.trace_data.dataset_year}"
+    return base_path / year_suffix
 
 
 def get_ispypsa_input_directory():
@@ -127,6 +129,12 @@ def get_operational_pypsa_file():
 def get_local_cache_files():
     """Get list of local cache files."""
     return list_cache_files(get_parsed_workbook_cache())
+
+
+@return_empty_list_if_no_config
+def get_workbook_path():
+    """Get workbook file path."""
+    return Path(config.paths.workbook_path)
 
 
 @return_empty_list_if_no_config
@@ -220,6 +228,92 @@ def build_parsed_workbook_cache() -> None:
         )
 
     build_local_cache(parsed_workbook_cache, workbook_path, version)
+
+
+def download_workbook_from_config() -> None:
+    """Download ISP workbook from manifest.
+
+    Can be run with direct parameters or with config file:
+    - Direct: ispypsa workbook_version=6.0 workbook_path=path/to/workbook.xlsx download_workbook
+    - Config: ispypsa config=config.yaml download_workbook
+    """
+    # Check if direct parameters are provided
+    direct_version = get_var("workbook_version", None)
+    direct_path = get_var("workbook_path", None)
+
+    if direct_version and direct_path:
+        # Use direct parameters (no config needed)
+        version = direct_version
+        workbook_path = Path(direct_path)
+        # Simple logging setup for direct mode
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    else:
+        # Use config file
+        check_config_present()
+        configure_logging_for_run()
+        workbook_path = get_workbook_path()
+        version = config.iasr_workbook_version
+
+    # Validate path
+    if not str(workbook_path).endswith(".xlsx"):
+        raise ValueError(f"workbook_path must end with .xlsx, got: {workbook_path}")
+
+    # Log start
+    logging.info(f"Downloading ISP workbook version {version} to {workbook_path}")
+
+    # Download (fetch_workbook handles directory creation and silently overwrites)
+    fetch_workbook(version, workbook_path)
+
+    # Log completion
+    logging.info("Workbook download completed successfully")
+
+
+def download_trace_data_from_config() -> None:
+    """Download trace data from manifest.
+
+    Can be run with direct parameters or with config file:
+    - Direct: ispypsa save_directory=path/to/traces trace_dataset_type=example download_trace_data
+    - Config: ispypsa config=config.yaml download_trace_data
+    """
+    # Check if direct save_directory parameter is provided
+    direct_save_dir = get_var("save_directory", None)
+
+    if direct_save_dir:
+        # Use direct parameters (no config needed)
+        trace_dir = Path(direct_save_dir)
+        # Get parameters from command line with defaults
+        dataset_type = get_var("trace_dataset_type", "example")
+        dataset_year = int(get_var("trace_dataset_year", "2024"))
+        # Simple logging setup for direct mode
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    else:
+        # Use config file
+        check_config_present()
+        configure_logging_for_run()
+        trace_dir = get_parsed_trace_directory()
+        # Get parameters from config, with command line override
+        dataset_type = get_var("trace_dataset_type", config.trace_data.dataset_type)
+        dataset_year = int(
+            get_var("trace_dataset_year", config.trace_data.dataset_year)
+        )
+
+    # Validate dataset_type
+    if dataset_type not in ["full", "example"]:
+        raise ValueError(
+            f"trace_dataset_type must be 'full' or 'example', got: {dataset_type}"
+        )
+
+    # Log start
+    logging.info(
+        f"Downloading {dataset_type} trace data for {dataset_year} to {trace_dir}"
+    )
+
+    # Download (fetch_trace_data handles directory creation)
+    # Note: Partial downloads from network errors will be left as-is
+    fetch_trace_data(dataset_type, dataset_year, trace_dir)
+
+    # Log completion
+    logging.info("Trace data download completed successfully")
 
 
 def save_config_file() -> None:
@@ -501,4 +595,24 @@ def task_create_and_run_operational_model():
         "actions": [create_and_run_operational_model],
         "file_dep": operational_deps,
         "targets": [get_operational_pypsa_file()],
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_download_workbook():
+    """Download ISP workbook file from data repository."""
+    return {
+        "actions": [download_workbook_from_config],
+        "targets": [get_workbook_path()],
+        "uptodate": [False],  # Always allow re-download
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_download_trace_data():
+    """Download trace data from data repository."""
+    return {
+        "actions": [download_trace_data_from_config],
+        "targets": [],  # No targets to track
+        "uptodate": [False],  # Always allow re-download
     }

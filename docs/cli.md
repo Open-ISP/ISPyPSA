@@ -91,6 +91,93 @@ save_config
     a task is not up to date and will be rerun. This applies to both the primary target
     task and all of its dependencies.
 
+!!! Note
+
+    ISPyPSA provides independent download tasks for obtaining required data files. These tasks are
+    **not part of the main workflow task dependency** and need be explicity run when needed.
+
+### download_workbook
+
+Downloads the ISP workbook Excel file from the data repository.
+
+**Usage with config file:**
+
+```bash
+ispypsa config=config.yaml download_workbook
+```
+
+**Usage with direct parameters (no config file needed):**
+
+```bash
+ispypsa workbook_version=6.0 workbook_path=data/workbooks/6.0.xlsx download_workbook
+```
+
+**Parameters (if not using config):**
+
+- `workbook_version` (required): Version of workbook to download (e.g., "6.0")
+- `workbook_path` (required): Full path where workbook should be saved (must end with .xlsx)
+
+**Outputs:**
+
+- Excel workbook file at the specified path
+
+**Notes:**
+
+- This task will overwrite any existing workbook file at the target location
+- If download fails partway through, partial files will remain
+- Task always runs when invoked (never considers itself up-to-date)
+
+### download_trace_data
+
+Downloads trace data (demand, wind, solar) from the data repository.
+
+**Usage with config file:**
+
+```bash
+# Download example dataset (default - smaller, for testing)
+ispypsa config=config.yaml download_trace_data
+
+# Download full dataset (override config default)
+ispypsa config=config.yaml trace_dataset_type=full download_trace_data
+```
+
+**Usage with direct parameters (no config file needed):**
+
+```bash
+# Download example dataset to specified directory
+ispypsa save_directory=data/traces download_trace_data
+
+# Download full dataset to specified directory
+ispypsa save_directory=data/traces trace_dataset_type=full download_trace_data
+
+# Specify all parameters
+ispypsa save_directory=data/traces trace_dataset_type=example trace_dataset_year=2024 download_trace_data
+```
+
+**Parameters (if not using config):**
+
+- `save_directory`: Directory where trace data should be saved
+- `trace_dataset_type` (optional): Either "example" or "full"
+    - Defaults to "example"
+    - "example": Smaller dataset suitable for testing and development
+    - "full": Complete dataset for production runs
+- `trace_dataset_year` (optional): Year of dataset
+    - Defaults to 2024
+    - Currently only 2024 is supported
+
+**Outputs:**
+
+- Trace data files in the specified directory
+- Files organized in subdirectories: `isp_{year}/project/`, `isp_{year}/zone/`, `isp_{year}/demand/`
+
+**Notes:**
+
+- This task will re-download all files, overwriting any existing trace data
+- If download fails partway through, partial files will remain
+- Task always runs when invoked (never considers itself up-to-date)
+- The "full" dataset manifest is currently empty and will be populated in future releases
+- Direct mode is useful for downloading data before creating a config file
+
 ### cache_required_iasr_workbook_tables
 
 Extracts data from the ISP Excel workbook and caches it as CSV files.

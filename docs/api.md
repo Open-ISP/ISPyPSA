@@ -35,6 +35,10 @@ Python script.
 
 ::: ispypsa.data_fetch.write_csvs
 
+::: ispypsa.data_fetch.fetch_workbook
+
+::: ispypsa.data_fetch.fetch_trace_data
+
 ## Templating (ISPyPSA Input Creation)
 
 ::: ispypsa.templater.create_ispypsa_inputs_template

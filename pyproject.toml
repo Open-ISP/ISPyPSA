@@ -19,6 +19,8 @@ dependencies = [
     "tables>=3.10.1",
     "isp-trace-parser>=1.0.3",
     "isp-workbook-parser>=2.6.0",
+    "requests>=2.32.3",
+    "tqdm>=4.67.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"

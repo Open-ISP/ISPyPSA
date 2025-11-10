@@ -27,6 +27,9 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
 
+hooks:
+  - docs/scripts/copy_files.py
+
 plugins:
   - search
   - mkdocstrings:

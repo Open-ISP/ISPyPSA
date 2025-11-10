@@ -24,7 +24,9 @@ config = load_config(config_path)
 
 # Load base paths from config
 parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
-parsed_traces_directory = Path(config.paths.parsed_traces_directory)
+parsed_traces_directory = (
+    Path(config.paths.parsed_traces_directory) / f"isp_{config.trace_data.dataset_year}"
+)
 workbook_path = Path(config.paths.workbook_path)
 run_directory = Path(config.paths.run_directory)
 
