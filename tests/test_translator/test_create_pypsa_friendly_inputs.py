@@ -222,7 +222,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(tmp_path):
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
     # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
@@ -300,7 +300,7 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(tmp_path):
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
     # Create dummy input tables - using the same data as in test_create_pypsa_friendly_existing_generator_timeseries
