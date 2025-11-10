@@ -51,7 +51,7 @@ def test_translate_rezs_to_buses():
 
 
 def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     sub_regions_ispypsa = pd.DataFrame(
         {
@@ -104,7 +104,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
 
 
 def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     sub_regions_ispypsa = pd.DataFrame(
         {
@@ -162,7 +162,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
 
 
 def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     sub_regions_ispypsa = pd.DataFrame(
         {

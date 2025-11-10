@@ -225,7 +225,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
     # Create snapshots for capacity expansion (hourly)
@@ -349,7 +349,7 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
     # only keep the generators that we have test traces for from the fixtures:
