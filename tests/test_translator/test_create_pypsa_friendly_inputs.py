@@ -104,9 +104,9 @@ def test_create_pypsa_friendly_snapshots_operational():
     assert "snapshots" in snapshots.columns
     assert "investment_periods" in snapshots.columns
 
-    # For operational mode, there should only be one investment period (start year)
-    # even though there are two investment periods in the capacity expansion config
-    assert set(snapshots["investment_periods"].unique()) == {2025}
+    # For operational mode the investment periods should match the
+    # capacity expansion config
+    assert set(snapshots["investment_periods"].unique()) == {2025, 2026}
 
     # Check timestamps start in the right place
     first_date = snapshots["snapshots"].min()
