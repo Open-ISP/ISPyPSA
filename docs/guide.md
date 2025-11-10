@@ -40,11 +40,11 @@ DataFrames. The Tables section provides detailed descriptions of each table, det
 the required columns, their units, and their effect on the model.
 
 - [ISPyPSA input tables](tables/ispypsa.md) describe the set of tables taken as inputs
-  to the [translater](workflow/translater.md), these tables are the recommended inputs
+  to the [translater](workflow.md#translating), these tables are the recommended inputs
   for most users to edit and create custom ISP scenarios.
 - [PyPSA friendly inputs](tables/ispypsa.md) describe the set of tables taken as inputs
-  to the [model](workflow/model.md), these tables are provided as audit points, but
-  may also be useful for advanced users looking for fine tuned model control.
+  to the [model](workflow.md#capacity-expansion-model), these tables are provided as audit
+  points, but may also be useful for advanced users looking for fine tuned model control.
 
 ## API
 

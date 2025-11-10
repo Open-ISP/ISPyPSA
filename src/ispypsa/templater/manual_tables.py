@@ -3,7 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 
-def load_manually_extracted_tables(iasr_workbook_version: str):
+def load_manually_extracted_tables(
+    iasr_workbook_version: str,
+) -> dict[str : pd.DataFrame]:
     """Retrieves the manually extracted template files for the IASR workbook version.
 
     Args:

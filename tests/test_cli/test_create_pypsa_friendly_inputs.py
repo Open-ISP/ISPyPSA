@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from ispypsa.translator.create_pypsa_friendly_inputs import _BASE_TRANSLATOR_OUTPUTS
+from ispypsa.translator.create_pypsa_friendly import _BASE_TRANSLATOR_OUTPUTS
 
 from .cli_test_helpers import (
     assert_task_ran,

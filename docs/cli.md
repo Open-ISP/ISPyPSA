@@ -302,7 +302,7 @@ ispypsa config=../configs/my_config.yaml task_name
 ispypsa config=my_config.yaml task_name
 ```
 
-See the [example configuration file](examples/ispypsa_config.yaml) for the required format.
+See the [example configuration file](examples/example_config.md) for the required format.
 
 ## Examples
 

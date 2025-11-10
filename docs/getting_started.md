@@ -57,7 +57,7 @@ traces and workbooks from.
 
 2. Download the default example config file and place in the new directory.
 
-    [⬇ Download ispypsa_config.yaml](examples/ispypsa_config.py)
+    [⬇ Download ispypsa_config.yaml](examples/example_config.md)
 
 2. Edit the yaml config file so that the paths section matches your environment:
       - `parsed_traces_directory`: Location of demand, wind, and solar trace data.
@@ -194,7 +194,7 @@ traces and workbooks from.
 !!! note "Understanding what's happening under the hood!"
 
       When ISPyPSA is run from the command line the workflow executed is the same as in
-      [example_workflow.py](examples/example_workflow.py). If you want to understand
+      [example_workflow.py](examples/example_api_workflow.md). If you want to understand
       the workflow by tracing the API calls you can follow along in example_workflow.py
       script. Alternatively, the [Workflow](workflow.md) section provides a
       high level explanation.
