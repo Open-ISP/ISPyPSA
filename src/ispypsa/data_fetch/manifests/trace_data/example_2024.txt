@@ -1,0 +1,7 @@
+https://data.openisp.au/processed/isp_2024/project/RefYear=2018/data_0.parquet
+https://data.openisp.au/processed/isp_2024/project/RefYear=2018/data_1.parquet
+https://data.openisp.au/processed/isp_2024/project/RefYear=2018/data_2.parquet
+https://data.openisp.au/processed/isp_2024/zone/RefYear=2018/data_0.parquet
+https://data.openisp.au/processed/isp_2024/zone/RefYear=2018/data_1.parquet
+https://data.openisp.au/processed/isp_2024/zone/RefYear=2018/data_2.parquet
+https://data.openisp.au/processed/isp_2024/demand/Scenario=Step_Change/RefYear=2018/data_0.parquet

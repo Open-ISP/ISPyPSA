@@ -86,6 +86,10 @@ def get_valid_config():
         "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
+        "trace_data": {
+            "dataset_type": "example",
+            "dataset_year": 2024,
+        },
         "paths": {
             "ispypsa_run_name": "test",
             "parsed_traces_directory": "tests/test_traces",
@@ -160,11 +164,6 @@ def invalid_end_year(config):
 def invalid_path_not_directory(config):
     config["paths"]["parsed_traces_directory"] = "tests/wrong_traces"
     return config, NotADirectoryError
-
-
-def invalid_path_wrong_structure(config):
-    config["paths"]["parsed_traces_directory"] = "ispypsa_runs"
-    return config, ValueError
 
 
 def invalid_resolution_min_not_30(config):
@@ -266,6 +265,16 @@ def invalid_env_variable_not_set(config):
     return config, ValueError
 
 
+def invalid_trace_dataset_type(config):
+    config["trace_data"]["dataset_type"] = "invalid"
+    return config, ValidationError
+
+
+def invalid_trace_dataset_year(config):
+    config["trace_data"]["dataset_year"] = "invalid"  # Should be int
+    return config, ValidationError
+
+
 @pytest.mark.parametrize(
     "modifier_func",
     [
@@ -282,7 +291,6 @@ def invalid_env_variable_not_set(config):
         invalid_rez_transmission_limit,
         invalid_end_year,
         invalid_path_not_directory,
-        invalid_path_wrong_structure,
         invalid_resolution_min_not_30,
         invalid_resolution_min_less_than_30,
         invalid_resolution_min_not_multiple_of_30,
@@ -301,6 +309,8 @@ def invalid_env_variable_not_set(config):
         invalid_missing_run_directory,
         invalid_missing_workbook_path,
         invalid_env_variable_not_set,
+        invalid_trace_dataset_type,
+        invalid_trace_dataset_year,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )

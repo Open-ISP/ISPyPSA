@@ -28,15 +28,8 @@ class PathsConfig(BaseModel):
         trace_path = Path(parsed_traces_directory)
         if not trace_path.exists():
             raise NotADirectoryError(
-                f"The parsed traces directory specified in the config1 ({parsed_traces_directory})"
+                f"The parsed traces directory specified in the config ({parsed_traces_directory})"
                 + " does not exist"
-            )
-        # check this folder contains sub-folders named solar, wind and demand
-        child_folders = set([folder.parts[-1] for folder in trace_path.iterdir()])
-        if child_folders != set(("demand", "wind", "solar")):
-            raise ValueError(
-                "The parsed traces directory must contain the following sub-folders"
-                + " with parsed trace data: 'demand', 'solar', 'wind'"
             )
         return parsed_traces_directory
 
@@ -135,6 +128,11 @@ class UnservedEnergyConfig(BaseModel):
     max_per_node: float = 1e5  # Default to a very large value (100,000 MW)
 
 
+class TraceDataConfig(BaseModel):
+    dataset_type: Literal["full", "example"] = "example"
+    dataset_year: int = 2024
+
+
 class ModelConfig(BaseModel):
     paths: PathsConfig
     scenario: Literal[tuple(_ISP_SCENARIOS)]
@@ -144,6 +142,7 @@ class ModelConfig(BaseModel):
     temporal: TemporalConfig
     iasr_workbook_version: str
     unserved_energy: UnservedEnergyConfig
+    trace_data: TraceDataConfig = TraceDataConfig()
     filter_by_nem_regions: list[str] | None = None
     filter_by_isp_sub_regions: list[str] | None = None
     solver: Literal[

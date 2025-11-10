@@ -57,6 +57,33 @@ Examples:
 
 ```ispypsa_run_name: modelling_test_run```
 
+## Trace Data
+
+### trace_data.dataset_type
+
+The type of trace dataset to download when using CLI download tasks. This setting is only used by the `download_trace_data` CLI task.
+
+Options:
+
+- "example": Smaller dataset suitable for testing and development
+- "full": Complete dataset for production runs
+
+Default: "example"
+
+Examples:
+
+```dataset_type: example```
+
+### trace_data.dataset_year
+
+The year of trace dataset to download when using CLI download tasks. This setting is only used by the `download_trace_data` CLI task. Currently only 2024 is supported.
+
+Default: 2024
+
+Examples:
+
+```dataset_year: 2024```
+
 ## ISPyPSA Templating
 
 ### iasr_workbook_version

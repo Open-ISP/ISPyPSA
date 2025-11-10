@@ -26,6 +26,20 @@ paths:
   ispypsa_run_name: development
 
 
+# ===== Trace Data =====================================================================
+
+trace_data:
+  # The type of trace dataset to download when using CLI download tasks
+  # Options: "example" (smaller, for testing) or "full" (complete dataset)
+  # Default: "example"
+  dataset_type: example
+
+  # The year of trace dataset to download when using CLI download tasks
+  # Currently only 2024 is supported
+  # Default: 2024
+  dataset_year: 2024
+
+
 # ===== ISPyPSA templating =============================================================
 
 # The version of IASR workbook that the template inputs are generated from.
