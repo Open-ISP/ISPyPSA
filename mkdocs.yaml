@@ -44,12 +44,12 @@ plugins:
           options.extra:
             docstring_style: google
             docstring_section_style: list
-          rendering:
             show_root_heading: true
             show_source: true
-            show_signature: true  # This is key for displaying signatures
+            show_signature: true
             show_signature_annotations: true
             separate_signature: true
+            heading_level: 3
 
 nav:
   - Introduction: index.md

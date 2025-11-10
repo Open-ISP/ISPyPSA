@@ -46,7 +46,6 @@ the required columns, their units, and their effect on the model.
   to the [model](workflow.md#capacity-expansion-model), these tables are provided as audit
   points, but may also be useful for advanced users looking for fine tuned model control.
 
-
 ## API
 
 The [API](api.md) section explains the different ISPyPSA functions used to implement
