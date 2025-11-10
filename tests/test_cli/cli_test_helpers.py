@@ -130,6 +130,10 @@ def mock_config(tmp_path, mock_workbook_file):
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
         },
+        "trace_data": {
+            "dataset_type": "example",
+            "dateset_year": 2024,
+        },
         "filter_by_isp_sub_regions": ["NNSW", "SQ"],
     }
     # Write YAML config
