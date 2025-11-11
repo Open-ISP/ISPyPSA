@@ -113,8 +113,6 @@ def _add_generators_to_network(
     path_to_marginal_costs = path_to_timeseries_data / Path("marginal_cost_timeseries")
     generators.apply(
         lambda row: _add_generator_to_network(
-            # add a dropna cols to each row? If input is optional to pypsa objects??
-            # check that either p_nom or p_max_pu is not nan?
             row.to_dict(),
             network,
             path_to_solar_traces,

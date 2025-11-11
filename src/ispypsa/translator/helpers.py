@@ -34,8 +34,8 @@ def _annuitised_investment_costs(
     return (capital_cost * wacc) / (1 - (1 + wacc) ** (-1.0 * asset_lifetime))
 
 
-def _get_commissioning_date_year_as_int(
-    commissioning_date_str: str, year_type: str = "fy"
+def _get_commissioning_or_build_year_as_int(
+    commissioning_date_str: str, default_build_year: int, year_type: str = "fy"
 ) -> int:
     """Return build year of CAA generator as an int, or 0 if no build year given.
 
@@ -45,15 +45,16 @@ def _get_commissioning_date_year_as_int(
     Args:
         commissioning_date_str: string describing commissioning date of committed, anticipated
             or additional generator. Expects a date string in the format "%Y-%m-%d".
+        default_build_year: integer to return if no build year is given. Typically
+            this will be the first investment period year.
         year_type: str which should be "fy" or "calendar". If "fy" then investment
             periods are interpreted as specifying financial years (according to the
             calendar year the financial year ends in).
 
-    Returns: integer build year or 0.
+    Returns: integer, default_build_year or year of commissioning date.
     """
-    build_year = 0
     if not isinstance(commissioning_date_str, str):
-        return build_year
+        return default_build_year
     else:
         commissioning_date = pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")
         if commissioning_date.month < 7 or year_type == "calendar":
@@ -104,3 +105,24 @@ def _get_financial_year_int_from_string(
         )
     else:
         raise ValueError(f"Unknown year_type: {year_type}")
+
+
+def _add_investment_periods_as_build_years(
+    df: pd.DataFrame, investment_periods: list[int]
+):
+    """
+    Add investment periods as build years to a pd.DataFrame, adding duplicate rows
+    for each investment period as needed.
+
+    Args:
+        df (pd.DataFrame): pd.DataFrame to add investment periods to.
+        investment_periods (list[int]): list of investment periods.
+
+    Returns:
+        pd.DataFrame: pd.DataFrame with added investment periods as build years.
+    """
+    df["build_year"] = "investment_periods"
+    df["build_year"] = df["build_year"].map({"investment_periods": investment_periods})
+    df = df.explode("build_year").reset_index(drop=True)
+    df["build_year"] = df["build_year"].astype(int)
+    return df

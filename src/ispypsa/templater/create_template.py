@@ -141,7 +141,7 @@ def create_ispypsa_inputs_template(
         )
 
     template["renewable_energy_zones"] = _template_rez_build_limits(
-        iasr_tables["initial_build_limits"]
+        iasr_tables["initial_build_limits"], scenario
     )
 
     possible_rez_or_constraint_names = list(

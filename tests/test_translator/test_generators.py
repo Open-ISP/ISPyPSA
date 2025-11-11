@@ -31,10 +31,10 @@ def test_translate_ecaa_generators(csv_str_to_df, translated_generator_column_or
     """Test translation of existing generators (ECAA) to PyPSA format."""
     # Set up input data using csv_str_to_df
     ecaa_generators_csv = """
-    generator,      technology_type,      region_id,  sub_region_id,  fuel_type,    fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw
-    Bayswater,      Steam__Sub__Critical, NSW,        CNSW,           Black__Coal,  Bayswater,          150.0,            2.5,                 9.8,               1985-01-01,          660.0
-    Borumba,        Pumped__Hydro,        QLD,        SQ,             Hydro,        Hydro,              0.0,              0.0,                 0.0,               2030-01-01,          200.0
-    Tallawarra,     CCGT,                 NSW,        SNSW,           Gas,          Tallawarra,         170.0,            3.5,                 7.2,               2009-01-01,          420.0
+    generator,      technology_type,      region_id,  sub_region_id,  fuel_type,    fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw, rez_id
+    Bayswater,      Steam__Sub__Critical, NSW,        CNSW,           Black__Coal,  Bayswater,          150.0,            2.5,                 9.8,               NaN,                 660.0,               NaN
+    Borumba,        Pumped__Hydro,        QLD,        SQ,             Hydro,        Hydro,              0.0,              0.0,                 0.0,               2030-01-01,          200.0,               NaN
+    Tallawarra,     CCGT,                 NSW,        SNSW,           Gas,          Tallawarra,         170.0,            3.5,                 7.2,               NaN,                 420.0,               NaN
     """
     ecaa_generators = csv_str_to_df(ecaa_generators_csv)
 
@@ -58,12 +58,13 @@ def test_translate_ecaa_generators(csv_str_to_df, translated_generator_column_or
 
     # Define expected output
     expected_output_csv = """
-    name,        p_nom,  p_min_pu,  build_year,  carrier,      lifetime,  isp_fuel_cost_mapping,  isp_vom_$/mwh_sent_out,  isp_heat_rate_gj/mwh,  bus,   marginal_cost,  p_nom_extendable,  capital_cost,  isp_technology_type
-    Bayswater,   660.0,  0.227,     1985,        Black__Coal,  6.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical
-    Borumba,     200.0,  0.0,       2030,        Hydro,        101.0,     Hydro,                  0.0,                     0.0,                   SQ,    borumba,        False,             0.0,           Pumped__Hydro
-    Tallawarra,  420.0,  0.405,     2009,        Gas,          14.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT
+    name,        p_nom,  p_min_pu,  build_year,  carrier,      lifetime,  isp_fuel_cost_mapping,  isp_vom_$/mwh_sent_out,  isp_heat_rate_gj/mwh,  bus,   marginal_cost,  p_nom_extendable,  capital_cost,  isp_technology_type,     isp_rez_id
+    Bayswater,   660.0,  0.227,     2025,        Black__Coal,  6.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical,    NaN
+    Borumba,     200.0,  0.0,       2030,        Hydro,        Infinity,  Hydro,                  0.0,                     0.0,                   SQ,    borumba,        False,             0.0,           Pumped__Hydro,           NaN
+    Tallawarra,  420.0,  0.405,     2025,        Gas,          14.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT,                    NaN
     """
     expected_output = csv_str_to_df(expected_output_csv)
+    expected_output = expected_output.replace("Infinity", np.inf)
 
     expected_column_order = translated_generator_column_order["ecaa_column_order"]
     expected_output = expected_output[expected_column_order]
@@ -82,8 +83,9 @@ def test_translate_ecaa_generators_region_handling(csv_str_to_df):
     """Test that the function correctly handles different region settings."""
     # Set up input data
     generator_csv = """
-    generator,  technology_type,  region_id,  sub_region_id,  fuel_type,  fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw
-    TestGen,    CCGT,             NSW,        CNSW,           Gas,        TestGen,            50.0,             2.0,                 7.0,               ,                    100.0
+    generator,  technology_type,  region_id,  sub_region_id,  fuel_type,  fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw,   rez_id
+    TestGen,    CCGT,             NSW,        CNSW,           Gas,        TestGen,            50.0,             2.0,                 7.0,               ,                    100.0,                 NaN
+    TestWind,   Wind,             NSW,        CNSW,           Wind,       TestWind,           0.0,              5.0,                 0.0,               ,                    100.0,                 N3
     """
     generator = csv_str_to_df(generator_csv)
 
@@ -107,20 +109,43 @@ def test_translate_ecaa_generators_region_handling(csv_str_to_df):
         ispypsa_tables, investment_periods, "sub_regions"
     )
 
-    # Check bus assignment
+    # Check bus assignment - for default rez config "discrete_nodes"
     # single_region: "NEM"
-    assert all(result_single_region["bus"] == "NEM")
+    single_region_non_rez_bus = result_single_region.loc[
+        result_single_region["name"] == "TestGen", "bus"
+    ].values[0]
+    assert single_region_non_rez_bus == "NEM"
+    single_region_rez_bus = result_single_region.loc[
+        result_single_region["name"] == "TestWind", "bus"
+    ].values[0]
+    assert single_region_rez_bus == "N3"
+
     # nem_regions: region_id
-    assert all(result_nem_regions["bus"] == "NSW")
+    nem_regions_non_rez_bus = result_nem_regions.loc[
+        result_nem_regions["name"] == "TestGen", "bus"
+    ].values[0]
+    assert nem_regions_non_rez_bus == "NSW"
+    nem_regions_rez_bus = result_nem_regions.loc[
+        result_nem_regions["name"] == "TestWind", "bus"
+    ].values[0]
+    assert nem_regions_rez_bus == "N3"
+
     # sub_regions: sub_region_id
-    assert all(result_sub_regions["bus"] == "CNSW")
+    sub_regions_non_rez_bus = result_sub_regions.loc[
+        result_sub_regions["name"] == "TestGen", "bus"
+    ].values[0]
+    assert sub_regions_non_rez_bus == "CNSW"
+    sub_regions_rez_bus = result_sub_regions.loc[
+        result_sub_regions["name"] == "TestWind", "bus"
+    ].values[0]
+    assert sub_regions_rez_bus == "N3"
 
 
 def test_translate_new_entrant_generators(
     sample_generator_translator_tables, translated_generator_column_order
 ):
     """Test translation of new entrant generators to PyPSA format."""
-    # Set up input data using csv_str_to_df
+
     new_entrant_generators = pd.DataFrame(
         {
             "generator_name": ["CCGT", "Large scale Solar PV", "Wind"],
@@ -140,7 +165,9 @@ def test_translate_new_entrant_generators(
             "connection_cost_technology": ["CCGT", "Large scale Solar PV", "Wind"],
             "connection_cost_rez/_region_id": ["SA", "Tumut", "Far North Queensland"],
             "technology_specific_lcf_%": [100.0, 95.0, 103.0],
-            "generator": ["CCGT_CSA", "Large_scale_Solar_PV_N7_SAT", "Wind_Q1_WM"],
+            "isp_resource_type": ["CCGT", "SAT", "WM"],
+            "rez_id": [None, "N7", "Q1"],
+            "generator": ["ccgt_csa", "large_scale_solar_pv_n7_sat", "wind_q1_wm"],
         }
     )
 
@@ -168,10 +195,11 @@ def test_translate_new_entrant_generators(
     expected_output = pd.DataFrame(
         {
             "name": [
-                "CCGT_CSA_2025",
-                "Large_scale_Solar_PV_N7_SAT_2025",
-                "Wind_Q1_WM_2025",
+                "ccgt_csa_2025",
+                "large_scale_solar_pv_n7_sat_2025",
+                "wind_q1_wm_2025",
             ],
+            "p_nom": [0.0, 0.0, 0.0],
             "p_nom_mod": [50, 0.0, 0.0],
             "p_nom_max": [400, np.inf, np.inf],
             "p_min_pu": [0.45, 0.0, 0.0],
@@ -185,7 +213,7 @@ def test_translate_new_entrant_generators(
             ],
             "isp_vom_$/mwh_sent_out": [4.0, 0.0, 0.0],
             "isp_heat_rate_gj/mwh": [7.2, 0.0, 0.0],
-            "bus": ["CSA", "SNSW", "NQ"],
+            "bus": ["CSA", "N7", "Q1"],
             "marginal_cost": [
                 "ccgt_csa",
                 "large_scale_solar_pv_n7_sat",
@@ -202,7 +230,8 @@ def test_translate_new_entrant_generators(
                 "Large scale Solar PV",
                 "Wind",
             ],
-            "isp_name": ["CCGT", "Large scale Solar PV", "Wind"],
+            "isp_resource_type": ["CCGT", "SAT", "WM"],
+            "isp_rez_id": [None, "N7", "Q1"],
         }
     )
 
@@ -226,24 +255,26 @@ def test_translate_new_entrant_generators_region_handling(
     # Set up input data
     new_entrant_generators = pd.DataFrame(
         {
-            "generator_name": ["CCGT", "Large scale Solar PV", "Wind"],
-            "technology_type": ["CCGT", "Large scale Solar PV", "Wind"],
-            "region_id": ["QLD", "QLD", "QLD"],
-            "sub_region_id": ["CQ", "NQ", "SQ"],
-            "rez_location": [None, "Northern Qld", "Wide Bay"],
-            "fuel_type": ["Gas", "Solar", "Wind"],
-            "fuel_cost_mapping": ["QLD new CCGT", "Solar", "Wind"],
-            "minimum_stable_level_%": [45.0, 0.0, 0.0],
-            "fom_$/kw/annum": [10.0, 15.0, 25.0],
-            "vom_$/mwh_sent_out": [4.0, 0.0, 0.0],
-            "heat_rate_gj/mwh": [7.2, 0.0, 0.0],
-            "maximum_capacity_mw": [400, None, None],
-            "unit_capacity_mw": [50, None, None],
-            "lifetime": [40, 30, 30],
-            "connection_cost_technology": ["CCGT", "Large scale Solar PV", "Wind"],
-            "connection_cost_rez/_region_id": ["QLD", "Northern Qld", "Wide Bay"],
-            "technology_specific_lcf_%": [100.0, 95.0, 103.0],
-            "generator": ["CCGT_CSA", "Large_scale_Solar_PV_Q2_SAT", "Wind_Q7_WM"],
+            "generator_name": ["CCGT", "Wind"],
+            "technology_type": ["CCGT", "Wind"],
+            "region_id": ["QLD", "QLD"],
+            "sub_region_id": ["CQ", "SQ"],
+            "rez_location": [None, "Wide Bay"],
+            "fuel_type": ["Gas", "Wind"],
+            "fuel_cost_mapping": ["QLD new CCGT", "Wind"],
+            "minimum_stable_level_%": [45.0, 0.0],
+            "fom_$/kw/annum": [10.0, 25.0],
+            "vom_$/mwh_sent_out": [4.0, 0.0],
+            "heat_rate_gj/mwh": [7.2, 0.0],
+            "maximum_capacity_mw": [400, None],
+            "unit_capacity_mw": [50, None],
+            "lifetime": [40, 30],
+            "connection_cost_technology": ["CCGT", "Wind"],
+            "connection_cost_rez/_region_id": ["QLD", "Wide Bay"],
+            "technology_specific_lcf_%": [100.0, 103.0],
+            "rez_id": [None, "Q7"],
+            "generator": ["CCGT_CQ", "Wind_Q7_WM"],
+            "isp_resource_type": ["CCGT", "WM"],
         }
     )
 
@@ -253,8 +284,6 @@ def test_translate_new_entrant_generators_region_handling(
         **{
             k: sample_generator_translator_tables[k]
             for k in [
-                "gas_prices",
-                "biomethane_prices",
                 "new_entrant_build_costs",
                 "new_entrant_wind_and_solar_connection_costs",
                 "new_entrant_non_vre_connection_costs",
@@ -275,16 +304,36 @@ def test_translate_new_entrant_generators_region_handling(
         ispypsa_tables, investment_periods, wacc, "sub_regions"
     )
 
-    # Check bus assignment
+    # Check bus assignment - for default rez config "discrete_nodes"
     # single_region: "NEM"
-    assert all(result_single_region["bus"] == "NEM")
+    single_region_non_rez_bus = result_single_region.loc[
+        result_single_region["name"] == "CCGT_CQ_2025", "bus"
+    ].values[0]
+    assert single_region_non_rez_bus == "NEM"
+    single_region_wind_bus = result_single_region.loc[
+        result_single_region["name"] == "Wind_Q7_WM_2025", "bus"
+    ].values[0]
+    assert single_region_wind_bus == "Q7"
+
     # nem_regions: region_id
-    assert all(result_nem_regions["bus"] == "QLD")
+    nem_regions_non_rez_bus = result_nem_regions.loc[
+        result_nem_regions["name"] == "CCGT_CQ_2025", "bus"
+    ].values[0]
+    assert nem_regions_non_rez_bus == "QLD"
+    nem_regions_wind_bus = result_nem_regions.loc[
+        result_nem_regions["name"] == "Wind_Q7_WM_2025", "bus"
+    ].values[0]
+    assert nem_regions_wind_bus == "Q7"
 
     # sub_regions: sub_region_id
-    assert result_sub_regions.at[0, "bus"] == "CQ"
-    assert result_sub_regions.at[1, "bus"] == "NQ"
-    assert result_sub_regions.at[2, "bus"] == "SQ"
+    sub_regions_non_rez_bus = result_sub_regions.loc[
+        result_sub_regions["name"] == "CCGT_CQ_2025", "bus"
+    ].values[0]
+    assert sub_regions_non_rez_bus == "CQ"
+    sub_regions_wind_bus = result_sub_regions.loc[
+        result_sub_regions["name"] == "Wind_Q7_WM_2025", "bus"
+    ].values[0]
+    assert sub_regions_wind_bus == "Q7"
 
 
 def test_add_closure_year_column(csv_str_to_df):
@@ -324,45 +373,13 @@ def test_add_closure_year_column(csv_str_to_df):
     Liddell_1,                 Coal,               NSW,          2023
     Eraring_1,                 Coal,               NSW,          2025
     Newport_Gas,               CCGT,               VIC,          2040
-    New_Generator_No_Closure,  Wind,               QLD,          2140
+    New_Generator_No_Closure,  Wind,               QLD,          -1
     """
     expected = csv_str_to_df(expected_csv)
 
     pd.testing.assert_frame_equal(
         result.sort_values("generator").reset_index(drop=True),
         expected.sort_values("generator").reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
-def test_add_closure_year_column_empty_closure_df(csv_str_to_df):
-    """Test edge cases for the _add_closure_year_column function."""
-    investment_periods = [2020, 2025, 2030]
-
-    ecaa_generators_csv = """
-    generator,                 technology_type,    region_id
-    Bayswater_1,               Coal,               NSW
-    Newport_Gas,               CCGT,               VIC
-    New_Generator_No_Closure,  Wind,               QLD
-    """
-    ecaa_generators = csv_str_to_df(ecaa_generators_csv)
-    empty_closure = pd.DataFrame(
-        columns=["generator", "duid", "expected_closure_year_calendar_year"]
-    )
-    empty_result = _add_closure_year_column(
-        ecaa_generators, empty_closure, investment_periods
-    )
-    expected_csv = """
-    generator,                 technology_type,    region_id,    closure_year
-    Bayswater_1,               Coal,               NSW,          2130
-    Newport_Gas,               CCGT,               VIC,          2130
-    New_Generator_No_Closure,  Wind,               QLD,          2130
-    """
-    expected_empty = csv_str_to_df(expected_csv)
-
-    pd.testing.assert_frame_equal(
-        empty_result.sort_values("generator").reset_index(drop=True),
-        expected_empty.sort_values("generator").reset_index(drop=True),
         check_dtype=False,
     )
 
@@ -381,74 +398,6 @@ def test_add_closure_year_column_empty_ecaa_df():
         ValueError, match="Can't add closure years to empty ecaa_generators table."
     ):
         _add_closure_year_column(empty_ecaa, empty_closure, investment_periods)
-
-
-def test_add_closure_year_column_no_matching_generators(csv_str_to_df):
-    investment_periods = [2020, 2025, 2030]
-    # Case 2: No matching generators in closure_years
-    no_matches_ecaa_gen_csv = """
-    generator,      technology_type
-    Unknown_Gen_1,  Coal
-    Unknown_Gen_2,  Gas
-    """
-    no_matches_ecaa_gen = csv_str_to_df(no_matches_ecaa_gen_csv)
-
-    closure_csv = """
-    generator,      duid,   expected_closure_year_calendar_year
-    Different_Gen,  DF01,   2035
-    """
-    closure = csv_str_to_df(closure_csv)
-
-    no_matches_result = _add_closure_year_column(
-        no_matches_ecaa_gen, closure, investment_periods
-    )
-
-    # All should get default value (last investment period + 100)
-    expected_no_matches_csv = """
-    generator,      technology_type,  closure_year
-    Unknown_Gen_1,  Coal,             2130
-    Unknown_Gen_2,  Gas,              2130
-    """
-    expected_no_matches = csv_str_to_df(expected_no_matches_csv)
-
-    pd.testing.assert_frame_equal(
-        no_matches_result.sort_values("generator").reset_index(drop=True),
-        expected_no_matches.sort_values("generator").reset_index(drop=True),
-    )
-
-
-def test_add_closure_year_column_missing_year(csv_str_to_df):
-    # Case 3: Default fill for missing closure year (not all generators missing)
-    investment_periods = [2020, 2025, 2030]
-    generators_csv = """
-    generator,    technology_type
-    Station_X,    Coal
-    Station_Y,    CCGT
-    """
-    generators = csv_str_to_df(generators_csv)
-
-    closure_years_csv = """
-    generator,      duid,   expected_closure_year_calendar_year
-    Station_X,      SX1,    2025
-    Station_Y,      SY1,
-    """
-    closure_years = csv_str_to_df(closure_years_csv)
-
-    default_fill_results = _add_closure_year_column(
-        generators, closure_years, investment_periods
-    )
-
-    # Should fill the missing closure year with default (100 + last investment period)
-    expected_default_csv = """
-    generator,    technology_type,  closure_year
-    Station_X,    Coal,             2025
-    Station_Y,    CCGT,             2130
-    """
-    expected_default = csv_str_to_df(expected_default_csv)
-
-    pd.testing.assert_frame_equal(
-        default_fill_results, expected_default, check_dtype=False
-    )
 
 
 def test_add_new_entrant_generator_build_costs(
@@ -560,13 +509,12 @@ def test_add_new_entrant_generator_connection_costs(
     csv_str_to_df, sample_generator_translator_tables
 ):
     generators_csv = """
-    generator_name,                fuel_type,     build_year,   connection_cost_technology,     connection_cost_rez/_region_id
-    CCGT,                          Gas,           2024,         CCGT,                           NSW
-    Large__scale__Solar__PV,       Solar,         2025,         Large__scale__Solar__PV,        Far__North__Queensland
-    Wind,                          Wind,          2023,         Wind,                           Tumut
-    Wind__-__offshore__(floating), Wind,          2024,         Wind__-__offshore__(floating),  Leigh__Creek
-    Biomass,                       Biomass,       2025,         Biomass,                        QLD
-    Dummy__Gen,                    Water,         2024,         Dummy__Gen,                     VIC
+    generator_name,                fuel_type,     build_year,   connection_cost_technology,     connection_cost_rez/_region_id,     generator
+    CCGT,                          Gas,           2024,         CCGT,                           NSW,                                ccgt_nsw
+    Large__scale__Solar__PV,       Solar,         2025,         Large__scale__Solar__PV,        Far__North__Queensland,             large_scale_solar_pv_sat_q1
+    Wind,                          Wind,          2023,         Wind,                           Tumut,                              wind_wm_n7
+    Wind__-__offshore__(floating), Wind,          2024,         Wind__-__offshore__(floating),  Leigh__Creek,                       wind_wfl_s6
+    Biomass,                       Biomass,       2025,         Biomass,                        QLD,                                biomass_qld
     """
     generators_df = csv_str_to_df(generators_csv)
 
@@ -585,19 +533,36 @@ def test_add_new_entrant_generator_connection_costs(
     result_col_order = result.columns
 
     expected_result = """
-    generator_name,                fuel_type,     build_year,   connection_cost_technology,     connection_cost_rez/_region_id,        connection_cost_$/mw
-    CCGT,                          Gas,           2024,         CCGT,                           NSW,                                   85000
-    Large__scale__Solar__PV,       Solar,         2025,         Large__scale__Solar__PV,        Far__North__Queensland,                267000
-    Wind,                          Wind,          2023,         Wind,                           Tumut,                                 337000
-    Wind__-__offshore__(floating), Wind,          2024,         Wind__-__offshore__(floating),  Leigh__Creek,                          0
-    Biomass,                       Biomass,       2025,         Biomass,                        QLD,                                   120000
-    Dummy__Gen,                    Water,         2024,         Dummy__Gen,                     VIC,                                   0
+    generator_name,                fuel_type,     build_year,   connection_cost_technology,     connection_cost_rez/_region_id,        connection_cost_$/mw,    generator
+    CCGT,                          Gas,           2024,         CCGT,                           NSW,                                   85000,                   ccgt_nsw
+    Large__scale__Solar__PV,       Solar,         2025,         Large__scale__Solar__PV,        Far__North__Queensland,                267000,                  large_scale_solar_pv_sat_q1
+    Wind,                          Wind,          2023,         Wind,                           Tumut,                                 337000,                  wind_wm_n7
+    Wind__-__offshore__(floating), Wind,          2024,         Wind__-__offshore__(floating),  Leigh__Creek,                          0,                       wind_wfl_s6
+    Biomass,                       Biomass,       2025,         Biomass,                        QLD,                                   120000,                  biomass_qld
     """
 
     expected_result_df = csv_str_to_df(expected_result)
     expected_result_df = expected_result_df[result_col_order]
 
     pd.testing.assert_frame_equal(result, expected_result_df, check_dtype=False)
+
+    # check that if there's an extra generator that doesn't have connection costs the
+    # correct error gets returned:
+    extra_generator_csv = """
+    generator_name,                fuel_type,     build_year,   connection_cost_technology,     connection_cost_rez/_region_id,     generator
+    Dummy__Gen,                    Gas,           2024,         Dummy__Gen,                     NSW,                                dummy_gen_nsw
+    """
+    extra_generator = csv_str_to_df(extra_generator_csv)
+    with_extra_gen = pd.concat([generators_df, extra_generator], ignore_index=True)
+
+    with pytest.raises(ValueError) as excinfo:
+        _add_new_entrant_generator_connection_costs(
+            with_extra_gen, vre_connection_costs, non_vre_connection_costs
+        )
+    assert (
+        str(excinfo.value)
+        == "Missing connection costs for the following generators: ['dummy_gen_nsw']"
+    )
 
 
 def test_calculate_annuitised_new_entrant_gen_capital_costs(csv_str_to_df):
@@ -1150,14 +1115,16 @@ def test_create_pypsa_friendly_dynamic_marginal_costs_multiple_gens(
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     test_generators_csv = """
-    name,                      carrier,       isp_fuel_cost_mapping,     isp_heat_rate_gj/mwh,  isp_vom_$/mwh_sent_out,   marginal_cost
-    Bairnsdale,                Gas,           Bairnsdale,                20,                    8,                        bairnsdale
-    Eraring,                   Black__Coal,   Eraring,                   10,                    5,                        eraring
-    SA__new__CCGT,             Gas,           SA__new__CCGT,             11,                    10,                       sa_new_ccgt
-    Kogan__Gas,                Hyblend,       QLD__new__OCGT,            3,                     20,                       kogan_gas
-    Large__Scale__Solar__PV,   Solar,         Large__Scale__Solar__PV,   0,                     0,                        large_scale_solar_pv
+    name,                      carrier,             isp_fuel_cost_mapping,     isp_heat_rate_gj/mwh,  isp_vom_$/mwh_sent_out,   marginal_cost
+    Bairnsdale,                Gas,                 Bairnsdale,                20,                    8,                        bairnsdale
+    Eraring,                   Black__Coal,         Eraring,                   10,                    5,                        eraring
+    SA__new__CCGT,             Gas,                 SA__new__CCGT,             11,                    10,                       sa_new_ccgt
+    Kogan__Gas,                Hyblend,             QLD__new__OCGT,            3,                     20,                       kogan_gas
+    Large__Scale__Solar__PV,   Solar,               Large__Scale__Solar__PV,   0,                     0,                        large_scale_solar_pv
+    Unserved__Energy,          Unserved__Energy,    Unserved__Energy,          0,                     0,                        STATIC_MARGINAL_COST
     """
     test_generators = csv_str_to_df(test_generators_csv)
+    test_generators = test_generators.replace("STATIC_MARGINAL_COST", 10000.0)
     # Extract tables from the fixture
 
     ispypsa_tables = {
@@ -1229,6 +1196,22 @@ def test_create_pypsa_friendly_dynamic_marginal_costs_multiple_gens(
             marginal_costs.sort_values(by="snapshots"),
             expected_marginal_cost.sort_values(by="snapshots"),
         )
+
+    # Expect NO marginal costs for the unserved energy generator
+    assert len(list(tmp_path.glob("marginal_cost_timeseries/*.parquet"))) == 5
+
+    # Test with same inputs but make one marginal cost value nan to check ValueError raised:
+    test_generators = csv_str_to_df(test_generators_csv)
+    test_generators = test_generators.replace("STATIC_MARGINAL_COST", np.nan)
+    with pytest.raises(ValueError) as excinfo:
+        create_pypsa_friendly_dynamic_marginal_costs(
+            ispypsa_tables, test_generators, snapshots, tmp_path
+        )
+    # check message is correct:
+    assert (
+        str(excinfo.value)
+        == "Undefined marginal cost for generator(s): {'Unserved Energy'}"
+    )
 
 
 def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
@@ -1320,6 +1303,8 @@ def test_create_pypsa_friendly_new_entrant_generator_timeseries(tmp_path):
         {
             "generator": ["Large scale Solar PV_N1_SAT", "Wind_Q1_WM"],
             "fuel_type": ["Solar", "Wind"],
+            "rez_id": ["N1", "Q1"],
+            "isp_resource_type": ["SAT", "WM"],
         }
     )
 

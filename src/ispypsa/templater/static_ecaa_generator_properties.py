@@ -75,6 +75,16 @@ def _template_ecaa_generators_static_properties(
         .reset_index(drop=True)
     )
 
+    # Add Borumba back in to ECAA generators summary for short-term while PHES is WIP
+    # required for REZ group constraint SWQLD1
+    borumba_summary = ecaa_storage_summaries.loc[
+        ecaa_storage_summaries["generator"] == "Borumba", :
+    ].copy()
+
+    ecaa_generator_summaries = pd.concat(
+        [ecaa_generator_summaries, borumba_summary], ignore_index=True
+    )
+
     return ecaa_generator_summaries
 
 
@@ -161,6 +171,7 @@ def _merge_and_set_ecaa_generators_static_properties(
     df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
+    df = _add_rez_id_column(df, "rez_id", iasr_tables["renewable_energy_zones"])
 
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
@@ -332,3 +343,31 @@ def _process_and_merge_existing_gpg_min_load(
     for gen, row in processed_gpg_min_loads.iterrows():
         df.loc[df["generator"] == gen, "minimum_load_mw"] = row["Min Stable Level (MW)"]
     return df
+
+
+def _add_rez_id_column(
+    df: pd.DataFrame, rez_id_col_name: str, renewable_energy_zones: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Merges REZ IDs into the ECAA generator table and cleans up REZ names.
+
+    Args:
+        df: ECAA generator DataFrame
+        rez_id_col_name: str, name of the new column to be added.
+        renewable_energy_zones: a pd.Dataframe of the IASR table `renewable_energy_zones`
+            containing columns "ID" and "Name" used to map the REZ IDs.
+
+    Returns:
+        pd.DataFrame: ECAA generator DataFrame with REZ ID column added.
+    """
+
+    # add a new column to hold the REZ IDs that maps to the current rez_location:
+    df[rez_id_col_name] = df["rez_location"]
+
+    rez_id_table_attributes = dict(table_lookup="Name", table_value="ID")
+    # merge in the REZ IDs:
+    df_with_rez_ids, col = _merge_table_data(
+        df, rez_id_col_name, renewable_energy_zones, rez_id_table_attributes
+    )
+
+    return df_with_rez_ids

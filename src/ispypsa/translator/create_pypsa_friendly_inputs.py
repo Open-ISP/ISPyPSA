@@ -15,6 +15,7 @@ from ispypsa.translator.buses import (
     create_pypsa_friendly_bus_demand_timeseries,
 )
 from ispypsa.translator.custom_constraints import (
+    _append_if_not_empty,
     _translate_custom_constraints,
 )
 from ispypsa.translator.generators import (
@@ -92,25 +93,34 @@ def create_pypsa_friendly_inputs(
         config.discount_rate,
     )
 
+    translated_generators = []
     translated_ecaa_generators = _translate_ecaa_generators(
         ispypsa_tables,
         config.temporal.capacity_expansion.investment_periods,
         config.network.nodes.regional_granularity,
+        config.network.nodes.rezs,
         config.temporal.year_type,
     )
+    _append_if_not_empty(translated_generators, translated_ecaa_generators)
 
     translated_new_entrant_generators = _translate_new_entrant_generators(
         ispypsa_tables,
         config.temporal.capacity_expansion.investment_periods,
         config.discount_rate,
         config.network.nodes.regional_granularity,
+        config.network.nodes.rezs,
     )
+    _append_if_not_empty(translated_generators, translated_new_entrant_generators)
 
-    pypsa_inputs["generators"] = pd.concat(
-        [translated_ecaa_generators, translated_new_entrant_generators],
-        axis=0,
-        ignore_index=True,
-    )
+    if len(translated_generators) > 0:
+        pypsa_inputs["generators"] = pd.concat(
+            translated_generators,
+            axis=0,
+            ignore_index=True,
+        )
+    else:
+        # TODO: Log, improve error message (/ is this the right place for the error?)
+        raise ValueError("No generator data returned from translator.")
 
     buses = []
     links = []
@@ -129,7 +139,7 @@ def create_pypsa_friendly_inputs(
             config.unserved_energy.generator_size_mw,
         )
         pypsa_inputs["generators"] = pd.concat(
-            [pypsa_inputs["generators"], unserved_energy_generators]
+            [pypsa_inputs["generators"], unserved_energy_generators], ignore_index=True
         )
 
     if config.network.nodes.rezs == "discrete_nodes":
@@ -153,7 +163,9 @@ def create_pypsa_friendly_inputs(
         pypsa_inputs["links"] = pd.DataFrame()
 
     pypsa_inputs.update(
-        _translate_custom_constraints(config, ispypsa_tables, pypsa_inputs["links"])
+        _translate_custom_constraints(
+            config, ispypsa_tables, pypsa_inputs["links"], pypsa_inputs["generators"]
+        )
     )
 
     return pypsa_inputs

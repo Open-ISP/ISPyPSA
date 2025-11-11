@@ -192,7 +192,9 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
-    df = _add_technology_rez_subregion_column(df, iasr_tables, new_col_name="generator")
+
+    df = _add_identifier_columns(df, iasr_tables)
+
     # replace remaining string values in static property columns
     df = df.infer_objects()
     for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
@@ -411,31 +413,31 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
     return df
 
 
-def _add_technology_rez_subregion_column(
-    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame], new_col_name: str
+def _add_and_clean_rez_ids(
+    df: pd.DataFrame, rez_id_col_name: str, renewable_energy_zones: pd.DataFrame
 ) -> pd.DataFrame:
     """
-    Adds a new column to the new entrant generator table to act as a unique identifier.
+    Merges REZ IDs into the new entrant generator table and cleans up REZ names.
 
-    The new column is filled first by generator type combined with the corresponding REZ ID,
-    and where applicable the technology or resource quality (e.g. WFX = wind offshore floating,
-    SAT = single axis tracking, etc). This function also updates the Non-REZ IDs for Victoria
-    Non-REZ (V0) and New South Wales Non-REZ (N0), as well as manually handling Tasmania
-    Coast and Portland Coast REZ name references.
+    REZ IDs are unique letter/digit identifiers used in the IASR workbook. This function
+    also handles the Non-REZ IDs for Victoria (V0) and New South Wales (N0). There are
+    also some manual mappings to correct REZ names that have been updated/changed
+    across tables (currently in the IASR workbook v6.0): 'North [East/West] Tasmania Coast'
+    becomes 'North Tasmania Coast', 'Portland Coast' becomes 'Southern Ocean'.
 
     Args:
         df: new entrant generator DataFrame
-        iasr_tables: Dict of tables from the IASR workbook that have been parsed using
-            `isp-workbook-parser`.
-        new_col_name: str, name of the new column to be added
+        rez_id_col_name: str, name of the new column to be added.
+        renewable_energy_zones: a pd.Dataframe of the IASR table `renewable_energy_zones`
+            containing columns "ID" and "Name" used to map the REZ IDs.
 
     Returns:
-        pd.DataFrame: new entrant generator DataFrame with new column added
+        pd.DataFrame: new entrant generator DataFrame with REZ ID column added.
     """
 
     # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
     # update references to "Portland Coast" to "Southern Ocean"
-    rez_or_region_cols = [col for col in df.columns if "rez" in col or "region" in col]
+    rez_or_region_cols = [col for col in df.columns if re.search(r"rez|region", col)]
     df[rez_or_region_cols] = df[rez_or_region_cols].replace(
         {
             r".+Tasmania Coast": "North Tasmania Coast",
@@ -443,52 +445,152 @@ def _add_technology_rez_subregion_column(
         },
         regex=True,
     )
-    # adds new column filled with REZ names (inc. updated references)
-    df[new_col_name] = df["rez_location"]
+    # add a new column to hold the REZ IDs that maps to the current rez_location:
+    df[rez_id_col_name] = df["rez_location"]
 
-    rez_id_table = iasr_tables["renewable_energy_zones"]
-    replacement_dict = (
-        rez_id_table.loc[:, ["Name", "ID"]].set_index("Name").squeeze().to_dict()
+    # add the non-rez IDs for Victoria and New South Wales to the renewable_energy_zones df:
+    non_rez_ids = pd.DataFrame(
+        {
+            "ID": ["V0", "N0"],
+            "Name": ["Victoria Non-REZ", "New South Wales Non-REZ"],
+        }
     )
-    # add Non-REZ option IDs for Victoria Non-REZ (V0) and New South Wales Non-REZ (N0)
-    non_rez_ids = {"New South Wales Non-REZ": "N0", "Victoria Non-REZ": "V0"}
-    replacement_dict.update(non_rez_ids)
-
-    where_str = df[new_col_name].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, new_col_name] = _fuzzy_match_names(
-        df.loc[where_str, new_col_name],
-        replacement_dict.keys(),
-        f"adding unique id column for new entrant generators called {new_col_name}",
-        not_match="existing",
-        threshold=90,
+    renewable_energy_zones = pd.concat(
+        [renewable_energy_zones, non_rez_ids], ignore_index=True
     )
-    df[new_col_name] = df[new_col_name].replace(replacement_dict)
-    # drop rows with REZ N12 (Build limit for VRE == 0.0MW)
-    # TODO: incorporate this into build limit filtering?
-    df = df.loc[df[new_col_name] != "N12"]
+    rez_id_table_attributes = dict(table_lookup="Name", table_value="ID")
+    # merge in the REZ IDs:
+    df_with_rez_ids, col = _merge_table_data(
+        df, rez_id_col_name, renewable_energy_zones, rez_id_table_attributes
+    )
 
-    # add a col with resource quality/technology code:
-    df["temporary_quality_col"] = df["generator_name"]
-    df["temporary_quality_col"] = df["temporary_quality_col"].map(
+    # No trace data has been provided by AEMO for the N12 REZ, as the 2024 ISP modelling
+    # did not find any VRE built in this REZ. So drop generators in this REZ for now.
+    df_with_rez_ids = df_with_rez_ids[df_with_rez_ids[rez_id_col_name] != "N12"].copy()
+
+    return df_with_rez_ids
+
+
+def _add_isp_resource_type_column(
+    df: pd.DataFrame, isp_resource_type_col_name: str
+) -> pd.DataFrame:
+    """
+    Adds a new column to the new entrant generator table to hold resource quality/technology
+    code as defined in the IASR workbook and AEMO VRE traces.
+    """
+
+    df[isp_resource_type_col_name] = df["generator_name"].map(
         _VRE_RESOURCE_QUALITY_AND_TECH_CODES
     )
-    # expand to account for fixed and floating offshore wind resources:
-    df = df.explode("temporary_quality_col").reset_index(drop=True)
-    # apply different naming convention for rez and non-rez new entrants:
-    df.loc[
-        _where_any_substring_appears(df["technology_type"], ["solar", "wind"]),
-        new_col_name,
-    ] = (
-        df["technology_type"]
-        + "_"
-        + df[new_col_name]
-        + "_"
-        + df["temporary_quality_col"]
+    # expand to account for medium/high quality wind resources:
+    df_with_isp_resource_type = df.explode(isp_resource_type_col_name).reset_index(
+        drop=True
     )
 
-    df[new_col_name] = df[new_col_name].where(
-        df[new_col_name].notna(), df["generator_name"] + "_" + df["sub_region_id"]
+    return df_with_isp_resource_type
+
+
+def _add_storage_duration_column(
+    df: pd.DataFrame, storage_duration_col_name: str
+) -> pd.DataFrame:
+    """Adds a new column to the new entrant generator table to hold storage duration in hours."""
+
+    # if 'storage' is present in the name -> grab the hours from the name string:
+    def _get_storage_duration(name: str) -> str | None:
+        duration_pattern = r"(?P<duration>\d+h)rs* storage"
+        duration_string = re.search(duration_pattern, name, re.IGNORECASE)
+
+        if duration_string:
+            return duration_string.group("duration")
+        else:
+            return None
+
+    df[storage_duration_col_name] = df["generator_name"].map(_get_storage_duration)
+
+    return df
+
+
+def _add_unique_generator_string_column(
+    df: pd.DataFrame, generator_string_col_name: str = "generator"
+) -> pd.DataFrame:
+    """
+    Adds a new column to the new entrant generator table to hold a unique string
+    identifier for each generator.
+
+    The unique string identifier is created by combining the technology type,
+    technology descriptor, and either the rez_id or sub_region_id into a single
+    string in the format: `{technology_type}_{isp_resource_type}_{rez_id|sub_region_id}`.
+    The resulting string is cleaned up to remove special characters and converted
+    to snakecase.
+    """
+
+    def _create_generator_string(row):
+        # 1. Combine columns to create unique string as: `{technology_type}_{isp_resource_type}_{rez_id|sub_region_id}`
+        # Using rez_id where not NaN, otherwise sub_region_id
+        generator_string = row["technology_type"]
+        if isinstance(row["isp_resource_type"], str):
+            generator_string += "_" + row["isp_resource_type"]
+        if isinstance(row["rez_id"], str):
+            generator_string += "_" + row["rez_id"]
+        else:
+            generator_string += "_" + row["sub_region_id"]
+        # 2. Clean up resulting strings to remove special characters and convert to snakecase
+        generator_string = _snakecase_string(re.sub(r"[/\\]", " ", generator_string))
+
+        # 3. Final fussy clean up of some REZ names that get split up by _snakecase_string:
+        split_rez = re.search(
+            r"_(?P<split_rez_string>(?P<rez_letter>[a-z]{1})_(?P<rez_number>\d{2}))$",
+            generator_string,
+        )
+        if split_rez:
+            split_rez_string = split_rez.group("split_rez_string")
+            replacement_string = split_rez.group("rez_letter") + split_rez.group(
+                "rez_number"
+            )
+            generator_string = re.sub(
+                split_rez_string, replacement_string, generator_string
+            )
+
+        return generator_string
+
+    df[generator_string_col_name] = df.apply(_create_generator_string, axis=1)
+
+    return df
+
+
+def _add_identifier_columns(df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]):
+    """
+    Adds four new identifier columns to the new entrant generator table.
+
+    The additional columns are created to hold REZ IDs, storage durations in hours,
+    technology descriptors, and a 'generator' identifier that holds a combination
+    of id columns and technology type for each unique generator. These identifiers
+    are used primarily to map generators to corresponding VRE trace data, provide unique
+    identifiers for new entrant generators, and to apply custom build limit constraints
+    by technology type and/or resource quality.
+
+    Args:
+        df: a pd.Dataframe containing new entrant generator data
+        iasr_tables: Dict of tables from the IASR workbook
+
+    Returns:
+        pd.DataFrame: New entrant generator table with additional columns 'rez_id',
+            'storage_duration', 'isp_resource_type', and 'generator'.
+    """
+    df_with_rez_ids = _add_and_clean_rez_ids(
+        df, "rez_id", iasr_tables["renewable_energy_zones"]
     )
-    return df.drop(columns=["temporary_quality_col"]).drop_duplicates(
-        subset=[new_col_name], ignore_index=True
+    df_with_storage_duration = _add_storage_duration_column(
+        df_with_rez_ids, "storage_duration"
+    )
+    df_with_isp_resource_type = _add_isp_resource_type_column(
+        df_with_storage_duration, "isp_resource_type"
+    )
+
+    df_with_unique_generator_str = _add_unique_generator_string_column(
+        df_with_isp_resource_type, "generator"
+    )
+
+    return df_with_unique_generator_str.drop_duplicates(
+        subset=["generator"], ignore_index=True
     )

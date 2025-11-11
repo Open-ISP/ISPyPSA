@@ -48,7 +48,7 @@ def sample_ispypsa_tables(csv_str_to_df):
 
     # Renewable energy zones table
     renewable_energy_zones_csv = """
-    rez_id,                    isp_sub_region_id,  carrier,  wind_generation_total_limits_mw_high,  wind_generation_total_limits_mw_medium,  wind_generation_total_limits_mw_offshore_floating,  wind_generation_total_limits_mw_offshore_fixed,  solar_pv_plus_solar_thermal_limits_mw_solar,  rez_solar_resource_limit_violation_penalty_factor_$/mw,  rez_transmission_network_limit_summer_typical
+    rez_id,                    isp_sub_region_id,  carrier,  wind_generation_total_limits_mw_high,  wind_generation_total_limits_mw_medium,  wind_generation_total_limits_mw_offshore_floating,  wind_generation_total_limits_mw_offshore_fixed,  solar_pv_plus_solar_thermal_limits_mw_solar,  rez_resource_limit_violation_penalty_factor_$/mw,  rez_transmission_network_limit_summer_typical
     Central-West__Orana__REZ,  CNSW,               AC,       3000,                                  2000,                                    0,                                                   0,                                                1500,                                          10000,                                                    4500
     New__England__REZ,         NNSW,               AC,       5000,                                  3500,                                    0,                                                   0,                                                2000,                                          10000,                                                    6000
     """
@@ -63,13 +63,13 @@ def sample_ispypsa_tables(csv_str_to_df):
 
     # ECAA generators table
     ecaa_generators_csv = """
-    generator,                          technology_type,            region_id,  sub_region_id,   fuel_type,     fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw
-    Bayswater,                          Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Bayswater,          250,              5.0,                 10.0,              NaN,                 2640
-    Eraring,                            Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Eraring,            210,              5.0,                 10.0,              NaN,                 2880
-    Bodangora__Wind__Farm,              Wind,                       NSW,        CNSW,            Wind,          Wind,               0,                0.0,                 0.0,               NaN,                 250
-    Central-West__Orana__REZ__Solar,    Large__scale__Solar__PV,    NSW,        CNSW,            Solar,         Solar,              0,                0.0,                 0.0,               2025,                200
-    New__England__REZ__Wind,            Wind,                       NSW,        NNSW,            Wind,          Wind,               0,                0.0,                 0.0,               2028,                500
-    Moree__Solar__Farm,                 Large__scale__Solar__PV,    NSW,        NNSW,            Solar,         Solar,              0,                0.0,                 0.0,               NaN,                320
+    generator,                        technology_type,            region_id,  sub_region_id,   fuel_type,     fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw,   rez_id
+    Bayswater,                        Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Bayswater,          250,              5.0,                 10.0,              NaN,                 2640,                  NaN
+    Eraring,                          Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Eraring,            210,              5.0,                 10.0,              NaN,                 2880,                  NaN
+    Bodangora__Wind__Farm,            Wind,                       NSW,        CNSW,            Wind,          Wind,               0,                0.0,                 0.0,               NaN,                 250,                   N3
+    Central-West__Orana__REZ__Solar,  Large__scale__Solar__PV,    NSW,        CNSW,            Solar,         Solar,              0,                0.0,                 0.0,               2025,                200,                   N3
+    New__England__REZ__Wind,          Wind,                       NSW,        NNSW,            Wind,          Wind,               0,                0.0,                 0.0,               2028,                500,                   N2
+    Moree__Solar__Farm,               Large__scale__Solar__PV,    NSW,        NNSW,            Solar,         Solar,              0,                0.0,                 0.0,               NaN,                 320,                   N2
     """
     tables["ecaa_generators"] = csv_str_to_df(ecaa_generators_csv)
 
@@ -83,14 +83,6 @@ def sample_ispypsa_tables(csv_str_to_df):
                 "Wind",
                 "Large scale Solar PV",
                 "Wind",
-            ],
-            "generator": [
-                "CCGT_CNSW",
-                "OCGT (small GT)_CNSW",
-                "Large scale Solar PV_N3_SAT",
-                "Wind_N3_WH",
-                "Large scale Solar PV_N2_SAT",
-                "Wind_N2_WH",
             ],
             "technology_type": [
                 "CCGT",
@@ -135,6 +127,23 @@ def sample_ispypsa_tables(csv_str_to_df):
             ],
             "fom_$/kw/annum": [12.0, 15.0, 20.0, 30.0, 20.0, 30.0],
             "technology_specific_lcf_%": [100.0, 103.0, 107.0, 105.0, 101.0, 99.0],
+            "isp_resource_type": [
+                "CCGT",
+                "OCGT (small GT)",
+                "SAT",
+                "WH",
+                "SAT",
+                "WH",
+            ],
+            "rez_id": [None, None, "N3", "N3", "N2", "N2"],
+            "generator": [
+                "ccgt_cnsw",
+                "ocgt_small_gt_cnsw",
+                "large_scale_solar_pv_n3_sat",
+                "wind_n3_wh",
+                "large_scale_solar_pv_n2_sat",
+                "wind_n2_wh",
+            ],
         }
     )
     tables["new_entrant_generators"] = new_entrant_generators_df
@@ -171,6 +180,7 @@ def sample_ispypsa_tables(csv_str_to_df):
     REZ__names,               2023_24_$/mw,  2024_25_$/mw,  2025_26_$/mw, 2026_27_$/mw,  2027_28_$/mw,   2028_29_$/mw,  system_strength_connection_cost_$/mw
     Central-West__Orana,      150000,        140000,       130000,        120000,         110000,        100000,        137000
     New__England,             120000,        120000,       120000,        120000,         120000,        120000,        137000
+    Wide__Bay,                120000,        120000,       120000,        120000,         120000,        120000,        137000
     """
     tables["new_entrant_wind_and_solar_connection_costs"] = csv_str_to_df(
         new_entrant_wind_and_solar_connection_costs_csv
@@ -402,6 +412,7 @@ def sample_generator_translator_tables(csv_str_to_df):
     Far__North__Queensland,   150000,        140000,       130000,       137000
     Leigh__Creek,             120000,        120000,       120000,       137000
     Tumut,                    200000,        210000,       220000,       137000
+    Wide__Bay,                120000,        120000,       120000,       137000
     """
     tables["new_entrant_wind_and_solar_connection_costs"] = csv_str_to_df(
         new_entrant_wind_and_solar_connection_costs
@@ -450,10 +461,12 @@ def translated_generator_column_order():
             "isp_fuel_cost_mapping",
             "isp_vom_$/mwh_sent_out",
             "isp_heat_rate_gj/mwh",
+            "isp_rez_id",
         ],
         new_entrant_column_order=[
             "name",
             "bus",
+            "p_nom",
             "p_nom_mod",
             "p_nom_extendable",
             "p_nom_max",
@@ -463,11 +476,12 @@ def translated_generator_column_order():
             "build_year",
             "lifetime",
             "capital_cost",
-            "isp_name",
             "isp_technology_type",
             "isp_fuel_cost_mapping",
             "isp_vom_$/mwh_sent_out",
             "isp_heat_rate_gj/mwh",
+            "isp_resource_type",
+            "isp_rez_id",
         ],
     )
 

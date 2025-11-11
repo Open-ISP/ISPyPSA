@@ -4,11 +4,16 @@ import pandas as pd
 from ispypsa.config import (
     ModelConfig,
 )
+from ispypsa.translator.helpers import (
+    _add_investment_periods_as_build_years,
+    _annuitised_investment_costs,
+)
 from ispypsa.translator.links import _translate_time_varying_expansion_costs
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_ATTRIBUTES,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
+    _VRE_BUILD_LIMIT_CUSTOM_CONSTRAINT_GROUPS,
 )
 
 
@@ -16,6 +21,7 @@ def _translate_custom_constraints(
     config: ModelConfig,
     ispypsa_tables: dict[str, pd.DataFrame],
     links: pd.DataFrame,
+    generators: pd.DataFrame,
 ):
     """Translate custom constraint tables into a PyPSA friendly format and define any
     endogenous custom constraints.
@@ -26,7 +32,9 @@ def _translate_custom_constraints(
             The relevant tables for this function are:
                 - custom_constraints_rhs
                 - custom_constraints_lhs
+                - renewable_energy_zones
         links: pd.DataFrame specifying the Link components to be used in the PyPSA model
+        generators: pd.DataFrame specifying the Generator components to be used in the PyPSA model
 
     Returns: dictionary of dataframes in the `PyPSA` friendly format, with the relevant
         tables for custom constraints. New tables are:
@@ -41,27 +49,49 @@ def _translate_custom_constraints(
     rhs = []
 
     # Process manual custom constraints
-    manual_lhs, manual_rhs, generators = _process_manual_custom_constraints(
+    manual_lhs, manual_rhs, constraint_generators = _process_manual_custom_constraints(
         config, ispypsa_tables, links
     )
 
     _append_if_not_empty(lhs, manual_lhs)
     _append_if_not_empty(rhs, manual_rhs)
 
-    if generators is not None:
-        pypsa_inputs["custom_constraints_generators"] = generators
+    (
+        generator_build_limits_lhs,
+        generator_build_limits_rhs,
+        resource_limit_relaxation_generators,
+    ) = _create_vre_build_and_resource_limit_constraints(
+        ispypsa_tables.get("renewable_energy_zones"),
+        generators,
+        config.temporal.capacity_expansion.investment_periods,
+        config.wacc,
+        config.network.annuitisation_lifetime,
+    )
+    _append_if_not_empty(lhs, generator_build_limits_lhs)
+    _append_if_not_empty(rhs, generator_build_limits_rhs)
 
     # Process transmission expansion limit constraints
     transmission_expansion_limit_lhs, transmission_expansion_limit_rhs = (
         _create_expansion_limit_constraints(
             links,
-            pypsa_inputs.get("custom_constraints_generators"),
+            constraint_generators,
             ispypsa_tables.get("flow_path_expansion_costs"),
             ispypsa_tables.get("rez_transmission_expansion_costs"),
         )
     )
     _append_if_not_empty(lhs, transmission_expansion_limit_lhs)
     _append_if_not_empty(rhs, transmission_expansion_limit_rhs)
+
+    if resource_limit_relaxation_generators is not None:
+        if constraint_generators is None:
+            constraint_generators = resource_limit_relaxation_generators
+        else:
+            constraint_generators = pd.concat(
+                [constraint_generators, resource_limit_relaxation_generators]
+            )
+
+    if constraint_generators is not None:
+        pypsa_inputs["custom_constraints_generators"] = constraint_generators
 
     # Concatenate all constraints
     if lhs and rhs:
@@ -666,3 +696,369 @@ def _validate_lhs_rhs_constraints(
             f"The following RHS constraints do not have corresponding LHS definitions: "
             f"{sorted(rhs_without_lhs)}"
         )
+
+
+def _create_vre_build_and_resource_limit_constraints(
+    renewable_energy_zones: pd.DataFrame,
+    generators: pd.DataFrame,
+    investment_periods: list[int],
+    wacc: float,
+    asset_lifetime: int,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]:
+    """Create custom constraints to manage generator build limits for new VRE in REZs.
+
+    There are two parts to the build limit constraint for VRE in REZs. One is a
+    resource-level limit that is applied separately for different quality and type
+    of wind resources (i.e. High/Medium and Onshore/Offshore [fixed/floating] are
+    constrained individually), the other is a land use limit that applies to total new
+    Wind capacity in a REZ and total new Solar capacity in a REZ.
+
+    The resource-level limits are mostly applied as soft constraints with a penalty
+    on extra capacity built above the limit, with a hard cap set by the land use limit.
+    However, offshore wind capacity is capped by the resource-level limit and has no
+    soft constraint.
+
+    Args:
+        renewable_energy_zones: pd.DataFrame of the ISPyPSA-formatted table of the
+            same name. This table contains the resource-level limits
+            and land use limits for VRE in REZs, as well as the penalty price for
+            exceeding resource-level limits.
+        generators: pd.DataFrame specifying the Generator components to be used
+            in the PyPSA model
+        investment_periods: List of investment years (e.g., [2025, 2030]).
+        wacc: Weighted average cost of capital.
+        asset_lifetime: Nominal asset lifetime in years.
+
+    Returns: tuple of dataframes specifying the LHS, RHS, and dummy generators (or None)
+        created for all VRE build and resource limit constraints.
+    """
+
+    if renewable_energy_zones is None or renewable_energy_zones.empty:
+        return pd.DataFrame(), pd.DataFrame(), None
+
+    if generators.empty:
+        return pd.DataFrame(), pd.DataFrame(), None
+
+    lhs = []
+    rhs = []
+    dummy_generators = []
+    for (
+        constraint_group_type,
+        constraint_group_details,
+    ) in _VRE_BUILD_LIMIT_CUSTOM_CONSTRAINT_GROUPS.items():
+        # restructure the resource/build limit dataframe to input:
+        build_or_resource_limits = _get_build_or_resource_limits_df(
+            renewable_energy_zones, constraint_group_details
+        )
+
+        constraint_group_lhs, constraint_group_rhs = _create_vre_constraint_lhs_rhs(
+            constraint_group_type,
+            build_or_resource_limits,
+            generators,
+            constraint_group_details["constraint_filter_col"],
+            constraint_group_details["constraint_type"],
+        )
+        _append_if_not_empty(lhs, constraint_group_lhs)
+        _append_if_not_empty(rhs, constraint_group_rhs)
+
+        # create and append dummy generators for relaxing resource limit constraints
+        # where appropriate
+        constraint_relaxing_generators = (
+            _create_dummy_generators_for_vre_resource_limit_constraints(
+                build_or_resource_limits,
+                constraint_group_details,
+                investment_periods=investment_periods,
+                asset_lifetime=asset_lifetime,
+                wacc=wacc,
+            )
+        )
+        _append_if_not_empty(dummy_generators, constraint_relaxing_generators)
+
+    if lhs and rhs:
+        lhs = pd.concat(lhs, ignore_index=True)
+        rhs = pd.concat(rhs, ignore_index=True)
+    else:
+        return pd.DataFrame(), pd.DataFrame(), None
+
+    custom_constraint_generators = None
+    if dummy_generators:
+        custom_constraint_generators = pd.concat(dummy_generators, ignore_index=True)
+        custom_constraint_generators_lhs = (
+            _translate_custom_constraint_generators_to_lhs(custom_constraint_generators)
+        )
+        # need to filter to only use the custom gens that have constraint names
+        # that already exist in lhs to avoid adding back in nonexistent constraints
+        custom_constraint_generators_lhs = custom_constraint_generators_lhs[
+            custom_constraint_generators_lhs["constraint_name"].isin(
+                lhs["constraint_name"]
+            )
+        ]
+        lhs = pd.concat([lhs, custom_constraint_generators_lhs], ignore_index=True)
+
+    return lhs, rhs, custom_constraint_generators
+
+
+def _get_build_or_resource_limits_df(
+    renewable_energy_zones: pd.DataFrame, constraint_group_details: dict
+) -> pd.DataFrame:
+    """
+    Get the build or resource limits for a given constraint group type.
+
+    Args:
+        renewable_energy_zones: pd.DataFrame of renewable energy zones data with
+            columns for build or resource limits.
+        constraint_group_details: dict containing details about the constraint group
+            type, such as column mappings, constraint filter column, constraint type,
+            constraint name suffix, etc.
+
+    Returns:
+        build_or_resource_limits: pd.Dataframe containing the build or resource limits
+            for the given constraint group type.
+    """
+    column_mapping_dict = constraint_group_details["column_mapping"]
+    # check whether columns are present in the renewable energy zones table - if not,
+    # no constraints of this type are assumed to be present:
+    if set(column_mapping_dict.keys()) - set(renewable_energy_zones.columns):
+        return pd.DataFrame()
+
+    build_or_resource_limits = (
+        renewable_energy_zones[column_mapping_dict.keys()]
+        .copy()
+        .rename(columns=column_mapping_dict)
+    )
+    melt_id_cols = [
+        col for col in ["rez_id", "penalty_$/mw"] if col in build_or_resource_limits
+    ]
+
+    build_or_resource_limits = build_or_resource_limits.melt(
+        id_vars=melt_id_cols,
+        var_name=constraint_group_details["constraint_filter_col"],
+        value_name=constraint_group_details["constraint_type"],
+    )
+
+    # drop rows where a constraint/limit is not defined:
+    build_or_resource_limits = build_or_resource_limits.dropna(
+        subset=constraint_group_details["constraint_type"], axis=0
+    )
+
+    build_or_resource_limits["constraint_name"] = (
+        build_or_resource_limits["rez_id"].astype(str)
+        + "_"
+        + build_or_resource_limits[
+            constraint_group_details["constraint_filter_col"]
+        ].astype(str)
+        + "_"
+        + constraint_group_details["constraint_name_suffix"]
+    )
+
+    return build_or_resource_limits.reset_index(drop=True)
+
+
+def _create_vre_constraint_lhs_rhs(
+    constraint_group_type: str,
+    build_or_resource_limits: pd.DataFrame,
+    generators: pd.DataFrame,
+    constraint_filter_col: str,
+    rhs_constraint_col: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Create left-hand side and right-hand side DataFrames for VRE resource or
+    build limit constraints.
+
+    Args:
+        constraint_group_type : str specifying the constraint group type being added,
+            for example `'onshore_wind_resource_limits'`. Used for logging/error messages.
+        build_or_resource_limits : pd.DataFrame containing the renewable energy zone
+            build or resource limits, with columns `'constraint_name'` and `'rez_id'`
+            and columns matching the `constraint_filter_col` and `rhs_constraint_col`.
+        generators : pd.DataFrame containing the PyPSA-friendly generators and their
+            relevant attributes.
+        constraint_filter_col : str specifying the column name in `generators` on which
+            to filter, one of:
+                `'isp_resource_type'`: to apply the constraint to generators with the same
+                    resource type (e.g. WFL, WFX, etc.)
+                `'carrier'`: to apply the constraint to generators with the same `carrier`
+                    (e.g. Wind, Solar, Gas, etc.)
+        rhs_constraint_col : str with the column name in `build_or_resource_limits`
+            to use as the right-hand side of the constraint, one of `'resource_limit_mw'`
+            or `'build_limit_mw'`.
+
+    Returns:
+        lhs : dataframe with the left-hand side of the constraint with columns 'constraint_name',
+            'variable_name', 'component', 'attribute', and 'coefficient', or an empty
+            dataframe if no constraints were created.
+        rhs : dataframe with the right-hand side of the constraint with columns 'constraint_name',
+            'rhs' and 'constraint_type', or an empty dataframe if no constraints were created.
+    """
+
+    if build_or_resource_limits.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    cols_not_found = [
+        col
+        for col in [constraint_filter_col, rhs_constraint_col]
+        if col not in build_or_resource_limits.columns
+    ]
+    if cols_not_found:
+        raise ValueError(
+            f"Column(s) {cols_not_found} not found in build_or_resource_limits DataFrame"
+            + f" for constraint group type {constraint_group_type}"
+        )
+
+    lhs = []
+    rhs = []
+    for _, row in build_or_resource_limits.iterrows():
+        constrained_generators = generators.loc[
+            (
+                (generators[constraint_filter_col] == row[constraint_filter_col])
+                & (generators["bus"] == row["rez_id"])
+                & (generators["p_nom_extendable"] == True)
+            ),
+            "name",
+        ]
+        if not constrained_generators.empty:
+            lhs.append(
+                pd.DataFrame(
+                    {
+                        "constraint_name": row["constraint_name"],
+                        "variable_name": constrained_generators,
+                    }
+                )
+            )
+            rhs.append(row[["constraint_name", rhs_constraint_col]].to_frame().T)
+
+    lhs_constraint_group = pd.DataFrame()
+    rhs_constraint_group = pd.DataFrame()
+    if lhs and rhs:
+        lhs_constraint_group = _translate_build_or_resource_limit_lhs(
+            pd.concat(lhs, ignore_index=True)
+        )
+        rhs_constraint_group = _translate_build_or_resource_limit_rhs(
+            pd.concat(rhs, ignore_index=True)
+        )
+
+    return lhs_constraint_group, rhs_constraint_group
+
+
+def _translate_build_or_resource_limit_lhs(lhs: pd.DataFrame) -> pd.DataFrame:
+    """
+    Translate custom generator build or resource limit constraint lhs values to PyPSA style.
+
+    Args:
+        lhs: pd.DataFrame with custom constraint lhs values
+
+    Returns:
+        pd.DataFrame with translated custom constraint lhs values
+    """
+    if lhs.empty:
+        return pd.DataFrame()
+    lhs = lhs.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+    lhs["component"] = "Generator"
+    lhs["attribute"] = "p_nom"
+    lhs["coefficient"] = 1
+    return lhs.reset_index(drop=True)
+
+
+def _translate_build_or_resource_limit_rhs(rhs: pd.DataFrame) -> pd.DataFrame:
+    """
+    Translate custom generator build or resource limit constraint rhs values to PyPSA style.
+
+    Args:
+        rhs: pd.DataFrame with custom constraint rhs values
+
+    Returns:
+        pd.DataFrame with translated custom constraint rhs values
+    """
+    if rhs.empty:
+        return pd.DataFrame()
+    rhs = rhs.rename(columns=_CUSTOM_CONSTRAINT_ATTRIBUTES)
+    rhs["constraint_type"] = "<="
+    return rhs.reset_index(drop=True)
+
+
+def _create_dummy_generators_for_vre_resource_limit_constraints(
+    resource_limits: pd.DataFrame,
+    constraint_group_details: dict,
+    investment_periods: list[int],
+    asset_lifetime: int,
+    wacc: float,
+) -> pd.DataFrame:
+    """
+    Create dummy generators for relaxing VRE resource limit constraints with penalty prices.
+
+    Args:
+        resource_limits: pd.DataFrame with renewable energy zone resource limits.
+        constraint_group_details: dict containing details about the constraint group type,
+            such as column mappings, constraint filter column, constraint type,
+            constraint name suffix, etc.
+        investment_periods: list of investment years.
+        asset_lifetime: int specifying the nominal asset lifetime in years.
+        wacc: float indicating the weighted average coast of capital.
+
+    Returns:
+        pd.DataFrame with dummy generators for VRE resource limit constraints with penalty prices.
+    """
+
+    if not constraint_group_details["can_be_relaxed"]:
+        # only make dummy generators for resource limit constraints
+        return pd.DataFrame()
+
+    # if no penalty price is specified, don't create dummy generators
+    dummy_generators = resource_limits.copy().dropna(subset="penalty_$/mw")
+
+    if dummy_generators.empty:
+        return pd.DataFrame()
+
+    dummy_generators = _add_investment_periods_as_build_years(
+        dummy_generators, investment_periods
+    )
+    dummy_generators["capital_cost"] = dummy_generators["penalty_$/mw"].apply(
+        lambda x: _annuitised_investment_costs(x, wacc, asset_lifetime)
+    )
+    return _format_resource_limit_relaxation_generators(
+        dummy_generators, asset_lifetime
+    )
+
+
+def _format_resource_limit_relaxation_generators(
+    resource_limit_relaxation_generators: pd.DataFrame, asset_lifetime: int
+) -> pd.DataFrame:
+    """
+    Format custom generator build or resource limit dummy generators to PyPSA style.
+
+    Args:
+        resource_limit_relaxation_generators: pd.DataFrame with custom dummy generators
+            for relaxing VRE resource limit constraints.
+        asset_lifetime: int specifying the nominal asset lifetime in years
+
+    Returns:
+        pd.DataFrame with formatted custom constraint generators in PyPSA style.
+    """
+    resource_limit_relaxation_generators["name"] = (
+        resource_limit_relaxation_generators["constraint_name"]
+        + "_relax_"
+        + resource_limit_relaxation_generators["build_year"].astype(str)
+    )
+    resource_limit_relaxation_generators["isp_name"] = (
+        resource_limit_relaxation_generators["constraint_name"]
+    )
+    resource_limit_relaxation_generators["bus"] = "bus_for_custom_constraint_gens"
+    resource_limit_relaxation_generators["p_nom"] = 0.0
+    resource_limit_relaxation_generators["p_nom_extendable"] = True
+    resource_limit_relaxation_generators["lifetime"] = asset_lifetime
+    # asset_lifetime rather than np.inf atm - it's not yet clear to me whether any relaxation of the
+    # resource limit constraint lasts any longer than the lifetime of the generator built
+    # under that relaxation, i.e. it's not clear whether the extra cost associated with
+    # negotiating more land use/resource allocation for capacity is permanent and ongoing
+    # or not.
+    necessary_cols = [
+        "name",
+        "isp_name",
+        "bus",
+        "p_nom",
+        "p_nom_extendable",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+    ]
+    return resource_limit_relaxation_generators[necessary_cols].reset_index(drop=True)
