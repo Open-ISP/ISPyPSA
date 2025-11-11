@@ -117,7 +117,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
         "datetime64[ns]"
     )
     expected_solar_trace = expected_solar_trace.reset_index(drop=True)
-    got_solar_trace = generator_traces_by_type["solar"]["Moree Solar Farm"]
+    got_solar_trace = generator_traces_by_type["solar"]["Tamworth Solar Farm"]
     got_solar_trace = got_solar_trace.reset_index(drop=True)
     pd.testing.assert_frame_equal(expected_solar_trace, got_solar_trace)
 
@@ -135,6 +135,6 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
         "datetime64[ns]"
     )
     expected_wind_trace = expected_wind_trace.reset_index(drop=True)
-    got_wind_trace = generator_traces_by_type["wind"]["Canunda Wind Farm"]
+    got_wind_trace = generator_traces_by_type["wind"]["Wambo Wind Farm"]
     got_wind_trace = got_wind_trace.reset_index(drop=True)
     pd.testing.assert_frame_equal(expected_wind_trace, got_wind_trace)
