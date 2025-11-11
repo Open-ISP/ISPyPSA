@@ -153,6 +153,12 @@ def get_pypsa_friendly_input_files():
 
 
 @return_empty_list_if_no_config
+def get_operational_snapshots_file():
+    """Get list with operational snapshots file."""
+    return [get_pypsa_friendly_directory() / "operational_snapshots.csv"]
+
+
+@return_empty_list_if_no_config
 def get_capacity_expansion_timeseries_files():
     """Get list of capacity expansion timeseries files."""
     check_config_present()
@@ -369,19 +375,18 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
 
     ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-    write_csvs(pypsa_tables, pypsa_friendly_dir)
-
 
     # Create capacity expansion timeseries
-    create_pypsa_friendly_timeseries_inputs(
+    pypsa_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         ispypsa_tables,
-        pypsa_tables["snapshots"],
         pypsa_tables["generators"],
         parsed_trace_dir,
         capacity_expansion_timeseries_location,
     )
+
+    write_csvs(pypsa_tables, pypsa_friendly_dir)
 
 
 def create_and_run_capacity_expansion_model() -> None:
@@ -418,6 +423,7 @@ def create_operational_timeseries() -> None:
     configure_logging_for_run()
     input_tables_dir = get_ispypsa_input_tables_directory()
     pypsa_friendly_dir = get_pypsa_friendly_directory()
+    output_tables_dir = get_pypsa_friendly_directory()
     parsed_trace_dir = get_parsed_trace_directory()
     operational_timeseries_location = get_operational_timeseries_location()
 
@@ -425,19 +431,17 @@ def create_operational_timeseries() -> None:
     ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
-    # Create operational snapshots
-    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
-
     # Create operational timeseries
-    create_pypsa_friendly_timeseries_inputs(
+    operational_snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,
-        operational_snapshots,
         pypsa_friendly_input_tables["generators"],
         parsed_trace_dir,
         operational_timeseries_location,
     )
+
+    write_csvs({"operational_snapshots": operational_snapshots}, output_tables_dir)
 
 
 def create_and_run_operational_model() -> None:
@@ -455,9 +459,6 @@ def create_and_run_operational_model() -> None:
     # Load tables
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
-    # Create operational snapshots (needed for update_network_timeseries)
-    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
-
     # Load the capacity expansion network
     network = pypsa.Network(capacity_expansion_pypsa_file)
 
@@ -465,7 +466,7 @@ def create_and_run_operational_model() -> None:
     update_network_timeseries(
         network,
         pypsa_friendly_input_tables,
-        operational_snapshots,
+        pypsa_friendly_input_tables["operational_snapshots"],
         operational_timeseries_location,
     )
 
@@ -570,7 +571,7 @@ def task_create_and_run_capacity_expansion_model():
 @remove_deps_and_targets_if_no_config
 def task_create_operational_timeseries():
     def check_targets():
-        targets = get_pypsa_friendly_input_files() + get_operational_timeseries_files()
+        targets = get_operational_timeseries_files() + get_operational_snapshots_file()
 
         for target in targets:
             if not target.exists():
@@ -589,7 +590,9 @@ def task_create_operational_timeseries():
 @remove_deps_and_targets_if_no_config
 def task_create_and_run_operational_model():
     operational_deps = (
-        get_pypsa_friendly_input_files() + get_operational_timeseries_files()
+        get_pypsa_friendly_input_files()
+        + get_operational_timeseries_files()
+        + get_operational_snapshots_file()
     )
     return {
         "actions": [create_and_run_operational_model],
