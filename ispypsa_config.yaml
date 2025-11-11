@@ -13,12 +13,6 @@ paths:
   parsed_workbook_cache: "ispypsa_runs/workbook_table_cache"
 
   # The run directory where all inputs and outputs will be stored
-  # Subdirectories will be created automatically:
-  #   - {run_directory}/ispypsa_inputs
-  #   - {run_directory}/pypsa_friendly
-  #   - {run_directory}/pypsa_friendly/capacity_expansion_timeseries
-  #   - {run_directory}/pypsa_friendly/operational_timeseries
-  #   - {run_directory}/outputs
   run_directory: "ispypsa_runs"
 
   # The name of the ISPyPSA model run
