@@ -6,14 +6,15 @@ flexibility is required the [API](api.md) might be a better option.
 
 ## Overview
 
-The `ispypsa` command allows you to:
+The `ispypsa` command and sub-tasks allow you to:
 
+  - Download data
   - Extract data from ISP workbooks
   - Generate model input files
   - Run capacity expansion and operational models
   - Manage workflow outputs
 
-All commands require a configuration file that specifies paths and model parameters.
+Most tasks require a configuration file that specifies paths and model parameters.
 See the [Workflow overview](workflow.md) section for a high-level overview of
 the default ISPyPSA workflow.
 
@@ -375,7 +376,7 @@ ispypsa config=config.yaml save_config
 
 ## Configuration
 
-The `config=` argument is required for task execution. It accepts either absolute or relative
+The `config=` argument is required for most tasks. It accepts either absolute or relative
 paths:
 
 ```bash
@@ -404,7 +405,7 @@ ispypsa config=config.yaml cache_required_iasr_workbook_tables
 # Generate ISPyPSA inputs
 ispypsa config=config.yaml create_ispypsa_inputs
 
-# At this stage the ISPyPSA inputs could be edited to adjust build cost or any other
+# At this stage the ISPyPSA inputs could be edited to adjust build costs or any other
 # inputs set out in {run_directory}/{run_name}/ispypsa_inputs/tables/
 
 # Convert to PyPSA format and run capacity expansion

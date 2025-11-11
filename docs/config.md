@@ -6,7 +6,8 @@ is documented on this page and an example config file can be found
 ## Paths
 
 The paths settings specify the locations of model input and output data. Either relative
-or absolute paths can be used.
+or absolute paths can be used. Relative paths assume the run directory (CLI or API) is the
+root directory of the relative path.
 
 ### paths.parsed_traces_directory
 
@@ -61,7 +62,8 @@ Examples:
 
 ### trace_data.dataset_type
 
-The type of trace dataset to download when using CLI download tasks. This setting is only used by the `download_trace_data` CLI task.
+The type of trace dataset to download when using CLI download tasks. This setting is only used by the
+`download_trace_data` CLI task.
 
 Options:
 
@@ -76,7 +78,9 @@ Examples:
 
 ### trace_data.dataset_year
 
-The year of trace dataset to download when using CLI download tasks. This setting is only used by the `download_trace_data` CLI task. Currently only 2024 is supported.
+The year of trace dataset to download when using CLI download tasks. This setting is used by the `download_trace_data`
+CLI task and by other modelling tasks to select the correct data set from the trace data directory. Currently only 2024
+is supported.
 
 Default: 2024
 
