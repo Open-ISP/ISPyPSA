@@ -4,7 +4,11 @@ from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network, save_results, update_network_timeseries
+from ispypsa.pypsa_build import (
+    build_pypsa_network,
+    save_results,
+    update_network_timeseries,
+)
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     load_manually_extracted_tables,

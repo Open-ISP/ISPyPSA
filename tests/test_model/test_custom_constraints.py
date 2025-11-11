@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.data_fetch import read_csvs
-from ispypsa.model import build_pypsa_network
-from ispypsa.model.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build import build_pypsa_network
+from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
 
 
 def test_custom_constraints():
