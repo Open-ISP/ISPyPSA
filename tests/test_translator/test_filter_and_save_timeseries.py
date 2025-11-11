@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from ispypsa.translator.create_pypsa_friendly_inputs import _filter_and_save_timeseries
+from ispypsa.translator.create_pypsa_friendly import _filter_and_save_timeseries
 
 
 def test_filter_and_save_timeseries_demand_traces(tmp_path):
