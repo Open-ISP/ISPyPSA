@@ -6,7 +6,58 @@ steps of the workflow are outlined below.
 
 ## Input data downloading
 
-To document once added to ISPyPSA CLI and API.
+ISPyPSA requires two main types of input data: the IASR workbook containing model
+parameters and assumptions, and trace data containing wind, solar, and demand time series.
+Both can be downloaded using the ISPyPSA CLI or API.
+
+### Workbook
+
+The IASR workbook is downloaded from OpenISP's public archive. The workbook download can be run using
+either the ISPyPSA CLI or API:
+
+=== "CLI"
+
+    ```commandline
+    uv run ispypsa config=ispypsa_config.yaml download_workbook
+    ```
+
+=== "API"
+
+    ```Python
+    from ispypsa.data_fetch import fetch_workbook
+
+    fetch_workbook(
+        workbook_version="6.0",
+        save_path="path/to/save/iasr_workbook.xlsx"
+    )
+    ```
+
+### Trace data
+
+The trace data contains time series for wind and solar resource availability, and demand.
+This data has been preprocessed using [isp-trace-parser](https://github.
+com/Open-ISP/isp-trace-parser) and is hosted on OpenISP's
+public archive. The dataset type (full or example) and year are specified in the
+configuration file. The trace data download can be run using either the ISPyPSA CLI
+or API:
+
+=== "CLI"
+
+    ```commandline
+    uv run ispypsa config=ispypsa_config.yaml download_trace_data
+    ```
+
+=== "API"
+
+    ```Python
+    from ispypsa.data_fetch import fetch_trace_data
+
+    fetch_trace_data(
+        dataset_type="example",
+        dataset_year=2024,
+        save_directory="path/to/save/directory"
+    )
+    ```
 
 ## Workbook parsing
 

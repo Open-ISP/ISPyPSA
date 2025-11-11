@@ -55,8 +55,9 @@ pip install or a python package manager can install ISPyPSA
 
 3. Edit the yaml config file so that the paths section matches your environment:
       - `parsed_traces_directory`: Base directory where trace data will be downloaded.
+         Choose a directory on a drive with at least 30 GB of free space.
       - `workbook_path`: Path where the ISP Excel workbook file will be downloaded (must end with `.xlsx`).
-         You need to give complete file path and name, not just a path to a directory.
+         You need to give a complete file path and name, not just a path to a directory.
       - `parsed_workbook_cache`: Where extracted workbook data should be cached. This
          could be anywhere but a subdirectory in your new directory is a good idea.
       - `run_directory`: Base directory where all model inputs and outputs will be
@@ -75,23 +76,24 @@ pip install or a python package manager can install ISPyPSA
 
         # Base directory where trace data will be downloaded
         # The download task will create isp_2024 subdirectory automatically
-        parsed_traces_directory: "trace_data"
+        parsed_traces_directory: "data/trace_data"
 
         # Path where the ISP Excel workbook will be downloaded
         workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
 
         # The path to the workbook table cache directory
-        parsed_workbook_cache: "workbook_table_cache"
+        parsed_workbook_cache: "data/workbook_table_cache"
 
         # The run directory where all inputs and outputs will be stored
-        # Subdirectories will be created automatically:
-        #   - {run_directory}/{ispypsa_run_name}/ispypsa_inputs
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries
-        #   - {run_directory}/{ispypsa_run_name}/outputs
         run_directory: "ispypsa_runs"
      ```
+
+!!! Important "Relative paths"
+
+      In this example the paths in the config should be relative to the directory where you will use the command line
+      to run the model. If you are using a new `uv` project then this will be the directory you just created, and
+      `data`, `data/trace_data`, `data/workbook_table_cache`, and `ispypsa_runs` should be new directories you have
+       created.
 
 4. Using the command line inside the project/environment where `ispypsa` is installed download the ISP workbook:
 
@@ -145,7 +147,7 @@ pip install or a python package manager can install ISPyPSA
         ```
 
 6. Using the command line inside the project/environment where `ispypsa` is installed
-   run the complete modeling workflow to tests everything works correctly:
+   run the complete modeling workflow to test everything works correctly:
 
     === "uv"
 
