@@ -82,9 +82,9 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
     expected_trace = expected_trace.reset_index(drop=True)
 
     # The function returns a dictionary with node names as keys
-    # For sub_regions granularity, CNSW should be its own node
-    assert "CNSW" in demand_traces
-    got_trace = demand_traces["CNSW"]
+    # For sub_regions granularity, NNSW should be its own node
+    assert "NNSW" in demand_traces
+    got_trace = demand_traces["NNSW"]
 
     # Compare the traces
     pd.testing.assert_frame_equal(expected_trace, got_trace)
