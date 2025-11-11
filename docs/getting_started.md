@@ -78,7 +78,6 @@ pip install or a python package manager can install ISPyPSA
         # The download task will create isp_2024 subdirectory automatically
         parsed_traces_directory: "data/trace_data"
 
-
         # Path where the ISP Excel workbook will be downloaded
         workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
 
@@ -149,7 +148,6 @@ pip install or a python package manager can install ISPyPSA
 
 6. Using the command line inside the project/environment where `ispypsa` is installed
    run the complete modeling workflow to test everything works correctly:
-
 
     === "uv"
 
