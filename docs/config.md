@@ -294,7 +294,7 @@ Representative weeks to use instead of full yearly temporal representation.
 
 Options:
 
-- "None": Full yearly temporal representation is used.
+- "None": Full yearly temporal representation is used or another aggregation.
 - list[int]: a list of integers specifying weeks of year to use as representative. Weeks
   of year are defined as full weeks (Monday-Sunday) falling within the year. For
   example, if the list is "[1]" the model will only use the first full week of each
@@ -303,6 +303,21 @@ Options:
 Examples:
 
 ```representative_weeks: [12, 25, 40]```
+
+#### temporal.capacity_expansion.aggregation.named_representative_weeks
+
+Named representative weeks to use instead of full yearly temporal representation.
+
+Options:
+
+- "None": Full yearly temporal representation is used or another aggregation.
+-  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar of financial year are considered for selection.
+
+Examples:
+
+```named_representative_weeks: [residual-peak-demand, minimum-demand]```
 
 ### temporal.operational
 
@@ -354,7 +369,7 @@ Representative weeks to use instead of full yearly temporal representation.
 
 Options:
 
-- "None": Full yearly temporal representation is used.
+- "None": Full yearly temporal representation is used or another aggregation.
 - list[int]: a list of integers specifying weeks of year to use as representative. Weeks
   of year are defined as full weeks (Monday-Sunday) falling within the year. For
   example, if the list is "[1]" the model will only use the first full week of each
@@ -363,6 +378,21 @@ Options:
 Examples:
 
 ```representative_weeks: [12, 25, 40]```
+
+#### temporal.operational.aggregation.named_representative_weeks
+
+Named representative weeks to use instead of full yearly temporal representation.
+
+Options:
+
+- "None": Full yearly temporal representation is used or another aggregation.
+-  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar of financial year are considered for selection.
+
+Examples:
+
+```named_representative_weeks: [residual-peak-demand, minimum-demand]```
 
 ## Solver
 

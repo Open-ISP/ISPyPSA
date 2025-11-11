@@ -138,6 +138,8 @@ falls within the year.
 modelling using the [temporal.capacity_expansion.aggregation.representative_weeks](config.md#temporalcapacity_expansionaggregationrepresentative_weeks)
 and [temporal.operational.aggregation.representative_weeks](config.md#temporaloperationalaggregationrepresentative_weeks)
 config inputs.
+- If both `representative_weeks` and `named_representative_weeks` are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.
 - TODO: Clarify that representative weeks treated sequential by PyPSA.
 
 ### Named representative weeks
@@ -161,6 +163,8 @@ extracted from the yearly data. For example, ["residual-peak-demand", "residual-
 modelling using the [temporal.capacity_expansion.aggregation.named_representative_weeks](config.md#temporalcapacity_expansionaggregationnamed_representative_weeks)
 and [temporal.operational.aggregation.named_representative_weeks](config.md#temporaloperationalaggregationnamed_representative_weeks)
 config inputs.
+- If both `representative_weeks` and `named_representative_weeks` are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.
 
 ## Capacity expansion
 
