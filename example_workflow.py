@@ -111,6 +111,10 @@ operational_snapshots = create_pypsa_friendly_timeseries_inputs(
     operational_timeseries_location,
 )
 
+write_csvs(
+    {"operational_snapshots": operational_snapshots}, pypsa_friendly_inputs_location
+)
+
 update_network_timeseries(
     network,
     pypsa_friendly_input_tables,
