@@ -163,7 +163,9 @@ def invalid_path_not_directory(config):
 
 
 def invalid_path_wrong_structure(config):
-    config["paths"]["parsed_traces_directory"] = "ispypsa_runs"
+    # 'docs' is a directory which exists locally and on github but doesn't have the
+    # expected solar, wind, demand substructure.
+    config["paths"]["parsed_traces_directory"] = "docs"
     return config, ValueError
 
 
