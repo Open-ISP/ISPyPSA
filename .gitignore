@@ -178,6 +178,7 @@ ispypsa_runs/**/*.yaml
 # IDE specific files
 .vscode/
 .DS_Store
+# ignore claude stuff
 .claude/settings.local.json
 
 # ignore all pypsa output files

@@ -43,7 +43,6 @@ operational_timeseries_location = (
 )
 pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
 
-
 # Create output directories if they don't exist
 parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
 ispypsa_input_tables_directory.mkdir(parents=True, exist_ok=True)
