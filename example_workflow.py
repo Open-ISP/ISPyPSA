@@ -41,7 +41,7 @@ capacity_expansion_timeseries_location = (
 operational_timeseries_location = (
     pypsa_friendly_inputs_location / "operational_timeseries"
 )
-pypsa_outputs_directory = run_directory / "outputs"
+pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
 
 # Create output directories if they don't exist
 parsed_workbook_cache.mkdir(parents=True, exist_ok=True)

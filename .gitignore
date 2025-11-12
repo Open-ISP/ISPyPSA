@@ -170,6 +170,7 @@ scratch.py
 ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
 ispypsa_runs/**/*.nc
+ispypsa_runs/**/*.yaml
 
 # ignore doit database
 .doit*
@@ -178,3 +179,6 @@ ispypsa_runs/**/*.nc
 .vscode/
 .DS_Store
 .claude/settings.local.json
+
+# ignore all pypsa output files
+*.nc
