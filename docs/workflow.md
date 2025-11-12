@@ -125,9 +125,11 @@ run using either ISPyPSA CLI or API.
         load_manually_extracted_tables,
     )
 
+    # Load model config
     config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
+    # Setup directory paths
     parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
@@ -176,9 +178,14 @@ step can be run using either the ISPyPSA CLI or API.
         load_manually_extracted_tables,
     )
 
+    # Load model config
     config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
+    # Setup directory paths
+    parsed_traces_directory = (
+        Path(config.paths.parsed_traces_directory) / f"isp_{config.trace_data.dataset_year}"
+    )
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
         run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
@@ -190,18 +197,22 @@ step can be run using either the ISPyPSA CLI or API.
         pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
     )
 
+    # Load ISPyPSA input tables
+    ispypsa_tables = read_csvs(ispypsa_input_tables_directory)
+
     # Translate ISPyPSA format to a PyPSA friendly format.
     pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-    write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 
-    create_pypsa_friendly_timeseries_inputs(
+    # Create timeseries inputs
+    pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         ispypsa_tables,
-        pypsa_friendly_input_tables["snapshots"],
         parsed_traces_directory,
         capacity_expansion_timeseries_location,
     )
+
+    write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
     ```
 
 ### Create operational timeseries data
@@ -225,9 +236,14 @@ you can also create the PyPSA friendly operational timeseries data at this stage
         load_manually_extracted_tables,
     )
 
+    # Load model config
     config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
+    # Setup directory paths
+    parsed_traces_directory = (
+        Path(config.paths.parsed_traces_directory) / f"isp_{config.trace_data.dataset_year}"
+    )
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
         run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
@@ -239,23 +255,19 @@ you can also create the PyPSA friendly operational timeseries data at this stage
         pypsa_friendly_inputs_location / "operational_timeseries"
     )
 
-    # Translate ISPyPSA format to a PyPSA friendly format.
-    pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-    write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
+    # Load ISPyPSA input tables
+    ispypsa_tables = read_csvs(ispypsa_input_tables_directory)
 
-    operational_snapshots = create_pypsa_friendly_snapshots(
-        config,
-        "operational"
-    )
-
-    create_pypsa_friendly_timeseries_inputs(
+    # Create timeseries inputs
+    operational_snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,
-        operational_snapshots,
         parsed_traces_directory,
         operational_timeseries_location,
     )
+
+    write_csvs({"operational_snapshots": operational_snapshots}, pypsa_friendly_inputs_location)
     ```
 
 ## PyPSA building and run
@@ -280,29 +292,27 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     from ispypsa.data_fetch import read_csvs
     from ispypsa.model import build_pypsa_network, save_results
 
-    # Load model config.
-    config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+    # Load model config
+    config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
-    # Load base paths from config
+    # Setup directory paths
     run_directory = Path(config.paths.run_directory)
-
-    # Construct full paths from base paths
     pypsa_friendly_inputs_location = (
         run_directory / config.ispypsa_run_name / "pypsa_friendly"
     )
-    capacity_expansion_timeseries_location = (
+    timeseries_location = (
         pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
     )
     pypsa_outputs_directory = run_directory / "outputs"
 
-    # Load the capacity expansion network
-    network = pypsa.Network(capacity_expansion_pypsa_file)
+    # Load pypsa friendly inputs
+    pypsa_tables = read_csvs(pypsa_friendly_inputs_location)
 
     # Build a PyPSA network object.
     network = build_pypsa_network(
-        pypsa_friendly_input_tables,
-        capacity_expansion_timeseries_location,
+        pypsa_tables,
+        timeseries_location,
     )
 
     # Solve for least cost operation/expansion
@@ -313,7 +323,7 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     save_results(
         network,
         pypsa_outputs_directory,
-        config.paths.ispypsa_run_name +"_capacity_expansion"
+        "capacity_expansion"
     )
     ```
 
@@ -341,14 +351,12 @@ computational complexity.
     from ispypsa.data_fetch import read_csvs
     from ispypsa.model import update_network_timeseries, save_results
 
-    # Load model config.
-    config_path = Path("ispypsa_runs/development/ispypsa_inputs/ispypsa_config.yaml")
+    # Load model config
+    config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
-    # Load base paths from config
+    # Setup directory paths
     run_directory = Path(config.paths.run_directory)
-
-    # Construct full paths from base paths
     pypsa_friendly_inputs_location = (
         run_directory / config.ispypsa_run_name / "pypsa_friendly"
     )
@@ -357,19 +365,20 @@ computational complexity.
     )
     pypsa_outputs_directory = run_directory / "outputs"
     capacity_expansion_pypsa_file = (
-        pypsa_outputs_directory / config.paths.ispypsa_run_name +"_capacity_expansion"
+        pypsa_outputs_directory / "capacity_expansion.nc"
     )
 
-    # Get PyPSA freindly inputs as pd.DataFrames
-    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_inputs_location)
+    # Load pypsa friendly inputs
+    pypsa_tables = read_csvs(pypsa_friendly_inputs_location)
 
-    # Create operational snapshots (needed for update_network_timeseries)
-    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
+    # Load the capacity expansion network
+    network = pypsa.Network(capacity_expansion_pypsa_file)
 
+    # Update network timeseries
     update_network_timeseries(
         network,
-        pypsa_friendly_input_tables,
-        operational_snapshots,
+        pypsa_tables,
+        pypsa_tables["operational_snapshots"],
         operational_timeseries_location,
     )
 
@@ -384,6 +393,6 @@ computational complexity.
     save_results(
         network,
         pypsa_outputs_directory,
-        config.paths.ispypsa_run_name +"_operational"
+        "operational"
     )
     ```
