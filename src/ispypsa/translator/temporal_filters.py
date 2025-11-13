@@ -628,14 +628,14 @@ def _aggregate_wind_solar_traces(
 
     Args:
         generator_traces: Dictionary with generator names as keys and traces as values
-        existing_generators: DataFrame with generator data including fuel_type and reg_cap
+        existing_generators: DataFrame with generator data including fuel_type and maximum_capacity_mw
 
     Returns:
         DataFrame with columns: Datetime, Value (total wind+solar MW)
     """
     # Create mapping of generator name to fuel type and capacity
     gen_info = existing_generators.set_index("generator")[
-        ["fuel_type", "reg_cap"]
+        ["fuel_type", "maximum_capacity_mw"]
     ].to_dict("index")
 
     # Collect all wind and solar data
@@ -646,7 +646,7 @@ def _aggregate_wind_solar_traces(
             continue
 
         gen_fuel_type = gen_info[gen_name]["fuel_type"]
-        gen_capacity = gen_info[gen_name]["reg_cap"]
+        gen_capacity = gen_info[gen_name]["maximum_capacity_mw"]
 
         # Only process wind and solar generators
         if "Wind" in gen_fuel_type or "Solar" in gen_fuel_type:
