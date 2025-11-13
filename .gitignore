@@ -173,7 +173,7 @@ ispypsa_runs/**/*.nc
 ispypsa_runs/**/*.yaml
 
 # ignore doit database
-.doit*\
+.doit*
 
 # IDE specific files
 .vscode/
