@@ -204,7 +204,7 @@ def test_prepare_data_for_named_weeks_with_residual_metrics_success(csv_str_to_d
     generator_traces = {"wind1": gen_data, "solar1": gen_data}
 
     generators_csv = """
-    generator,fuel_type,reg_cap
+    generator,fuel_type,maximum_capacity_mw
     wind1,Wind,100
     solar1,Solar,50
     """
@@ -333,7 +333,7 @@ def test_aggregate_wind_solar_traces_basic(csv_str_to_df):
     generator_traces = {"wind_farm_1": wind_trace, "solar_farm_1": solar_trace}
 
     generators_csv = """
-    generator,fuel_type,reg_cap
+    generator,fuel_type,maximum_capacity_mw
     wind_farm_1,Wind,100
     solar_farm_1,Solar,50
     """
@@ -371,7 +371,7 @@ def test_aggregate_wind_solar_traces_missing_generator(csv_str_to_df):
     }
 
     generators_csv = """
-    generator,fuel_type,reg_cap
+    generator,fuel_type,maximum_capacity_mw
     wind_farm_1,Wind,100
     """
     existing_generators = csv_str_to_df(generators_csv)
@@ -409,7 +409,7 @@ def test_aggregate_wind_solar_traces_non_renewable_generators(csv_str_to_df):
     }
 
     generators_csv = """
-    generator,fuel_type,reg_cap
+    generator,fuel_type,maximum_capacity_mw
     wind_farm_1,Wind,100
     coal_plant,Black__Coal,200
     gas_plant,Gas,150
@@ -445,7 +445,7 @@ def test_aggregate_wind_solar_traces_no_renewable_generators(csv_str_to_df):
     generator_traces = {"coal_plant": gen_trace, "gas_plant": gen_trace}
 
     generators_csv = """
-    generator,fuel_type,reg_cap
+    generator,fuel_type,maximum_capacity_mw
     coal_plant,Black__Coal,200
     gas_plant,Gas,150
     """
