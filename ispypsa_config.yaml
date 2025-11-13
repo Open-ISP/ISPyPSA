@@ -104,15 +104,15 @@ temporal:
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
       # Options:
-      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
       #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
       #   first full week of each modelled year.
 
-      representative_weeks: None
+      representative_weeks: ~
 
       # Named representative weeks based on demand characteristics
-      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
       #     residual-minimum-demand, peak-consumption, residual-peak-consumption
       named_representative_weeks: [residual-peak-demand]
@@ -125,14 +125,14 @@ temporal:
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
       # Options:
-      #   "None": Full yearly temporal representation is used or another aggregation.
+      #    ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
       #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
       #   first full week of each modelled year.
-      representative_weeks: None
+      representative_weeks: ~
 
       # Named representative weeks based on demand characteristics
-      #   "None": Full yearly temporal representation is used or another aggregation.
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
       #     residual-minimum-demand, peak-consumption, residual-peak-consumption
       named_representative_weeks: [residual-peak-demand]
