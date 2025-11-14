@@ -17,6 +17,15 @@ from ispypsa.data_fetch import (
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.plotting import (
+    create_plot_suite,
+    list_capacity_expansion_plot_files,
+    save_plots,
+)
+from ispypsa.results import (
+    extract_capacity_expansion_results,
+    list_capacity_expansion_results_files,
+)
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     list_templater_output_files,
@@ -92,6 +101,16 @@ def get_operational_timeseries_location():
 def get_pypsa_outputs_directory():
     """Get PyPSA outputs directory path."""
     return get_run_directory() / "outputs"
+
+
+def get_capacity_expansion_tabular_results_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_tables"
+
+
+def get_capacity_expansion_plots_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_plots"
 
 
 def return_empty_list_if_no_config(func):
@@ -176,6 +195,23 @@ def get_operational_timeseries_files():
     return list_timeseries_files(
         config, ispypsa_tables, get_operational_timeseries_location()
     )
+
+
+@return_empty_list_if_no_config
+def get_capacity_expansion_tabular_results_files():
+    """Get list of capacity expansion tabular results files."""
+    check_config_present()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    return list_capacity_expansion_results_files(results_dir)
+
+
+@return_empty_list_if_no_config
+def get_capacity_expansion_plot_files():
+    """Get list of plot files that will be created."""
+    check_config_present()
+    plots_dir = get_capacity_expansion_plots_directory()
+    # Based on current plot structure
+    return list_capacity_expansion_plot_files(plots_dir)
 
 
 def configure_logging_for_run() -> None:
@@ -413,6 +449,8 @@ def create_and_run_capacity_expansion_model() -> None:
         network.optimize.solve_model(solver_name=config.solver)
 
     network.export_to_netcdf(capacity_expansion_pypsa_file)
+    results = extract_capacity_expansion_results(network)
+    write_csvs(results, get_capacity_expansion_tabular_results_directory())
 
 
 def create_operational_timeseries() -> None:
@@ -477,6 +515,23 @@ def create_and_run_operational_model() -> None:
 
     # Save the network for operational optimization
     network.export_to_netcdf(operational_pypsa_file)
+
+
+def create_and_save_plots() -> None:
+    """Create and save plots from capacity expansion results."""
+    check_config_present()
+    configure_logging_for_run()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    plots_dir = get_capacity_expansion_plots_directory()
+
+    # Load results
+    results = read_csvs(results_dir)
+
+    # Create plots
+    plots = create_plot_suite(results)
+
+    # Save plots
+    save_plots(plots, plots_dir)
 
 
 def remove_deps_and_targets_if_no_config(func):
@@ -554,11 +609,15 @@ def task_create_and_run_capacity_expansion_model():
         get_pypsa_friendly_input_files() + get_capacity_expansion_timeseries_files()
     )
 
+    capacity_expansion_targets = [
+        get_capacity_expansion_pypsa_file()
+    ] + get_capacity_expansion_tabular_results_files()
+
     return {
         "actions": [(create_and_run_capacity_expansion_model,)],
         "task_dep": ["create_pypsa_friendly_inputs"],
         "file_dep": capacity_expansion_deps,
-        "targets": [get_capacity_expansion_pypsa_file()],
+        "targets": capacity_expansion_targets,
     }
 
 
@@ -593,6 +652,18 @@ def task_create_and_run_operational_model():
         "actions": [create_and_run_operational_model],
         "file_dep": operational_deps,
         "targets": [get_operational_pypsa_file()],
+    }
+
+
+@create_after(executed="create_and_run_capacity_expansion_model")
+@remove_deps_and_targets_if_no_config
+def task_create_capacity_expansion_plots():
+    """Create and save plots from capacity expansion results."""
+    return {
+        "actions": [create_and_save_plots],
+        "task_dep": ["create_and_run_capacity_expansion_model"],
+        "file_dep": get_capacity_expansion_tabular_results_files(),
+        "targets": get_capacity_expansion_plot_files(),
     }
 
 

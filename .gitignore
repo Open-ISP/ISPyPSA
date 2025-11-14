@@ -171,6 +171,8 @@ ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
 ispypsa_runs/**/*.nc
 ispypsa_runs/**/*.yaml
+*.svg
+
 
 # ignore doit database
 .doit*

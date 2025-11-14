@@ -28,6 +28,7 @@ def _translate_renewable_energy_zone_build_limits_to_links(
     existing_links = _translate_existing_rez_connections_to_links(
         renewable_energy_zone_build_limits,
         config.network.rez_to_sub_region_transmission_default_limit,
+        config.temporal.range.start_year,
     )
 
     # Create expansion links from rez expansion costs if expansion is enabled
@@ -42,6 +43,9 @@ def _translate_renewable_energy_zone_build_limits_to_links(
             id_column="rez_constraint_id",
             match_column="bus0",
         )
+
+        expansion_links["isp_type"] = "rez"
+
         # Combine existing and expansion links
         all_links = pd.concat(
             [existing_links, expansion_links], ignore_index=True, sort=False
@@ -55,6 +59,7 @@ def _translate_renewable_energy_zone_build_limits_to_links(
 def _translate_existing_rez_connections_to_links(
     renewable_energy_zone_build_limits: pd.DataFrame,
     rez_to_sub_region_transmission_default_limit: float,
+    start_year: int,
 ) -> pd.DataFrame:
     """Process existing REZ connection limits to PyPSA links.
 
@@ -75,10 +80,12 @@ def _translate_existing_rez_connections_to_links(
 
     # Links without an explicit limit because their limits are modelled through
     # custom constraints are given a very large capacity
+    links["isp_type"] = "rez"
+    links.loc[links["p_nom"].isna(), "isp_type"] = "rez_no_limit"
     links["p_nom"] = links["p_nom"].fillna(rez_to_sub_region_transmission_default_limit)
 
     links["p_min_pu"] = -1.0
-    links["build_year"] = 0
+    links["build_year"] = start_year - 1
     links["lifetime"] = np.inf
     links["capital_cost"] = np.nan
 
