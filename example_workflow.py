@@ -7,6 +7,8 @@ from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, save_results, update_network_timeseries
+from ispypsa.plotting import create_plot_suite, save_plots
+from ispypsa.results import extract_capacity_expansion_results
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     load_manually_extracted_tables,
@@ -44,6 +46,8 @@ operational_timeseries_location = (
     pypsa_friendly_inputs_location / "operational_timeseries"
 )
 pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
+tabular_results_directory = pypsa_outputs_directory / "capacity_expansion_tables"
+plot_results_directory = pypsa_outputs_directory / "capacity_expansion_plots"
 
 # Create output directories if they don't exist
 parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
@@ -52,6 +56,8 @@ pypsa_friendly_inputs_location.mkdir(parents=True, exist_ok=True)
 capacity_expansion_timeseries_location.mkdir(parents=True, exist_ok=True)
 operational_timeseries_location.mkdir(parents=True, exist_ok=True)
 pypsa_outputs_directory.mkdir(parents=True, exist_ok=True)
+tabular_results_directory.mkdir(parents=True, exist_ok=True)
+plot_results_directory.mkdir(parents=True, exist_ok=True)
 
 configure_logging()
 
@@ -105,6 +111,13 @@ network.optimize.solve_model(solver_name=config.solver)
 
 # Save results.
 save_results(network, pypsa_outputs_directory, "capacity_expansion")
+results = extract_capacity_expansion_results(network)
+write_csvs(results, tabular_results_directory)
+
+# Create plots
+plots = create_plot_suite(results)
+save_plots(plots, plot_results_directory)
+
 
 # Operational modelling extension
 operational_snapshots = create_pypsa_friendly_timeseries_inputs(

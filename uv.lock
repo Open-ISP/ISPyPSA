@@ -1038,6 +1038,7 @@ dependencies = [
     { name = "isp-workbook-parser" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "pygal" },
     { name = "pypsa" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -1081,6 +1082,7 @@ requires-dist = [
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
+    { name = "pygal", specifier = ">=3.0.5" },
     { name = "pypsa", specifier = "==0.34.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -2371,6 +2373,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/91/c3/5240f2a5dc0b4856655c003466f70aa50d676b1709e5b04f0bee296bbd28/pydata_sphinx_theme-0.16.0.tar.gz", hash = "sha256:721dd26e05fa8b992d66ef545536e6cbe0110afb9865820a08894af1ad6f7707", size = 2407197 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ba/92/38f384061e1361fac7092c35e932c0e08026fb9080bf3fbf05f4c3bb6bda/pydata_sphinx_theme-0.16.0-py3-none-any.whl", hash = "sha256:18c810ee4e67e05281e371e156c1fb5bb0fa1f2747240461b225272f7d8d57d8", size = 6739948 },
+]
+
+[[package]]
+name = "pygal"
+version = "3.0.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-metadata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/7b/8f50821a0f1585881ef40ae13ecb7603b0d81ef99fedf992ec35e6b6f7d5/pygal-3.0.5.tar.gz", hash = "sha256:c0a0f34e5bc1c01975c2bfb8342ad521e293ad42e525699dd00c4d7a52c14b71", size = 80489 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/7d/b5d656dbeb73f488ce7409a75108a775f6cf8e20624ed8025a9476cbc1bb/pygal-3.0.5-py3-none-any.whl", hash = "sha256:a3268a5667b470c8fbbb0eca7e987561a7321caeba589d40e4c1bc16dbe71393", size = 129548 },
 ]
 
 [[package]]

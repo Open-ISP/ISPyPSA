@@ -28,5 +28,6 @@ def write_csvs(data_dict: dict[str : pd.DataFrame], directory: Path | str):
     """
     for file_name, data in data_dict.items():
         save_path = Path(directory) / Path(f"{file_name}.csv")
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         # set index=False to avoid adding "Unnamed" cols if/when reading from these csvs later
         data.to_csv(save_path, index=False)
