@@ -4,9 +4,13 @@ from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network, save_results, update_network_timeseries
-from ispypsa.plotting import create_plot_suite, save_plots
-from ispypsa.results import extract_capacity_expansion_results
+from ispypsa.model import (
+    build_pypsa_network,
+    save_pypsa_network,
+    update_network_timeseries,
+)
+from ispypsa.plotting import create_capacity_expansion_plot_suite, save_plots
+from ispypsa.results import extract_tabular_capacity_expansion_results
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     load_manually_extracted_tables,
@@ -105,15 +109,14 @@ network = build_pypsa_network(
 # Never use network.optimize() as this will remove custom constraints.
 network.optimize.solve_model(solver_name=config.solver)
 
-# Save results.
-save_results(network, pypsa_outputs_directory, "capacity_expansion")
-results = extract_capacity_expansion_results(network)
+# Save capacity expansion results
+save_pypsa_network(network, pypsa_outputs_directory, "capacity_expansion")
+results = extract_tabular_capacity_expansion_results(network)
 write_csvs(results, tabular_results_directory)
 
-# Create plots
-plots = create_plot_suite(results)
+# Create and save capacity expansion plots
+plots = create_capacity_expansion_plot_suite(results)
 save_plots(plots, plot_results_directory)
-
 
 # Operational modelling extension
 operational_snapshots = create_pypsa_friendly_timeseries_inputs(
@@ -143,4 +146,4 @@ network.optimize.optimize_with_rolling_horizon(
     overlap=config.temporal.operational.overlap,
 )
 
-save_results(network, pypsa_outputs_directory, "operational")
+save_pypsa_network(network, pypsa_outputs_directory, "operational")

@@ -18,12 +18,12 @@ from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, update_network_timeseries
 from ispypsa.plotting import (
-    create_plot_suite,
+    create_capacity_expansion_plot_suite,
     list_capacity_expansion_plot_files,
     save_plots,
 )
 from ispypsa.results import (
-    extract_capacity_expansion_results,
+    extract_tabular_capacity_expansion_results,
     list_capacity_expansion_results_files,
 )
 from ispypsa.templater import (
@@ -423,6 +423,14 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
 
+def get_create_plots_arg() -> bool:
+    create_plots = config.create_plots
+    cli_create_plots = get_var("create_plots", None)
+    if cli_create_plots is not None:
+        create_plots = cli_create_plots.lower() == "true"
+    return create_plots
+
+
 def create_and_run_capacity_expansion_model() -> None:
     check_config_present()
     configure_logging_for_run()
@@ -433,7 +441,7 @@ def create_and_run_capacity_expansion_model() -> None:
     )
 
     # Get dont_run flag from doit variables
-    dont_run = get_var("dont_run_capacity_expansion", "False") == "True"
+    dont_run = get_var("dont_run_capacity_expansion", "False").lower == "true"
 
     create_or_clean_task_output_folder(capacity_expansion_pypsa_file.parent)
 
@@ -447,10 +455,14 @@ def create_and_run_capacity_expansion_model() -> None:
     if not dont_run:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
+        results = extract_tabular_capacity_expansion_results(network)
+        write_csvs(results, get_capacity_expansion_tabular_results_directory())
+
+        if get_create_plots_arg():
+            plots = create_capacity_expansion_plot_suite(results)
+            save_plots(plots, get_capacity_expansion_plots_directory())
 
     network.export_to_netcdf(capacity_expansion_pypsa_file)
-    results = extract_capacity_expansion_results(network)
-    write_csvs(results, get_capacity_expansion_tabular_results_directory())
 
 
 def create_operational_timeseries() -> None:
@@ -517,7 +529,7 @@ def create_and_run_operational_model() -> None:
     network.export_to_netcdf(operational_pypsa_file)
 
 
-def create_and_save_plots() -> None:
+def create_capacity_expansion_plots_suite() -> None:
     """Create and save plots from capacity expansion results."""
     check_config_present()
     configure_logging_for_run()
@@ -528,7 +540,7 @@ def create_and_save_plots() -> None:
     results = read_csvs(results_dir)
 
     # Create plots
-    plots = create_plot_suite(results)
+    plots = create_capacity_expansion_plot_suite(results)
 
     # Save plots
     save_plots(plots, plots_dir)
@@ -655,15 +667,23 @@ def task_create_and_run_operational_model():
     }
 
 
-@create_after(executed="create_and_run_capacity_expansion_model")
+def check_results_files_exist():
+    """Check if all dependencies exist"""
+    dependencies = get_capacity_expansion_tabular_results_files()
+    for dep in dependencies:
+        if not os.path.exists(dep):
+            raise FileNotFoundError(
+                f"Results file {dep} not found. Please run the capacity expansion model first."
+            )
+
+
 @remove_deps_and_targets_if_no_config
 def task_create_capacity_expansion_plots():
     """Create and save plots from capacity expansion results."""
     return {
-        "actions": [create_and_save_plots],
-        "task_dep": ["create_and_run_capacity_expansion_model"],
-        "file_dep": get_capacity_expansion_tabular_results_files(),
+        "actions": [check_results_files_exist, create_capacity_expansion_plots_suite],
         "targets": get_capacity_expansion_plot_files(),
+        # "uptodate": [check_results_files_exist()],
     }
 
 
