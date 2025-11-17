@@ -171,6 +171,7 @@ class ModelConfig(BaseModel):
         "mindopt",
         "pips",
     ]
+    create_plots: bool = False
 
     @model_validator(mode="after")
     def validate_region_filters(self):

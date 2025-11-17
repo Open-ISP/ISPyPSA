@@ -142,3 +142,7 @@ temporal:
 
 # External solver to use
 solver: highs
+
+
+# ===== Plotting =====================================================================
+create_plots: True
