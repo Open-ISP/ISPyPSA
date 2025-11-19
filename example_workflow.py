@@ -11,8 +11,17 @@ from ispypsa.model import (
     save_pypsa_network,
     update_network_timeseries,
 )
-from ispypsa.plotting import create_capacity_expansion_plot_suite, save_plots
-from ispypsa.results import extract_tabular_capacity_expansion_results
+from ispypsa.plotting import (
+    create_capacity_expansion_plot_suite,
+    create_operational_plot_suite,
+    generate_results_website,
+    save_plots,
+)
+from ispypsa.results import (
+    extract_regions_and_zones_mapping,
+    extract_tabular_capacity_expansion_results,
+    extract_tabular_operational_results,
+)
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     load_manually_extracted_tables,
@@ -50,8 +59,14 @@ operational_timeseries_location = (
     pypsa_friendly_inputs_location / "operational_timeseries"
 )
 pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
-tabular_results_directory = pypsa_outputs_directory / "capacity_expansion_tables"
-plot_results_directory = pypsa_outputs_directory / "capacity_expansion_plots"
+capacity_expansion_tabular_results_directory = (
+    pypsa_outputs_directory / "capacity_expansion_tables"
+)
+capacity_expansion_plot_results_directory = (
+    pypsa_outputs_directory / "capacity_expansion_plots"
+)
+operational_tabular_results_directory = pypsa_outputs_directory / "operational_tables"
+operational_plot_results_directory = pypsa_outputs_directory / "operational_plots"
 
 # Create output directories if they don't exist
 parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
@@ -60,8 +75,10 @@ pypsa_friendly_inputs_location.mkdir(parents=True, exist_ok=True)
 capacity_expansion_timeseries_location.mkdir(parents=True, exist_ok=True)
 operational_timeseries_location.mkdir(parents=True, exist_ok=True)
 pypsa_outputs_directory.mkdir(parents=True, exist_ok=True)
-tabular_results_directory.mkdir(parents=True, exist_ok=True)
-plot_results_directory.mkdir(parents=True, exist_ok=True)
+capacity_expansion_tabular_results_directory.mkdir(parents=True, exist_ok=True)
+capacity_expansion_plot_results_directory.mkdir(parents=True, exist_ok=True)
+operational_tabular_results_directory.mkdir(parents=True, exist_ok=True)
+operational_plot_results_directory.mkdir(parents=True, exist_ok=True)
 
 configure_logging()
 
@@ -115,12 +132,28 @@ network.optimize.solve_model(solver_name=config.solver)
 
 # Save capacity expansion results
 save_pypsa_network(network, pypsa_outputs_directory, "capacity_expansion")
-results = extract_tabular_capacity_expansion_results(network)
-write_csvs(results, tabular_results_directory)
+capacity_expansion_results = extract_tabular_capacity_expansion_results(
+    network, ispypsa_tables
+)
+capacity_expansion_results["regions_and_zones_mapping"] = (
+    extract_regions_and_zones_mapping(ispypsa_tables)
+)
+write_csvs(capacity_expansion_results, capacity_expansion_tabular_results_directory)
 
 # Create and save capacity expansion plots
-plots = create_capacity_expansion_plot_suite(results)
-save_plots(plots, plot_results_directory)
+capacity_expansion_plots = create_capacity_expansion_plot_suite(
+    capacity_expansion_results
+)
+save_plots(capacity_expansion_plots, capacity_expansion_plot_results_directory)
+
+# Generate capacity expansion results website
+generate_results_website(
+    capacity_expansion_plots,
+    capacity_expansion_plot_results_directory,
+    pypsa_outputs_directory,
+    output_filename="capacity_expansion_results_viewer.html",
+    subtitle="Capacity Expansion Analysis",
+)
 
 # Operational modelling extension
 operational_snapshots = create_pypsa_friendly_timeseries_inputs(
@@ -152,3 +185,23 @@ network.optimize.optimize_with_rolling_horizon(
 )
 
 save_pypsa_network(network, pypsa_outputs_directory, "operational")
+
+# Extract and save operational results
+operational_results = extract_tabular_operational_results(network, ispypsa_tables)
+operational_results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+    ispypsa_tables
+)
+write_csvs(operational_results, operational_tabular_results_directory)
+
+# Create and save operational plots
+operational_plots = create_operational_plot_suite(operational_results)
+save_plots(operational_plots, operational_plot_results_directory)
+
+# Generate operational results website
+generate_results_website(
+    operational_plots,
+    operational_plot_results_directory,
+    pypsa_outputs_directory,
+    output_filename="operational_results_viewer.html",
+    subtitle="Operational Analysis",
+)
