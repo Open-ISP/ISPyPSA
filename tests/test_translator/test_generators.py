@@ -929,8 +929,25 @@ def test_get_dynamic_fuel_prices(sample_generator_translator_tables, csv_str_to_
     }
     generators_df = sample_generator_translator_tables["translated_generators_df"]
 
+    # Set up snapshots
+    snapshots_csv = """
+    investment_periods,     snapshots
+    2024,                   2023-07-01__12:00:00
+    2024,                   2023-10-01__12:00:00
+    2024,                   2024-01-01__12:00:00
+    2024,                   2024-04-01__12:00:00
+    2025,                   2024-07-01__12:00:00
+    2025,                   2024-10-01__12:00:00
+    2025,                   2025-01-01__12:00:00
+    2025,                   2025-04-01__12:00:00
+    """
+    snapshots = csv_str_to_df(snapshots_csv)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+
     # Call the function with the test data
-    dynamic_fuel_prices = _get_dynamic_fuel_prices(ispypsa_tables, generators_df)
+    dynamic_fuel_prices = _get_dynamic_fuel_prices(
+        ispypsa_tables, generators_df, snapshots
+    )
 
     # Check that the fuel costs are calculated correctly
     expected_fuel_prices_csv = """
