@@ -160,13 +160,96 @@ def test_translate_custom_constraints_with_tables_no_rez_expansion(csv_str_to_df
 - Prefer small, focused functions with single responsibilities
 - Extract complex workflows into independent subfunctions that can be tested separately
 - Functions should return data (e.g., DataFrames) rather than modifying state
-- Each function should handle its own edge cases (None inputs, empty DataFrames)
+- **DEFAULT: Write non-defensive code**
+  - Do NOT add defensive programming features unless explicitly needed or revealed through testing
+  - Trust the design decisions and caller contracts
+  - If the architecture dictates a parameter will always be provided, don't add `None` checks
+  - Don't add fallback logic "just in case" when the system is designed to prevent that case
+  - Don't add try/except blocks unless error handling is explicitly required
+  - Defensive checks add noise, obscure the actual logic, and hide bugs that should fail fast
+  - Let the code fail clearly when preconditions aren't met rather than silently handling edge cases
+- Don't maintain backward compatibility unless explicitly requested
+  - When refactoring function signatures, update all call sites directly
+  - Don't create deprecated wrapper functions or aliases
+  - Breaking changes to internal APIs are acceptable
 
 ### Refactoring Patterns
 - When a function has multiple independent workflows, break it into:
   1. Separate functions for each workflow
   2. A main orchestration function that calls the subfunctions
 - Move validation logic (like empty checks) into the lowest appropriate level
+
+### Post-Drafting Review Questions
+
+After drafting a function, consider these refactoring opportunities:
+
+1. **Could vectorized pandas operations improve code clarity?**
+   - Look for nested loops iterating over DataFrame rows
+   - Consider using `.pivot()`, `.reindex()`, `.ffill()`, `.groupby()`, `.merge()` instead
+   - Vectorized operations are typically faster and more readable
+
+   Example:
+   ```python
+   # Before: Nested loops with manual state tracking
+   for entity in entities:
+       entity_data = data[data["entity_id"] == entity]
+       values = []
+       for year in years:
+           year_data = entity_data[entity_data["year"] == year]
+           if not year_data.empty:
+               values.append(year_data["value"].iloc[0])
+           else:
+               values.append(values[-1] if values else 0)
+
+   # After: Vectorized with pivot + reindex + ffill
+   pivot_data = data.pivot(index="year", columns="entity_id", values="value")
+   pivot_data = pivot_data.reindex(years).ffill().fillna(0)
+   ```
+
+2. **Could helper functions improve code clarity/conciseness?**
+   - Look for duplicated code blocks (especially with only minor variations)
+   - Consider extracting repeated logic into a parameterized helper function
+   - Helper functions should be private (start with `_`) if not used outside the module
+
+   Signs you need a helper function:
+   - Same logic repeated with different variable names
+   - Copy-pasted code blocks with minor differences
+   - Function longer than ~50 lines with distinct sections
+
+3. **Should defensive code be removed?**
+   - **DEFAULT: Remove defensive checks unless explicitly needed**
+   - Don't add defensive checks when the architecture prevents the case from occurring
+   - Trust design decisions - if a parameter is always provided by design, don't check for None
+   - Remove try/except blocks that silently handle errors without clear justification
+   - Consider whether edge cases are realistic given the system's design
+
+   Example of unnecessary defensiveness:
+   ```python
+   # Before: Overly defensive when link_flows is always provided by caller
+   def extract_flows(link_flows: pd.DataFrame | None = None, network: pypsa.Network = None):
+       if link_flows is None:
+           link_flows = _extract_raw_link_flows(network)
+       # ... process link_flows
+
+   # After: Trust the design - link_flows is always provided
+   def extract_flows(link_flows: pd.DataFrame):
+       # ... process link_flows
+   ```
+
+   Example of pandas operations that don't need defensive checks:
+   ```python
+   # Filtering empty DataFrame returns empty DataFrame anyway - no check needed
+   region_data = data[data["region"] == region]  # Works even if data is empty
+
+   # Many pandas operations handle empty DataFrames gracefully
+   result = data.groupby("category").sum()  # Returns empty if data is empty
+   ```
+
+   Only keep defensive code when:
+   - Explicitly requested by the user or revealed necessary through testing
+   - At module boundaries (public API) where you don't control the caller AND edge cases are documented
+   - The edge case would cause cryptic errors or silent data corruption AND is explicitly tested
+   - The defensive check is part of a tested, real-world usage pattern
 
 ### Example Refactoring Pattern
 ```python
@@ -233,71 +316,65 @@ UV_PROJECT_ENVIRONMENT=.venv-wsl uv sync
 
 #### Running Tests with uv
 ```bash
-# Basic test execution
-source $HOME/.local/bin/env && uv run pytest tests/
+# Basic test execution (RECOMMENDED)
+uv run pytest tests/
 
 # Run a specific test file
-source $HOME/.local/bin/env && uv run pytest tests/test_translator/test_translate_custom_constraints.py
+uv run pytest tests/test_translator/test_translate_custom_constraints.py
 
 # Run a specific test function with verbose output
-source $HOME/.local/bin/env && uv run pytest tests/test_translator/test_translate_custom_constraints.py::test_translate_custom_constraints_no_tables_no_links -v
+uv run pytest tests/test_translator/test_translate_custom_constraints.py::test_translate_custom_constraints_no_tables_no_links -v
 
 # Run tests matching a pattern
-source $HOME/.local/bin/env && uv run pytest tests/ -k "custom_constraint" -v
-
-# With a specific virtual environment
-source $HOME/.local/bin/env && UV_PROJECT_ENVIRONMENT=.venv-wsl uv run pytest tests/test_translator/test_translate_custom_constraints.py -v
+uv run pytest tests/ -k "custom_constraint" -v
 ```
 
 #### Running Python Scripts with uv
 ```bash
-# Run a Python script
-source $HOME/.local/bin/env && uv run python example_workflow.py
+# Run a Python script (RECOMMENDED)
+uv run example_workflow.py
 
 # Run a module
-source $HOME/.local/bin/env && uv run python -m ispypsa.model.build
+uv run python -m ispypsa.model.build
 
 # Interactive Python shell with project dependencies
-source $HOME/.local/bin/env && uv run python
-
-# Run with specific virtual environment
-source $HOME/.local/bin/env && UV_PROJECT_ENVIRONMENT=.venv-wsl uv run python example_workflow.py
+uv run python
 ```
 
 #### Common Workflow Commands
 ```bash
 # Check which packages are installed
-source $HOME/.local/bin/env && uv pip list
+uv pip list
 
 # Add a new dependency (this updates pyproject.toml and uv.lock)
-source $HOME/.local/bin/env && uv add pandas
+uv add pandas
 
 # Add a development dependency
-source $HOME/.local/bin/env && uv add --dev pytest-mock
+uv add --dev pytest-mock
 
 # Update dependencies
-source $HOME/.local/bin/env && uv sync --upgrade
+uv sync --upgrade
 
 # Run pre-commit hooks
-source $HOME/.local/bin/env && uv run pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 #### Troubleshooting
 ```bash
 # If you get "Project virtual environment directory cannot be used" error
 rm -rf .venv
-source $HOME/.local/bin/env && uv sync
+uv sync
 
 # To explicitly set UV_LINK_MODE if you see hardlink warnings
 export UV_LINK_MODE=copy
-source $HOME/.local/bin/env && uv sync
+uv sync
 ```
 
 #### Best Practices
-1. Always source the uv environment before running commands: `source $HOME/.local/bin/env`
-2. Use `UV_PROJECT_ENVIRONMENT` when you have multiple virtual environments
-3. Run `uv sync` after pulling changes that might have updated dependencies
-4. Use `uv run` prefix for all Python-related commands to ensure the correct environment is used
+1. Use `uv run` for all Python scripts and test execution
+2. Use `uv sync` after pulling changes that might have updated dependencies
+3. The `uv` command automatically detects and uses the project's virtual environment
+4. For WSL/Linux environments where uv is installed via the shell script, you may need to source the environment first: `source $HOME/.local/bin/env`
 
 ### Testing Workflow
 1. Implement the test with hardcoded expected results

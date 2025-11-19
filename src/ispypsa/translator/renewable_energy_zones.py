@@ -33,9 +33,13 @@ def _translate_renewable_energy_zone_build_limits_to_links(
 
     # Create expansion links from rez expansion costs if expansion is enabled
     if config.network.rez_transmission_expansion and not rez_expansion_costs.empty:
+        links_to_duplicate = existing_links[
+            existing_links["isp_type"] != "rez_no_limit"
+        ].copy()
+
         expansion_links = _translate_expansion_costs_to_links(
             expansion_costs=rez_expansion_costs,
-            existing_links_df=existing_links.copy(),
+            existing_links_df=links_to_duplicate,
             investment_periods=config.temporal.capacity_expansion.investment_periods,
             year_type=config.temporal.year_type,
             wacc=config.wacc,
