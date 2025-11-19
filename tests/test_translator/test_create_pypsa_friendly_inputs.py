@@ -276,7 +276,6 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
         axis=0,
         ignore_index=True,
     )
-    generators.to_csv("TEST_TO_SEE.csv")
 
     # Create output directory
     output_dir = tmp_path / "timeseries_output"

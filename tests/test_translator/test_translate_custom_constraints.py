@@ -653,7 +653,6 @@ def test_create_vre_build_limit_constraints_basic(csv_str_to_df):
     REZ2_Solar_resource_limit_relax_2030,   bus_for_custom_constraint_gens,     0.0,        True,               2030,           30,         REZ2_Solar_resource_limit
     """
     expected_dummy_generators = csv_str_to_df(expected_dummy_generators_csv)
-
     cols_no_capex_in_order = [
         "name",
         "isp_name",
@@ -664,7 +663,7 @@ def test_create_vre_build_limit_constraints_basic(csv_str_to_df):
         "lifetime",
     ]
 
-    # check capital_cost is present and floats before checking other columns for equality:
+    # check capital_cost is present and float before checking other columns for equality:
     assert dummy_generators is not None
     assert "capital_cost" in dummy_generators.columns
     assert dummy_generators["capital_cost"].dtype == "float64"

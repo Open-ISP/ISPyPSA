@@ -373,7 +373,7 @@ def _add_new_entrant_generator_build_costs(
     # make sure new_entrant_generators_table has build_year column with ints:
     new_entrant_generators_table["build_year"] = new_entrant_generators_table[
         "build_year"
-    ].astype(int)
+    ].astype("int64")
 
     # return generator table with build costs merged in
     return new_entrant_generators_table.merge(build_costs, how="left")

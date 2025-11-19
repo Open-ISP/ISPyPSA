@@ -124,5 +124,6 @@ def _add_investment_periods_as_build_years(
     df["build_year"] = "investment_periods"
     df["build_year"] = df["build_year"].map({"investment_periods": investment_periods})
     df = df.explode("build_year").reset_index(drop=True)
-    df["build_year"] = df["build_year"].astype(int)
+    df["build_year"] = df["build_year"].astype("int64")
+
     return df
