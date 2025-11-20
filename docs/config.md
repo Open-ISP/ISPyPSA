@@ -97,7 +97,7 @@ Examples:
 
 ### discount_rate
 
-Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
+Discount rate applied to model objective function, as a fraction, i.e. 0.05 is 5%.
 
 Examples:
 
@@ -251,7 +251,7 @@ Examples:
 #### temporal.capacity_expansion.investment_periods
 
 List of investment period start years. An investment period runs from the beginning of
-the year (financial or calendar) until the next the period begins.
+the year (financial or calendar) until the next the period begins or the model end year is reached.
 
 Examples:
 

@@ -42,7 +42,7 @@ infeasibility.
 demand data are defined using the `reference_year_cycle` options in the config. [More detail on
 reference years](#reference-years).
 - The time varying quantity of demand at each node is also dependent on the model year.
-AEMO publishes demand data for every year in modelling horizon for each reference year. With demand
+AEMO publishes demand data for every year in modelling horizon for each reference year, with demand
 changing over time due to economic growth, CER uptake, energy efficiency etc.
 
 ## Transmission
@@ -75,7 +75,7 @@ both directions of flow:
 `renewable_energy_zones` is used to set power flow limit.
 - TODO: Implement time varying export limits making use of the peak demand and
 winter limits provided in the IASR workbook.
-- If a NA of blank value is provided then the `rez_to_sub_region_transmission_default_limit`
+- If a NA or blank value is provided then the `rez_to_sub_region_transmission_default_limit`
 from the config file is used to set the limit. This is typically set to high value (1e5). Using
 the default limit is done for REZs where [custom contraints](#custom-constraints) are used to
 model REZ export limits, such that the static limit will not influence the optimisation.
@@ -108,7 +108,7 @@ is chosen from which to derive both demand and renewable energy availability.
 - In the model config the inputs [temporal.capacity_expansion.reference_year_cycle](config.md#temporalcapacity_expansionreference_year_cycle)
 and [temporal.operational.reference_year_cycle](config.md#temporaloperationalreference_year_cycle)
 are used to specify the ordering of reference years.
-- If the `reference_year_cycle` is shorter than model the horizon than cycle is repeated as many
+- If the `reference_year_cycle` is shorter than the model horizon then the cycle is repeated as many
 times as needed.
 
 ## Temporal aggregation
@@ -179,7 +179,7 @@ can be used to specify the investment periodisation. For example, specify `[2025
 two investment periods in the model, one starting at the beginning of 2025 and ending at the
 beginning of 2030, and a second period starting at the beginning of 2030 and lasting to the end of
 the modelling horizon.
-- The periodosation is not myopic. The optimisation considers investment across all periods
+- The periodisation is not myopic. The optimisation considers investment across all periods
 simultaneously.
 
 The periodisation is also used to structure the application of discount rates to the model:

@@ -102,7 +102,7 @@ traces and workbooks from.
      and MS Excel workbook.
 
 3. Using the command line inside the project/environment where `ispypsa` is installed
-   run the complete modeling workflow to tests everything works correctly:
+   run the complete modelling workflow to test everything works correctly:
 
     === "uv"
 
