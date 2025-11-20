@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
+from ispypsa.translator.helpers import convert_to_numeric_if_possible
+
 
 def _get_trace_data(generator_name: str, path_to_traces: Path):
     """Fetches trace data for a generator from directories containing traces.
@@ -111,6 +113,10 @@ def _add_generators_to_network(
     path_to_solar_traces = path_to_timeseries_data / Path("solar_traces")
     path_to_wind_traces = path_to_timeseries_data / Path("wind_traces")
     path_to_marginal_costs = path_to_timeseries_data / Path("marginal_cost_timeseries")
+
+    # This is needed because numbers can be converted to strings if the data has been saved to a csv.
+    generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
+
     generators.apply(
         lambda row: _add_generator_to_network(
             row.to_dict(),

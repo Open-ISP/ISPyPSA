@@ -26,6 +26,7 @@ from ispypsa.translator.generators import (
     create_pypsa_friendly_ecaa_generator_timeseries,
     create_pypsa_friendly_new_entrant_generator_timeseries,
 )
+from ispypsa.translator.helpers import convert_to_numeric_if_possible
 from ispypsa.translator.links import _translate_flow_paths_to_links
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_links,
@@ -300,6 +301,8 @@ def create_pypsa_friendly_timeseries_inputs(
         year_type=config.temporal.year_type,
         snapshots=snapshots,
     )
+    # This is needed because numbers can be converted to strings if the data has been saved to a csv.
+    generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
     # NOTE - maybe this function needs to be somewhere separate/handled a little
     # different because it currently requires the translated generator table as input?
     create_pypsa_friendly_dynamic_marginal_costs(

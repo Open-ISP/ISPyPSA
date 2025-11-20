@@ -127,3 +127,23 @@ def _add_investment_periods_as_build_years(
     df["build_year"] = df["build_year"].astype("int64")
 
     return df
+
+
+def convert_to_numeric_if_possible(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Convert only numeric values to numeric leaving strings or other types that don't parse as they are.
+
+    Args:
+        df: pd.DataFrame to convert numeric columns to.
+        cols: list of column names to convert.
+
+    Returns:
+        pd.DataFrame: pd.DataFrame with converted numeric columns.
+    """
+
+    for col in cols:
+        df["temp_col"] = pd.to_numeric(df[col], errors="coerce")
+        # Replace values that failed to convert to numeric with original strings.
+        df[col] = df["temp_col"].combine_first(df[col])
+        df = df.drop(columns=["temp_col"])
+
+    return df
