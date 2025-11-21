@@ -297,8 +297,8 @@ def create_and_run_capacity_expansion_model() -> None:
         get_capacity_expansion_timeseries_location()
     )
 
-    # Get dont_run flag from doit variables
-    dont_run = get_var("dont_run_capacity_expansion", "False") == "True"
+    # Get run_optimisation flag from doit variables
+    run_optimisation = get_var("run_optimisation", "True") == "True"
 
     create_or_clean_task_output_folder(capacity_expansion_pypsa_file.parent)
 
@@ -309,7 +309,7 @@ def create_and_run_capacity_expansion_model() -> None:
         capacity_expansion_timeseries_location,
     )
 
-    if not dont_run:
+    if run_optimisation:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
 
@@ -351,8 +351,8 @@ def create_and_run_operational_model() -> None:
     operational_timeseries_location = get_operational_timeseries_location()
     operational_pypsa_file = get_operational_pypsa_file()
 
-    # Get dont_run flag from doit variables
-    dont_run = get_var("dont_run_operational", "False") == "True"
+    # Get run_optimisation flag from doit variables
+    run_optimisation = get_var("run_optimisation", "True") == "True"
 
     # Load tables
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
@@ -374,7 +374,7 @@ def create_and_run_operational_model() -> None:
     # Fix optimal capacities from capacity expansion
     network.optimize.fix_optimal_capacities()
 
-    if not dont_run:
+    if run_optimisation:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.optimize_with_rolling_horizon(
             horizon=config.temporal.operational.horizon,

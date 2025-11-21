@@ -242,7 +242,9 @@ Examples:
 
 The order in which different weather reference years are used in the model. If the
 number of reference years is less than the number of model years the reference years
-will be reused in the order provided.
+will be reused in the order provided. For example, if there are 5 model years and 2
+references years, [A, B], are given in reference_year_cycle, the reference years are used
+in the order [A, B, A, B, A].
 
 Examples:
 
@@ -290,7 +292,9 @@ Examples:
 
 The order in which different weather reference years are used in the model. If the
 number of reference years is less than the number of model years the reference years
-will be reused in the order provided.
+will be reused in the order provided. For example, if there are 5 model years and 2
+references years, [A, B], are given in reference_year_cycle, the reference years are used
+in the order [A, B, A, B, A].
 
 Examples:
 

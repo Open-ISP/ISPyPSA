@@ -169,10 +169,10 @@ ispypsa config=config.yaml create_and_run_capacity_expansion_model
 
 **Skip Optimization Option:**
 
-You can skip the optimization step and only build the network using the `dont_run_capacity_expansion` flag:
+You can skip the optimization step and only build the network using the `run_optimisation` flag:
 
 ```bash
-ispypsa config=config.yaml dont_run_capacity_expansion=True create_and_run_capacity_expansion_model
+ispypsa config=config.yaml run_optimisation=False create_and_run_capacity_expansion_model
 ```
 
 This is particularly useful for:
@@ -181,7 +181,7 @@ This is particularly useful for:
 - Debugging model setup issues
 - Creating a network file for manual inspection or custom optimization
 
-When this flag is set to `True`, the task will:
+When this flag is set to `False`, the task will:
 1. Build the complete PyPSA network with all components and constraints
 2. Save the unoptimized network to the output file
 3. Skip the potentially time-consuming optimization step
@@ -226,7 +226,7 @@ ispypsa config=config.yaml create_and_run_operational_model
 !!! note "Running Without Capacity Expansion"
 
     The operational model can be built and run even if the capacity expansion optimization was
-    skipped (using `dont_run_capacity_expansion=True`). However, this will significantly affect
+    skipped (using `run_optimisation=False`). However, this will significantly affect
     the operational model outputs because:
 
     - The network will use initial capacities rather than optimized capacities
@@ -238,10 +238,10 @@ ispypsa config=config.yaml create_and_run_operational_model
 
 **Skip Optimization Option:**
 
-You can skip the optimization step and only prepare the network using the `dont_run_operational` flag:
+You can skip the optimization step and only prepare the network using the `run_optimisation` flag:
 
 ```bash
-ispypsa config=config.yaml dont_run_operational=True create_and_run_operational_model
+ispypsa config=config.yaml run_optimisation=False create_and_run_operational_model
 ```
 
 This is particularly useful for:
@@ -251,7 +251,7 @@ This is particularly useful for:
 - Debugging time series data integration
 - Creating a prepared network for custom operational analysis
 
-When this flag is set to `True`, the task will:
+When this flag is set to `False`, the task will:
 
 1. Load the capacity expansion results
 2. Update the network with operational time series data
@@ -385,14 +385,14 @@ ispypsa config=configs/test_config.yaml create_and_run_capacity_expansion_model
 You can skip the optimization step in modeling tasks using these flags:
 
 ```bash
-# Skip capacity expansion optimization (only build the network)
-ispypsa config=config.yaml dont_run_capacity_expansion=True create_and_run_capacity_expansion_model
+# Skip capacity expansion optimization (only prepare the network)
+ispypsa config=config.yaml run_optimisation=False create_and_run_capacity_expansion_model
 
-# Skip operational optimization (only prepare the network)
-ispypsa config=config.yaml dont_run_operational=True create_and_run_operational_model
+# Skip operational optimization (only prepare the network, capacity expansion will also be skipped)
+ispypsa config=config.yaml run_optimisation=False create_and_run_operational_model
 
 # Run both optimizations normally (default behavior)
-ispypsa config=config.yaml dont_run_capacity_expansion=False dont_run_operational=False create_and_run_operational_model
+ispypsa config=config.yaml run_optimisation=True create_and_run_operational_model
 ```
 
 These flags are useful for:
