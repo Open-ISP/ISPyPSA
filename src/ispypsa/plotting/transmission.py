@@ -26,9 +26,12 @@ def prepare_transmission_capacity_by_region(
         Contains cumulative capacity by region and year in GW.
     """
     # Filter out rez_no_limit
-    transmission_expansion = transmission_expansion[
+    df = transmission_expansion[
         transmission_expansion["isp_type"] != "rez_no_limit"
     ].copy()
+
+    if df.empty:
+        return pd.DataFrame(columns=["build_year", "nem_region_id", "capacity_gw"])
 
     # Create mapping from node to NEM region
     # Use isp_sub_region_id as the node identifier
@@ -41,82 +44,45 @@ def prepare_transmission_capacity_by_region(
 
     # Also add REZ mappings if rez_id column exists
     if "rez_id" in regions_and_zones_mapping.columns:
-        rez_to_region = dict(
-            zip(
-                regions_and_zones_mapping["rez_id"].dropna(),
-                regions_and_zones_mapping.loc[
-                    regions_and_zones_mapping["rez_id"].notna(), "nem_region_id"
-                ],
-            )
-        )
-        node_to_region.update(rez_to_region)
+        rez_rows = regions_and_zones_mapping.dropna(subset=["rez_id"])
+        node_to_region.update(dict(zip(rez_rows["rez_id"], rez_rows["nem_region_id"])))
 
     # Map nodes to regions
-    transmission_expansion["region_from"] = transmission_expansion["node_from"].map(
-        node_to_region
+    region_from = df["node_from"].map(node_to_region)
+    region_to = df["node_to"].map(node_to_region)
+
+    # Vectorized allocation: Split every line into two halves.
+    # - Inter-region (A->B): A gets 50%, B gets 50%.
+    # - Intra-region (A->A): A gets 50% + 50% = 100%.
+    half_capacity = df["forward_direction_nominal_capacity_mw"] / 2.0
+
+    allocations = pd.concat(
+        [
+            pd.DataFrame(
+                {"region": region_from, "year": df["build_year"], "cap": half_capacity}
+            ),
+            pd.DataFrame(
+                {"region": region_to, "year": df["build_year"], "cap": half_capacity}
+            ),
+        ]
     )
-    transmission_expansion["region_to"] = transmission_expansion["node_to"].map(
-        node_to_region
-    )
-
-    # Create region allocations
-    allocations = []
-
-    for _, row in transmission_expansion.iterrows():
-        capacity_mw = row["forward_direction_nominal_capacity_mw"]
-        region_from = row["region_from"]
-        region_to = row["region_to"]
-
-        if region_from == region_to:
-            # Intra-region: allocate 100% to the region
-            allocations.append(
-                {
-                    "build_year": row["build_year"],
-                    "nem_region_id": region_from,
-                    "capacity_mw": capacity_mw,
-                }
-            )
-        else:
-            # Inter-region: split 50/50
-            allocations.append(
-                {
-                    "build_year": row["build_year"],
-                    "nem_region_id": region_from,
-                    "capacity_mw": capacity_mw / 2,
-                }
-            )
-            allocations.append(
-                {
-                    "build_year": row["build_year"],
-                    "nem_region_id": region_to,
-                    "capacity_mw": capacity_mw / 2,
-                }
-            )
-
-    # Create DataFrame from allocations
-    capacity_by_region = pd.DataFrame(allocations)
-
-    if capacity_by_region.empty:
-        return pd.DataFrame(columns=["build_year", "nem_region_id", "capacity_gw"])
 
     # Group by build_year and region, sum capacities
     capacity_by_region = (
-        capacity_by_region.groupby(["build_year", "nem_region_id"])["capacity_mw"]
+        allocations.groupby(["year", "region"])["cap"]
         .sum()
         .reset_index()
+        .sort_values(["region", "year"])
     )
 
-    # Calculate cumulative sum for each region
-    capacity_by_region = capacity_by_region.sort_values(["nem_region_id", "build_year"])
-    capacity_by_region["capacity_mw"] = capacity_by_region.groupby("nem_region_id")[
-        "capacity_mw"
-    ].cumsum()
+    # Calculate cumulative sum (GW)
+    capacity_by_region["capacity_gw"] = (
+        capacity_by_region.groupby("region")["cap"].cumsum() / 1000
+    )
 
-    # Convert to GW
-    capacity_by_region["capacity_gw"] = capacity_by_region["capacity_mw"] / 1000
-    capacity_by_region = capacity_by_region.drop(columns=["capacity_mw"])
-
-    return capacity_by_region
+    return capacity_by_region.rename(
+        columns={"year": "build_year", "region": "nem_region_id"}
+    )[["build_year", "nem_region_id", "capacity_gw"]]
 
 
 def prepare_rez_capacity_by_region(
@@ -215,11 +181,11 @@ def prepare_flow_path_capacity_by_region(
         Contains cumulative capacity by flow path and year.
     """
     # Filter for flow paths only
-    flow_path_expansion = transmission_expansion[
+    paths = transmission_expansion[
         transmission_expansion["isp_type"] == "flow_path"
     ].copy()
 
-    if flow_path_expansion.empty:
+    if paths.empty:
         return pd.DataFrame(
             columns=["nem_region_id", "flow_path", "build_year", "capacity_mw"]
         )
@@ -233,46 +199,39 @@ def prepare_flow_path_capacity_by_region(
     )
 
     # Map nodes to regions
-    flow_path_expansion["region_from"] = flow_path_expansion["node_from"].map(
-        node_to_region
+    region_from = paths["node_from"].map(node_to_region)
+    region_to = paths["node_to"].map(node_to_region)
+
+    # Create two views of the data: one for the 'from' side, one for the 'to' side.
+    # We only want to keep 'to' if it's a different region.
+    # This effectively "melts" the paths so each region gets a row for the paths connected to it.
+    base_data = pd.DataFrame(
+        {
+            "flow_path": paths["isp_name"],
+            "build_year": paths["build_year"],
+            "capacity_mw": paths["forward_direction_nominal_capacity_mw"],
+        }
     )
-    flow_path_expansion["region_to"] = flow_path_expansion["node_to"].map(
-        node_to_region
-    )
 
-    # Create entries for each region the flow path touches
-    flow_data = []
+    from_df = base_data.copy()
+    from_df["nem_region_id"] = region_from
 
-    for _, row in flow_path_expansion.iterrows():
-        region_from = row["region_from"]
-        region_to = row["region_to"]
-        flow_path = row["isp_name"]
-        build_year = row["build_year"]
-        capacity_mw = row["forward_direction_nominal_capacity_mw"]
+    to_df = base_data.copy()
+    to_df["nem_region_id"] = region_to
 
-        # Add to region_from
-        if pd.notna(region_from):
-            flow_data.append(
-                {
-                    "nem_region_id": region_from,
-                    "flow_path": flow_path,
-                    "build_year": build_year,
-                    "capacity_mw": capacity_mw,
-                }
-            )
+    # Filter:
+    # 1. Keep valid regions (not NaN)
+    # 2. For to_df, keep only if region_to != region_from
+    #    (If region_to == region_from, it's an intra-region path and already covered by from_df)
+    from_df = from_df.dropna(subset=["nem_region_id"])
 
-        # Add to region_to if different from region_from
-        if pd.notna(region_to) and region_to != region_from:
-            flow_data.append(
-                {
-                    "nem_region_id": region_to,
-                    "flow_path": flow_path,
-                    "build_year": build_year,
-                    "capacity_mw": capacity_mw,
-                }
-            )
+    # We need to compare region_to vs region_from safely.
+    # Since we just created them from the same df, indices align.
+    to_df = to_df[
+        to_df["nem_region_id"].notna() & (to_df["nem_region_id"] != region_from)
+    ]
 
-    flow_df = pd.DataFrame(flow_data)
+    flow_df = pd.concat([from_df, to_df])
 
     if flow_df.empty:
         return pd.DataFrame(
@@ -285,7 +244,7 @@ def prepare_flow_path_capacity_by_region(
         "capacity_mw"
     ].cumsum()
 
-    return flow_df
+    return flow_df.loc[:, ["nem_region_id", "flow_path", "build_year", "capacity_mw"]]
 
 
 def plot_aggregate_transmission_capacity(
