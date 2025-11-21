@@ -104,7 +104,9 @@ def test_generate_results_website():
         }
 
         # Generate website
-        generate_results_website(plots, output_dir, site_name="Test ISPyPSA Results")
+        generate_results_website(
+            plots, plots_dir, output_dir, site_name="Test ISPyPSA Results"
+        )
 
         # Check that website was created
         html_file = output_dir / "results_viewer.html"
@@ -135,6 +137,9 @@ def test_generate_results_website():
 def test_generate_results_website_empty_plots():
     """Test website generation with no plots."""
     with tempfile.TemporaryDirectory() as tmpdir:
+        plots_dir = Path(tmpdir) / "outputs"
+        plots_dir.mkdir(parents=True, exist_ok=True)
+
         output_dir = Path(tmpdir) / "outputs"
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -142,7 +147,7 @@ def test_generate_results_website_empty_plots():
         plots = {}
 
         # Generate website (should handle gracefully)
-        generate_results_website(plots, output_dir)
+        generate_results_website(plots, plots_dir, output_dir)
 
         # HTML file should not be created if no plots
         html_file = output_dir / "results_viewer.html"
