@@ -8,6 +8,9 @@ import pandas as pd
 from ispypsa.templater.helpers import (
     _add_units_to_financial_year_columns,
     _convert_financial_year_columns_to_float,
+    _manual_remove_footnotes_from_generator_names,
+    _rez_name_to_id_mapping,
+    _standardise_storage_capitalisation,
 )
 
 from .helpers import _fuzzy_match_names, _snakecase_string
@@ -16,7 +19,7 @@ from .lists import _ECAA_GENERATOR_TYPES
 
 def _template_generator_dynamic_properties(
     iasr_tables: dict[str, pd.DataFrame], scenario: str
-) -> dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame | pd.Series]:
     """Creates ISPyPSA templates for dynamic generator properties (i.e. those that vary
     with calendar/financial year).
 
@@ -81,9 +84,6 @@ def _template_generator_dynamic_properties(
     ]
     seasonal_ratings = _template_seasonal_ratings(seasonal_ratings)
 
-    closure_years = iasr_tables["expected_closure_years"]
-    closure_years = _template_closure_years(closure_years)
-
     build_costs = _template_new_entrant_build_costs(iasr_tables, scenario)
     wind_and_solar_connection_costs = (
         _template_new_entrant_wind_and_solar_connection_costs(iasr_tables, scenario)
@@ -105,8 +105,6 @@ def _template_generator_dynamic_properties(
         "full_outage_forecasts": full_outage_forecasts,
         "partial_outage_forecasts": partial_outage_forecasts,
         "seasonal_ratings": seasonal_ratings,
-        "closure_years": closure_years,
-        # "build_costs": build_costs,
         "new_entrant_build_costs": build_costs,
         "new_entrant_wind_and_solar_connection_costs": wind_and_solar_connection_costs,
         "new_entrant_non_vre_connection_costs": non_vre_connection_costs,
@@ -227,24 +225,6 @@ def _template_existing_generators_partial_outage_forecasts(
     return partial_outages_forecast
 
 
-def _template_closure_years(closure_years: pd.DataFrame) -> pd.DataFrame:
-    """Creates a closure years template for existing generators
-
-    Args:
-        closure_years: pd.DataFrame table from IASR workbook specifying full
-            generator closure years.
-
-    Returns:
-        `pd.DataFrame`: ISPyPSA template for full outage forecasts
-    """
-    closure_years.columns = [_snakecase_string(col) for col in closure_years.columns]
-    closure_years = closure_years.rename(columns={"generator_name": "generator"})
-    closure_years = closure_years.loc[
-        :, ["generator", "duid", "expected_closure_year_calendar_year"]
-    ]
-    return closure_years
-
-
 def _template_seasonal_ratings(
     seasonal_ratings: list[pd.DataFrame],
 ) -> pd.DataFrame:
@@ -300,6 +280,10 @@ def _template_new_entrant_build_costs(
     # convert data in $/kW to $/MW
     build_costs.columns = _add_units_to_financial_year_columns(
         build_costs.columns, "$/MW"
+    )
+    # enforce "storage" capitalisation to match up wiht new entrant generator names
+    build_costs["technology"] = _standardise_storage_capitalisation(
+        build_costs["technology"]
     )
     build_costs = build_costs.set_index("technology")
     build_costs *= 1000.0
@@ -521,7 +505,16 @@ def _template_new_entrant_wind_and_solar_connection_costs(
     wind_solar_connection_cost_forecasts.columns = _add_units_to_financial_year_columns(
         wind_solar_connection_cost_forecasts.columns, "$/MW"
     )
-    return wind_solar_connection_cost_forecasts.reset_index()
+    wind_solar_connection_cost_forecasts = (
+        wind_solar_connection_cost_forecasts.reset_index()
+    )
+
+    wind_solar_connection_cost_forecasts["REZ names"] = _rez_name_to_id_mapping(
+        wind_solar_connection_cost_forecasts["REZ names"],
+        "REZ names",
+        iasr_tables["renewable_energy_zones"],
+    )
+    return wind_solar_connection_cost_forecasts
 
 
 def _template_new_entrant_non_vre_connection_costs(
@@ -536,6 +529,7 @@ def _template_new_entrant_non_vre_connection_costs(
     Returns:
         `pd.DataFrame`: ISPyPSA template for new entrant non-VRE connection costs
     """
+    connection_costs = _manual_remove_footnotes_from_generator_names(connection_costs)
     connection_costs = connection_costs.set_index("Region")
     # convert to $/MW and add units to columns
     col_rename_map = {}

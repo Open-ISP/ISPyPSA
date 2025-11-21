@@ -5,12 +5,16 @@ import pandas as pd
 
 from .helpers import (
     _fuzzy_match_names,
+    _manual_remove_footnotes_from_generator_names,
     _one_to_one_priority_based_fuzzy_matching,
+    _rez_name_to_id_mapping,
     _snakecase_string,
+    _standardise_storage_capitalisation,
     _where_any_substring_appears,
 )
-from .lists import _NEW_GENERATOR_TYPES
+from .lists import _MINIMUM_REQUIRED_GENERATOR_COLUMNS, _NEW_GENERATOR_TYPES
 from .mappings import (
+    _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING,
     _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
     _VRE_RESOURCE_QUALITY_AND_TECH_CODES,
 )
@@ -76,7 +80,13 @@ def _template_new_generators_static_properties(
         .reset_index(drop=True)
     )
 
-    return new_generator_summaries
+    required_cols_only = [
+        col
+        for col in _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+        if col in new_generator_summaries.columns
+    ]
+
+    return new_generator_summaries[required_cols_only]
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,10 +129,10 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
+    # handle footnotes that have stuck around:
+    df = _manual_remove_footnotes_from_generator_names(df)
     # enforces capitalisation structure for instances of str "storage" in generator_name col
-    df["generator_name"] = df["generator_name"].replace(
-        [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
-    )
+    df["generator_name"] = _standardise_storage_capitalisation(df["generator_name"])
     df = _fix_forced_outage_columns(df)
 
     # Drop rows that contain new entrants for the Illawarra REZ (N12) - these
@@ -133,15 +143,12 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     # adds extra necessary columns taking appropriate mapping values
     # NOTE: this could be done more efficiently in future if needed, potentially
     # adding a `new_mapping` field to relevant table map dicts?
-    df["partial_outage_derating_factor_%"] = df[
-        "forced_outage_rate_partial_outage_%_of_time"
-    ]
-    df["maximum_capacity_mw"] = df["generator_name"]
-    df["unit_capacity_mw"] = df["generator_name"]
-    df["lifetime"] = df["generator_name"]
-    df["minimum_stable_level_%"] = df["technology_type"]
-    df["summer_peak_rating_%"] = df["summer_rating_mw"]
-    df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
+    for (
+        new_column,
+        existing_column_mapping,
+    ) in _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING.items():
+        df[new_column] = df[existing_column_mapping]
+
     return df
 
 
@@ -435,40 +442,21 @@ def _add_and_clean_rez_ids(
         pd.DataFrame: new entrant generator DataFrame with REZ ID column added.
     """
 
-    # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
-    # update references to "Portland Coast" to "Southern Ocean"
-    rez_or_region_cols = [col for col in df.columns if re.search(r"rez|region", col)]
-    df[rez_or_region_cols] = df[rez_or_region_cols].replace(
-        {
-            r".+Tasmania Coast": "North Tasmania Coast",
-            r"Portland Coast": "Southern Ocean",
-        },
-        regex=True,
-    )
     # add a new column to hold the REZ IDs that maps to the current rez_location:
     df[rez_id_col_name] = df["rez_location"]
 
-    # add the non-rez IDs for Victoria and New South Wales to the renewable_energy_zones df:
-    non_rez_ids = pd.DataFrame(
-        {
-            "ID": ["V0", "N0"],
-            "Name": ["Victoria Non-REZ", "New South Wales Non-REZ"],
-        }
-    )
-    renewable_energy_zones = pd.concat(
-        [renewable_energy_zones, non_rez_ids], ignore_index=True
-    )
-    rez_id_table_attributes = dict(table_lookup="Name", table_value="ID")
-    # merge in the REZ IDs:
-    df_with_rez_ids, col = _merge_table_data(
-        df, rez_id_col_name, renewable_energy_zones, rez_id_table_attributes
-    )
+    # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
+    # update references to "Portland Coast" to "Southern Ocean"
+    rez_or_region_cols = [col for col in df.columns if re.search(r"rez|region", col)]
+
+    for col in rez_or_region_cols:
+        df[col] = _rez_name_to_id_mapping(df[col], col, renewable_energy_zones)
 
     # No trace data has been provided by AEMO for the N12 REZ, as the 2024 ISP modelling
     # did not find any VRE built in this REZ. So drop generators in this REZ for now.
-    df_with_rez_ids = df_with_rez_ids[df_with_rez_ids[rez_id_col_name] != "N12"].copy()
+    df_with_only_rez_ids = df[df[rez_id_col_name] != "N12"].copy()
 
-    return df_with_rez_ids
+    return df_with_only_rez_ids
 
 
 def _add_isp_resource_type_column(

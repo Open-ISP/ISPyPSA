@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from ispypsa.translator.generators import (
-    _add_closure_year_column,
     _add_new_entrant_generator_build_costs,
     _add_new_entrant_generator_connection_costs,
     _calculate_annuitised_new_entrant_gen_capital_costs,
@@ -31,25 +30,16 @@ def test_translate_ecaa_generators(csv_str_to_df, translated_generator_column_or
     """Test translation of existing generators (ECAA) to PyPSA format."""
     # Set up input data using csv_str_to_df
     ecaa_generators_csv = """
-    generator,      technology_type,      region_id,  sub_region_id,  fuel_type,    fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw, rez_id
-    Bayswater,      Steam__Sub__Critical, NSW,        CNSW,           Black__Coal,  Bayswater,          150.0,            2.5,                 9.8,               NaN,                 660.0,               NaN
-    Borumba,        Pumped__Hydro,        QLD,        SQ,             Hydro,        Hydro,              0.0,              0.0,                 0.0,               2030-01-01,          200.0,               NaN
-    Tallawarra,     CCGT,                 NSW,        SNSW,           Gas,          Tallawarra,         170.0,            3.5,                 7.2,               NaN,                 420.0,               NaN
+    generator,      technology_type,      region_id,  sub_region_id,  fuel_type,    fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  closure_year,  maximum_capacity_mw, rez_id
+    Bayswater,      Steam__Sub__Critical, NSW,        CNSW,           Black__Coal,  Bayswater,          150.0,            2.5,                 9.8,               NaN,                 2031,          660.0,               NaN
+    Borumba,        Pumped__Hydro,        QLD,        SQ,             Hydro,        Hydro,              0.0,              0.0,                 0.0,               2030-01-01,          -1,           200.0,               NaN
+    Tallawarra,     CCGT,                 NSW,        SNSW,           Gas,          Tallawarra,         170.0,            3.5,                 7.2,               NaN,                 2039,          420.0,               NaN
     """
     ecaa_generators = csv_str_to_df(ecaa_generators_csv)
-
-    closure_years_csv = """
-    generator,      duid,     expected_closure_year_calendar_year
-    Bayswater,      BW01,     2031
-    Borumba,        BO01,
-    Tallawarra,     TL01,     2039
-    """
-    closure_years = csv_str_to_df(closure_years_csv)
 
     # Define input tables and investment periods
     ispypsa_tables = {
         "ecaa_generators": ecaa_generators,
-        "closure_years": closure_years,
     }
     investment_periods = [2025, 2026]
 
@@ -83,19 +73,13 @@ def test_translate_ecaa_generators_region_handling(csv_str_to_df):
     """Test that the function correctly handles different region settings."""
     # Set up input data
     generator_csv = """
-    generator,  technology_type,  region_id,  sub_region_id,  fuel_type,  fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw,   rez_id
-    TestGen,    CCGT,             NSW,        CNSW,           Gas,        TestGen,            50.0,             2.0,                 7.0,               ,                    100.0,                 NaN
-    TestWind,   Wind,             NSW,        CNSW,           Wind,       TestWind,           0.0,              5.0,                 0.0,               ,                    100.0,                 N3
+    generator,  technology_type,  region_id,  sub_region_id,  fuel_type,  fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  closure_year,  maximum_capacity_mw,   rez_id
+    TestGen,    CCGT,             NSW,        CNSW,           Gas,        TestGen,            50.0,             2.0,                 7.0,               ,                    2035,          100.0,                 NaN
+    TestWind,   Wind,             NSW,        CNSW,           Wind,       TestWind,           0.0,              5.0,                 0.0,               ,                    -1,            100.0,                 N3
     """
     generator = csv_str_to_df(generator_csv)
 
-    closure_csv = """
-    generator,  duid,  expected_closure_year_calendar_year
-    TestGen,    TG01,  2035
-    """
-    closure = csv_str_to_df(closure_csv)
-
-    ispypsa_tables = {"ecaa_generators": generator, "closure_years": closure}
+    ispypsa_tables = {"ecaa_generators": generator}
     investment_periods = [2025]
 
     # Test with different region settings
@@ -336,70 +320,6 @@ def test_translate_new_entrant_generators_region_handling(
     assert sub_regions_wind_bus == "Q7"
 
 
-def test_add_closure_year_column(csv_str_to_df):
-    """Test the _add_closure_year_column function with various scenarios."""
-    # Setup test data
-    ecaa_generators_csv = """
-    generator,                 technology_type,    region_id
-    Bayswater_1,               Coal,               NSW
-    Liddell_1,                 Coal,               NSW
-    Eraring_1,                 Coal,               NSW
-    Newport_Gas,               CCGT,               VIC
-    New_Generator_No_Closure,  Wind,               QLD
-    """
-    ecaa_generators = csv_str_to_df(ecaa_generators_csv)
-
-    closure_years_csv = """
-    generator,                 expected_closure_year_calendar_year, duid
-    Bayswater_1,               2035,                                BA01
-    Bayswater_1,               2036,                                BA02
-    Liddell_1,                 2023,                                LD01
-    Eraring_1,                 2025,                                ER01
-    Newport_Gas_,              2040,                                NP01
-    """
-    closure_years = csv_str_to_df(closure_years_csv)
-
-    investment_periods = [2020, 2025, 2030, 2035, 2040]
-
-    # Execute function
-    result = _add_closure_year_column(
-        ecaa_generators, closure_years, investment_periods
-    )
-
-    # Expected result
-    expected_csv = """
-    generator,                 technology_type,    region_id,    closure_year
-    Bayswater_1,               Coal,               NSW,          2035
-    Liddell_1,                 Coal,               NSW,          2023
-    Eraring_1,                 Coal,               NSW,          2025
-    Newport_Gas,               CCGT,               VIC,          2040
-    New_Generator_No_Closure,  Wind,               QLD,          -1
-    """
-    expected = csv_str_to_df(expected_csv)
-
-    pd.testing.assert_frame_equal(
-        result.sort_values("generator").reset_index(drop=True),
-        expected.sort_values("generator").reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
-def test_add_closure_year_column_empty_ecaa_df():
-    """Test edge cases for the _add_closure_year_column function."""
-    investment_periods = [2020, 2025, 2030]
-
-    # Case 1a: Empty closure years dataframe
-    empty_closure = pd.DataFrame(
-        columns=["generator", "duid", "expected_closure_year_calendar_year"]
-    )
-    # Case 1b: Raise value error for empty ecaa_generators dataframe:
-    empty_ecaa = pd.DataFrame(columns=["generator", "technology_type"])
-    with pytest.raises(
-        ValueError, match="Can't add closure years to empty ecaa_generators table."
-    ):
-        _add_closure_year_column(empty_ecaa, empty_closure, investment_periods)
-
-
 def test_add_new_entrant_generator_build_costs(
     csv_str_to_df, sample_generator_translator_tables
 ):
@@ -445,6 +365,29 @@ def test_add_new_entrant_generator_build_costs_missing_build_year(
     with pytest.raises(
         ValueError,
         match="new_entrant_generators_table must have column 'build_year' to merge in build costs.",
+    ):
+        _add_new_entrant_generator_build_costs(generators_df, build_costs_df)
+
+
+def test_add_new_entrant_generator_build_costs_undefined_build_costs(
+    csv_str_to_df, sample_generator_translator_tables
+):
+    """Test that the function raises an error when build costs are undefined for some generators."""
+    generators_csv = """
+    generator_name,           build_year
+    CCGT,                     2025
+    Large__scale__Solar__PV,  2023
+    Wind,                     2024
+    NonExistentGenerator,     2025
+    """
+    generators_df = csv_str_to_df(generators_csv)
+
+    build_costs_df = sample_generator_translator_tables["new_entrant_build_costs"]
+
+    # Check that the function raises a ValueError for undefined build costs
+    with pytest.raises(
+        ValueError,
+        match=r"Undefined build costs for new entrant generators: \['NonExistentGenerator'\]",
     ):
         _add_new_entrant_generator_build_costs(generators_df, build_costs_df)
 

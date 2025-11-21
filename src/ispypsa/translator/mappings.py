@@ -9,11 +9,12 @@ _ECAA_GENERATOR_ATTRIBUTES = {
     "lifetime": "lifetime",
     "capital_cost": "capital_cost",
     # attributes used for marginal cost calculations:
-    "technology_type": "isp_technology_type",
     "fuel_cost_mapping": "isp_fuel_cost_mapping",
     "vom_$/mwh_sent_out": "isp_vom_$/mwh_sent_out",
     "heat_rate_gj/mwh": "isp_heat_rate_gj/mwh",
     "rez_id": "isp_rez_id",
+    # keeping technology_type because it's not defined anywhere else for the ECAA generators:
+    "technology_type": "isp_technology_type",
 }
 
 _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
@@ -30,13 +31,14 @@ _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
     "lifetime": "lifetime",
     "capital_cost": "capital_cost",
     # attributes used for marginal cost calculations:
-    "technology_type": "isp_technology_type",
     "fuel_cost_mapping": "isp_fuel_cost_mapping",
     "vom_$/mwh_sent_out": "isp_vom_$/mwh_sent_out",
     "heat_rate_gj/mwh": "isp_heat_rate_gj/mwh",
     # attributes used to filter/apply custom constraints:
     "isp_resource_type": "isp_resource_type",
     "rez_id": "isp_rez_id",
+    # keeping technology_type because it's not defined anywhere else for the ECAA generators and could be useful for plotting/labelling?
+    "technology_type": "isp_technology_type",
 }
 
 _GENERATOR_ATTRIBUTE_ORDER = [

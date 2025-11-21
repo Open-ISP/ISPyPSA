@@ -19,7 +19,6 @@ def test_sample_ispypsa_tables_fixture(sample_ispypsa_tables):
         "biomethane_prices",
         "gpg_emissions_reduction_biomethane",
         "new_entrant_build_costs",
-        "closure_years",
         "new_entrant_wind_and_solar_connection_costs",
         "new_entrant_non_vre_connection_costs",
         "custom_constraints_lhs",

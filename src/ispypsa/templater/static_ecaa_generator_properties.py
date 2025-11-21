@@ -8,8 +8,11 @@ from .helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from .lists import _ECAA_GENERATOR_TYPES
-from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .lists import _ECAA_GENERATOR_TYPES, _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+from .mappings import (
+    _ECAA_GENERATOR_NEW_COLUMN_MAPPING,
+    _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+)
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -85,7 +88,13 @@ def _template_ecaa_generators_static_properties(
         [ecaa_generator_summaries, borumba_summary], ignore_index=True
     )
 
-    return ecaa_generator_summaries
+    required_cols_only = [
+        col
+        for col in _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+        if col in ecaa_generator_summaries.columns
+    ]
+
+    return ecaa_generator_summaries[required_cols_only]
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -122,12 +131,12 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
     df = _fix_forced_outage_columns(df)
-    # adds a partial derating factor column that takes partial outage rate mappings
-    df["partial_outage_derating_factor_%"] = df[
-        "forced_outage_rate_partial_outage_%_of_time"
-    ]
-    # adds a commissioning date column that takes generator mappings
-    df["commissioning_date"] = df["generator"]
+
+    for (
+        new_column,
+        existing_column_mapping,
+    ) in _ECAA_GENERATOR_NEW_COLUMN_MAPPING.items():
+        df[new_column] = df[existing_column_mapping]
 
     return df
 
@@ -171,6 +180,7 @@ def _merge_and_set_ecaa_generators_static_properties(
     df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
+    df = _add_closure_year_column(df, iasr_tables["expected_closure_years"])
     df = _add_rez_id_column(df, "rez_id", iasr_tables["renewable_energy_zones"])
 
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
@@ -342,6 +352,65 @@ def _process_and_merge_existing_gpg_min_load(
     processed_gpg_min_loads = processed_gpg_min_loads.set_index("Generator Station")
     for gen, row in processed_gpg_min_loads.iterrows():
         df.loc[df["generator"] == gen, "minimum_load_mw"] = row["Min Stable Level (MW)"]
+    return df
+
+
+def _add_closure_year_column(
+    df: pd.DataFrame, closure_years: pd.DataFrame
+) -> pd.DataFrame:
+    """Adds a column containing the expected closure year (calendar year) for ECAA generators.
+
+    Note 1: currently only one generator object is templated and translated per ECAA
+    generator, while some generators have multiple units with different expected closure
+    years. This function makes the OPINIONATED choice to return the earliest expected
+    year given in closure_years table for each set of generating units.
+
+    Note 2: the IASR table specifies the expected closure years as calendar years, without
+    giving more detail about the expected closure month elsewhere. For now, this function
+    also makes the OPINIONATED choice to just return the year given by the table as the
+    closure year.
+
+    Args:
+        ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
+        closure_years: pd.Dataframe containing the IASR table `expected_generator_closure_years`
+            for the ECAA generators, by unit. Expects that closure years are given as integers.
+
+    Returns:
+        `pd.DataFrame`: ECAA generator attributes table with additional 'closure_year' column.
+    """
+
+    default_closure_year = -1
+
+    # reformat closure_years table for clearer mapping:
+    closure_years.columns = [_snakecase_string(col) for col in closure_years.columns]
+    closure_years = closure_years.rename(
+        columns={
+            "generator_name": "generator",
+            "expected_closure_year_calendar_year": "closure_year",
+        }
+    )
+
+    # process closure_years to get the earliest expected closure year for each generator:
+    closure_years = (
+        closure_years.sort_values("closure_year", ascending=True)
+        .drop_duplicates(subset="generator", keep="first")
+        .dropna(subset="closure_year")
+    )
+    closure_years_dict = closure_years.set_index("generator")["closure_year"].to_dict()
+
+    where_str = df["closure_year"].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, "closure_year"] = _fuzzy_match_names(
+        df.loc[where_str, "closure_year"],
+        closure_years_dict.keys(),
+        f"adding closure_year column to ecaa_generators table",
+        not_match="existing",
+        threshold=85,
+    )
+    # map rather than replace to pass default value for undefined closure years:
+    df["closure_year"] = df["closure_year"].map(
+        lambda closure_year: closure_years_dict.get(closure_year, default_closure_year)
+    )
+
     return df
 
 

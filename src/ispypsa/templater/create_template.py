@@ -47,7 +47,6 @@ _BASE_TEMPLATE_OUTPUTS = [
     "full_outage_forecasts",
     "partial_outage_forecasts",
     "seasonal_ratings",
-    "closure_years",
     "new_entrant_wind_and_solar_connection_costs",
     "new_entrant_non_vre_connection_costs",
     "custom_constraints_lhs",

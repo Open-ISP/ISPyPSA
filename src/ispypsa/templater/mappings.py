@@ -65,6 +65,29 @@ _GENERATOR_PROPERTIES = {
     "gas_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
 }
 
+_ECAA_GENERATOR_NEW_COLUMN_MAPPING = {
+    "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
+    "commissioning_date": "generator",
+    "closure_year": "generator",
+}
+
+_NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING = {
+    "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
+    "maximum_capacity_mw": "generator_name",
+    "unit_capacity_mw": "generator_name",
+    "lifetime": "generator_name",
+    "minimum_stable_level_%": "technology_type",
+    "summer_peak_rating_%": "summer_rating_mw",
+    "technology_specific_lcf_%": "regional_build_cost_zone",
+}
+"""
+_NEW_COLUMN_MAPPING dicts define new/additional columns to be added to the corresponding
+ECAA or new entrant generator summary tables. Keys are the name of the column to be added
+(corresponding to the table/column name of the data being added) and values are the name
+of the column in the existing summary table that holds the required data mapping for merging
+in the new column.
+"""
+
 _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
         table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
@@ -138,7 +161,7 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         generator_status="Existing",
     ),
 }
-"""
+""""
 Existing, committed, anticipated and additional summary table columns mapped to
 corresponding IASR tables and lookup information that can be used to retrieve values.
 

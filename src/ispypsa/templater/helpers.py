@@ -280,3 +280,90 @@ def _strip_all_text_after_numeric_value(
             regex=True,
         )
     return series
+
+
+def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:
+    """
+    Standardises capitalisation of "storage" in a pandas Series.
+
+    In the context of the new entrant generator summary table, this function is used to
+    enforce a consistent naming convention for instances of "storage" in the
+    "New entrants" column (renamed by the templator to "generator_name").
+
+    The convention is as follows:
+        - "Battery Storage" for instances where "storage" is part of a battery name,
+          not a descriptor for duration.
+        - "storage" (lowercase) for instances where "storage" is a descriptor for duration
+          (e.g., "2hrs storage", "1hr storage").
+        - All other cases are left unchanged.
+    """
+
+    battery_name_pattern = r"Battery [s|S]torage"
+    battery_name_standard = r"Battery Storage"
+
+    series = series.str.replace(battery_name_pattern, battery_name_standard, regex=True)
+
+    # 'duration_string' instances of storage are preceeded by a number and "hr"/"hrs"
+    duration_string_pattern = r"(?P<duration>\d+\s*hrs*) [S|s]torage"
+
+    # make sure all duration-related instances use lowercase "storage"
+    series = series.str.replace(
+        duration_string_pattern, r"\g<duration> storage", regex=True
+    )
+
+    return series
+
+
+def _manual_remove_footnotes_from_generator_names(df: pd.DataFrame) -> pd.DataFrame:
+    """Manually handles specific cases where footnote numbers have remained in generator names."""
+
+    strings_with_footnotes = {
+        "Small OCGT2": "Small OCGT",
+        "Pumped Hydro3 (8 hrs storage)": "Pumped Hydro (8 hrs storage)",
+    }
+    # rename columns AND replace values across the df to cover all potential cases:
+    df_cols_renamed = df.rename(columns=strings_with_footnotes)
+    df_all_replaced = df_cols_renamed.replace(
+        list(strings_with_footnotes.keys()), list(strings_with_footnotes.values())
+    )
+    return df_all_replaced
+
+
+def _rez_name_to_id_mapping(
+    series: pd.Series, series_name: str, renewable_energy_zones: pd.DataFrame
+) -> pd.Series:
+    """Maps REZ names to REZ IDs."""
+
+    # add non-REZs to the REZ table and set up mapping:
+    non_rez_ids = pd.DataFrame(
+        {
+            "ID": ["V0", "N0"],
+            "Name": ["Victoria Non-REZ", "New South Wales Non-REZ"],
+        }
+    )
+    renewable_energy_zones = pd.concat(
+        [renewable_energy_zones, non_rez_ids], ignore_index=True
+    )
+    rez_name_to_id = dict(
+        zip(renewable_energy_zones["Name"], renewable_energy_zones["ID"])
+    )
+
+    # ------ clean up the series in case of old/unsupported REZ names
+    # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
+    # update references to "Portland Coast" to "Southern Ocean"
+    series = series.replace(
+        {
+            r".+Tasmania Coast": "North Tasmania Coast",
+            r"Portland Coast": "Southern Ocean",
+        },
+        regex=True,
+    )
+    # fuzzy match series to REZ names to make sure they are consistent
+    series = _fuzzy_match_names(
+        series,
+        renewable_energy_zones["Name"],
+        f"mapping REZ names to REZ IDs for property '{series_name}'",
+        threshold=90,
+    )
+
+    return series.replace(rez_name_to_id)

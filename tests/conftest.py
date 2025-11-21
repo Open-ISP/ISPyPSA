@@ -63,13 +63,13 @@ def sample_ispypsa_tables(csv_str_to_df):
 
     # ECAA generators table
     ecaa_generators_csv = """
-    generator,                        technology_type,            region_id,  sub_region_id,   fuel_type,     fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  maximum_capacity_mw,   rez_id
-    Bayswater,                        Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Bayswater,          250,              5.0,                 10.0,              NaN,                 2640,                  NaN
-    Eraring,                          Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Eraring,            210,              5.0,                 10.0,              NaN,                 2880,                  NaN
-    Bodangora__Wind__Farm,            Wind,                       NSW,        CNSW,            Wind,          Wind,               0,                0.0,                 0.0,               NaN,                 250,                   N3
-    Central-West__Orana__REZ__Solar,  Large__scale__Solar__PV,    NSW,        CNSW,            Solar,         Solar,              0,                0.0,                 0.0,               2025,                200,                   N3
-    New__England__REZ__Wind,          Wind,                       NSW,        NNSW,            Wind,          Wind,               0,                0.0,                 0.0,               2028,                500,                   N2
-    Moree__Solar__Farm,               Large__scale__Solar__PV,    NSW,        NNSW,            Solar,         Solar,              0,                0.0,                 0.0,               NaN,                 320,                   N2
+    generator,                        technology_type,            region_id,  sub_region_id,   fuel_type,     fuel_cost_mapping,  minimum_load_mw,  vom_$/mwh_sent_out,  heat_rate_gj/mwh,  commissioning_date,  closure_year,      maximum_capacity_mw,   rez_id
+    Bayswater,                        Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Bayswater,          250,              5.0,                 10.0,              NaN,                 2033,              2640,                  NaN
+    Eraring,                          Steam__Sub__Critical,       NSW,        CNSW,            Black__Coal,   Eraring,            210,              5.0,                 10.0,              NaN,                 2029,              2880,                  NaN
+    Bodangora__Wind__Farm,            Wind,                       NSW,        CNSW,            Wind,          Wind,               0,                0.0,                 0.0,               NaN,                 2045,              250,                   N3
+    Central-West__Orana__REZ__Solar,  Large__scale__Solar__PV,    NSW,        CNSW,            Solar,         Solar,              0,                0.0,                 0.0,               2025,                2055,              200,                   N3
+    New__England__REZ__Wind,          Wind,                       NSW,        NNSW,            Wind,          Wind,               0,                0.0,                 0.0,               2028,                2058,              500,                   N2
+    Moree__Solar__Farm,               Large__scale__Solar__PV,    NSW,        NNSW,            Solar,         Solar,              0,                0.0,                 0.0,               NaN,                 2065,              320,                   N2
     """
     tables["ecaa_generators"] = csv_str_to_df(ecaa_generators_csv)
 
@@ -147,24 +147,6 @@ def sample_ispypsa_tables(csv_str_to_df):
         }
     )
     tables["new_entrant_generators"] = new_entrant_generators_df
-
-    # Additional tables needed for ECAA generators:
-    closure_years_csv = """
-    generator,                          duid,       expected_closure_year_calendar_year
-    Bayswater,                          BW01,       2033
-    Bayswater,                          BW02,       2033
-    Bayswater,                          BW03,       2033
-    Bayswater,                          BW04,       2033
-    Eraring,                            ER01,       2029
-    Eraring,                            ER02,       2029
-    Eraring,                            ER03,       2029
-    Eraring,                            ER04,       2029
-    Bodangora__Wind__Farm,              duid,       2045
-    Central-West__Orana__REZ__Solar,    duid,       2055
-    New__England__REZ__Wind,            duid,       2058
-    Moree__Solar__Farm,                 duid,       2065
-    """
-    tables["closure_years"] = csv_str_to_df(closure_years_csv)
 
     # Additional tables needed for new entrant generators:
     new_entrant_build_costs_csv = """
@@ -398,7 +380,7 @@ def sample_generator_translator_tables(csv_str_to_df):
     # Sample new entrant build costs
     new_entrant_build_costs = """
     technology,                    2022_23_$/mw,  2023_24_$/mw,  2024_25_$/mw
-    Large__Scale__Solar__PV,       1600000,       1500000,       1400000
+    Large__scale__Solar__PV,       1600000,       1500000,       1400000
     CCGT,                          2000000,       1950000,       1900000
     Wind,                          1800000,       1700000,       1500000
     Wind__-__offshore__(floating), 4500000,       4400000,       4300000

@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 from isp_trace_parser import get_data
 
-from ispypsa.config import ModelConfig
-from ispypsa.model import generators
 from ispypsa.templater.helpers import (
     _fuzzy_match_names,
     _snakecase_string,
@@ -63,26 +61,22 @@ def _translate_ecaa_generators(
         return pd.DataFrame()
 
     # calculate lifetime based on expected closure_year - build_year:
-    ecaa_generators = _add_closure_year_column(
-        ecaa_generators, ispypsa_tables["closure_years"], investment_periods
-    )
     ecaa_generators["lifetime"] = ecaa_generators["closure_year"].map(
         lambda x: float(x - investment_periods[0]) if x > 0 else np.inf
     )
     ecaa_generators = ecaa_generators[ecaa_generators["lifetime"] > 0].copy()
 
     gen_attributes = _ECAA_GENERATOR_ATTRIBUTES.copy()
+    # Decide which column to rename to be the bus column.
     if regional_granularity == "sub_regions":
-        gen_attributes["sub_region_id"] = "bus"
         bus_column = "sub_region_id"
     elif regional_granularity == "nem_regions":
-        gen_attributes["region_id"] = "bus"
         bus_column = "region_id"
-
-    if regional_granularity == "single_region":
+    elif regional_granularity == "single_region":
+        # No existing column to use for bus, so create a new one.
         ecaa_generators["bus"] = "NEM"
-        gen_attributes["bus"] = "bus"
-        bus_column = "bus"
+        bus_column = "bus"  # Name doesn't need to change.
+    gen_attributes[bus_column] = "bus"
 
     if rez_handling == "discrete_nodes":
         # make sure generators are still connected to the REZ bus where applicable
@@ -121,37 +115,6 @@ def _translate_ecaa_generators(
     return ecaa_generators_pypsa_format[columns_in_order]
 
 
-def _create_unserved_energy_generators(
-    buses: pd.DataFrame, cost: float, generator_size_mw: float
-) -> pd.DataFrame:
-    """Create unserved energy generators for each bus in the network.
-
-    These generators allow the model to opt for unserved energy at a very high cost
-    when other options are exhausted or infeasible, preventing model infeasibility.
-
-    Args:
-        buses: DataFrame containing bus information with a 'name' column
-        cost: Marginal cost of unserved energy ($/MWh)
-        generator_size_mw: Size of unserved energy generators (MW)
-
-    Returns:
-        DataFrame containing unserved energy generators in PyPSA format
-    """
-
-    generators = pd.DataFrame(
-        {
-            "name": "unserved_energy_" + buses["name"],
-            "carrier": "Unserved Energy",
-            "bus": buses["name"],
-            "p_nom": generator_size_mw,
-            "p_nom_extendable": False,
-            "marginal_cost": cost,
-        }
-    )
-
-    return generators
-
-
 def _translate_new_entrant_generators(
     ispypsa_tables: dict[str, pd.DataFrame],
     investment_periods: list[int],
@@ -184,17 +147,16 @@ def _translate_new_entrant_generators(
         return pd.DataFrame()
 
     gen_attributes = _NEW_ENTRANT_GENERATOR_ATTRIBUTES.copy()
+    # Decide which column to rename to be the bus column.
     if regional_granularity == "sub_regions":
-        gen_attributes["sub_region_id"] = "bus"
         bus_column = "sub_region_id"
     elif regional_granularity == "nem_regions":
-        gen_attributes["region_id"] = "bus"
         bus_column = "region_id"
-
-    if regional_granularity == "single_region":
+    elif regional_granularity == "single_region":
+        # No existing column to use for bus, so create a new one.
         new_entrant_generators["bus"] = "NEM"
-        gen_attributes["bus"] = "bus"
-        bus_column = "bus"
+        bus_column = "bus"  # Name doesn't need to change.
+    gen_attributes[bus_column] = "bus"
 
     if rez_handling == "discrete_nodes":
         # make sure generators are still connected to the REZ bus where applicable
@@ -269,64 +231,6 @@ def _translate_new_entrant_generators(
     return new_entrant_generators_pypsa_format[columns_in_order]
 
 
-def _add_closure_year_column(
-    ecaa_generators: pd.DataFrame,
-    closure_years: pd.DataFrame,
-    investment_periods: list[int],
-) -> pd.DataFrame:
-    """Adds a column containing the expected closure year (calendar year) for ECAA generators.
-
-    Note: currently only one generator object is templated and translated per ECAA
-    generator, while some generators have multiple units with different expected closure
-    years. This function makes the OPINIONATED choice to return the earliest expected
-    year given in closure_years table for each set of generating units.
-
-    Args:
-        ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
-        closure_years: `ISPyPSA` formatted pd.Dataframe containing expected closure years
-            for the ECAA generators, by unit. Given as integers.
-        investment_periods: list of years in which investment periods start obtained
-            from the model configuration. Used in this function to set the default
-            closure year to 100 years beyond the last investment period.
-
-    Returns:
-        `pd.DataFrame`: ECAA generator attributes table with additional closure year column.
-    """
-    default_closure_year = -1
-
-    if ecaa_generators is None or ecaa_generators.empty:
-        raise ValueError("Can't add closure years to empty ecaa_generators table.")
-
-    if closure_years is None or closure_years.empty:
-        # TODO: log if no closure years are given?
-        ecaa_generators["closure_year"] = default_closure_year
-        return ecaa_generators
-
-    ecaa_generators["closure_year"] = ecaa_generators["generator"]
-
-    closure_years = (
-        closure_years.sort_values("expected_closure_year_calendar_year")
-        .drop(columns=["duid"])
-        .drop_duplicates(subset=["generator"], keep="first")
-        .dropna(subset=["expected_closure_year_calendar_year"])
-    )
-
-    closure_years_dict = closure_years.set_index("generator").squeeze(axis=1).to_dict()
-
-    where_str = ecaa_generators["closure_year"].apply(lambda x: isinstance(x, str))
-    ecaa_generators.loc[where_str, "closure_year"] = _fuzzy_match_names(
-        ecaa_generators.loc[where_str, "closure_year"],
-        closure_years_dict.keys(),
-        f"adding closure_year column to ecaa_generators table",
-        not_match="existing",
-        threshold=85,
-    )
-    ecaa_generators["closure_year"] = ecaa_generators["closure_year"].apply(
-        lambda closure_year: closure_years_dict.get(closure_year, default_closure_year)
-    )
-    return ecaa_generators
-
-
 def _add_new_entrant_generator_build_costs(
     new_entrant_generators_table: pd.DataFrame,
     new_entrant_build_costs: pd.DataFrame,
@@ -345,6 +249,10 @@ def _add_new_entrant_generator_build_costs(
         pd.DataFrame: new_entrant_generators_table with build costs merged in as new column
             called "build_cost_$/mw".
 
+    Raises:
+        ValueError: if new_entrant_generators_table does not have column "build_year" or
+            if any new entrant generators have build costs missing/undefined.
+
     Notes:
         1. The function assumes that new_entrant_build_costs has a "technology" column
            that matches with the "generator_name" column in new_entrant_generators_table.
@@ -354,14 +262,7 @@ def _add_new_entrant_generator_build_costs(
         raise ValueError(
             "new_entrant_generators_table must have column 'build_year' to merge in build costs."
         )
-    # line up "technology" names with "generator_name" options
-    new_entrant_build_costs.loc[:, "technology"] = _fuzzy_match_names(
-        new_entrant_build_costs.loc[:, "technology"],
-        new_entrant_generators_table["generator_name"].unique(),
-        "adding build_costs for capital_cost calculation for new entrant generators",
-        not_match="existing",
-        threshold=90,
-    )
+
     build_costs = new_entrant_build_costs.melt(
         id_vars=["technology"], var_name="build_year", value_name="build_cost_$/mw"
     ).rename(columns={"technology": "generator_name"})
@@ -376,7 +277,24 @@ def _add_new_entrant_generator_build_costs(
     ].astype("int64")
 
     # return generator table with build costs merged in
-    return new_entrant_generators_table.merge(build_costs, how="left")
+    new_entrants_with_build_costs = new_entrant_generators_table.merge(
+        build_costs, how="left"
+    )
+
+    # check for empty/undefined build costs:
+    undefined_build_cost_gens = (
+        new_entrants_with_build_costs[
+            new_entrants_with_build_costs["build_cost_$/mw"].isna()
+        ]["generator_name"]
+        .unique()
+        .tolist()
+    )
+    if undefined_build_cost_gens:
+        raise ValueError(
+            f"Undefined build costs for new entrant generators: {undefined_build_cost_gens}"
+        )
+
+    return new_entrants_with_build_costs
 
 
 def _add_new_entrant_generator_connection_costs(

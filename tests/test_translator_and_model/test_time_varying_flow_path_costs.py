@@ -135,27 +135,19 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     # At the moment Brown Coal cost is set to 30 $/MWh and Liquid Fuel to
     # 400 $/MWh. "__" gets converted to a space.
     ecaa_generators_csv = """
-    generator,               fuel_type,     sub_region_id, maximum_capacity_mw,     fuel_cost_mapping,      minimum_load_mw,    vom_$/mwh_sent_out,  heat_rate_gj/mwh,      commissioning_date,     rez_id,     technology_type
-    expensive_generator_A,   Liquid__Fuel,  A,             200,                     Liquid__Fuel,           0,                  0.0,                 0.0,                   NaN,                    NaN,        OCGT
-    cheap_generator_B,       Brown__Coal,   B,             200,                     cheap_generator_B,      0,                  0.0,                 0.0,                   NaN,                    NaN,        Steam__Sub__Critical
+    generator,               fuel_type,     sub_region_id, maximum_capacity_mw,     fuel_cost_mapping,      minimum_load_mw,    vom_$/mwh_sent_out,  heat_rate_gj/mwh,      commissioning_date,     closure_year,   rez_id,     technology_type
+    expensive_generator_A,   Liquid__Fuel,  A,             200,                     Liquid__Fuel,           0,                  0.0,                 0.0,                   NaN,                    2050,           NaN,        OCGT
+    cheap_generator_B,       Brown__Coal,   B,             200,                     cheap_generator_B,      0,                  0.0,                 0.0,                   NaN,                    2050,           NaN,        Steam__Sub__Critical
     """
     ecaa_generators = csv_str_to_df(ecaa_generators_csv)
 
     # Minimal versions of other required tables
-    # Closure years table
-    closure_years_csv = """
-    generator,              duid,   expected_closure_year_calendar_year
-    expensive_generator_A,  DUID1,  2050
-    cheap_generator_B,      DUID2,  2050
-    """
-    closure_years = csv_str_to_df(closure_years_csv)
 
     # Collect all ISPyPSA tables
     ispypsa_tables = {
         "sub_regions": sub_regions,
         "flow_paths": flow_paths,
         "flow_path_expansion_costs": flow_path_expansion_costs,
-        "closure_years": closure_years,
         "ecaa_generators": ecaa_generators,
         "new_entrant_generators": pd.DataFrame(),
         "renewable_energy_zones": pd.DataFrame(),
