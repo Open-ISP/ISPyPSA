@@ -1,8 +1,14 @@
 """Generate a static website for navigating ISPyPSA plots."""
 
 import logging
+import re
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional
+
+import pandas as pd
+
+# Words that should always be capitalized in the website navigation
+ALWAYS_CAPITALIZED_WORDS = ["NEM", "ISP"]
 
 
 def _is_year_folder(folder_name: str) -> bool:
@@ -41,11 +47,12 @@ def _build_plot_tree(plot_paths: list[Path]) -> dict:
     return tree
 
 
-def _format_display_name(name: str) -> str:
+def _format_display_name(name: str, known_ids: Optional[List[str]] = None) -> str:
     """Format a name for display, preserving uppercase abbreviations.
 
     Args:
         name: The name to format
+        known_ids: List of known IDs that should always be fully capitalized
 
     Returns:
         Formatted name with proper capitalization
@@ -53,21 +60,42 @@ def _format_display_name(name: str) -> str:
     # Replace underscores with spaces
     name = name.replace("_", " ")
 
+    # Base formatting
     # If the name is all uppercase or looks like an abbreviation (2-5 chars, all caps),
     # keep it as-is
     if name.isupper() and len(name) <= 5:
-        return name
+        formatted_name = name
+    else:
+        # For mixed case or longer names, use title case
+        formatted_name = name.title()
 
-    # For mixed case or longer names, use title case
-    return name.title()
+    # Apply known IDs capitalization if provided
+    if known_ids:
+        # Create a regex pattern to match any of the known IDs (case-insensitive)
+        # use word boundaries to ensure we match full words/IDs
+        # specific sorting by length happens in the caller
+        pattern = re.compile(
+            r"\b(" + "|".join(re.escape(kid) for kid in known_ids) + r")\b",
+            re.IGNORECASE,
+        )
+
+        def replace_func(match):
+            return match.group(0).upper()
+
+        formatted_name = pattern.sub(replace_func, formatted_name)
+
+    return formatted_name
 
 
-def _tree_to_html(tree: dict, indent: int = 0) -> str:
+def _tree_to_html(
+    tree: dict, indent: int = 0, known_ids: Optional[List[str]] = None
+) -> str:
     """Convert tree structure to HTML list elements.
 
     Args:
         tree: Nested dictionary representing the plot tree
         indent: Current indentation level
+        known_ids: List of known IDs that should always be fully capitalized
 
     Returns:
         HTML string
@@ -77,7 +105,7 @@ def _tree_to_html(tree: dict, indent: int = 0) -> str:
     for key, value in sorted(tree.items()):
         if isinstance(value, dict):
             # This is a folder
-            folder_name = _format_display_name(key)
+            folder_name = _format_display_name(key, known_ids)
             html_parts.append(f'<li class="folder">')
             html_parts.append(
                 f'<div class="folder-header" onclick="toggleFolder(this)">'
@@ -85,13 +113,13 @@ def _tree_to_html(tree: dict, indent: int = 0) -> str:
                 f"</div>"
             )
             html_parts.append('<ul class="folder-content">')
-            html_parts.append(_tree_to_html(value, indent + 1))
+            html_parts.append(_tree_to_html(value, indent + 1, known_ids))
             html_parts.append("</ul>")
             html_parts.append("</li>")
         else:
             # This is a file
             file_name = key.replace(".html", "")
-            file_name = _format_display_name(file_name)
+            file_name = _format_display_name(file_name, known_ids)
             html_parts.append(
                 f'<li class="file" onclick="loadPlot(\'{value}\')">{file_name}</li>'
             )
@@ -406,6 +434,7 @@ def generate_results_website(
     site_name: str = "ISPyPSA Results",
     output_filename: str = "results_viewer.html",
     subtitle: str = "Capacity Expansion Analysis",
+    regions_and_zones_mapping: Optional[pd.DataFrame] = None,
 ) -> None:
     """Generate a static website for navigating ISPyPSA plot results.
 
@@ -420,6 +449,8 @@ def generate_results_website(
         site_name: Name of the website (default: "ISPyPSA Results")
         output_filename: Name of the output HTML file (default: "results_viewer.html")
         subtitle: Subtitle to display in the header (default: "Capacity Expansion Analysis")
+        regions_and_zones_mapping: Optional mapping table to ensure correct capitalization
+            of region and zone IDs
 
     Returns:
         None. The website is saved as output_filename in output_dir
@@ -439,8 +470,30 @@ def generate_results_website(
     # Build plot tree structure
     plot_tree = _build_plot_tree(plot_paths)
 
+    # Build known IDs list if mapping is provided
+    known_ids_list = []
+    if regions_and_zones_mapping is not None:
+        known_ids = set()
+        for col in ["nem_region_id", "isp_sub_region_id", "rez_id"]:
+            if col in regions_and_zones_mapping.columns:
+                ids = regions_and_zones_mapping[col].dropna().astype(str).unique()
+                for id_val in ids:
+                    # Standard version with spaces (matches text where underscores were replaced)
+                    known_ids.add(id_val.replace("_", " ").upper())
+                    # Hyphenated version (matches text with hyphens, e.g. SEQ-1)
+                    known_ids.add(id_val.replace("_", "-").upper())
+
+        # Add always capitalized words
+        known_ids.update(ALWAYS_CAPITALIZED_WORDS)
+
+        # Convert to sorted list (by length descending to handle overlapping IDs correctly)
+        known_ids_list = sorted(known_ids, key=len, reverse=True)
+    else:
+        # If no mapping provided, at least use the hardcoded list
+        known_ids_list = sorted(ALWAYS_CAPITALIZED_WORDS, key=len, reverse=True)
+
     # Convert tree to HTML
-    plot_tree_html = _tree_to_html(plot_tree)
+    plot_tree_html = _tree_to_html(plot_tree, known_ids=known_ids_list)
 
     # Generate complete HTML
     html_content = _generate_html_template(

@@ -1,6 +1,4 @@
 from ispypsa.plotting.generation import (
-    plot_regional_dispatch,
-    plot_sub_regional_dispatch,
     prepare_demand_data,
     prepare_dispatch_data,
 )
@@ -18,8 +16,4 @@ __all__ = [
     "create_operational_plot_suite",
     "save_plots",
     "generate_results_website",
-    "plot_regional_dispatch",
-    "plot_sub_regional_dispatch",
-    "prepare_dispatch_data",
-    "prepare_demand_data",
 ]

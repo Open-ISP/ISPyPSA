@@ -3,7 +3,7 @@ from datetime import timedelta
 import pandas as pd
 
 
-def calculate_week_starting(timesteps: pd.Series) -> pd.Series:
+def _calculate_week_starting(timesteps: pd.Series) -> pd.Series:
     """Calculate the week starting date (Monday) for each timestep.
 
     Args:

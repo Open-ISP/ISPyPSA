@@ -149,6 +149,7 @@ generate_results_website(
     pypsa_outputs_directory,
     output_filename="capacity_expansion_results_viewer.html",
     subtitle="Capacity Expansion Analysis",
+    regions_and_zones_mapping=capacity_expansion_results["regions_and_zones_mapping"],
 )
 
 # Operational modelling extension
@@ -199,4 +200,5 @@ generate_results_website(
     pypsa_outputs_directory,
     output_filename="operational_results_viewer.html",
     subtitle="Operational Analysis",
+    regions_and_zones_mapping=operational_results["regions_and_zones_mapping"],
 )

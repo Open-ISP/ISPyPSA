@@ -1,13 +1,12 @@
-from datetime import timedelta
 from typing import Literal
 
 import pandas as pd
 import plotly.graph_objects as go
 
 from ispypsa.helpers import csv_str_to_df
+from ispypsa.plotting.helpers import _calculate_week_starting
 from ispypsa.plotting.style import create_plotly_professional_layout
-from ispypsa.plotting.utils import calculate_week_starting
-from ispypsa.results.transmission import _build_node_to_geography_mapping
+from ispypsa.results.helpers import _build_node_to_geography_mapping
 
 
 def prepare_transmission_capacity_by_region(
@@ -78,7 +77,7 @@ def prepare_transmission_capacity_by_region(
 
     # Create mapping from node to NEM region
     node_to_region = _build_node_to_geography_mapping(
-        regions_and_zones_mapping, "region"
+        regions_and_zones_mapping, "nem_region_id"
     )
 
     # Map nodes to regions
@@ -224,7 +223,7 @@ def prepare_flow_data(
     flows["timestep"] = pd.to_datetime(flows["timestep"])
 
     # Calculate week_starting as the Monday of each week
-    flows["week_starting"] = calculate_week_starting(flows["timestep"])
+    flows["week_starting"] = _calculate_week_starting(flows["timestep"])
     return flows
 
 
@@ -334,7 +333,7 @@ def plot_flows(
             plots[output_isp_type] = {}
         if isp_name not in plots[output_isp_type]:
             plots[output_isp_type][isp_name] = {}
-        if investment_period not in plots[output_isp_type][isp_name]:
+        if str(investment_period) not in plots[output_isp_type][isp_name]:
             plots[output_isp_type][isp_name][str(investment_period)] = {}
 
         # Store the chart and data with week_starting as string for consistency

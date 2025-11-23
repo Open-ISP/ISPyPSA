@@ -3,8 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.plotting.generation import (
-    plot_regional_dispatch,
-    plot_sub_regional_dispatch,
+    plot_node_level_dispatch,
 )
 from ispypsa.plotting.transmission import (
     plot_aggregate_transmission_capacity,
@@ -54,8 +53,8 @@ def create_capacity_expansion_plot_suite(
         results: A dictionary of results from the ISPyPSA model. Should contain each of the following results tables:
         - transmission_expansion
         - transmission_flows
-        - nem_region_transmission_flows (for regional dispatch plots)
-        - isp_sub_region_transmission_flows (for sub-regional dispatch plots)
+        - nem_region_transmission_flows
+        - isp_sub_region_transmission_flows
         - regions_and_zones_mapping
         - generator_dispatch
         - demand
@@ -86,16 +85,18 @@ def create_capacity_expansion_plot_suite(
             ),
         },
         "dispatch": {
-            "regional": plot_regional_dispatch(
+            "nem_region_id": plot_node_level_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],
+                "nem_region_id",
                 nem_region_flows,
             ),
-            "sub_regional": plot_sub_regional_dispatch(
+            "isp_sub_region_id": plot_node_level_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],
+                "isp_sub_region_id",
                 isp_sub_region_flows,
             ),
         },
@@ -140,16 +141,18 @@ def create_operational_plot_suite(
             ),
         },
         "dispatch": {
-            "regional": plot_regional_dispatch(
+            "regional": plot_node_level_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],
+                "nem_region_id",
                 nem_region_flows,
             ),
-            "sub_regional": plot_sub_regional_dispatch(
+            "sub_regional": plot_node_level_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],
+                "isp_sub_region_id",
                 isp_sub_region_flows,
             ),
         },

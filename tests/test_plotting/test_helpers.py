@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ispypsa.plotting.utils import calculate_week_starting
+from ispypsa.plotting.helpers import _calculate_week_starting
 
 
 def test_calculate_week_starting():
@@ -33,7 +33,7 @@ def test_calculate_week_starting():
         )
     )
 
-    result = calculate_week_starting(timesteps)
+    result = _calculate_week_starting(timesteps)
 
     expected = pd.Series(
         [

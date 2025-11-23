@@ -57,6 +57,7 @@ def extract_regions_and_zones_mapping(
 The CAPACITY_EXPANSION_RESULTS_FILES dictionary creates a mapping between the result file name and the function used to extract the results.
 """
 CAPACITY_EXPANSION_RESULTS_FILES = {
+    "regions_and_zones_mapping": extract_regions_and_zones_mapping,
     "transmission_expansion": extract_transmission_expansion_results,
     "transmission_flows": extract_transmission_flows,
     "rez_transmission_flows": extract_rez_transmission_flows,
@@ -95,7 +96,6 @@ def extract_tabular_capacity_expansion_results(
     Returns:
         A dictionary of results with the file name as the key and the results as the value.
     """
-    regions_mapping = extract_regions_and_zones_mapping(ispypsa_tables)
 
     # Functions that require link_flows and regions_mapping parameters
     geographic_transmission_functions = {
@@ -106,15 +106,22 @@ def extract_tabular_capacity_expansion_results(
 
     results = {}
 
+    # Extract regions and zones mapping to be used in other functions that require it.
+    results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+        ispypsa_tables
+    )
+
     # Extract first transmission flows to be used in other functions that require it.
     results["transmission_flows"] = extract_transmission_flows(network)
 
     for file, function in CAPACITY_EXPANSION_RESULTS_FILES.items():
-        if file == "transmission_flows":
+        if file in ["transmission_flows", "regions_and_zones_mapping"]:
             continue
 
         if file in geographic_transmission_functions:
-            results[file] = function(results["transmission_flows"], regions_mapping)
+            results[file] = function(
+                results["transmission_flows"], results["regions_and_zones_mapping"]
+            )
         else:
             results[file] = function(network)
 
@@ -134,7 +141,6 @@ def extract_tabular_operational_results(
     Returns:
         A dictionary of results with the file name as the key and the results as the value.
     """
-    regions_mapping = extract_regions_and_zones_mapping(ispypsa_tables)
 
     # Functions that require link_flows and regions_mapping parameters
     geographic_transmission_functions = {
@@ -145,15 +151,22 @@ def extract_tabular_operational_results(
 
     results = {}
 
+    # Extract regions and zones mapping to be used in other functions that require it.
+    results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+        ispypsa_tables
+    )
+
     # Extract first transmission flows to be used in other functions that require it.
     results["transmission_flows"] = extract_transmission_flows(network)
 
     for file, function in OPERATIONAL_RESULTS_FILES.items():
-        if file == "transmission_flows":
+        if file in ["transmission_flows", "regions_and_zones_mapping"]:
             continue
 
         if file in geographic_transmission_functions:
-            results[file] = function(results["transmission_flows"], regions_mapping)
+            results[file] = function(
+                results["transmission_flows"], results["regions_and_zones_mapping"]
+            )
         else:
             results[file] = function(network)
 

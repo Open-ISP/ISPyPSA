@@ -1,6 +1,8 @@
 import pandas as pd
 import pypsa
 
+from ispypsa.results.helpers import _build_node_to_geography_mapping
+
 
 def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFrame:
     """Extract transmission expansion results from PyPSA network and rename columns according to ISP conventions.
@@ -134,76 +136,6 @@ def extract_transmission_flows(network: pypsa.Network) -> pd.DataFrame:
     return flow_agg
 
 
-def _build_node_to_geography_mapping(
-    regions_and_zones_mapping: pd.DataFrame, geography_level: str
-) -> dict[str, str]:
-    """Build mapping from nodes to geographic units at specified level.
-
-    Args:
-        regions_and_zones_mapping: Mapping table with nem_region_id, isp_sub_region_id, rez_id
-        geography_level: One of 'rez', 'subregion', 'region'
-
-    Returns:
-        Dictionary mapping node names to geographic unit IDs
-    """
-    if geography_level == "region":
-        # Map sub-regions to regions
-        node_to_geo = dict(
-            zip(
-                regions_and_zones_mapping["isp_sub_region_id"],
-                regions_and_zones_mapping["nem_region_id"],
-            )
-        )
-        # Map REZs to regions
-        if "rez_id" in regions_and_zones_mapping.columns:
-            rez_to_geo = dict(
-                zip(
-                    regions_and_zones_mapping["rez_id"].dropna(),
-                    regions_and_zones_mapping.loc[
-                        regions_and_zones_mapping["rez_id"].notna(), "nem_region_id"
-                    ],
-                )
-            )
-            node_to_geo.update(rez_to_geo)
-
-    elif geography_level == "subregion":
-        # Map sub-regions to themselves
-        node_to_geo = dict(
-            zip(
-                regions_and_zones_mapping["isp_sub_region_id"],
-                regions_and_zones_mapping["isp_sub_region_id"],
-            )
-        )
-        # Map REZs to their parent sub-regions
-        if "rez_id" in regions_and_zones_mapping.columns:
-            rez_to_geo = dict(
-                zip(
-                    regions_and_zones_mapping["rez_id"].dropna(),
-                    regions_and_zones_mapping.loc[
-                        regions_and_zones_mapping["rez_id"].notna(), "isp_sub_region_id"
-                    ],
-                )
-            )
-            node_to_geo.update(rez_to_geo)
-
-    elif geography_level == "rez":
-        # Only map REZs to themselves
-        if "rez_id" in regions_and_zones_mapping.columns:
-            node_to_geo = dict(
-                zip(
-                    regions_and_zones_mapping["rez_id"].dropna(),
-                    regions_and_zones_mapping["rez_id"].dropna(),
-                )
-            )
-        else:
-            node_to_geo = {}
-
-    else:
-        raise ValueError(f"Unknown geography_level: {geography_level}")
-
-    return node_to_geo
-
-
 def _calculate_transmission_flows_by_geography(
     flow_long: pd.DataFrame,
     node_to_geography: dict[str, str],
@@ -292,7 +224,7 @@ def extract_rez_transmission_flows(
         DataFrame with columns: rez_id, investment_period, timestep,
             imports_mw, exports_mw, net_imports_mw
     """
-    node_to_rez = _build_node_to_geography_mapping(regions_and_zones_mapping, "rez")
+    node_to_rez = _build_node_to_geography_mapping(regions_and_zones_mapping, "rez_id")
     return _calculate_transmission_flows_by_geography(link_flows, node_to_rez, "rez_id")
 
 
@@ -314,7 +246,7 @@ def extract_isp_sub_region_transmission_flows(
             imports_mw, exports_mw, net_imports_mw
     """
     node_to_subregion = _build_node_to_geography_mapping(
-        regions_and_zones_mapping, "subregion"
+        regions_and_zones_mapping, "isp_sub_region_id"
     )
     return _calculate_transmission_flows_by_geography(
         link_flows, node_to_subregion, "isp_sub_region_id"
@@ -339,7 +271,7 @@ def extract_nem_region_transmission_flows(
             imports_mw, exports_mw, net_imports_mw
     """
     node_to_region = _build_node_to_geography_mapping(
-        regions_and_zones_mapping, "region"
+        regions_and_zones_mapping, "nem_region_id"
     )
     return _calculate_transmission_flows_by_geography(
         link_flows, node_to_region, "nem_region_id"
