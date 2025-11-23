@@ -69,7 +69,7 @@ def _translate_existing_flow_path_capacity_to_links(
     links_df["name"] = links_df["name"] + "_existing"
     links_df["p_nom_extendable"] = False
     links_df["p_min_pu"] = -1.0 * (links_df["p_nom_reverse"] / links_df["p_nom"])
-    links_df["build_year"] = start_year - 1
+    links_df["build_year"] = 0
     links_df["lifetime"] = np.inf
     links_df = links_df.drop(columns=["p_nom_reverse"])
     links_df["capital_cost"] = np.nan

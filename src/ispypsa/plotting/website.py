@@ -102,6 +102,7 @@ def _tree_to_html(tree: dict, indent: int = 0) -> str:
 def _generate_html_template(
     plot_tree_html: str,
     plot_dir_name: str,
+    site_name: str,
     subtitle: str = "Capacity Expansion Analysis",
 ) -> str:
     """Generate the complete HTML template.
@@ -119,7 +120,7 @@ def _generate_html_template(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISPyPSA Results</title>
+    <title>{site_name}</title>
     <style>
         * {{
             margin: 0;
@@ -349,7 +350,7 @@ def _generate_html_template(
 
         <div class="plot-viewer">
             <div class="header">
-                <h1>ISPyPSA Results</h1>
+                <h1>Run name: {site_name}</h1>
                 <p>{subtitle}</p>
             </div>
             <div class="plot-container" id="plotContainer">
@@ -442,7 +443,9 @@ def generate_results_website(
     plot_tree_html = _tree_to_html(plot_tree)
 
     # Generate complete HTML
-    html_content = _generate_html_template(plot_tree_html, plot_dir_name, subtitle)
+    html_content = _generate_html_template(
+        plot_tree_html, plot_dir_name, site_name, subtitle
+    )
 
     # Write HTML file
     output_file = output_dir / output_filename

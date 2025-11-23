@@ -10,47 +10,69 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
     Examples:
 
     >>> extract_transmission_expansion_results(network)
-    isp_name, node_from, node_to, build_year, forward_direction_nominal_capacity_mw, reverse_direction_nominal_capacity_mw
-    A-B, A, B, 0, 100, 100
-    A-B, A, B, 2026, 300, 300
-    A-B, A, B, 2027, 400, 400
+       isp_name node_from node_to investment_period  forward_capacity_mw reverse_capacity_mw
+    0       A-B         A       B                 0                  100                 100
+    1       A-B         A       B              2026                  300                 300
+    2       A-B         A       B              2027                  400                 400
 
     Args:
         network: PyPSA network object
 
     Returns:
-        pd.DataFrame: Transmission expansion results in ISP format. Columns: isp_name, node_from, node_to, build_year,
-        forward_direction_nominal_capacity_mw, and reverse_direction_nominal_capacity_mw.
+        pd.DataFrame: Transmission expansion results in ISP format. Columns: isp_name, node_from, node_to,
+            investment_period, forward_capacity_mw, and reverse_capacity_mw.
 
     """
 
     results = network.links
 
-    # results = results[results["p_nom_opt"] > 0].copy()
-
     columns_to_rename = {
         "bus0": "node_from",
         "bus1": "node_to",
+        "build_year": "investment_period",
     }
 
     results = results.rename(columns=columns_to_rename)
 
-    results["forward_direction_nominal_capacity_mw"] = results["p_nom_opt"]
-    results["reverse_direction_nominal_capacity_mw"] = (
-        results["p_nom_opt"] * results["p_min_pu"]
-    )
+    results["forward_capacity_mw"] = results["p_nom_opt"]
+    results["reverse_capacity_mw"] = results["p_nom_opt"] * results["p_min_pu"]
 
     cols_to_keep = [
         "isp_name",
         "isp_type",
         "node_from",
         "node_to",
-        "build_year",
-        "forward_direction_nominal_capacity_mw",
-        "reverse_direction_nominal_capacity_mw",
+        "investment_period",
+        "forward_capacity_mw",
+        "reverse_capacity_mw",
     ]
 
     results = results.loc[:, cols_to_keep].reset_index(drop=True)
+
+    cumsum_cols = ["forward_capacity_mw", "reverse_capacity_mw"]
+    results = results.sort_values("investment_period")
+    results[cumsum_cols] = results.groupby("isp_name")[cumsum_cols].cumsum()
+
+    # Make sure each transmission element has value for each year.
+    investment_periods = sorted(results["investment_period"].unique())
+    isp_names = sorted(results["isp_name"].unique())
+    complete_index = pd.MultiIndex.from_product(
+        [isp_names, investment_periods], names=["isp_name", "investment_period"]
+    )
+    results = results.set_index(["isp_name", "investment_period"])
+    results = results.reindex(complete_index)
+    results = results.groupby(level="isp_name").ffill()
+
+    # Backfill static attributes for years before the first investment
+    # Note: We use bfill() to propagate attributes like node names and ISP type
+    # backwards to years before the link is built (where they are currently NaN).
+    static_cols = ["node_from", "node_to", "isp_type"]
+    results[static_cols] = results.groupby(level="isp_name")[static_cols].bfill()
+
+    # Fill remaining capacity NaNs (years before first investment) with 0
+    results[cumsum_cols] = results[cumsum_cols].fillna(0)
+
+    results = results.reset_index()
 
     return results
 
@@ -67,7 +89,7 @@ def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:
         DataFrame with columns: Link, investment_period, timestep, flow_mw, bus0, bus1, isp_name
     """
     # Get link static data
-    links = network.links[["bus0", "bus1", "isp_name"]].reset_index()
+    links = network.links.loc[:, ["bus0", "bus1", "isp_name"]].reset_index()
 
     # Get flow time series (p0 = flow from bus0 to bus1)
     flow_t = network.links_t.p0.reset_index().rename(
@@ -87,21 +109,26 @@ def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:
     return flow_long
 
 
-def extract_transmission_flows(link_flows: pd.DataFrame) -> pd.DataFrame:
+def extract_transmission_flows(network: pypsa.Network) -> pd.DataFrame:
     """Extract transmission flows aggregated by ISP name.
 
     Args:
-        link_flows: Raw link flows from _extract_raw_link_flows()
+        network: PyPSA network with solved optimization results
 
     Returns:
         DataFrame with columns: isp_name, investment_period, timestep, flow
     """
+
+    link_flows = _extract_raw_link_flows(network)
+
     # Aggregate by isp_name
     flow_agg = (
-        link_flows.groupby(["isp_name", "investment_period", "timestep"])
+        link_flows.groupby(
+            ["isp_name", "bus0", "bus1", "investment_period", "timestep"]
+        )
         .agg({"flow_mw": "sum"})
         .reset_index()
-        .rename(columns={"flow_mw": "flow"})
+        .rename(columns={"bus0": "from_node", "bus1": "to_node"})
     )
 
     return flow_agg
@@ -198,15 +225,13 @@ def _calculate_transmission_flows_by_geography(
     """
     # Map nodes to geographic units
     flow_long = flow_long.copy()
-    flow_long["bus0_geo"] = flow_long["bus0"].map(node_to_geography)
-    flow_long["bus1_geo"] = flow_long["bus1"].map(node_to_geography)
+    flow_long["from_node_geo"] = flow_long["from_node"].map(node_to_geography)
+    flow_long["to_node_geo"] = flow_long["to_node"].map(node_to_geography)
 
     # Filter to only inter-geography flows (different geographic units)
     # Also filter out flows where either end doesn't map to this geography level
     inter_geo_flows = flow_long[
-        (flow_long["bus0_geo"].notna())
-        & (flow_long["bus1_geo"].notna())
-        & (flow_long["bus0_geo"] != flow_long["bus1_geo"])
+        (flow_long["from_node_geo"] != flow_long["to_node_geo"])
     ].copy()
 
     if inter_geo_flows.empty:
@@ -225,13 +250,13 @@ def _calculate_transmission_flows_by_geography(
     # Calculate imports and exports from each geographic unit's perspective
     # For bus0 (origin): positive flow = export, negative flow = import
     bus0_flows = inter_geo_flows.copy()
-    bus0_flows[geography_column_name] = bus0_flows["bus0_geo"]
+    bus0_flows[geography_column_name] = bus0_flows["from_node_geo"]
     bus0_flows["exports_mw"] = bus0_flows["flow_mw"].clip(lower=0)
     bus0_flows["imports_mw"] = (-bus0_flows["flow_mw"]).clip(lower=0)
 
     # For bus1 (destination): positive flow = import, negative flow = export
     bus1_flows = inter_geo_flows.copy()
-    bus1_flows[geography_column_name] = bus1_flows["bus1_geo"]
+    bus1_flows[geography_column_name] = bus1_flows["to_node_geo"]
     bus1_flows["imports_mw"] = bus1_flows["flow_mw"].clip(lower=0)
     bus1_flows["exports_mw"] = (-bus1_flows["flow_mw"]).clip(lower=0)
 
@@ -260,7 +285,8 @@ def extract_rez_transmission_flows(
 
     Args:
         link_flows: Raw link flows from _extract_raw_link_flows()
-        regions_and_zones_mapping: Mapping table with rez_id column
+        regions_and_zones_mapping: Mapping table with nem_region_id, isp_sub_region_id,
+        and rez_id columns
 
     Returns:
         DataFrame with columns: rez_id, investment_period, timestep,
@@ -280,7 +306,8 @@ def extract_isp_sub_region_transmission_flows(
 
     Args:
         link_flows: Raw link flows from _extract_raw_link_flows()
-        regions_and_zones_mapping: Mapping table with isp_sub_region_id column
+        regions_and_zones_mapping: Mapping table with nem_region_id, isp_sub_region_id,
+        and rez_id columns
 
     Returns:
         DataFrame with columns: isp_sub_region_id, investment_period, timestep,
@@ -304,7 +331,8 @@ def extract_nem_region_transmission_flows(
 
     Args:
         link_flows: Raw link flows from _extract_raw_link_flows()
-        regions_and_zones_mapping: Mapping table with nem_region_id column
+        regions_and_zones_mapping: Mapping table with nem_region_id, isp_sub_region_id,
+        and rez_id columns
 
     Returns:
         DataFrame with columns: nem_region_id, investment_period, timestep,

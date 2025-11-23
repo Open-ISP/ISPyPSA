@@ -496,6 +496,7 @@ def create_and_run_capacity_expansion_model() -> None:
                 plots,
                 plots_dir,
                 get_pypsa_outputs_directory(),
+                site_name=f"{config.paths.ispypsa_run_name}",
                 output_filename="capacity_expansion_results_viewer.html",
                 subtitle="Capacity Expansion Analysis",
             )
@@ -584,8 +585,9 @@ def create_and_run_operational_model() -> None:
                 plots,
                 plots_dir,
                 get_pypsa_outputs_directory(),
-                output_filename="capacity_expansion_results_viewer.html",
-                subtitle="Capacity Expansion Analysis",
+                output_filename="operational_results_viewer.html",
+                site_name=f"{config.paths.ispypsa_run_name}",
+                subtitle="Operational Analysis",
             )
 
 
@@ -611,6 +613,7 @@ def create_capacity_expansion_plots_suite() -> None:
         plots_dir,
         get_pypsa_outputs_directory(),
         output_filename="capacity_expansion_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
         subtitle="Capacity Expansion Analysis",
     )
 
@@ -637,6 +640,7 @@ def create_operational_plots_suite() -> None:
         plots_dir,
         get_pypsa_outputs_directory(),
         output_filename="operational_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
         subtitle="Operational Analysis",
     )
 
