@@ -132,20 +132,16 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     flow_path_expansion_costs = csv_str_to_df(flow_path_expansion_costs_csv)
 
     # ECAA Generators table (existing generators)
-    # At the moment Brown Coal cost is hard coded to 30 $/MWh and Liquid Fuel to
+    # At the moment Brown Coal cost is set to 30 $/MWh and Liquid Fuel to
     # 400 $/MWh. "__" gets converted to a space.
     ecaa_generators_csv = """
-    generator,               fuel_type,   sub_region_id, maximum_capacity_mw
-    expensive_generator_A,   Liquid__Fuel, A,             200
-    cheap_generator_B,       Brown__Coal,  B,             200
+    generator,               fuel_type,     sub_region_id, maximum_capacity_mw,     fuel_cost_mapping,      minimum_load_mw,    vom_$/mwh_sent_out,  heat_rate_gj/mwh,      commissioning_date,     closure_year,   rez_id,     technology_type
+    expensive_generator_A,   Liquid__Fuel,  A,             200,                     Liquid__Fuel,           0,                  0.0,                 0.0,                   NaN,                    2050,           NaN,        OCGT
+    cheap_generator_B,       Brown__Coal,   B,             200,                     cheap_generator_B,      0,                  0.0,                 0.0,                   NaN,                    2050,           NaN,        Steam__Sub__Critical
     """
     ecaa_generators = csv_str_to_df(ecaa_generators_csv)
 
     # Minimal versions of other required tables
-    new_entrant_generators_csv = """
-    generator, fuel_type, technology_type, sub_region_id
-    """
-    new_entrant_generators = csv_str_to_df(new_entrant_generators_csv)
 
     # Collect all ISPyPSA tables
     ispypsa_tables = {
@@ -153,8 +149,8 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
         "flow_paths": flow_paths,
         "flow_path_expansion_costs": flow_path_expansion_costs,
         "ecaa_generators": ecaa_generators,
-        # Add empty DataFrames for other tables
         "new_entrant_generators": pd.DataFrame(),
+        "renewable_energy_zones": pd.DataFrame(),
     }
 
     # Create a ModelConfig instance
@@ -162,6 +158,18 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
 
     # Translate ISPyPSA tables to PyPSA-friendly format
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
+
+    # Manually set the marginal costs for the generators:
+    generators = pypsa_tables["generators"].copy()
+    generators.loc[generators["name"] == "expensive_generator_A", "marginal_cost"] = (
+        400.0
+    )
+    generators.loc[generators["name"] == "cheap_generator_B", "marginal_cost"] = 30.0
+    for unserved_energy_gen in ["unserved_energy_A", "unserved_energy_B"]:
+        generators.loc[generators["name"] == unserved_energy_gen, "marginal_cost"] = (
+            config_dict["unserved_energy"]["cost"]
+        )
+    pypsa_tables["generators"] = generators
 
     # Manually create a short hardcoded snapshots so the model works with our short
     # time series data.
@@ -186,6 +194,7 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
         model_phase="capacity_expansion",
         ispypsa_tables=ispypsa_tables,
         snapshots=snapshots,
+        generators=generators,
         parsed_traces_directory=traces_dir,
         pypsa_friendly_timeseries_inputs_location=pypsa_timeseries_dir,
     )

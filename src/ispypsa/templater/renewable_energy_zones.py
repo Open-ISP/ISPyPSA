@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +9,7 @@ from .helpers import _snakecase_string
 
 
 def _template_rez_build_limits(
-    rez_build_limits: pd.DataFrame,
+    rez_build_limits: pd.DataFrame, scenario: str
 ) -> pd.DataFrame:
     """Create a template for renewable energy zones that contains data on resource and
     transmission limits and transmission expansion costs.
@@ -16,6 +17,7 @@ def _template_rez_build_limits(
     Args:
         rez_build_limits: pd.DataFrame IASR table specifying the renewable energy
             zone build limits
+        scenario: ISP scenario to generate template inputs based on.
 
     Returns:
         `pd.DataFrame`: `ISPyPSA` formatted REZ table resource and transmission limits
@@ -38,29 +40,43 @@ def _template_rez_build_limits(
     for col in cols_to_pass_to_float:
         rez_build_limits[col] = pd.to_numeric(rez_build_limits[col], errors="coerce")
     cols_where_zero_goes_to_nan = [
-        "rez_resource_limit_violation_penalty_factor_$m/mw",
+        col for col in cols_to_pass_to_float if re.search(r"land_use_limit", col)
     ]
+    cols_where_zero_goes_to_nan.append(
+        "rez_resource_limit_violation_penalty_factor_$m/mw"
+    )
     for col in cols_where_zero_goes_to_nan:
         rez_build_limits.loc[rez_build_limits[col] == 0.0, col] = np.nan
 
     rez_build_limits = _process_transmission_limit(rez_build_limits)
+
+    rez_build_limits = _convert_cost_units(
+        rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
+    )
+
+    land_use_limit_scenario_str = ""
+    if scenario == "Green Energy Exports":
+        land_use_limit_scenario_str = "_green_energy_exports_scenario"
+
+    rez_build_limits = rez_build_limits.rename(
+        columns={
+            f"land_use_limits_in_mw{land_use_limit_scenario_str}_wind": "land_use_limits_mw_wind",
+            f"land_use_limits_in_mw{land_use_limit_scenario_str}_solar": "land_use_limits_mw_solar",
+            "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_resource_limit_violation_penalty_factor_$/mw",
+        }
+    )
     cols_where_nan_goes_to_zero = [
         "wind_generation_total_limits_mw_high",
         "wind_generation_total_limits_mw_medium",
         "wind_generation_total_limits_mw_offshore_floating",
         "wind_generation_total_limits_mw_offshore_fixed",
         "solar_pv_plus_solar_thermal_limits_mw_solar",
+        "land_use_limits_mw_wind",
+        "land_use_limits_mw_solar",
     ]
     for col in cols_where_nan_goes_to_zero:
         rez_build_limits[col] = rez_build_limits[col].fillna(0.0)
-    rez_build_limits = _convert_cost_units(
-        rez_build_limits, "rez_resource_limit_violation_penalty_factor_$m/mw"
-    )
-    rez_build_limits = rez_build_limits.rename(
-        columns={
-            "rez_resource_limit_violation_penalty_factor_$m/mw": "rez_solar_resource_limit_violation_penalty_factor_$/mw",
-        }
-    )
+
     rez_build_limits["carrier"] = "AC"
     rez_build_limits = rez_build_limits.loc[
         :,
@@ -73,12 +89,14 @@ def _template_rez_build_limits(
             "wind_generation_total_limits_mw_offshore_floating",
             "wind_generation_total_limits_mw_offshore_fixed",
             "solar_pv_plus_solar_thermal_limits_mw_solar",
-            "rez_solar_resource_limit_violation_penalty_factor_$/mw",
+            "rez_resource_limit_violation_penalty_factor_$/mw",
             # Remove while not being used.
             # "rez_transmission_network_limit_peak_demand",
             "rez_transmission_network_limit_summer_typical",
             # Remove while not being used.
             # "rez_transmission_network_limit_winter_reference",
+            "land_use_limits_mw_wind",
+            "land_use_limits_mw_solar",
         ],
     ]
     return rez_build_limits

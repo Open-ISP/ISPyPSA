@@ -38,10 +38,17 @@ _BASE_TEMPLATE_OUTPUTS = [
     "coal_prices",
     "gas_prices",
     "liquid_fuel_prices",
+    "biomass_prices",
+    "biomethane_prices",
+    "hydrogen_prices",
+    "new_entrant_build_costs",
+    "gpg_emissions_reduction_h2",
+    "gpg_emissions_reduction_biomethane",
     "full_outage_forecasts",
     "partial_outage_forecasts",
     "seasonal_ratings",
-    "closure_years",
+    "new_entrant_wind_and_solar_connection_costs",
+    "new_entrant_non_vre_connection_costs",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
 ]
@@ -133,7 +140,7 @@ def create_ispypsa_inputs_template(
         )
 
     template["renewable_energy_zones"] = _template_rez_build_limits(
-        iasr_tables["initial_build_limits"]
+        iasr_tables["initial_build_limits"], scenario
     )
 
     possible_rez_or_constraint_names = list(

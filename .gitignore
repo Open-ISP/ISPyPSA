@@ -173,3 +173,7 @@ ispypsa_runs/**/*.h5
 
 # ignore doit database
 .doit*
+
+# IDE specific files
+.vscode/
+.DS_Store

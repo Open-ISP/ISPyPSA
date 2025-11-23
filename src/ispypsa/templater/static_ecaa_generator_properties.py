@@ -1,6 +1,5 @@
 import logging
 import re
-from pathlib import Path
 
 import pandas as pd
 
@@ -9,8 +8,11 @@ from .helpers import (
     _snakecase_string,
     _where_any_substring_appears,
 )
-from .lists import _ECAA_GENERATOR_TYPES
-from .mappings import _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .lists import _ECAA_GENERATOR_TYPES, _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+from .mappings import (
+    _ECAA_GENERATOR_NEW_COLUMN_MAPPING,
+    _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+)
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -18,7 +20,7 @@ _OBSOLETE_COLUMNS = [
 
 
 def _template_ecaa_generators_static_properties(
-    iasr_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the existing, commited, anticipated and additional (ECAA) generators
     summary tables into an ISPyPSA template format
@@ -44,17 +46,55 @@ def _template_ecaa_generators_static_properties(
     cleaned_ecaa_generator_summaries = _clean_generator_summary(
         ecaa_generator_summaries
     )
-    # drop any energy storage
-    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.loc[
-        ~cleaned_ecaa_generator_summaries["technology_type"].str.contains("Battery"),
-        :,
-    ].reset_index(drop=True)
-    merged_cleaned_ecaa_generator_summaries = (
+
+    cleaned_ecaa_generator_summaries = cleaned_ecaa_generator_summaries.reset_index(
+        drop=True
+    )
+    merged_cleaned_ecaa_generator_and_storage_summaries = (
         _merge_and_set_ecaa_generators_static_properties(
             cleaned_ecaa_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_ecaa_generator_summaries
+
+    ecaa_storage_summaries = (
+        merged_cleaned_ecaa_generator_and_storage_summaries.loc[
+            merged_cleaned_ecaa_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    ecaa_generator_summaries = (
+        merged_cleaned_ecaa_generator_and_storage_summaries.loc[
+            ~merged_cleaned_ecaa_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    # Add Borumba back in to ECAA generators summary for short-term while PHES is WIP
+    # required for REZ group constraint SWQLD1
+    borumba_summary = ecaa_storage_summaries.loc[
+        ecaa_storage_summaries["generator"] == "Borumba", :
+    ].copy()
+
+    ecaa_generator_summaries = pd.concat(
+        [ecaa_generator_summaries, borumba_summary], ignore_index=True
+    )
+
+    required_cols_only = [
+        col
+        for col in _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+        if col in ecaa_generator_summaries.columns
+    ]
+
+    return ecaa_generator_summaries[required_cols_only]
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -91,15 +131,18 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
     df = _fix_forced_outage_columns(df)
-    # adds a partial derating factor column that takes partial outage rate mappings
-    df["partial_outage_derating_factor_%"] = df[
-        "forced_outage_rate_partial_outage_%_of_time"
-    ]
+
+    for (
+        new_column,
+        existing_column_mapping,
+    ) in _ECAA_GENERATOR_NEW_COLUMN_MAPPING.items():
+        df[new_column] = df[existing_column_mapping]
+
     return df
 
 
 def _merge_and_set_ecaa_generators_static_properties(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "Existing generator summary" template, and renames columns if this is specified
@@ -137,12 +180,21 @@ def _merge_and_set_ecaa_generators_static_properties(
     df = _zero_solar_wind_h2gt_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
+    df = _add_closure_year_column(df, iasr_tables["expected_closure_years"])
+    df = _add_rez_id_column(df, "rez_id", iasr_tables["renewable_energy_zones"])
+
     for outage_col in [col for col in df.columns if re.search("outage", col)]:
         # correct remaining outage mapping differences
         df[outage_col] = _rename_summary_outage_mappings(df[outage_col])
+
     # replace remaining string values in static property columns
     df = df.infer_objects()
-    for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
+    for col in [
+        col
+        for col in merged_static_cols
+        if df[col].dtype == "object"
+        and "date" not in col  # keep instances of date/datetime strings as strings
+    ]:
         df[col] = df[col].apply(lambda x: pd.NA if isinstance(x, str) else x)
     return df
 
@@ -264,7 +316,8 @@ def _rename_summary_outage_mappings(outage_series: pd.Series) -> pd.Series:
 
 
 def _process_and_merge_existing_gpg_min_load(
-    df: pd.DataFrame, existing_gpg_min_loads
+    df: pd.DataFrame,
+    existing_gpg_min_loads: pd.DataFrame,
 ) -> pd.DataFrame:
     """Processes and merges in gas-fired generation minimum load data
 
@@ -300,3 +353,90 @@ def _process_and_merge_existing_gpg_min_load(
     for gen, row in processed_gpg_min_loads.iterrows():
         df.loc[df["generator"] == gen, "minimum_load_mw"] = row["Min Stable Level (MW)"]
     return df
+
+
+def _add_closure_year_column(
+    df: pd.DataFrame, closure_years: pd.DataFrame
+) -> pd.DataFrame:
+    """Adds a column containing the expected closure year (calendar year) for ECAA generators.
+
+    Note 1: currently only one generator object is templated and translated per ECAA
+    generator, while some generators have multiple units with different expected closure
+    years. This function makes the OPINIONATED choice to return the earliest expected
+    year given in closure_years table for each set of generating units.
+
+    Note 2: the IASR table specifies the expected closure years as calendar years, without
+    giving more detail about the expected closure month elsewhere. For now, this function
+    also makes the OPINIONATED choice to just return the year given by the table as the
+    closure year.
+
+    Args:
+        ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
+        closure_years: pd.Dataframe containing the IASR table `expected_generator_closure_years`
+            for the ECAA generators, by unit. Expects that closure years are given as integers.
+
+    Returns:
+        `pd.DataFrame`: ECAA generator attributes table with additional 'closure_year' column.
+    """
+
+    default_closure_year = -1
+
+    # reformat closure_years table for clearer mapping:
+    closure_years.columns = [_snakecase_string(col) for col in closure_years.columns]
+    closure_years = closure_years.rename(
+        columns={
+            "generator_name": "generator",
+            "expected_closure_year_calendar_year": "closure_year",
+        }
+    )
+
+    # process closure_years to get the earliest expected closure year for each generator:
+    closure_years = (
+        closure_years.sort_values("closure_year", ascending=True)
+        .drop_duplicates(subset="generator", keep="first")
+        .dropna(subset="closure_year")
+    )
+    closure_years_dict = closure_years.set_index("generator")["closure_year"].to_dict()
+
+    where_str = df["closure_year"].apply(lambda x: isinstance(x, str))
+    df.loc[where_str, "closure_year"] = _fuzzy_match_names(
+        df.loc[where_str, "closure_year"],
+        closure_years_dict.keys(),
+        f"adding closure_year column to ecaa_generators table",
+        not_match="existing",
+        threshold=85,
+    )
+    # map rather than replace to pass default value for undefined closure years:
+    df["closure_year"] = df["closure_year"].map(
+        lambda closure_year: closure_years_dict.get(closure_year, default_closure_year)
+    )
+
+    return df
+
+
+def _add_rez_id_column(
+    df: pd.DataFrame, rez_id_col_name: str, renewable_energy_zones: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Merges REZ IDs into the ECAA generator table and cleans up REZ names.
+
+    Args:
+        df: ECAA generator DataFrame
+        rez_id_col_name: str, name of the new column to be added.
+        renewable_energy_zones: a pd.Dataframe of the IASR table `renewable_energy_zones`
+            containing columns "ID" and "Name" used to map the REZ IDs.
+
+    Returns:
+        pd.DataFrame: ECAA generator DataFrame with REZ ID column added.
+    """
+
+    # add a new column to hold the REZ IDs that maps to the current rez_location:
+    df[rez_id_col_name] = df["rez_location"]
+
+    rez_id_table_attributes = dict(table_lookup="Name", table_value="ID")
+    # merge in the REZ IDs:
+    df_with_rez_ids, col = _merge_table_data(
+        df, rez_id_col_name, renewable_energy_zones, rez_id_table_attributes
+    )
+
+    return df_with_rez_ids

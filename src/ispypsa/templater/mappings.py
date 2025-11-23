@@ -65,12 +65,42 @@ _GENERATOR_PROPERTIES = {
     "gas_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
 }
 
+_ECAA_GENERATOR_NEW_COLUMN_MAPPING = {
+    "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
+    "commissioning_date": "generator",
+    "closure_year": "generator",
+}
+
+_NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING = {
+    "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
+    "maximum_capacity_mw": "generator_name",
+    "unit_capacity_mw": "generator_name",
+    "lifetime": "generator_name",
+    "minimum_stable_level_%": "technology_type",
+    "summer_peak_rating_%": "summer_rating_mw",
+    "technology_specific_lcf_%": "regional_build_cost_zone",
+}
+"""
+_NEW_COLUMN_MAPPING dicts define new/additional columns to be added to the corresponding
+ECAA or new entrant generator summary tables. Keys are the name of the column to be added
+(corresponding to the table/column name of the data being added) and values are the name
+of the column in the existing summary table that holds the required data mapping for merging
+in the new column.
+"""
+
 _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
         table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
         table_lookup="Generator",
         alternative_lookups=["Project"],
         table_value="Installed capacity (MW)",
+    ),
+    "commissioning_date": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_GENERATOR_TYPES],
+        table_lookup="Generator",
+        alternative_lookups=["Project"],
+        table_value="Commissioning date",
+        alternative_values=["Indicative commissioning date"],
     ),
     "maintenance_duration_%": dict(
         table="maintenance_existing_generators",
@@ -131,7 +161,7 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         generator_status="Existing",
     ),
 }
-"""
+""""
 Existing, committed, anticipated and additional summary table columns mapped to
 corresponding IASR tables and lookup information that can be used to retrieve values.
 
@@ -169,6 +199,11 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         table="maximum_capacity_new_entrants",
         table_lookup="Generator type",
         table_value="Total plant size (MW)",
+    ),
+    "unit_capacity_mw": dict(
+        table="maximum_capacity_new_entrants",
+        table_lookup="Generator type",
+        table_value="Unit size (MW)",
     ),
     "maintenance_duration_%": dict(
         table="maintenance_new_entrants",
@@ -245,7 +280,6 @@ lookup information that can be used to retrieve values.
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
-
 
 """
  _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to
@@ -494,4 +528,13 @@ _REZ_CONFIG = {
         "prep_activities": _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES,
     },
     "prep_activities_mapping": _REZ_PREPATORY_ACTIVITIES_NAME_TO_REZ_AND_OPTION_NAME,
+}
+
+
+_VRE_RESOURCE_QUALITY_AND_TECH_CODES = {
+    "Wind": ["WH", "WM"],
+    "Wind - offshore (fixed)": "WFX",
+    "Wind - offshore (floating)": "WFL",
+    "Large scale Solar PV": "SAT",
+    "Solar Thermal (15hrs storage)": "CST",
 }

@@ -1,18 +1,23 @@
 import logging
 import re
-from pathlib import Path
 
-import ipdb
 import pandas as pd
 
 from .helpers import (
     _fuzzy_match_names,
+    _manual_remove_footnotes_from_generator_names,
     _one_to_one_priority_based_fuzzy_matching,
+    _rez_name_to_id_mapping,
     _snakecase_string,
+    _standardise_storage_capitalisation,
     _where_any_substring_appears,
 )
-from .lists import _NEW_GENERATOR_TYPES
-from .mappings import _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP
+from .lists import _MINIMUM_REQUIRED_GENERATOR_COLUMNS, _NEW_GENERATOR_TYPES
+from .mappings import (
+    _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING,
+    _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP,
+    _VRE_RESOURCE_QUALITY_AND_TECH_CODES,
+)
 
 _OBSOLETE_COLUMNS = [
     "Maximum capacity factor (%)",
@@ -20,7 +25,7 @@ _OBSOLETE_COLUMNS = [
 
 
 def _template_new_generators_static_properties(
-    iasr_tables: dict[pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
     """Processes the new entrant generators summary tables into an ISPyPSA
     template format
@@ -37,18 +42,51 @@ def _template_new_generators_static_properties(
     new_generator_summaries = []
     for gen_type in _NEW_GENERATOR_TYPES:
         df = iasr_tables[_snakecase_string(gen_type) + "_summary"]
-        df.columns = ["Generator", *df.columns[1:]]
+        df.columns = ["Generator Name", *df.columns[1:]]
         new_generator_summaries.append(df)
     new_generator_summaries = pd.concat(new_generator_summaries, axis=0).reset_index(
         drop=True
     )
     cleaned_new_generator_summaries = _clean_generator_summary(new_generator_summaries)
-    merged_cleaned_new_generator_summaries = (
+
+    cleaned_new_generator_summaries = cleaned_new_generator_summaries.reset_index(
+        drop=True
+    )
+    merged_cleaned_new_generator_and_storage_summaries = (
         _merge_and_set_new_generators_static_properties(
             cleaned_new_generator_summaries, iasr_tables
         )
     )
-    return merged_cleaned_new_generator_summaries
+
+    new_storage_summaries = (
+        merged_cleaned_new_generator_and_storage_summaries.loc[
+            merged_cleaned_new_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    new_generator_summaries = (
+        merged_cleaned_new_generator_and_storage_summaries.loc[
+            ~merged_cleaned_new_generator_and_storage_summaries[
+                "technology_type"
+            ].str.contains(r"battery|pumped hydro", case=False),
+            :,
+        ]
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    required_cols_only = [
+        col
+        for col in _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+        if col in new_generator_summaries.columns
+    ]
+
+    return new_generator_summaries[required_cols_only]
 
 
 def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -91,28 +129,31 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(
         columns={col: (col + "_id") for col in df.columns if re.search(r"region$", col)}
     )
-    # enforces capitalisation structure for instances of str "storage" in generator col
-    df["generator"] = df["generator"].replace(
-        [r"s[a-z]{6}\s", r"S[a-z]{6}\)"], [r"Storage ", r"storage)"], regex=True
-    )
+    # handle footnotes that have stuck around:
+    df = _manual_remove_footnotes_from_generator_names(df)
+    # enforces capitalisation structure for instances of str "storage" in generator_name col
+    df["generator_name"] = _standardise_storage_capitalisation(df["generator_name"])
     df = _fix_forced_outage_columns(df)
+
+    # Drop rows that contain new entrants for the Illawarra REZ (N12) - these
+    # don't have any trace data from AEMO currently and "No VRE is projected for this REZ."
+    # (AEMO 2024 | Appendix 3. Renewable Energy Zones, p.38)
+    df = df.loc[~(df["rez_location"] == "Illawarra"), :]
 
     # adds extra necessary columns taking appropriate mapping values
     # NOTE: this could be done more efficiently in future if needed, potentially
     # adding a `new_mapping` field to relevant table map dicts?
-    df["partial_outage_derating_factor_%"] = df[
-        "forced_outage_rate_partial_outage_%_of_time"
-    ]
-    df["maximum_capacity_mw"] = df["generator"]
-    df["lifetime"] = df["generator"]
-    df["minimum_stable_level_%"] = df["technology_type"]
-    df["summer_peak_rating_%"] = df["summer_rating_mw"]
-    df["technology_specific_lcf_%"] = df["regional_build_cost_zone"]
+    for (
+        new_column,
+        existing_column_mapping,
+    ) in _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING.items():
+        df[new_column] = df[existing_column_mapping]
+
     return df
 
 
 def _merge_and_set_new_generators_static_properties(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame]
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
     """Merges into and sets static (i.e. not time-varying) generator properties in the
     "New entrants summary" template, and renames columns if this is specified
@@ -158,7 +199,9 @@ def _merge_and_set_new_generators_static_properties(
     df = _zero_solar_wind_battery_partial_outage_derating_factor(
         df, "partial_outage_derating_factor_%"
     )
-    df = _add_technology_rez_subregion_column(df, "technology_location_id")
+
+    df = _add_identifier_columns(df, iasr_tables)
+
     # replace remaining string values in static property columns
     df = df.infer_objects()
     for col in [col for col in merged_static_cols if df[col].dtype == "object"]:
@@ -216,11 +259,8 @@ def _process_and_merge_opex(
     from this base value multiplied by the O&M locational cost factor. This function
     merges in the post-LCF calculated values provided in the IASR workbook.
     """
-    # update the mapping in this column to include generator name and the
-    # cost region initially given
-    df[col_name] = df["generator"] + " " + df[col_name]
-    # renames columns by removing the specified table_col_prefix (the string present
-    # at the start of all variable col names due to row merging from isp-workbook-parser)
+    # update the mapping in this column to include generator name and the cost region initially given
+    df[col_name] = df["generator_name"] + " " + df[col_name]
     table_data = table_data.rename(
         columns={
             col: col.replace(f"{table_attrs['table_col_prefix']}_", "")
@@ -229,15 +269,15 @@ def _process_and_merge_opex(
     )
     opex_table = table_data.melt(
         id_vars=[table_attrs["table_lookup"]],
-        var_name="Cost region",
-        value_name="OPEX value",
+        var_name="cost_region",
+        value_name="opex_value",
     )
-    # add column with same generator + cost region mapping as df[col_name]:
-    opex_table["Mapping"] = (
-        opex_table[table_attrs["table_lookup"]] + " " + opex_table["Cost region"]
+    # add column with same generator + cost_region mapping as df[col_name]:
+    opex_table["mapping"] = (
+        opex_table[table_attrs["table_lookup"]] + " " + opex_table["cost_region"]
     )
     opex_replacement_dict = (
-        opex_table[["Mapping", "OPEX value"]].set_index("Mapping").squeeze().to_dict()
+        opex_table[["mapping", "opex_value"]].set_index("mapping").squeeze().to_dict()
     )
     # use fuzzy matching in case of slight differences in generator names:
     where_str = df[col_name].apply(lambda x: isinstance(x, str))
@@ -253,7 +293,7 @@ def _process_and_merge_opex(
 
 
 def _calculate_and_merge_tech_specific_lcfs(
-    df: pd.DataFrame, iasr_tables: dict[str : pd.DataFrame], tech_lcf_col: str
+    df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame], tech_lcf_col: str
 ) -> pd.DataFrame:
     """Calculates the technology-specific locational cost factor as a percentage
     for each new entrant generator and merges into summary mapping table.
@@ -280,7 +320,7 @@ def _calculate_and_merge_tech_specific_lcfs(
     for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
         df_to_match_gen_names["Technology"] = _fuzzy_match_names(
             df_to_match_gen_names["Technology"],
-            df["generator"].unique(),
+            df["generator_name"].unique(),
             "calculating and merging in LCFs to static new entrant gen summary",
             not_match="existing",
             threshold=90,
@@ -305,7 +345,7 @@ def _calculate_and_merge_tech_specific_lcfs(
             )
             calculated_or_given_lcf /= 100
         df.loc[
-            ((df["generator"] == tech) & (df[tech_lcf_col] == row["Location"])),
+            ((df["generator_name"] == tech) & (df[tech_lcf_col] == row["Location"])),
             tech_lcf_col,
         ] = calculated_or_given_lcf
     # fills rows with no LCF (some PHES REZs) with pd.NA
@@ -380,19 +420,165 @@ def _zero_solar_wind_battery_partial_outage_derating_factor(
     return df
 
 
-def _add_technology_rez_subregion_column(
-    df: pd.DataFrame, new_col_name: str
+def _add_and_clean_rez_ids(
+    df: pd.DataFrame, rez_id_col_name: str, renewable_energy_zones: pd.DataFrame
 ) -> pd.DataFrame:
-    """Adds an extra column holding the technology type and either REZ or ISP
-    subregion ID."""
-    # adds new column filled with REZ zone to start
-    df[new_col_name] = df["rez_location"]
-    # fills rows that don't have a REZ value with ISP subregion
-    df[new_col_name] = df[new_col_name].where(pd.notna, df["sub_region_id"])
+    """
+    Merges REZ IDs into the new entrant generator table and cleans up REZ names.
 
-    # adds together the generator name and REZ/subregion separated by a space.
-    # NOTE: this currently uses full generator names and full REZ names
-    # directly from the summary table to ensure each row has a unique value.
-    df[new_col_name] = df["generator"] + " " + df[new_col_name]
+    REZ IDs are unique letter/digit identifiers used in the IASR workbook. This function
+    also handles the Non-REZ IDs for Victoria (V0) and New South Wales (N0). There are
+    also some manual mappings to correct REZ names that have been updated/changed
+    across tables (currently in the IASR workbook v6.0): 'North [East/West] Tasmania Coast'
+    becomes 'North Tasmania Coast', 'Portland Coast' becomes 'Southern Ocean'.
+
+    Args:
+        df: new entrant generator DataFrame
+        rez_id_col_name: str, name of the new column to be added.
+        renewable_energy_zones: a pd.Dataframe of the IASR table `renewable_energy_zones`
+            containing columns "ID" and "Name" used to map the REZ IDs.
+
+    Returns:
+        pd.DataFrame: new entrant generator DataFrame with REZ ID column added.
+    """
+
+    # add a new column to hold the REZ IDs that maps to the current rez_location:
+    df[rez_id_col_name] = df["rez_location"]
+
+    # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
+    # update references to "Portland Coast" to "Southern Ocean"
+    rez_or_region_cols = [col for col in df.columns if re.search(r"rez|region", col)]
+
+    for col in rez_or_region_cols:
+        df[col] = _rez_name_to_id_mapping(df[col], col, renewable_energy_zones)
+
+    # No trace data has been provided by AEMO for the N12 REZ, as the 2024 ISP modelling
+    # did not find any VRE built in this REZ. So drop generators in this REZ for now.
+    df_with_only_rez_ids = df[df[rez_id_col_name] != "N12"].copy()
+
+    return df_with_only_rez_ids
+
+
+def _add_isp_resource_type_column(
+    df: pd.DataFrame, isp_resource_type_col_name: str
+) -> pd.DataFrame:
+    """
+    Adds a new column to the new entrant generator table to hold resource quality/technology
+    code as defined in the IASR workbook and AEMO VRE traces.
+    """
+
+    df[isp_resource_type_col_name] = df["generator_name"].map(
+        _VRE_RESOURCE_QUALITY_AND_TECH_CODES
+    )
+    # expand to account for medium/high quality wind resources:
+    df_with_isp_resource_type = df.explode(isp_resource_type_col_name).reset_index(
+        drop=True
+    )
+
+    return df_with_isp_resource_type
+
+
+def _add_storage_duration_column(
+    df: pd.DataFrame, storage_duration_col_name: str
+) -> pd.DataFrame:
+    """Adds a new column to the new entrant generator table to hold storage duration in hours."""
+
+    # if 'storage' is present in the name -> grab the hours from the name string:
+    def _get_storage_duration(name: str) -> str | None:
+        duration_pattern = r"(?P<duration>\d+h)rs* storage"
+        duration_string = re.search(duration_pattern, name, re.IGNORECASE)
+
+        if duration_string:
+            return duration_string.group("duration")
+        else:
+            return None
+
+    df[storage_duration_col_name] = df["generator_name"].map(_get_storage_duration)
 
     return df
+
+
+def _add_unique_generator_string_column(
+    df: pd.DataFrame, generator_string_col_name: str = "generator"
+) -> pd.DataFrame:
+    """
+    Adds a new column to the new entrant generator table to hold a unique string
+    identifier for each generator.
+
+    The unique string identifier is created by combining the technology type,
+    technology descriptor, and either the rez_id or sub_region_id into a single
+    string in the format: `{technology_type}_{isp_resource_type}_{rez_id|sub_region_id}`.
+    The resulting string is cleaned up to remove special characters and converted
+    to snakecase.
+    """
+
+    def _create_generator_string(row):
+        # 1. Combine columns to create unique string as: `{technology_type}_{isp_resource_type}_{rez_id|sub_region_id}`
+        # Using rez_id where not NaN, otherwise sub_region_id
+        generator_string = row["technology_type"]
+        if isinstance(row["isp_resource_type"], str):
+            generator_string += "_" + row["isp_resource_type"]
+        if isinstance(row["rez_id"], str):
+            generator_string += "_" + row["rez_id"]
+        else:
+            generator_string += "_" + row["sub_region_id"]
+        # 2. Clean up resulting strings to remove special characters and convert to snakecase
+        generator_string = _snakecase_string(re.sub(r"[/\\]", " ", generator_string))
+
+        # 3. Final fussy clean up of some REZ names that get split up by _snakecase_string:
+        split_rez = re.search(
+            r"_(?P<split_rez_string>(?P<rez_letter>[a-z]{1})_(?P<rez_number>\d{2}))$",
+            generator_string,
+        )
+        if split_rez:
+            split_rez_string = split_rez.group("split_rez_string")
+            replacement_string = split_rez.group("rez_letter") + split_rez.group(
+                "rez_number"
+            )
+            generator_string = re.sub(
+                split_rez_string, replacement_string, generator_string
+            )
+
+        return generator_string
+
+    df[generator_string_col_name] = df.apply(_create_generator_string, axis=1)
+
+    return df
+
+
+def _add_identifier_columns(df: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]):
+    """
+    Adds four new identifier columns to the new entrant generator table.
+
+    The additional columns are created to hold REZ IDs, storage durations in hours,
+    technology descriptors, and a 'generator' identifier that holds a combination
+    of id columns and technology type for each unique generator. These identifiers
+    are used primarily to map generators to corresponding VRE trace data, provide unique
+    identifiers for new entrant generators, and to apply custom build limit constraints
+    by technology type and/or resource quality.
+
+    Args:
+        df: a pd.Dataframe containing new entrant generator data
+        iasr_tables: Dict of tables from the IASR workbook
+
+    Returns:
+        pd.DataFrame: New entrant generator table with additional columns 'rez_id',
+            'storage_duration', 'isp_resource_type', and 'generator'.
+    """
+    df_with_rez_ids = _add_and_clean_rez_ids(
+        df, "rez_id", iasr_tables["renewable_energy_zones"]
+    )
+    df_with_storage_duration = _add_storage_duration_column(
+        df_with_rez_ids, "storage_duration"
+    )
+    df_with_isp_resource_type = _add_isp_resource_type_column(
+        df_with_storage_duration, "isp_resource_type"
+    )
+
+    df_with_unique_generator_str = _add_unique_generator_string_column(
+        df_with_isp_resource_type, "generator"
+    )
+
+    return df_with_unique_generator_str.drop_duplicates(
+        subset=["generator"], ignore_index=True
+    )

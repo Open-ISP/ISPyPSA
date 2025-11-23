@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from isp_trace_parser import construct_reference_year_mapping
+
 from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.logging import configure_logging
@@ -9,6 +11,7 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
+    create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
@@ -64,6 +67,7 @@ create_pypsa_friendly_timeseries_inputs(
     "capacity_expansion",
     ispypsa_tables,
     pypsa_friendly_input_tables["snapshots"],
+    pypsa_friendly_input_tables["generators"],
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
@@ -89,6 +93,7 @@ create_pypsa_friendly_timeseries_inputs(
     "operational",
     ispypsa_tables,
     operational_snapshots,
+    pypsa_friendly_input_tables["generators"],
     parsed_traces_directory,
     operational_timeseries_location,
 )
