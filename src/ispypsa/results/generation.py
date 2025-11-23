@@ -83,15 +83,14 @@ def extract_demand(network: pypsa.Network) -> pd.DataFrame:
     # Rename columns to match dispatch naming convention
     demand_long = demand_long.rename(
         columns={
-            "load_name": "load",
             "bus": "node",
             "period": "investment_period",
         }
     )
 
     # Reorder columns
-    demand_long = demand_long[
-        ["load", "node", "investment_period", "timestep", "demand_mw"]
+    demand_long = demand_long.loc[
+        :, ["node", "investment_period", "timestep", "demand_mw"]
     ]
 
     return demand_long

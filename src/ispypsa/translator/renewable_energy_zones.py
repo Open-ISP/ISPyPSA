@@ -89,7 +89,7 @@ def _translate_existing_rez_connections_to_links(
     links["p_nom"] = links["p_nom"].fillna(rez_to_sub_region_transmission_default_limit)
 
     links["p_min_pu"] = -1.0
-    links["build_year"] = start_year - 1
+    links["build_year"] = 0
     links["lifetime"] = np.inf
     links["capital_cost"] = np.nan
 

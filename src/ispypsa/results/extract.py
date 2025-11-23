@@ -97,9 +97,6 @@ def extract_tabular_capacity_expansion_results(
     """
     regions_mapping = extract_regions_and_zones_mapping(ispypsa_tables)
 
-    # Extract raw link flows once for all transmission flow functions
-    link_flows = _extract_raw_link_flows(network)
-
     # Functions that require link_flows and regions_mapping parameters
     geographic_transmission_functions = {
         "rez_transmission_flows",
@@ -107,17 +104,17 @@ def extract_tabular_capacity_expansion_results(
         "nem_region_transmission_flows",
     }
 
-    # Functions that require only link_flows parameter
-    link_flow_functions = {
-        "transmission_flows",
-    }
-
     results = {}
+
+    # Extract first transmission flows to be used in other functions that require it.
+    results["transmission_flows"] = extract_transmission_flows(network)
+
     for file, function in CAPACITY_EXPANSION_RESULTS_FILES.items():
+        if file == "transmission_flows":
+            continue
+
         if file in geographic_transmission_functions:
-            results[file] = function(link_flows, regions_mapping)
-        elif file in link_flow_functions:
-            results[file] = function(link_flows)
+            results[file] = function(results["transmission_flows"], regions_mapping)
         else:
             results[file] = function(network)
 
@@ -139,9 +136,6 @@ def extract_tabular_operational_results(
     """
     regions_mapping = extract_regions_and_zones_mapping(ispypsa_tables)
 
-    # Extract raw link flows once for all transmission flow functions
-    link_flows = _extract_raw_link_flows(network)
-
     # Functions that require link_flows and regions_mapping parameters
     geographic_transmission_functions = {
         "rez_transmission_flows",
@@ -149,17 +143,17 @@ def extract_tabular_operational_results(
         "nem_region_transmission_flows",
     }
 
-    # Functions that require only link_flows parameter
-    link_flow_functions = {
-        "transmission_flows",
-    }
-
     results = {}
+
+    # Extract first transmission flows to be used in other functions that require it.
+    results["transmission_flows"] = extract_transmission_flows(network)
+
     for file, function in OPERATIONAL_RESULTS_FILES.items():
+        if file == "transmission_flows":
+            continue
+
         if file in geographic_transmission_functions:
-            results[file] = function(link_flows, regions_mapping)
-        elif file in link_flow_functions:
-            results[file] = function(link_flows)
+            results[file] = function(results["transmission_flows"], regions_mapping)
         else:
             results[file] = function(network)
 

@@ -1,4 +1,4 @@
-"""Tests for transmission flow extraction functions."""
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pypsa
@@ -11,644 +11,457 @@ from ispypsa.results.transmission import (
     extract_isp_sub_region_transmission_flows,
     extract_nem_region_transmission_flows,
     extract_rez_transmission_flows,
+    extract_transmission_expansion_results,
     extract_transmission_flows,
 )
 
 
-@pytest.fixture
-def basic_network_with_flows():
-    """Create a basic PyPSA network with link flows for testing."""
-    network = pypsa.Network()
+def test_extract_transmission_expansion_results(csv_str_to_df):
+    """Test extraction of transmission expansion results with various build years."""
 
-    # Set up multi-period snapshots
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [
-                [2025, 2030],  # investment periods
-                pd.date_range("2025-01-01 00:00", periods=4, freq="h"),  # timesteps
-            ],
-            names=["period", "timestep"],
-        )
-    )
+    # 1. Prepare Input Data
+    # Scenario:
+    # - Link-AB: Base capacity (Year 0), no expansion
+    # - Link-CD: Base capacity (Year 0), expanded in 2030
+    # - Link-EF: No base capacity, built in 2025, expanded in 2030
+    links_csv = """
+    bus0, bus1, build_year, p_nom_opt, p_min_pu, isp_name, isp_type
+    A,    B,    0,          100,       -1,       Link-AB,  interconnector
+    C,    D,    0,          200,       -1,       Link-CD,  interconnector
+    C,    D,    2030,       50,        -1,       Link-CD,  interconnector
+    E,    F,    2025,       300,       -1,       Link-EF,  interconnector
+    E,    F,    2030,       100,       -1,       Link-EF,  interconnector
+    """
+    links_df = csv_str_to_df(links_csv)
 
-    # Add buses
-    network.add("Bus", "NodeA")
-    network.add("Bus", "NodeB")
-    network.add("Bus", "NodeC")
+    network = MagicMock(spec=pypsa.Network)
+    network.links = links_df
 
-    # Add links with static data
-    network.add(
-        "Link",
-        "LinkAB",
-        bus0="NodeA",
-        bus1="NodeB",
-        isp_name="A-B",
-    )
-    network.add(
-        "Link",
-        "LinkBC",
-        bus0="NodeB",
-        bus1="NodeC",
-        isp_name="B-C",
-    )
+    # 2. Execute Function
+    result = extract_transmission_expansion_results(network)
 
-    # Add time series flows (p0 = flow from bus0 to bus1)
-    # LinkAB: varying flows across periods and timesteps
-    network.links_t.p0["LinkAB"] = [100, 150, 200, 250, 300, 350, 400, 450]
-    # LinkBC: different pattern
-    network.links_t.p0["LinkBC"] = [50, 75, 100, 125, 150, 175, 200, 225]
+    # 3. Prepare Expected Output
+    # Note:
+    # - Forward capacity is cumulative p_nom_opt
+    # - Reverse capacity is cumulative (p_nom_opt * p_min_pu)
+    # - Rows are reindexed to include all combinations of isp_name and investment_period (0, 2025, 2030)
+    # - Missing values are forward filled (ffill). Pre-existence values (Link-EF at Year 0) remain NaN.
+    expected_csv = """
+    isp_name, investment_period, node_from, node_to, isp_type,        forward_capacity_mw, reverse_capacity_mw
+    Link-AB,  0,                 A,         B,       interconnector,  100.0,               -100.0
+    Link-AB,  2025,              A,         B,       interconnector,  100.0,               -100.0
+    Link-AB,  2030,              A,         B,       interconnector,  100.0,               -100.0
+    Link-CD,  0,                 C,         D,       interconnector,  200.0,               -200.0
+    Link-CD,  2025,              C,         D,       interconnector,  200.0,               -200.0
+    Link-CD,  2030,              C,         D,       interconnector,  250.0,               -250.0
+    Link-EF,  0,                 E,         F,       interconnector,  0.0,                 0.0
+    Link-EF,  2025,              E,         F,       interconnector,  300.0,               -300.0
+    Link-EF,  2030,              E,         F,       interconnector,  400.0,               -400.0
+    """
+    expected_df = csv_str_to_df(expected_csv)
 
-    return network
+    # Sort to ensure matching order (function sorts by isp_name, investment_period via reindex/groupby)
+    expected_df = expected_df.sort_values(
+        ["isp_name", "investment_period"]
+    ).reset_index(drop=True)
 
+    # Adjust data types for exact matching if needed (NaNs often force float/object)
+    # We rely on pandas flexibility but ensure column order/presence
 
-@pytest.fixture
-def network_with_inter_intra_flows():
-    """Network with both inter-geography and intra-geography flows."""
-    network = pypsa.Network()
-
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01 00:00", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
-    )
-
-    # Add buses representing different geographic levels
-    network.add("Bus", "NSW_CNSW")  # Sub-region in NSW
-    network.add("Bus", "NSW_NNSW")  # Another sub-region in NSW
-    network.add("Bus", "NSW_CNSW_REZ1")  # REZ within CNSW
-    network.add("Bus", "VIC")  # Different region
-
-    # Add links
-    # Inter-regional: NSW ↔ VIC
-    network.add("Link", "NSW-VIC", bus0="NSW_CNSW", bus1="VIC", isp_name="NSW-VIC")
-
-    # Intra-regional: NSW_CNSW ↔ NSW_NNSW (both in NSW)
-    network.add(
-        "Link", "CNSW-NNSW", bus0="NSW_CNSW", bus1="NSW_NNSW", isp_name="CNSW-NNSW"
-    )
-
-    # Intra-sub-region: REZ ↔ sub-region within same sub-region
-    network.add(
-        "Link", "REZ1-CNSW", bus0="NSW_CNSW_REZ1", bus1="NSW_CNSW", isp_name="REZ1-CNSW"
-    )
-
-    # Set flows
-    network.links_t.p0["NSW-VIC"] = [1000, 1100]
-    network.links_t.p0["CNSW-NNSW"] = [500, 550]
-    network.links_t.p0["REZ1-CNSW"] = [200, 220]
-
-    return network
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-# Tests for _extract_raw_link_flows
-def test_extract_raw_link_flows_basic(basic_network_with_flows):
-    """Test basic extraction of raw link flows."""
-    result = _extract_raw_link_flows(basic_network_with_flows)
+def test_extract_raw_link_flows(csv_str_to_df):
+    """Test extraction of raw link flows."""
 
-    # Check structure
-    expected_columns = [
-        "investment_period",
-        "timestep",
-        "Link",
-        "flow_mw",
-        "bus0",
-        "bus1",
-        "isp_name",
-    ]
-    assert list(result.columns) == expected_columns
+    # 1. Prepare Input Data
+    # Link static data
+    links_csv = """
+    Link,   bus0, bus1, isp_name
+    Link_1, A,    B,    Link-AB
+    Link_2, C,    D,    Link-CD
+    """
+    links_df = csv_str_to_df(links_csv).set_index("Link")
 
-    # Check we have data for both links across both periods
-    assert len(result) == 2 * 2 * 4  # 2 links × 2 periods × 4 timesteps = 16 rows
+    # Flow data (p0) in time series format
+    # Mocking PyPSA multi-period structure where index is MultiIndex (period, timestep)
+    iterables = [[2025, 2030], [0, 1]]
+    index = pd.MultiIndex.from_product(iterables, names=["period", "timestep"])
 
-    # Check link names
-    assert set(result["Link"].unique()) == {"LinkAB", "LinkBC"}
+    data = {"Link_1": [10, 20, 30, 40], "Link_2": [50, 60, 70, 80]}
+    p0_df = pd.DataFrame(data, index=index)
 
-    # Check periods
-    assert set(result["investment_period"].unique()) == {2025, 2030}
+    network = MagicMock(spec=pypsa.Network)
+    network.links = links_df
+    network.links_t = MagicMock()
+    network.links_t.p0 = p0_df
 
-    # Check a specific flow value
-    link_ab_2025_first = result[
-        (result["Link"] == "LinkAB") & (result["investment_period"] == 2025)
-    ].iloc[0]
-    assert link_ab_2025_first["flow_mw"] == 100
-    assert link_ab_2025_first["bus0"] == "NodeA"
-    assert link_ab_2025_first["bus1"] == "NodeB"
-    assert link_ab_2025_first["isp_name"] == "A-B"
-
-
-def test_extract_raw_link_flows_empty_network():
-    """Test extraction from network with no links."""
-    network = pypsa.Network()
-
-    # Set up multi-period snapshots (matching the structure expected by the function)
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
-    )
-
-    # Add isp_name column to network.links so it exists even when empty
-    network.links["isp_name"] = pd.Series(dtype=str)
-
+    # 2. Execute Function
     result = _extract_raw_link_flows(network)
 
-    # Should return empty DataFrame with correct schema
-    expected_columns = [
-        "investment_period",
-        "timestep",
-        "Link",
-        "flow_mw",
-        "bus0",
-        "bus1",
-        "isp_name",
-    ]
-    assert list(result.columns) == expected_columns
-    assert len(result) == 0
+    # 3. Prepare Expected Output
+    # The function melts the dataframe.
+    expected_csv = """
+    investment_period, timestep, Link,   flow_mw, bus0, bus1, isp_name
+    2025,              0,        Link_1, 10,      A,    B,    Link-AB
+    2025,              1,        Link_1, 20,      A,    B,    Link-AB
+    2030,              0,        Link_1, 30,      A,    B,    Link-AB
+    2030,              1,        Link_1, 40,      A,    B,    Link-AB
+    2025,              0,        Link_2, 50,      C,    D,    Link-CD
+    2025,              1,        Link_2, 60,      C,    D,    Link-CD
+    2030,              0,        Link_2, 70,      C,    D,    Link-CD
+    2030,              1,        Link_2, 80,      C,    D,    Link-CD
+    """
+    expected_df = csv_str_to_df(expected_csv)
 
-
-# Tests for extract_transmission_flows
-def test_extract_transmission_flows_basic(basic_network_with_flows):
-    """Test aggregation by ISP name."""
-    link_flows = _extract_raw_link_flows(basic_network_with_flows)
-    result = extract_transmission_flows(link_flows)
-
-    # Check structure
-    expected_columns = ["isp_name", "investment_period", "timestep", "flow"]
-    assert list(result.columns) == expected_columns
-
-    # Check aggregation worked
-    assert len(result) == 2 * 2 * 4  # 2 isp_names × 2 periods × 4 timesteps
-    assert set(result["isp_name"].unique()) == {"A-B", "B-C"}
-
-    # Verify a specific aggregated value
-    ab_2025_first = result[
-        (result["isp_name"] == "A-B") & (result["investment_period"] == 2025)
-    ].iloc[0]
-    assert ab_2025_first["flow"] == 100
-
-
-def test_extract_transmission_flows_empty():
-    """Test with empty link flows."""
-    empty_flows = pd.DataFrame(
-        columns=[
-            "Link",
-            "investment_period",
-            "timestep",
-            "flow_mw",
-            "bus0",
-            "bus1",
-            "isp_name",
-        ]
+    # Sort to ensure matching order
+    result = result.sort_values(["Link", "investment_period", "timestep"]).reset_index(
+        drop=True
     )
-    result = extract_transmission_flows(empty_flows)
+    expected_df = expected_df.sort_values(
+        ["Link", "investment_period", "timestep"]
+    ).reset_index(drop=True)
 
-    assert list(result.columns) == ["isp_name", "investment_period", "timestep", "flow"]
-    assert len(result) == 0
+    # Enforce types for comparison
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-# Tests for _build_node_to_geography_mapping
-def test_build_node_to_geography_mapping_region_level(csv_str_to_df):
-    """Test building node-to-region mapping."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               REZ1
-    NSW,            NNSW,               REZ2
-    VIC,            VIC,                NaN
+def test_extract_transmission_flows(csv_str_to_df):
+    """Test extraction and aggregation of transmission flows by ISP name."""
+
+    # 1. Prepare Input Data
+    # Two parallel links belonging to the same ISP path "Link-AB"
+    # This tests the aggregation logic in extract_transmission_flows
+    links_csv = """
+    Link,   bus0, bus1, isp_name
+    Link_1, A,    B,    Link-AB
+    Link_2, A,    B,    Link-AB
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    links_df = csv_str_to_df(links_csv).set_index("Link")
 
-    result = _build_node_to_geography_mapping(regions_mapping, "region")
+    iterables = [[2025], [0, 1]]
+    index = pd.MultiIndex.from_product(iterables, names=["period", "timestep"])
 
-    # Should map both sub-regions and REZs to regions
-    assert result["CNSW"] == "NSW"
-    assert result["NNSW"] == "NSW"
-    assert result["REZ1"] == "NSW"
-    assert result["REZ2"] == "NSW"
-    assert result["VIC"] == "VIC"
+    data = {"Link_1": [10, 20], "Link_2": [30, 40]}
+    p0_df = pd.DataFrame(data, index=index)
 
+    network = MagicMock(spec=pypsa.Network)
+    network.links = links_df
+    network.links_t = MagicMock()
+    network.links_t.p0 = p0_df
 
-def test_build_node_to_geography_mapping_subregion_level(csv_str_to_df):
-    """Test building node-to-sub-region mapping."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               REZ1
-    NSW,            NNSW,               REZ2
+    # 2. Execute Function
+    result = extract_transmission_flows(network)
+
+    # 3. Prepare Expected Output
+    # Should sum flows for Link_1 and Link_2 for each timestamp
+    expected_csv = """
+    isp_name, from_node, to_node, investment_period, timestep, flow_mw
+    Link-AB,  A,         B,       2025,              0,        40
+    Link-AB,  A,         B,       2025,              1,        60
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    expected_df = csv_str_to_df(expected_csv)
 
-    result = _build_node_to_geography_mapping(regions_mapping, "subregion")
+    # Sort to ensure matching order
+    result = result.sort_values(
+        ["isp_name", "investment_period", "timestep"]
+    ).reset_index(drop=True)
+    expected_df = expected_df.sort_values(
+        ["isp_name", "investment_period", "timestep"]
+    ).reset_index(drop=True)
 
-    # Sub-regions map to themselves, REZs map to parent sub-regions
-    assert result["CNSW"] == "CNSW"
-    assert result["NNSW"] == "NNSW"
-    assert result["REZ1"] == "CNSW"
-    assert result["REZ2"] == "NNSW"
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-def test_build_node_to_geography_mapping_rez_level(csv_str_to_df):
-    """Test building node-to-REZ mapping."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               REZ1
-    NSW,            NNSW,               REZ2
+def test_build_node_to_geography_mapping(csv_str_to_df):
+    """Test node to geography mapping for regions, subregions, and REZs."""
+
+    # 1. Prepare Input Data
+    mapping_csv = """
+    nem_region_id, isp_sub_region_id, rez_id
+    NSW1,          CNSW,              N1
+    NSW1,          NNSW,              N2
+    QLD1,          SEQ,
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    # Note: Empty value for SEQ's rez_id is handled as NaN by csv_str_to_df/pandas
+    mapping_df = csv_str_to_df(mapping_csv)
 
-    result = _build_node_to_geography_mapping(regions_mapping, "rez")
+    # 2. Test Region Mapping
+    # Should map subregions -> regions AND REZs -> regions
+    result_region = _build_node_to_geography_mapping(mapping_df, "region")
+    expected_region = {
+        "CNSW": "NSW1",
+        "NNSW": "NSW1",
+        "SEQ": "QLD1",
+        "N1": "NSW1",
+        "N2": "NSW1",
+    }
+    assert result_region == expected_region
 
-    # Only REZs map (to themselves), sub-regions don't appear
-    assert result["REZ1"] == "REZ1"
-    assert result["REZ2"] == "REZ2"
-    assert "CNSW" not in result
-    assert "NNSW" not in result
+    # 3. Test Subregion Mapping
+    # Should map subregions -> subregions AND REZs -> subregions
+    result_subregion = _build_node_to_geography_mapping(mapping_df, "subregion")
+    expected_subregion = {
+        "CNSW": "CNSW",
+        "NNSW": "NNSW",
+        "SEQ": "SEQ",
+        "N1": "CNSW",
+        "N2": "NNSW",
+    }
+    assert result_subregion == expected_subregion
+
+    # 4. Test REZ Mapping
+    # Should map REZs -> REZs only
+    result_rez = _build_node_to_geography_mapping(mapping_df, "rez")
+    expected_rez = {"N1": "N1", "N2": "N2"}
+    assert result_rez == expected_rez
+
+    # 5. Test Invalid Geography Level
+    with pytest.raises(ValueError, match="Unknown geography_level"):
+        _build_node_to_geography_mapping(mapping_df, "invalid_level")
 
 
-def test_build_node_to_geography_mapping_no_rez_column(csv_str_to_df):
-    """Test mapping when there's no rez_id column."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id
-    NSW,            CNSW
-    VIC,            VIC
+def test_calculate_transmission_flows_by_geography(csv_str_to_df):
+    """Test calculation of transmission flows between geographic regions."""
+
+    # 1. Prepare Input Data
+    # We simulate a flow between two regions (GeoA, GeoB) and one internal flow (GeoA).
+    # Columns expected by the function: from_node, to_node, flow_mw, investment_period, timestep
+
+    # Case 4: Parallel lines (multiple flows between GeoA and GeoB in same timestep)
+    # Case 1: Negative flow (from_node=A, to_node=B, flow=-15 implies B->A)
+    flow_long_csv = """
+    investment_period, timestep, from_node, to_node, flow_mw
+    2025,              0,        Node_A1,   Node_B1, 100
+    2025,              0,        Node_B1,   Node_A1, 20
+    2025,              0,        Node_A1,   Node_A2, 10
+    2025,              1,        Node_A1,   Node_B1, 50
+    2025,              1,        Node_A2,   Node_B1, 30
+    2025,              1,        Node_A1,   Node_B1, -15
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    flow_long = csv_str_to_df(flow_long_csv)
 
-    # Region level should still work
-    result_region = _build_node_to_geography_mapping(regions_mapping, "region")
-    assert result_region["CNSW"] == "NSW"
-    assert result_region["VIC"] == "VIC"
+    node_to_geography = {"Node_A1": "GeoA", "Node_A2": "GeoA", "Node_B1": "GeoB"}
 
-    # REZ level should return empty dict
-    result_rez = _build_node_to_geography_mapping(regions_mapping, "rez")
-    assert result_rez == {}
+    geography_col = "region_id"
 
-
-# Tests for _calculate_transmission_flows_by_geography
-def test_calculate_transmission_flows_filters_intra_geography():
-    """Test that intra-geography flows are filtered out."""
-    # Create flow data with both inter and intra flows
-    flow_long = pd.DataFrame(
-        {
-            "Link": ["Inter", "Intra"],
-            "investment_period": [2025, 2025],
-            "timestep": pd.to_datetime(["2025-01-01 00:00:00", "2025-01-01 00:00:00"]),
-            "flow_mw": [1000, 500],
-            "bus0": ["CNSW", "CNSW"],
-            "bus1": ["VIC", "NNSW"],
-            "isp_name": ["CNSW-VIC", "CNSW-NNSW"],
-        }
-    )
-
-    # Mapping: CNSW and NNSW both in NSW, VIC in VIC
-    node_to_geography = {"CNSW": "NSW", "NNSW": "NSW", "VIC": "VIC"}
-
+    # 2. Execute Function
     result = _calculate_transmission_flows_by_geography(
-        flow_long, node_to_geography, "region_id"
+        flow_long, node_to_geography, geography_col
     )
 
-    # Should only have flows for NSW and VIC (the inter-regional flow)
-    # Intra-NSW flow should be filtered out
-    assert len(result) == 2  # One for NSW, one for VIC
+    # 3. Prepare Expected Output
+    # Calculations:
+    # T0:
+    #   GeoA:
+    #     - Export to GeoB: 100 (Node_A1 -> Node_B1)
+    #     - Import from GeoB: 20 (Node_B1 -> Node_A1)
+    #     - Internal (Node_A1 -> Node_A2): Ignored
+    #     - Net Import: 20 - 100 = -80
+    #   GeoB:
+    #     - Import from GeoA: 100
+    #     - Export to GeoA: 20
+    #     - Net Import: 100 - 20 = 80
+    #
+    # T1:
+    #   GeoA:
+    #     - Export to GeoB (Flow 50): Exp 50, Imp 0
+    #     - Export to GeoB (Flow 30): Exp 30, Imp 0
+    #     - Flow from GeoB (Flow -15): Exp 0, Imp 15
+    #     - Total: Exp 80, Imp 15, Net = 15 - 80 = -65
+    #   GeoB:
+    #     - Import from GeoA (Flow 50): Imp 50, Exp 0
+    #     - Import from GeoA (Flow 30): Imp 30, Exp 0
+    #     - Flow to GeoA (Flow -15): Imp 0, Exp 15
+    #     - Total: Imp 80, Exp 15, Net = 80 - 15 = 65
 
-    # NSW should show exports
-    nsw_flow = result[result["region_id"] == "NSW"].iloc[0]
-    assert nsw_flow["exports_mw"] == 1000
-    assert nsw_flow["imports_mw"] == 0
-    assert nsw_flow["net_imports_mw"] == -1000
-
-    # VIC should show imports
-    vic_flow = result[result["region_id"] == "VIC"].iloc[0]
-    assert vic_flow["imports_mw"] == 1000
-    assert vic_flow["exports_mw"] == 0
-    assert vic_flow["net_imports_mw"] == 1000
-
-
-def test_calculate_transmission_flows_bidirectional():
-    """Test import/export calculation with bidirectional flows."""
-    flow_long = pd.DataFrame(
-        {
-            "Link": ["Link1", "Link1"],
-            "investment_period": [2025, 2025],
-            "timestep": pd.to_datetime(["2025-01-01 00:00:00", "2025-01-01 01:00:00"]),
-            "flow_mw": [500, -300],
-            "bus0": ["A", "A"],
-            "bus1": ["B", "B"],
-            "isp_name": ["A-B", "A-B"],
-        }
-    )
-
-    node_to_geography = {"A": "RegionA", "B": "RegionB"}
-
-    result = _calculate_transmission_flows_by_geography(
-        flow_long, node_to_geography, "region_id"
-    )
-
-    # At timestep 00:00 (positive flow):
-    # RegionA exports 500, RegionB imports 500
-    region_a_t0 = result[
-        (result["region_id"] == "RegionA")
-        & (result["timestep"] == pd.Timestamp("2025-01-01 00:00:00"))
-    ].iloc[0]
-    assert region_a_t0["exports_mw"] == 500
-    assert region_a_t0["imports_mw"] == 0
-    assert region_a_t0["net_imports_mw"] == -500
-
-    # At timestep 01:00 (negative flow = reverse):
-    # RegionA imports 300, RegionB exports 300
-    region_a_t1 = result[
-        (result["region_id"] == "RegionA")
-        & (result["timestep"] == pd.Timestamp("2025-01-01 01:00:00"))
-    ].iloc[0]
-    assert region_a_t1["imports_mw"] == 300
-    assert region_a_t1["exports_mw"] == 0
-    assert region_a_t1["net_imports_mw"] == 300
-
-
-def test_calculate_transmission_flows_unmapped_nodes():
-    """Test that flows with unmapped nodes are excluded."""
-    flow_long = pd.DataFrame(
-        {
-            "Link": ["Mapped", "Unmapped1", "Unmapped2"],
-            "investment_period": [2025, 2025, 2025],
-            "timestep": pd.to_datetime(
-                ["2025-01-01 00:00:00", "2025-01-01 00:00:00", "2025-01-01 00:00:00"]
-            ),
-            "flow_mw": [1000, 500, 300],
-            "bus0": ["NodeA", "Unknown", "NodeA"],
-            "bus1": ["NodeB", "NodeB", "Unknown2"],
-            "isp_name": ["A-B", "U-B", "A-U"],
-        }
-    )
-
-    # Only map some nodes
-    node_to_geography = {"NodeA": "GeoA", "NodeB": "GeoB"}
-
-    result = _calculate_transmission_flows_by_geography(
-        flow_long, node_to_geography, "geo_id"
-    )
-
-    # Should only include the mapped flow
-    assert len(result) == 2  # GeoA and GeoB
-    assert result["geo_id"].isin(["GeoA", "GeoB"]).all()
-
-
-def test_calculate_transmission_flows_empty_after_filtering():
-    """Test when all flows are filtered out (all intra-geography)."""
-    flow_long = pd.DataFrame(
-        {
-            "Link": ["Intra1", "Intra2"],
-            "investment_period": [2025, 2025],
-            "timestep": pd.to_datetime(["2025-01-01 00:00:00", "2025-01-01 00:00:00"]),
-            "flow_mw": [500, 300],
-            "bus0": ["A", "B"],
-            "bus1": ["B", "C"],
-            "isp_name": ["A-B", "B-C"],
-        }
-    )
-
-    # All nodes in same geography
-    node_to_geography = {"A": "SameGeo", "B": "SameGeo", "C": "SameGeo"}
-
-    result = _calculate_transmission_flows_by_geography(
-        flow_long, node_to_geography, "geo_id"
-    )
-
-    # Should return empty with correct schema
-    assert len(result) == 0
-    expected_columns = [
-        "geo_id",
-        "investment_period",
-        "timestep",
-        "imports_mw",
-        "exports_mw",
-        "net_imports_mw",
-    ]
-    assert list(result.columns) == expected_columns
-
-
-# Tests for geographic-specific extraction functions
-def test_extract_nem_region_transmission_flows_basic(
-    network_with_inter_intra_flows, csv_str_to_df
-):
-    """Test NEM region transmission flows extraction."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            NSW_CNSW,           NSW_CNSW_REZ1
-    NSW,            NSW_NNSW,           NaN
-    VIC,            VIC,                NaN
+    expected_csv = """
+    region_id, investment_period, timestep, imports_mw, exports_mw, net_imports_mw
+    GeoA,      2025,              0,        20,         100,        -80
+    GeoB,      2025,              0,        100,        20,         80
+    GeoA,      2025,              1,        15,         80,         -65
+    GeoB,      2025,              1,        80,         15,         65
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    expected_df = csv_str_to_df(expected_csv)
 
-    link_flows = _extract_raw_link_flows(network_with_inter_intra_flows)
-    result = extract_nem_region_transmission_flows(link_flows, regions_mapping)
+    # Sort both to ensure reliable comparison
+    result = result.sort_values(
+        [geography_col, "investment_period", "timestep"]
+    ).reset_index(drop=True)
+    expected_df = expected_df.sort_values(
+        [geography_col, "investment_period", "timestep"]
+    ).reset_index(drop=True)
 
-    # Should only have NSW-VIC flows (inter-regional)
-    # Intra-regional flows (CNSW-NNSW, REZ1-CNSW) should be filtered out
-    assert len(result) == 4  # 2 regions × 2 timesteps
-    assert set(result["nem_region_id"].unique()) == {"NSW", "VIC"}
-
-    # Verify NSW exports to VIC
-    nsw_flows = result[result["nem_region_id"] == "NSW"]
-    assert (nsw_flows["exports_mw"] > 0).all()
-    assert (nsw_flows["imports_mw"] == 0).all()
-
-    # Verify VIC imports from NSW
-    vic_flows = result[result["nem_region_id"] == "VIC"]
-    assert (vic_flows["imports_mw"] > 0).all()
-    assert (vic_flows["exports_mw"] == 0).all()
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-def test_extract_nem_region_transmission_flows_excludes_intra_regional(
-    network_with_inter_intra_flows, csv_str_to_df
-):
-    """Test that intra-regional flows are excluded (critical bug test)."""
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            NSW_CNSW,           NSW_CNSW_REZ1
-    NSW,            NSW_NNSW,           NaN
-    VIC,            VIC,                NaN
+def test_extract_nem_region_transmission_flows(csv_str_to_df):
+    """Test integration of extracting NEM region transmission flows.
+
+    This tests the end-to-end flow from link flows to aggregated region flows,
+    verifying that:
+    1. Sub-regions are correctly mapped to regions
+    2. REZs are correctly mapped to regions
+    3. Intra-region flows are filtered out
+    4. Inter-region flows are correctly aggregated
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
 
-    link_flows = _extract_raw_link_flows(network_with_inter_intra_flows)
-
-    # Get all flows (no filtering)
-    all_links = link_flows["Link"].unique()
-    assert len(all_links) == 3  # NSW-VIC, CNSW-NNSW, REZ1-CNSW
-
-    # Get regional flows (should filter out intra-regional)
-    result = extract_nem_region_transmission_flows(link_flows, regions_mapping)
-
-    # Should only count the 1 inter-regional link (NSW-VIC)
-    # Not the 2 intra-regional links (CNSW-NNSW and REZ1-CNSW)
-    unique_flows = result.groupby(["nem_region_id", "investment_period"]).size()
-    # Each region × period should have 2 timesteps
-    assert (unique_flows == 2).all()
-
-
-def test_extract_isp_sub_region_transmission_flows_basic(csv_str_to_df):
-    """Test sub-region transmission flows extraction."""
-    # Create simple network
-    network = pypsa.Network()
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
-    )
-    network.add("Bus", "CNSW")
-    network.add("Bus", "VIC")
-    network.add("Link", "CNSW-VIC", bus0="CNSW", bus1="VIC", isp_name="CNSW-VIC")
-    network.links_t.p0["CNSW-VIC"] = [800, 900]
-
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id
-    NSW,            CNSW
-    VIC,            VIC
+    # 1. Prepare Input Data
+    # Link flows (output format from extract_transmission_flows)
+    # We need from_node and to_node columns as expected by the internal logic
+    # Scenario:
+    # - Link 1: SubA1 (RegionA) -> SubB1 (RegionB). Flow 100. (Inter-region)
+    # - Link 2: SubA1 (RegionA) -> SubA2 (RegionA). Flow 50. (Intra-region)
+    # - Link 3: RezA1 (RegionA) -> SubA1 (RegionA). Flow 300. (Intra-region, standard REZ connection)
+    link_flows_csv = """
+    investment_period, timestep, from_node, to_node, flow_mw, isp_name
+    2025,              0,        SubA1,     SubB1,   100,     Link-AB
+    2025,              0,        SubA1,     SubA2,   50,      Link-A1-A2
+    2025,              0,        RezA1,     SubA1,   300,     Link-RezA-A
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    link_flows = csv_str_to_df(link_flows_csv)
 
-    link_flows = _extract_raw_link_flows(network)
-    result = extract_isp_sub_region_transmission_flows(link_flows, regions_mapping)
-
-    # Should have flows for both sub-regions
-    assert set(result["isp_sub_region_id"].unique()) == {"CNSW", "VIC"}
-    assert len(result) == 4  # 2 sub-regions × 2 timesteps
-
-
-def test_extract_isp_sub_region_transmission_flows_excludes_intra_subregion(
-    csv_str_to_df,
-):
-    """Test that intra-sub-region flows (e.g., REZ to sub-region) are excluded."""
-    network = pypsa.Network()
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
-    )
-    network.add("Bus", "CNSW")
-    network.add("Bus", "CNSW_REZ1")
-    network.add("Bus", "VIC")
-
-    # Inter-sub-region flow
-    network.add("Link", "CNSW-VIC", bus0="CNSW", bus1="VIC", isp_name="CNSW-VIC")
-    network.links_t.p0["CNSW-VIC"] = [800, 900]
-
-    # Intra-sub-region flow (REZ within CNSW)
-    network.add(
-        "Link", "REZ1-CNSW", bus0="CNSW_REZ1", bus1="CNSW", isp_name="REZ1-CNSW"
-    )
-    network.links_t.p0["REZ1-CNSW"] = [200, 220]
-
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               CNSW_REZ1
-    VIC,            VIC,                NaN
+    # Mapping table
+    mapping_csv = """
+    nem_region_id, isp_sub_region_id, rez_id
+    RegionA,       SubA1,             RezA1
+    RegionA,       SubA2,
+    RegionB,       SubB1,
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    regions_and_zones_mapping = csv_str_to_df(mapping_csv)
 
-    link_flows = _extract_raw_link_flows(network)
-    result = extract_isp_sub_region_transmission_flows(link_flows, regions_mapping)
-
-    # Should only have CNSW-VIC flow, not REZ1-CNSW
-    assert set(result["isp_sub_region_id"].unique()) == {"CNSW", "VIC"}
-
-    # Verify flows are from the inter-sub-region link only
-    cnsw_exports = result[result["isp_sub_region_id"] == "CNSW"]["exports_mw"]
-    assert (cnsw_exports > 700).all()  # Should be ~800-900, not ~200-220
-
-
-def test_extract_rez_transmission_flows_basic(csv_str_to_df):
-    """Test REZ transmission flows extraction."""
-    network = pypsa.Network()
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
+    # 2. Execute Function
+    result = extract_nem_region_transmission_flows(
+        link_flows, regions_and_zones_mapping
     )
-    network.add("Bus", "REZ1")
-    network.add("Bus", "REZ2")
-    network.add("Link", "REZ1-REZ2", bus0="REZ1", bus1="REZ2", isp_name="REZ1-REZ2")
-    network.links_t.p0["REZ1-REZ2"] = [100, 150]
 
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               REZ1
-    NSW,            NNSW,               REZ2
+    # 3. Prepare Expected Output
+    # Totals for RegionA -> RegionB: 100 MW
+    # RegionA: Export 100, Import 0, Net = -100
+    # RegionB: Import 100, Export 0, Net = 100
+
+    expected_csv = """
+    nem_region_id, investment_period, timestep, imports_mw, exports_mw, net_imports_mw
+    RegionA,       2025,              0,        0,          100,        -100
+    RegionB,       2025,              0,        100,        0,          100
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    expected_df = csv_str_to_df(expected_csv)
 
-    link_flows = _extract_raw_link_flows(network)
-    result = extract_rez_transmission_flows(link_flows, regions_mapping)
+    # Sort for comparison
+    result = result.sort_values(["nem_region_id"]).reset_index(drop=True)
+    expected_df = expected_df.sort_values(["nem_region_id"]).reset_index(drop=True)
 
-    # Should have flows for both REZs
-    assert set(result["rez_id"].unique()) == {"REZ1", "REZ2"}
-    assert len(result) == 4  # 2 REZs × 2 timesteps
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-def test_extract_rez_transmission_flows_excludes_non_rez(csv_str_to_df):
-    """Test that flows not involving REZs are excluded."""
-    network = pypsa.Network()
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
+def test_extract_isp_sub_region_transmission_flows(csv_str_to_df):
+    """Test integration of extracting ISP sub-region transmission flows."""
+
+    # 1. Prepare Input Data
+    # Scenario:
+    # - Link 1: SubA1 -> SubB1. Flow 100. (Inter-subregion)
+    # - Link 2: SubA1 -> SubA2. Flow 50. (Inter-subregion, same region but diff subregion)
+    # - Link 3: RezA1 (in SubA1) -> SubA1. Flow 300. (Intra-subregion)
+    link_flows_csv = """
+    investment_period, timestep, from_node, to_node, flow_mw, isp_name
+    2025,              0,        SubA1,     SubB1,   100,     Link-AB
+    2025,              0,        SubA1,     SubA2,   50,      Link-A1-A2
+    2025,              0,        RezA1,     SubA1,   300,     Link-RezA-A
+    """
+    link_flows = csv_str_to_df(link_flows_csv)
+
+    # Mapping table
+    # Note: RezA1 maps to SubA1
+    mapping_csv = """
+    nem_region_id, isp_sub_region_id, rez_id
+    RegionA,       SubA1,             RezA1
+    RegionA,       SubA2,
+    RegionB,       SubB1,
+    """
+    regions_and_zones_mapping = csv_str_to_df(mapping_csv)
+
+    # 2. Execute Function
+    result = extract_isp_sub_region_transmission_flows(
+        link_flows, regions_and_zones_mapping
     )
-    network.add("Bus", "REZ1")
-    network.add("Bus", "CNSW")  # Sub-region, not REZ
 
-    # Flow between REZ and sub-region (shouldn't appear in REZ results)
-    network.add("Link", "REZ1-CNSW", bus0="REZ1", bus1="CNSW", isp_name="REZ1-CNSW")
-    network.links_t.p0["REZ1-CNSW"] = [100, 150]
+    # 3. Prepare Expected Output
+    # SubA1:
+    # - Export to SubB1 (100)
+    # - Export to SubA2 (50)
+    # - Internal REZ flow (300) is ignored because RezA1 maps to SubA1
+    # - Total Export: 150
 
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id,  rez_id
-    NSW,            CNSW,               REZ1
+    # SubA2:
+    # - Import from SubA1 (50)
+
+    # SubB1:
+    # - Import from SubA1 (100)
+
+    expected_csv = """
+    isp_sub_region_id, investment_period, timestep, imports_mw, exports_mw, net_imports_mw
+    SubA1,             2025,              0,        0,          150,        -150
+    SubA2,             2025,              0,        50,         0,          50
+    SubB1,             2025,              0,        100,        0,          100
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    expected_df = csv_str_to_df(expected_csv)
 
-    link_flows = _extract_raw_link_flows(network)
-    result = extract_rez_transmission_flows(link_flows, regions_mapping)
+    # Sort for comparison
+    result = result.sort_values(["isp_sub_region_id"]).reset_index(drop=True)
+    expected_df = expected_df.sort_values(["isp_sub_region_id"]).reset_index(drop=True)
 
-    # Should be empty - CNSW is not a REZ, so flow is filtered out
-    assert len(result) == 0
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
 
 
-def test_multiple_investment_periods(csv_str_to_df):
-    """Test that flows are correctly separated by investment period."""
-    network = pypsa.Network()
-    network.set_snapshots(
-        pd.MultiIndex.from_product(
-            [[2025, 2030, 2035], pd.date_range("2025-01-01", periods=2, freq="h")],
-            names=["period", "timestep"],
-        )
-    )
-    network.add("Bus", "NodeA")
-    network.add("Bus", "NodeB")
-    network.add("Link", "A-B", bus0="NodeA", bus1="NodeB", isp_name="A-B")
-    # Different flows for each period
-    network.links_t.p0["A-B"] = [100, 110, 200, 210, 300, 310]
+def test_extract_rez_transmission_flows(csv_str_to_df):
+    """Test integration of extracting REZ transmission flows."""
 
-    regions_mapping_csv = """
-    nem_region_id,  isp_sub_region_id
-    RegionA,        NodeA
-    RegionB,        NodeB
+    # 1. Prepare Input Data
+    # Scenario:
+    # - Link 1: RezA1 -> SubA1. Flow 300. (Link-Rez-Grid)
+    # - Link 2: RezA2 -> SubA2. Flow 50. (Link-Rez-Grid)
+    # Note: REZs do not connect to each other directly, only to the grid (subregions).
+    # The function maps nodes to 'rez_id'. Subregions map to NaN.
+    # Flows between REZ and NaN (Subregion) are considered "inter-geography" flows
+    # and are counted as exports from the REZ.
+
+    link_flows_csv = """
+    investment_period, timestep, from_node, to_node, flow_mw, isp_name
+    2025,              0,        RezA1,     SubA1,   300,     Link-RezA1-Grid
+    2025,              0,        RezA2,     SubA2,   50,      Link-RezA2-Grid
     """
-    regions_mapping = csv_str_to_df(regions_mapping_csv)
+    link_flows = csv_str_to_df(link_flows_csv)
 
-    link_flows = _extract_raw_link_flows(network)
-    result = extract_nem_region_transmission_flows(link_flows, regions_mapping)
+    mapping_csv = """
+    nem_region_id, isp_sub_region_id, rez_id
+    RegionA,       SubA1,             RezA1
+    RegionA,       SubA2,             RezA2
+    """
+    regions_and_zones_mapping = csv_str_to_df(mapping_csv)
 
-    # Should have separate entries for each period
-    assert set(result["investment_period"].unique()) == {2025, 2030, 2035}
+    # 2. Execute Function
+    result = extract_rez_transmission_flows(link_flows, regions_and_zones_mapping)
 
-    # Verify different flow values by period
-    period_2025 = result[result["investment_period"] == 2025]["exports_mw"].max()
-    period_2030 = result[result["investment_period"] == 2030]["exports_mw"].max()
-    period_2035 = result[result["investment_period"] == 2035]["exports_mw"].max()
+    # 3. Prepare Expected Output
+    # RezA1:
+    # - Export to SubA1 (300) (SubA1 is 'foreign' to RezA1)
+    # - Total Export: 300
+    # RezA2:
+    # - Export to SubA2 (50) (SubA2 is 'foreign' to RezA2)
+    # - Total Export: 50
 
-    assert period_2025 < period_2030 < period_2035
+    expected_csv = """
+    rez_id, investment_period, timestep, imports_mw, exports_mw, net_imports_mw
+    RezA1,  2025,              0,        0,          300,        -300
+    RezA2,  2025,              0,        0,          50,         -50
+    """
+    expected_df = csv_str_to_df(expected_csv)
+
+    # Filter NaNs (non-REZ nodes like SubA1) which appear in the result
+    result = result.dropna(subset=["rez_id"])
+
+    # Sort for comparison
+    result = result.sort_values(["rez_id"]).reset_index(drop=True)
+    expected_df = expected_df.sort_values(["rez_id"]).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected_df, check_like=True)
