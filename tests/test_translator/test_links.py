@@ -24,8 +24,8 @@ def test_translate_existing_flow_path_capacity_to_links(csv_str_to_df):
     # Expected result
     expected_links_csv = """
     isp_name,    name,                 carrier,  bus0,     bus1,     p_nom,     p_min_pu, build_year, lifetime,  capital_cost,  p_nom_extendable
-    PathA-PathB, PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,     2024,       INF,       ,              False
-    PathB-PathC, PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,     2024,       INF,       ,              False
+    PathA-PathB, PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,     0,       INF,       ,              False
+    PathB-PathC, PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,     0,       INF,       ,              False
     """
     expected_links = csv_str_to_df(expected_links_csv)
     expected_links["capital_cost"] = pd.to_numeric(

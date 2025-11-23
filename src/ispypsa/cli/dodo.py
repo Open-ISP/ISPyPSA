@@ -499,6 +499,7 @@ def create_and_run_capacity_expansion_model() -> None:
                 site_name=f"{config.paths.ispypsa_run_name}",
                 output_filename="capacity_expansion_results_viewer.html",
                 subtitle="Capacity Expansion Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
             )
 
 
@@ -588,6 +589,7 @@ def create_and_run_operational_model() -> None:
                 output_filename="operational_results_viewer.html",
                 site_name=f"{config.paths.ispypsa_run_name}",
                 subtitle="Operational Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
             )
 
 
@@ -615,6 +617,7 @@ def create_capacity_expansion_plots_suite() -> None:
         output_filename="capacity_expansion_results_viewer.html",
         site_name=f"{config.paths.ispypsa_run_name}",
         subtitle="Capacity Expansion Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
     )
 
 
@@ -642,6 +645,7 @@ def create_operational_plots_suite() -> None:
         output_filename="operational_results_viewer.html",
         site_name=f"{config.paths.ispypsa_run_name}",
         subtitle="Operational Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
     )
 
 

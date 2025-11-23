@@ -32,7 +32,7 @@ def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
 
     # Merge with generator static data
     dispatch_long = dispatch_long.merge(
-        generators, left_on="generator_name", right_index=True, how="left"
+        generators, left_on="generator_name", right_index=True, how="inner"
     )
 
     dispatch_long = dispatch_long.rename(
