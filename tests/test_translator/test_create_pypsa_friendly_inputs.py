@@ -228,7 +228,6 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
-
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
@@ -421,7 +420,6 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     wind_dir = output_dir / "wind_traces"
     assert wind_dir.exists()
     assert (wind_dir / "Bodangora Wind Farm.parquet").exists()
-
 
     # 3. Check that marginal cost timeseries directory was created with the right files
     marginal_cost_dir = output_dir / "marginal_cost_timeseries"
