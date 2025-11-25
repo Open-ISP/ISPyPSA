@@ -56,8 +56,8 @@ Python script.
 
 ## Model Building & Execution
 
-::: ispypsa.model.build_pypsa_network
+::: ispypsa.pypsa_build.build_pypsa_network
 
-::: ispypsa.model.update_network_timeseries
+::: ispypsa.pypsa_build.update_network_timeseries
 
-::: ispypsa.model.save_results
+::: ispypsa.pypsa_build.save_results

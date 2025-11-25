@@ -2,16 +2,19 @@ from pathlib import Path
 
 import pandas as pd
 
-from ispypsa.model.buses import _add_bus_for_custom_constraints, _add_buses_to_network
-from ispypsa.model.carriers import _add_carriers_to_network
-from ispypsa.model.custom_constraints import _add_custom_constraints
-from ispypsa.model.generators import (
+from ispypsa.pypsa_build.buses import (
+    _add_bus_for_custom_constraints,
+    _add_buses_to_network,
+)
+from ispypsa.pypsa_build.carriers import _add_carriers_to_network
+from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build.generators import (
     _add_custom_constraint_generators_to_network,
     _add_generators_to_network,
 )
-from ispypsa.model.initialise import _initialise_network
-from ispypsa.model.investment_period_weights import _add_investment_period_weights
-from ispypsa.model.links import _add_links_to_network
+from ispypsa.pypsa_build.initialise import _initialise_network
+from ispypsa.pypsa_build.investment_period_weights import _add_investment_period_weights
+from ispypsa.pypsa_build.links import _add_links_to_network
 
 
 def build_pypsa_network(
@@ -24,7 +27,7 @@ def build_pypsa_network(
         Peform required imports.
         >>> from pathlib import Path
         >>> from ispypsa.data_fetch import read_csvs, write_csvs
-        >>> from ispypsa.model import build_pypsa_network
+        >>> from ispypsa.pypsa_build import build_pypsa_network
 
         Read in PyPSA friendly tables from CSV.
         >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.pypsa_build import build_pypsa_network, update_network_timeseries
 
 
 def test_expand_then_operate():

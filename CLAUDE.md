@@ -255,7 +255,7 @@ source $HOME/.local/bin/env && UV_PROJECT_ENVIRONMENT=.venv-wsl uv run pytest te
 source $HOME/.local/bin/env && uv run python example_workflow.py
 
 # Run a module
-source $HOME/.local/bin/env && uv run python -m ispypsa.model.build
+source $HOME/.local/bin/env && uv run python -m ispypsa.pypsa_build.build
 
 # Interactive Python shell with project dependencies
 source $HOME/.local/bin/env && uv run python

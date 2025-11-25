@@ -16,7 +16,7 @@ from ispypsa.data_fetch import (
 )
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.pypsa_build import build_pypsa_network, update_network_timeseries
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     list_templater_output_files,

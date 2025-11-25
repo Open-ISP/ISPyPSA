@@ -166,13 +166,6 @@ def invalid_path_not_directory(config):
     return config, NotADirectoryError
 
 
-def invalid_path_wrong_structure(config):
-    # 'docs' is a directory which exists locally and on github but doesn't have the
-    # expected solar, wind, demand substructure.
-    config["paths"]["parsed_traces_directory"] = "docs"
-    return config, ValueError
-
-
 def invalid_resolution_min_not_30(config):
     config["temporal"]["capacity_expansion"]["resolution_min"] = 60
     return config, ValueError

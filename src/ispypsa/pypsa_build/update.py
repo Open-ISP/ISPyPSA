@@ -3,9 +3,9 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
-from ispypsa.model.buses import _update_buses_demand_timeseries
-from ispypsa.model.custom_constraints import _add_custom_constraints
-from ispypsa.model.generators import _update_generators_availability_timeseries
+from ispypsa.pypsa_build.buses import _update_buses_demand_timeseries
+from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build.generators import _update_generators_availability_timeseries
 
 
 def update_network_timeseries(
@@ -25,7 +25,7 @@ def update_network_timeseries(
         >>> import pandas as pd
         >>> from pathlib import Path
         >>> from ispypsa.data_fetch import read_csvs
-        >>> from ispypsa.model import update_network_timeseries
+        >>> from ispypsa.pypsa_build import update_network_timeseries
 
         Get PyPSA friendly inputs (inparticular these need to contain the generators and
         buses tables).
