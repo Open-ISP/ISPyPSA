@@ -49,3 +49,19 @@ def test_build_node_to_geography_mapping(csv_str_to_df):
     # 5. Test Invalid Geography Level
     with pytest.raises(ValueError, match="Unknown geography_level"):
         _build_node_to_geography_mapping(mapping_df, "invalid_level")
+
+
+def test_build_node_to_geography_mapping_rez_without_rez_column(csv_str_to_df):
+    """Test REZ mapping when rez_id column doesn't exist returns empty dict."""
+    # Mapping without rez_id column
+    mapping_csv = """
+    nem_region_id, isp_sub_region_id
+    NSW1,          CNSW
+    NSW1,          NNSW
+    QLD1,          SEQ
+    """
+    mapping_df = csv_str_to_df(mapping_csv)
+
+    # When requesting rez_id mapping but column doesn't exist, should return empty dict
+    result = _build_node_to_geography_mapping(mapping_df, "rez_id")
+    assert result == {}
