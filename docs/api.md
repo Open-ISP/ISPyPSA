@@ -1,5 +1,26 @@
 # ISPyPSA API
 
+The ISPyPSA API is the set of Python functions used to carrier out the ISPyPSA modelling workflow. When the
+[CLI](cli.md) is used the API runs in the background to carrier out the workflow.
+
+Advanced users wanting more control or flexibility from the modelling workflow might want to use ISPyPSA directly
+through the API. An example of how the default ISPyPSA workflow is implement using the API is provided
+[below](#api-default-workflow). We suggest API users start by running and understanding the default workflow
+and then adapting it for their use case.
+
+Each API function is also documented individually after the workflow example.
+
+## API default workflow
+
+Below is an example of the default ISPyPSA workflow implemented using the Python API.
+This is the same workflow which the CLI follows. To use this workflow you simply need to
+edit the code to point at an ispypsa_config.yaml file of your choice, then run the
+Python script.
+
+```Python
+--8<-- "example_workflow.py"
+```
+
 ## Configuration & Logging
 
 ::: ispypsa.config.load_config

@@ -468,19 +468,6 @@ ispypsa config=configs/prod_config.yaml create_and_run_capacity_expansion_model
 ispypsa config=configs/test_config.yaml create_and_run_capacity_expansion_model
 ```
 
-### Debug Mode
-
-Use the `debug=True` flag to see detailed information about config file resolution:
-
-```bash
-ispypsa config=config.yaml debug=True create_ispypsa_inputs
-```
-
-Debug output includes:
-
-- Resolved config file path
-- Working directory information
-
 ### Skip Optimization Flags
 
 You can skip the optimization step in modeling tasks using these flags:

@@ -146,6 +146,8 @@ run using either ISPyPSA CLI or API.
         config.network.nodes.regional_granularity,
         iasr_tables,
         manually_extracted_tables,
+        config.filter_by_nem_regions,
+        config.filter_by_isp_sub_regions,
     )
     write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
     ```
@@ -177,7 +179,6 @@ step can be run using either the ISPyPSA CLI or API.
     config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
-    parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
         run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
@@ -227,7 +228,6 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     config_path = Path("ispypsa_config.yaml")
     config = load_config(config_path)
 
-    parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
         run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
