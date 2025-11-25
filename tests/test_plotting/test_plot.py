@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -7,6 +8,7 @@ from ispypsa.plotting.plot import (
     create_capacity_expansion_plot_suite,
     create_operational_plot_suite,
     flatten_dict_with_file_paths_as_keys,
+    save_plots,
 )
 
 
@@ -286,3 +288,55 @@ def test_create_operational_plot_suite(csv_str_to_df):
 
     for path_str in expected_paths:
         assert Path(path_str) in plots, f"Expected path {path_str} not found in plots"
+
+
+def test_save_plots(csv_str_to_df):
+    """Test saving plots and data to files."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        base_path = Path(tmpdir)
+
+        # Create test data
+        data_csv = """
+        region,  value
+        NSW1,    100
+        QLD1,    200
+        """
+        test_data = csv_str_to_df(data_csv)
+
+        # Create a simple plotly figure
+        fig = go.Figure(data=[go.Bar(x=["NSW1", "QLD1"], y=[100, 200])])
+
+        # Create charts dictionary with nested path structure
+        charts = {
+            Path("transmission/capacity.html"): {
+                "plot": fig,
+                "data": test_data,
+            },
+            Path("dispatch/regional/NSW1.html"): {
+                "plot": fig,
+                "data": test_data,
+            },
+        }
+
+        # Save plots
+        save_plots(charts, base_path)
+
+        # Verify HTML files were created
+        html_path1 = base_path / "transmission" / "capacity.html"
+        html_path2 = base_path / "dispatch" / "regional" / "NSW1.html"
+        assert html_path1.exists()
+        assert html_path2.exists()
+
+        # Verify CSV files were created
+        csv_path1 = base_path / "transmission" / "capacity.csv"
+        csv_path2 = base_path / "dispatch" / "regional" / "NSW1.csv"
+        assert csv_path1.exists()
+        assert csv_path2.exists()
+
+        # Verify CSV content
+        loaded_data = pd.read_csv(csv_path1)
+        pd.testing.assert_frame_equal(loaded_data, test_data)
+
+        # Verify HTML content contains plotly
+        html_content = html_path1.read_text(encoding="utf-8")
+        assert "plotly" in html_content.lower()
