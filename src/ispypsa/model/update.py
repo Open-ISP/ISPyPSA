@@ -22,7 +22,6 @@ def update_network_timeseries(
     expansion model with different reference year cycles.
 
     Examples:
-
         >>> import pandas as pd
         >>> from pathlib import Path
         >>> from ispypsa.data_fetch import read_csvs
@@ -40,7 +39,7 @@ def update_network_timeseries(
         Get the pypsa.Network we want to update the time series data in.
 
         >>> network = pypsa.Network()
-        >>> network.import_from_netcdf("existing_network.netcfd")
+        >>> network.import_from_netcdf("existing_network.nc")
 
         Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
 

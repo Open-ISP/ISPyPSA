@@ -9,7 +9,7 @@ from numpy import diff
 from ispypsa.config import ModelConfig
 from ispypsa.model.build import build_pypsa_network
 from ispypsa.templater import renewable_energy_zones
-from ispypsa.translator.create_pypsa_friendly_inputs import (
+from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,
 )
@@ -50,7 +50,13 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
 
     # Create a mock config
     config_dict = {
-        "ispypsa_run_name": "test",
+        "paths": {
+            "ispypsa_run_name": "dummy_value",
+            "parsed_traces_directory": "ENV",
+            "parsed_workbook_cache": "dummy_value",
+            "workbook_path": "dummy_value",
+            "run_directory": "dummy_value",
+        },
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -67,7 +73,6 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
             "rez_to_sub_region_transmission_default_limit": 1e5,
         },
         "temporal": {
-            "path_to_parsed_traces": "ENV",
             "year_type": "fy",
             "range": {
                 "start_year": 2026,

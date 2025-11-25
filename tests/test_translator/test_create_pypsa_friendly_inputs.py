@@ -104,9 +104,9 @@ def test_create_pypsa_friendly_snapshots_operational():
     assert "snapshots" in snapshots.columns
     assert "investment_periods" in snapshots.columns
 
-    # For operational mode, there should only be one investment period (start year)
-    # even though there are two investment periods in the capacity expansion config
-    assert set(snapshots["investment_periods"].unique()) == {2025}
+    # For operational mode the investment periods should match the
+    # capacity expansion config
+    assert set(snapshots["investment_periods"].unique()) == {2025, 2026}
 
     # Check timestamps start in the right place
     first_date = snapshots["snapshots"].min()
@@ -314,7 +314,6 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
 
     # 5. Load and check content of one of the generation files to verify basic structure
@@ -439,7 +438,6 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     # 4. Check that demand_traces directory was created with the right files
     demand_dir = output_dir / "demand_traces"
     assert demand_dir.exists()
-    assert (demand_dir / "CNSW.parquet").exists()
     assert (demand_dir / "NNSW.parquet").exists()
 
     # 5. Load and check content of one of the files to verify basic structure

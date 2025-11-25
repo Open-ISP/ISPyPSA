@@ -1,44 +1,5 @@
 REZ names,Region,REZ network voltage (kV),Connection capacity (MVA),Feeder length (km),Total cost ($M),$/kW,System Strength connection cost ($/kW)
 Far North Queensland,QLD,275,300.0,5.0,35.0,116.67,137.0
-North Queensland Clean Energy Hub,QLD,275,300.0,10.0,48.0,160.0,137.0
-Northern Queensland,QLD,275,300.0,5.0,35.0,116.67,137.0
-Isaac,QLD,275,300.0,5.0,34.0,113.33,137.0
-Barcaldine,QLD,275,300.0,10.0,45.0,150.0,0.0
-Fitzroy,QLD,275,300.0,5.0,34.0,113.33,137.0
-Wide Bay,QLD,275,300.0,5.0,34.0,113.33,0.0
 Darling Downs,QLD,275,300.0,5.0,35.0,116.67,0.0
-Banana,QLD,275,1800.0,100.0,414.0,230.0,137.0
 North West New South Wales,NSW,330,400.0,10.0,54.0,135.0,0.0
 New England,NSW,330,400.0,10.0,54.0,135.0,0.0
-Central-West Orana,NSW,330,400.0,10.0,54.0,135.0,0.0
-Broken Hill,NSW,220,250.0,10.0,44.0,176.0,0.0
-South West New South Wales,NSW,330,400.0,10.0,54.0,135.0,0.0
-Wagga Wagga,NSW,330,400.0,10.0,54.0,135.0,137.0
-Tumut,NSW,330,400.0,5.0,40.0,100.0,0.0
-Cooma-Monaro,NSW,330,400.0,5.0,40.0,100.0,0.0
-Hunter-Central Coast,NSW,330,400.0,10.0,40.0,100.0,0.0
-Hunter Coast,NSW,Note 1,,,,,
-Illawarra Coast,NSW,Note 1,,,,,
-Illawarra,NSW,330,400.0,5.0,40.0,100.0,0.0
-Ovens Murray,VIC,220,250.0,5.0,34.0,136.0,0.0
-Murray River,VIC,220,250.0,5.0,33.0,132.0,137.0
-Western Victoria,VIC,220,250.0,5.0,35.0,140.0,137.0
-South West Victoria,VIC,500,600.0,10.0,84.0,140.0,137.0
-Gippsland,VIC,220,2000.0,16.0,684.0,340.0,0.0
-Central North Victoria,VIC,220,250.0,10.0,46.0,184.0,137.0
-Gippsland Coast,VIC,220,2000.0,16.0,684.0,340.0,137.0
-Southern Ocean,VIC,Note 1,,,,,137.0
-South East South Australia,SA,275,300.0,10.0,45.0,150.0,137.0
-Riverland,SA,275,300.0,10.0,50.0,166.67,0.0
-Mid-North South Australia,SA,275,300.0,5.0,36.0,120.0,137.0
-Yorke Peninsula,SA,275,300.0,5.0,36.0,120.0,0.0
-Northern South Australia,SA,275,300.0,5.0,34.0,113.337,137.0
-Leigh Creek,SA,275,300.0,10.0,46.0,153.33,0.0
-Roxby Downs,SA,275,300.0,10.0,44.0,146.67,137.0
-Eastern Eyre Peninsula,SA,275,300.0,10.0,44.0,146.67,137.0
-Western Eyre Peninsula,SA,275,300.0,10.0,44.0,146.67,0.0
-South East South Australia Coast,SA,275,1200.0,50.0,894.0,745.0,137.0
-North East Tasmania,TAS,220,150.0,5.0,41.0,273.33,137.0
-North West Tasmania,TAS,220,150.0,5.0,36.0,240.0,137.0
-Central Highlands,TAS,220,150.0,5.0,33.0,220.0,137.0
-North Tasmania Coast,TAS,Note 1,,,,,137.0

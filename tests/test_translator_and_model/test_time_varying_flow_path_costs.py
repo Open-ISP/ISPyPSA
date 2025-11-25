@@ -5,7 +5,7 @@ from isp_trace_parser.demand_traces import write_new_demand_filepath
 
 from ispypsa.config import ModelConfig
 from ispypsa.model.build import build_pypsa_network
-from ispypsa.translator.create_pypsa_friendly_inputs import (
+from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,
 )
@@ -39,7 +39,13 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
 
     # Create a mock config
     config_dict = {
-        "ispypsa_run_name": "test",
+        "paths": {
+            "ispypsa_run_name": "test",
+            "parsed_traces_directory": "ENV",
+            "parsed_workbook_cache": "",
+            "workbook_path": "",
+            "run_directory": "",
+        },
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -56,7 +62,6 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
             "rez_to_sub_region_transmission_default_limit": 1e5,
         },
         "temporal": {
-            "path_to_parsed_traces": "ENV",
             "year_type": "fy",
             "range": {
                 "start_year": 2025,
@@ -73,7 +78,7 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
         },
         "unserved_energy": {
             "cost": 10000.0,
-            "generator_size_mw": 1000.0,
+            "max_per_node": 1000.0,
         },
         "solver": "highs",
         "iasr_workbook_version": "6.0",

@@ -44,7 +44,6 @@ def get_valid_config():
     and is used by both test_valid_config and test_invalid_config.
     """
     return {
-        "ispypsa_run_name": "test",
         "scenario": "Step Change",
         "wacc": 0.07,
         "discount_rate": 0.05,
@@ -61,7 +60,6 @@ def get_valid_config():
             "rez_to_sub_region_transmission_default_limit": 1e6,
         },
         "temporal": {
-            "path_to_parsed_traces": "tests/test_traces",
             "year_type": "fy",
             "range": {
                 "start_year": 2025,
@@ -85,9 +83,16 @@ def get_valid_config():
                 },
             },
         },
-        "unserved_energy": {"cost": 10000.0, "generator_size_mw": 1e5},
+        "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
+        "paths": {
+            "ispypsa_run_name": "test",
+            "parsed_traces_directory": "tests/trace_data",
+            "parsed_workbook_cache": "ispypsa_runs/workbook_table_cache",
+            "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
+            "run_directory": "ispypsa_runs/test",
+        },
     }
 
 
@@ -153,12 +158,14 @@ def invalid_end_year(config):
 
 
 def invalid_path_not_directory(config):
-    config["temporal"]["path_to_parsed_traces"] = "tests/wrong_traces"
+    config["paths"]["parsed_traces_directory"] = "tests/wrong_traces"
     return config, NotADirectoryError
 
 
 def invalid_path_wrong_structure(config):
-    config["temporal"]["path_to_parsed_traces"] = "ispypsa_runs"
+    # 'docs' is a directory which exists locally and on github but doesn't have the
+    # expected solar, wind, demand substructure.
+    config["paths"]["parsed_traces_directory"] = "docs"
     return config, ValueError
 
 
@@ -225,8 +232,40 @@ def invalid_unserved_energy_cost(config):
 
 
 def invalid_unserved_energy_generator_size(config):
-    config["unserved_energy"] = {"generator_size_mw": "large"}  # Should be a float
+    config["unserved_energy"] = {"max_per_node": "large"}  # Should be a float
     return config, ValidationError
+
+
+def invalid_both_region_filters(config):
+    config["filter_by_nem_regions"] = ["NSW"]
+    config["filter_by_isp_sub_regions"] = ["CNSW"]
+    return config, ValueError
+
+
+def invalid_missing_parsed_workbook_cache(config):
+    del config["paths"]["parsed_workbook_cache"]  # Required field
+    return config, ValidationError
+
+
+def invalid_missing_run_directory(config):
+    del config["paths"]["run_directory"]  # Required field
+    return config, ValidationError
+
+
+def invalid_missing_workbook_path(config):
+    del config["paths"]["workbook_path"]  # Required field
+    return config, ValidationError
+
+
+def invalid_env_variable_not_set(config):
+    # Set parsed_traces_directory to "ENV" to trigger the environment variable check
+    config["paths"]["parsed_traces_directory"] = "ENV"
+    # Ensure the environment variable is not set (it shouldn't be in test environment)
+    import os
+
+    if "PATH_TO_PARSED_TRACES" in os.environ:
+        del os.environ["PATH_TO_PARSED_TRACES"]
+    return config, ValueError
 
 
 @pytest.mark.parametrize(
@@ -259,6 +298,11 @@ def invalid_unserved_energy_generator_size(config):
         invalid_overlap,
         invalid_unserved_energy_cost,
         invalid_unserved_energy_generator_size,
+        invalid_both_region_filters,
+        invalid_missing_parsed_workbook_cache,
+        invalid_missing_run_directory,
+        invalid_missing_workbook_path,
+        invalid_env_variable_not_set,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
@@ -296,17 +340,66 @@ def test_unserved_energy_defaults():
     config = get_valid_config()
     # Remove unserved_energy fields entirely
     del config["unserved_energy"]["cost"]
-    del config["unserved_energy"]["generator_size_mw"]
+    del config["unserved_energy"]["max_per_node"]
     # This should not raise an error and use defaults
     model = ModelConfig(**config)
     # Verify default values are used
-    assert model.unserved_energy.generator_size_mw == 1e5
+    assert model.unserved_energy.max_per_node == 1e5
     assert model.unserved_energy.cost is None
 
 
 def test_path_to_parsed_traces_not_set_for_testing():
-    """Test that NOT_SET_FOR_TESTING is accepted for path_to_parsed_traces."""
+    """Test that NOT_SET_FOR_TESTING is accepted for parsed_traces_directory."""
     config = get_valid_config()
-    config["temporal"]["path_to_parsed_traces"] = "NOT_SET_FOR_TESTING"
+    config["paths"]["parsed_traces_directory"] = "NOT_SET_FOR_TESTING"
     # This should not raise an error
     ModelConfig(**config)
+
+
+def test_filter_by_nem_regions():
+    """Test that filter_by_nem_regions accepts valid input."""
+    config = get_valid_config()
+    config["filter_by_nem_regions"] = ["NSW", "VIC"]
+    # This should not raise an error
+    model = ModelConfig(**config)
+    assert model.filter_by_nem_regions == ["NSW", "VIC"]
+    assert model.filter_by_isp_sub_regions is None
+
+
+def test_filter_by_isp_sub_regions():
+    """Test that filter_by_isp_sub_regions accepts valid input."""
+    config = get_valid_config()
+    config["filter_by_isp_sub_regions"] = ["CNSW", "VIC", "TAS"]
+    # This should not raise an error
+    model = ModelConfig(**config)
+    assert model.filter_by_isp_sub_regions == ["CNSW", "VIC", "TAS"]
+    assert model.filter_by_nem_regions is None
+
+
+def test_no_region_filters():
+    """Test that both region filters can be None."""
+    config = get_valid_config()
+    # Don't add any region filters
+    model = ModelConfig(**config)
+    assert model.filter_by_nem_regions is None
+    assert model.filter_by_isp_sub_regions is None
+
+
+def test_base_paths_only():
+    """Test that only the four base paths are present in the config."""
+    config = get_valid_config()
+
+    model = ModelConfig(**config)
+
+    # Verify only base paths are present
+    assert model.paths.parsed_traces_directory == "tests/trace_data"
+    assert model.paths.parsed_workbook_cache == "ispypsa_runs/workbook_table_cache"
+    assert model.paths.workbook_path == "tests/test_workbooks/test-workbook.xlsx"
+    assert model.paths.run_directory == "ispypsa_runs/test"
+
+    # Verify no derived paths exist as attributes
+    assert not hasattr(model.paths, "ispypsa_input_tables_directory")
+    assert not hasattr(model.paths, "pypsa_friendly_inputs_location")
+    assert not hasattr(model.paths, "capacity_expansion_timeseries_location")
+    assert not hasattr(model.paths, "operational_timeseries_location")
+    assert not hasattr(model.paths, "pypsa_outputs_directory")

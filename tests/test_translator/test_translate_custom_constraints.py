@@ -224,8 +224,32 @@ def test_translate_custom_constraints_no_constraints(csv_str_to_df):
     # Call the function under test
     result = _translate_custom_constraints(config, ispypsa_tables, links, generators)
 
-    # Should return empty dictionary
-    assert result == {}
+    # Should return empty dataframes
+    assert result["custom_constraints_lhs"].empty
+    assert list(result["custom_constraints_lhs"].columns) == [
+        "constraint_name",
+        "variable_name",
+        "coefficient",
+        "component",
+        "attribute",
+    ]
+    assert result["custom_constraints_rhs"].empty
+    assert list(result["custom_constraints_rhs"].columns) == [
+        "constraint_name",
+        "rhs",
+        "constraint_type",
+    ]
+    assert result["custom_constraints_generators"].empty
+    assert list(result["custom_constraints_generators"].columns) == [
+        "name",
+        "isp_name",
+        "bus",
+        "p_nom",
+        "p_nom_extendable",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+    ]
 
 
 def test_translate_custom_constraints_mismatched_lhs_rhs(csv_str_to_df):

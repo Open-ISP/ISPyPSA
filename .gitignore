@@ -169,7 +169,8 @@ scratch.py
 # ispypsa ignores
 ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
-ispypsa_runs/**/*.h5
+ispypsa_runs/**/*.nc
+ispypsa_runs/**/*.yaml
 
 # ignore doit database
 .doit*
@@ -177,3 +178,7 @@ ispypsa_runs/**/*.h5
 # IDE specific files
 .vscode/
 .DS_Store
+.claude/settings.local.json
+
+# ignore all pypsa output files
+*.nc

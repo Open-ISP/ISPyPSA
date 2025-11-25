@@ -143,7 +143,7 @@ def convert_to_numeric_if_possible(df: pd.DataFrame, cols: list[str]) -> pd.Data
     for col in cols:
         df["temp_col"] = pd.to_numeric(df[col], errors="coerce")
         # Replace values that failed to convert to numeric with original strings.
-        df[col] = df["temp_col"].combine_first(df[col])
+        df[col] = df["temp_col"].fillna(df[col])
         df = df.drop(columns=["temp_col"])
 
     return df

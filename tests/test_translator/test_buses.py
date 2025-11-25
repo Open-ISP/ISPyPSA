@@ -55,8 +55,8 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
 
     sub_regions_ispypsa = pd.DataFrame(
         {
-            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+            "isp_sub_region_id": ["NNSW", "SQ"],
+            "nem_region_id": ["NSW", "QLD"],
         }
     )
 
@@ -81,10 +81,10 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
     )
 
     files = [
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
     ]
 
     files = [parsed_trace_path / Path(file) for file in files]
@@ -98,7 +98,7 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
     expected_trace = expected_trace.loc[:, ["investment_periods", "snapshots", "p_set"]]
     expected_trace = expected_trace.reset_index(drop=True)
 
-    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/CNSW.parquet"))
+    got_trace = pd.read_parquet(tmp_path / Path("demand_traces/NNSW.parquet"))
 
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
@@ -108,8 +108,8 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
 
     sub_regions_ispypsa = pd.DataFrame(
         {
-            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+            "isp_sub_region_id": ["NNSW", "SQ"],
+            "nem_region_id": ["NSW", "QLD"],
         }
     )
 
@@ -134,10 +134,6 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
     )
 
     files = [
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
         "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
@@ -170,8 +166,8 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
 
     sub_regions_ispypsa = pd.DataFrame(
         {
-            "isp_sub_region_id": ["CNSW", "NNSW", "CQ", "NQ"],
-            "nem_region_id": ["NSW", "NSW", "QLD", "QLD"],
+            "isp_sub_region_id": ["NNSW", "SQ"],
+            "nem_region_id": ["NSW", "QLD"],
         }
     )
 
@@ -196,22 +192,14 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
     )
 
     files = [
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/CNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
         "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
         "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
         "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
-        "demand/Step_Change/RefYear2011/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_CQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/CQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_CQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
-        "demand/Step_Change/RefYear2011/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/NQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+        "demand/Step_Change/RefYear2011/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_SQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
+        "demand/Step_Change/RefYear2011/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_SQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
+        "demand/Step_Change/RefYear2018/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_SQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
+        "demand/Step_Change/RefYear2018/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_SQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
     ]
 
     files = [parsed_trace_path / Path(file) for file in files]

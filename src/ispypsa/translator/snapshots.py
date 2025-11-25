@@ -65,7 +65,7 @@ def create_pypsa_friendly_snapshots(
     else:
         resolution_min = config.temporal.operational.resolution_min
         aggregation = config.temporal.operational.aggregation
-        investment_periods = [config.temporal.range.start_year]
+        investment_periods = config.temporal.capacity_expansion.investment_periods
 
     snapshots = _create_complete_snapshots_index(
         start_year=config.temporal.range.start_year,
@@ -188,6 +188,51 @@ def _add_investment_periods(
         )
 
     return result.loc[:, ["investment_periods", "snapshots"]]
+
+
+def _add_snapshot_weightings(
+    snapshots: pd.DataFrame, temporal_resolution_min: int
+) -> pd.DataFrame:
+    """Add columns to the snapshots pd.DataFrame specifying the weighting of each snapshot.
+
+    - The objective snapshot is calculated as 8760 divided by the number of snapshots in
+    the investment period. Such that the snaphots in an investment period are scaled to the
+    weight of a single year.
+    - The generators snapshot is calculated as 8760 divided by the number of snapshots in
+    the investment period. Such that the snaphots in an investment period are scaled to the
+    weight of a single year.
+    - The stores snapshot is calculated as the temporal resolution in hours. Such that the
+    charging and discharging of storage systems is consistent with the temporal resolution.
+
+
+    Args:
+        snapshots: pd.DataFrame with "snapshots" column specifying the time intervals
+            of the model as datetime objects. And 'investment_periods' column specifying
+            the investment period that each snapshot belongs to.
+        temporal_resolution_min: int specifying the snapshot temporal resolution in minutes.
+
+    Returns: pd.DataFrame with extra columns "objective", "generators" and "stores" specifying
+    the three types of snapshot weights.
+    """
+
+    # Calculate the number of snapshots in each investment period
+    snapshots["snapshot_count"] = snapshots.groupby("investment_periods").transform(
+        "count"
+    )
+
+    # Calculate the objective snapshot weighting
+    snapshots["objective"] = 8760 / snapshots["snapshot_count"]
+
+    # Calculate the generators snapshot weighting
+    snapshots["generators"] = 8760 / snapshots["snapshot_count"]
+
+    # Drop the snapshot count column
+    snapshots = snapshots.drop(columns=["snapshot_count"])
+
+    # Calculate the stores snapshot weighting
+    snapshots["stores"] = temporal_resolution_min / 60
+
+    return snapshots
 
 
 def _create_investment_period_weightings(

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +9,7 @@ from ispypsa.templater.dynamic_generator_properties import (
 from ispypsa.templater.energy_policy_targets import (
     _template_energy_policy_targets,
 )
+from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
     _template_rez_transmission_costs,
@@ -59,37 +61,38 @@ def create_ispypsa_inputs_template(
     regional_granularity: str,
     iasr_tables: dict[str : pd.DataFrame],
     manually_extracted_tables: dict[str : pd.DataFrame],
+    filter_to_nem_regions: list[str] = None,
+    filter_to_isp_sub_regions: list[str] = None,
 ) -> dict[str : pd.DataFrame]:
-    """Creates a template set of `ISPyPSA` input tables based on IASR tables.
+    """Creates a template set of [`ISPyPSA` input tables](tables/ispypsa.md).
 
     Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+        >>> from ispypsa.data_fetch import read_csvs, write_csvs
+        >>> from ispypsa.templater import load_manually_extracted_tables
+        >>> from ispypsa.templater import create_ispypsa_inputs_template
 
-    # Peform required imports.
-    >>> from pathlib import Path
-    >>> from ispypsa.config import load_config
-    >>> from ispypsa.data_fetch import read_csvs, write_csvs
-    >>> from ispypsa.templater import load_manually_extracted_tables
-    >>> from ispypsa.templater import create_ispypsa_inputs_template
+        Tables previously extracted from IASR workbook using isp_workbook_parser are
+        loaded.
+        >>> iasr_tables = read_csvs(Path("iasr_directory"))
 
-    # Tables previously extracted from IASR workbook using isp_workbook_parser are
-    # loaded.
-    >>> iasr_tables = read_csvs(Path("iasr_directory"))
+        Some tables can't be handled by isp_workbook_parser so ISPyPSA ships with the
+        missing data.
+        >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
 
-    # Some tables can't be handled by isp_workbook_parser so ISPyPSA ships with the
-    # missing data.
-    >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
+        Now a template can be created by specifying the ISP scenario to use and the
+        spacial granularity of model.
+        >>> ispypsa_inputs_template = create_ispypsa_inputs_template(
+        ... scenario="Step Change",
+        ... regional_granularity="sub_regions",
+        ... iasr_tables=iasr_tables,
+        ... manually_extracted_tables=manually_extracted_tables
+        ... )
 
-    # Now a template can be created by specifying the ISP scenario to use and the
-    # spacial granularity of model.
-    >>> ispypsa_inputs_template = create_ispypsa_inputs_template(
-    ... scenario="Step Change",
-    ... regional_granularity="sub_regions",
-    ... iasr_tables=iasr_tables,
-    ... manually_extracted_tables=manually_extracted_tables
-    ... )
-
-    # Write the template tables to a directory as CSVs.
-    >>> write_csvs(ispypsa_inputs_template)
+        Write the template tables to a directory as CSVs.
+        >>> write_csvs(ispypsa_inputs_template)
 
     Args:
         scenario: ISP scenario to generate template inputs based on.
@@ -99,10 +102,25 @@ def create_ispypsa_inputs_template(
             extracted using the `isp_workbook_parser`.
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
+        filter_to_nem_regions: Optional list of NEM region IDs (e.g., ['NSW', 'VIC'])
+            to filter the template to. Cannot be specified together with
+            filter_to_isp_sub_regions.
+        filter_to_isp_sub_regions: Optional list of ISP sub-region IDs
+            (e.g., ['CNSW', 'VIC', 'TAS']) to filter the template to. Cannot be
+            specified together with filter_to_nem_regions.
 
-    Returns: dictionary of dataframes in the `ISPyPSA` format. (add link to ispypsa
-        table docs)
+    Returns:
+        dictionary of dataframes in the [`ISPyPSA` format](tables/ispypsa.md)
+
+    Raises:
+        ValueError: If both filter_to_nem_regions and filter_to_isp_sub_regions are provided
     """
+    # Validate filtering parameters
+    if filter_to_nem_regions is not None and filter_to_isp_sub_regions is not None:
+        raise ValueError(
+            "Cannot specify both filter_to_nem_regions and filter_to_isp_sub_regions"
+        )
+
     template = {}
 
     template.update(manually_extracted_tables)
@@ -173,6 +191,14 @@ def create_ispypsa_inputs_template(
     energy_policy_targets = _template_energy_policy_targets(iasr_tables, scenario)
 
     template.update(energy_policy_targets)
+
+    # Apply regional filtering if requested
+    if filter_to_nem_regions or filter_to_isp_sub_regions:
+        template = _filter_template(
+            template,
+            nem_regions=filter_to_nem_regions,
+            isp_sub_regions=filter_to_isp_sub_regions,
+        )
 
     return template
 

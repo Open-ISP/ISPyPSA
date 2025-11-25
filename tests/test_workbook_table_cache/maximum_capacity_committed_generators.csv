@@ -1,28 +1,2 @@
 Generator,Region,Installed capacity (MW),Commissioning date
-Kurri Kurri OCGT,NSW,750.0,2024-12-01
-Tallawarra B,NSW,320.0,2024-02-01
-Kidston,QLD,250.0,2025-02-01
-Snowy 2.0,NSW,2200.0,2028-12-01
-Girgarre Solar Farm,VIC,93.48,2024-12-01
-Glenrowan Solar Farm,VIC,126.5,2024-05-01
-Mannum Solar Farm 2,SA,29.99,2024-02-01
-Metz Solar Farm,NSW,135.0,2023-04-01
-Riverina Solar Farm,NSW,32.4,2025-06-01
-Sebastopol Solar Farm,NSW,90.0,2023-01-01
-Stubbo Solar Farm,NSW,400.0,2024-07-01
-Walla Walla Solar Farm,NSW,303.94,2024-05-01
-Wandoan South Solar Farm - stage 1,QLD,160.0,2023-08-01
-Wellington North Solar Farm (Lightsource),NSW,436.8,2024-10-01
-Wollar Solar Farm,NSW,280.0,2024-06-01
-Woolooga Solar Farm,QLD,222.5,2022-09-01
-Wunghnu Solar Farm,VIC,93.5,2024-08-01
-Clarke Creek Wind Farm,QLD,450.0,2024-08-01
-Crookwell 3 Wind Farm,NSW,57.6,2024-06-01
-Flyers Creek Wind Farm,NSW,145.54,2023-12-01
-Golden Plains Wind Farm East,VIC,756.4,2025-08-01
-Goyder South Wind Farm 1A,SA,209.0,2024-06-01
-Goyder South Wind Farm 1B,SA,203.5,2024-12-01
-Hawkesdale Wind Farm,VIC,96.6,2024-04-01
-Ryan Corner Wind Farm,VIC,218.4,2024-03-01
-Rye Park Wind Farm,NSW,396.0,2024-07-01
-Wambo Wind Farm,QLD,252.0,2025-02-01
+Wambo Wind Farm,QLD,160,2023-08-01
