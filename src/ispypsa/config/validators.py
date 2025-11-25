@@ -170,4 +170,3 @@ class ModelConfig(BaseModel):
                 "Cannot specify both filter_by_nem_regions and filter_by_isp_sub_regions"
             )
         return self
-
