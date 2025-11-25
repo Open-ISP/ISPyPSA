@@ -6,7 +6,96 @@ import plotly.graph_objects as go
 from ispypsa.plotting.plot import (
     create_capacity_expansion_plot_suite,
     create_operational_plot_suite,
+    flatten_dict_with_file_paths_as_keys,
 )
+
+
+def test_flatten_dict_with_file_paths_as_keys_single_level():
+    """Test flattening a single level nested dictionary."""
+    nested_dict = {
+        "transmission": {
+            "flows": {"plot": "fig1", "data": "df1"},
+            "capacity": {"plot": "fig2", "data": "df2"},
+        }
+    }
+
+    result = flatten_dict_with_file_paths_as_keys(nested_dict)
+
+    expected_keys = [
+        Path("transmission/flows.html"),
+        Path("transmission/capacity.html"),
+    ]
+
+    assert len(result) == 2
+    for key in expected_keys:
+        assert key in result
+
+    assert result[Path("transmission/flows.html")] == {"plot": "fig1", "data": "df1"}
+    assert result[Path("transmission/capacity.html")] == {"plot": "fig2", "data": "df2"}
+
+
+def test_flatten_dict_with_file_paths_as_keys_deeply_nested():
+    """Test flattening a deeply nested dictionary."""
+    nested_dict = {
+        "dispatch": {
+            "regional": {
+                "NSW1": {
+                    "2030": {
+                        "week1": {"plot": "fig1", "data": "df1"},
+                        "week2": {"plot": "fig2", "data": "df2"},
+                    }
+                }
+            }
+        }
+    }
+
+    result = flatten_dict_with_file_paths_as_keys(nested_dict)
+
+    expected_keys = [
+        Path("dispatch/regional/NSW1/2030/week1.html"),
+        Path("dispatch/regional/NSW1/2030/week2.html"),
+    ]
+
+    assert len(result) == 2
+    for key in expected_keys:
+        assert key in result
+
+    assert result[Path("dispatch/regional/NSW1/2030/week1.html")] == {
+        "plot": "fig1",
+        "data": "df1",
+    }
+
+
+def test_flatten_dict_with_file_paths_as_keys_multiple_branches():
+    """Test flattening a dictionary with multiple branches."""
+    nested_dict = {
+        "transmission": {
+            "flows": {"plot": "fig1", "data": "df1"},
+        },
+        "dispatch": {
+            "regional": {"plot": "fig2", "data": "df2"},
+            "sub_regional": {"plot": "fig3", "data": "df3"},
+        },
+    }
+
+    result = flatten_dict_with_file_paths_as_keys(nested_dict)
+
+    expected_keys = [
+        Path("transmission/flows.html"),
+        Path("dispatch/regional.html"),
+        Path("dispatch/sub_regional.html"),
+    ]
+
+    assert len(result) == 3
+    for key in expected_keys:
+        assert key in result
+
+
+def test_flatten_dict_with_file_paths_as_keys_empty_dict():
+    """Test flattening an empty dictionary."""
+    result = flatten_dict_with_file_paths_as_keys({})
+
+    assert result == {}
 
 
 def test_create_capacity_expansion_plot_suite(csv_str_to_df):
