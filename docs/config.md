@@ -313,7 +313,8 @@ Options:
 - "None": Full yearly temporal representation is used or another aggregation.
 -  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
    residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
-   calendar of financial year are considered for selection.
+   calendar or financial year are considered for selection.
+``
 
 Examples:
 
@@ -388,7 +389,7 @@ Options:
 - "None": Full yearly temporal representation is used or another aggregation.
 -  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
    residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
-   calendar of financial year are considered for selection.
+   calendar or financial year are considered for selection.
 
 Examples:
 
