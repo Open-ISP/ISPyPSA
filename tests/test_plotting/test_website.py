@@ -154,5 +154,71 @@ def test_generate_results_website_empty_plots():
         assert not html_file.exists()
 
 
+def test_generate_results_website_with_regions_and_zones_mapping(csv_str_to_df):
+    """Test website generation with regions_and_zones_mapping provided."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_dir = Path(tmpdir) / "outputs"
+        plots_dir = output_dir / "capacity_expansion_plots"
+        plots_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create plot directories with names that include region/zone IDs
+        dispatch_dir = plots_dir / "dispatch"
+        dispatch_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create dummy plot files with region/zone names
+        (dispatch_dir / "nsw1_generation.html").write_text(
+            "<html><body>NSW1 Generation</body></html>"
+        )
+        (dispatch_dir / "seq_1_generation.html").write_text(
+            "<html><body>SEQ-1 Generation</body></html>"
+        )
+
+        # Create dummy plotly figures for the plots dict
+        dummy_fig = go.Figure()
+
+        # Create plots dictionary with region/zone names in paths
+        plots = {
+            Path("dispatch/nsw1_generation.html"): {
+                "plot": dummy_fig,
+                "data": None,
+            },
+            Path("dispatch/seq_1_generation.html"): {
+                "plot": dummy_fig,
+                "data": None,
+            },
+        }
+
+        # Create regions_and_zones_mapping DataFrame
+        regions_and_zones_mapping_csv = """
+        nem_region_id,  isp_sub_region_id,  rez_id
+        NSW1,           CNSW,               N1
+        QLD1,           SEQ,                Q1
+        VIC1,           CVIC,               V1
+        """
+        regions_and_zones_mapping = csv_str_to_df(regions_and_zones_mapping_csv)
+
+        # Generate website with regions_and_zones_mapping
+        generate_results_website(
+            plots,
+            plots_dir,
+            output_dir,
+            site_name="Test ISPyPSA Results",
+            regions_and_zones_mapping=regions_and_zones_mapping,
+        )
+
+        # Check that website was created
+        html_file = output_dir / "results_viewer.html"
+        assert html_file.exists()
+
+        # Read and check HTML content
+        html_content = html_file.read_text(encoding="utf-8")
+
+        # Check that region IDs are properly capitalized
+        # NSW1 should be capitalized (from nem_region_id)
+        assert "NSW1" in html_content
+        # SEQ should be capitalized (from isp_sub_region_id)
+        assert "SEQ" in html_content
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
