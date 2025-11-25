@@ -415,3 +415,37 @@ def test_extract_rez_transmission_flows(csv_str_to_df):
     expected_df = expected_df.sort_values(["rez_id"]).reset_index(drop=True)
 
     pd.testing.assert_frame_equal(result, expected_df, check_like=True)
+
+
+def test_calculate_transmission_flows_by_geography_intra_only(csv_str_to_df):
+    """Test that intra-regional only flows return empty DataFrame."""
+    # All flows are within the same geographic region (no inter-regional flows)
+    flow_long_csv = """
+    investment_period, timestep, from_node, to_node, flow_mw
+    2025,              0,        Node_A1,   Node_A2, 100
+    2025,              0,        Node_A2,   Node_A1, 50
+    2025,              1,        Node_A1,   Node_A2, 75
+    """
+    flow_long = csv_str_to_df(flow_long_csv)
+
+    # All nodes map to the same geography
+    node_to_geography = {"Node_A1": "GeoA", "Node_A2": "GeoA"}
+
+    geography_col = "region_id"
+
+    # Execute Function
+    result = _calculate_transmission_flows_by_geography(
+        flow_long, node_to_geography, geography_col
+    )
+
+    # Should return empty DataFrame with correct schema when all flows are intra-regional
+    assert result.empty
+    expected_columns = [
+        "region_id",
+        "investment_period",
+        "timestep",
+        "imports_mw",
+        "exports_mw",
+        "net_imports_mw",
+    ]
+    assert list(result.columns) == expected_columns

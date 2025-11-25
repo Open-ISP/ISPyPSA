@@ -8,9 +8,34 @@ import pytest
 
 from ispypsa.plotting.website import (
     _build_plot_tree,
+    _format_display_name,
     _tree_to_html,
     generate_results_website,
 )
+
+
+def test_format_display_name_short_uppercase():
+    """Test that short uppercase names are preserved as-is."""
+    # Short uppercase abbreviations (<=5 chars) should be kept as-is
+    assert _format_display_name("NSW") == "NSW"
+    assert _format_display_name("REZ") == "REZ"
+    assert _format_display_name("VIC") == "VIC"
+    assert _format_display_name("QLD1") == "QLD1"
+
+
+def test_format_display_name_mixed_case():
+    """Test that mixed case and longer names get title case."""
+    # Mixed case or longer names should get title case
+    assert _format_display_name("regional_dispatch") == "Regional Dispatch"
+    assert _format_display_name("transmission_flows") == "Transmission Flows"
+
+
+def test_format_display_name_with_known_ids():
+    """Test that known IDs are properly capitalized."""
+    known_ids = ["NSW1", "QLD1", "SEQ"]
+    # Known IDs should be uppercased even within longer strings
+    result = _format_display_name("nsw1_generation", known_ids)
+    assert "NSW1" in result
 
 
 def test_build_plot_tree():
