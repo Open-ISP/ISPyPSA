@@ -258,6 +258,7 @@ def create_ispypsa_inputs_from_config() -> None:
         filter_to_nem_regions=config.filter_by_nem_regions,
         filter_to_isp_sub_regions=config.filter_by_isp_sub_regions,
     )
+    logging.info(template["gas_prices"]["generator"].unique())
     write_csvs(template, input_tables_dir)
 
 
@@ -321,11 +322,13 @@ def create_operational_timeseries() -> None:
     check_config_present()
     configure_logging_for_run()
     input_tables_dir = get_ispypsa_input_tables_directory()
+    pypsa_friendly_dir = get_pypsa_friendly_directory()
     parsed_trace_dir = get_parsed_trace_directory()
     operational_timeseries_location = get_operational_timeseries_location()
 
     # Load tables
     ispypsa_tables = read_csvs(input_tables_dir)
+    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
     # Create operational snapshots
     operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")

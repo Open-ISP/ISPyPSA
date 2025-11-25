@@ -88,7 +88,7 @@ def get_valid_config():
         "iasr_workbook_version": "6.0",
         "paths": {
             "ispypsa_run_name": "test",
-            "parsed_traces_directory": "tests/test_traces",
+            "parsed_traces_directory": "tests/trace_data",
             "parsed_workbook_cache": "ispypsa_runs/workbook_table_cache",
             "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
             "run_directory": "ispypsa_runs/test",
@@ -392,7 +392,7 @@ def test_base_paths_only():
     model = ModelConfig(**config)
 
     # Verify only base paths are present
-    assert model.paths.parsed_traces_directory == "tests/test_traces"
+    assert model.paths.parsed_traces_directory == "tests/trace_data"
     assert model.paths.parsed_workbook_cache == "ispypsa_runs/workbook_table_cache"
     assert model.paths.workbook_path == "tests/test_workbooks/test-workbook.xlsx"
     assert model.paths.run_directory == "ispypsa_runs/test"

@@ -1,2 +1,5 @@
 REZ names,Region,REZ network voltage (kV),Connection capacity (MVA),Feeder length (km),Total cost ($M),$/kW,System Strength connection cost ($/kW)
-North West New South Wales,NSW,330,400,10,54,135,0
+Far North Queensland,QLD,275,300.0,5.0,35.0,116.67,137.0
+Darling Downs,QLD,275,300.0,5.0,35.0,116.67,0.0
+North West New South Wales,NSW,330,400.0,10.0,54.0,135.0,0.0
+New England,NSW,330,400.0,10.0,54.0,135.0,0.0

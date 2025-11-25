@@ -1,2 +1,4 @@
 ID,Name,NEM Region,NTNDP Zone,ISP Sub-region,Regional Cost Zones
 N1,North West NSW,NSW,NNS,NNSW,Medium
+Q8,Darling Downs,QLD,SWQ,SQ,Low
+N2,New England,NSW,NNS,NNSW,Low

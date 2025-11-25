@@ -94,10 +94,8 @@ def test_core_functionality_and_triggers(
     # Add a dummy row to trigger regeneration
     df = pd.read_csv(generators_file)
     if len(df) > 0:
-        new_row = df.iloc[0].copy()
-        new_row["name"] = "Dummy Generator CE Test"
-        new_row["carrier"] = "Black Coal"
-        df = pd.concat([df, new_row.to_frame().T], ignore_index=True)
+        m = df["p_nom"] > 0.0
+        df.loc[m, ["p_nom"]] = df.loc[:, ["p_nom"]] + 1.0
     df.to_csv(generators_file, index=False)
 
     result = run_cli_command(

@@ -19,18 +19,6 @@ paths:
   # This name is used to select the output folder within `ispypsa_runs`
   ispypsa_run_name: development
 
-# ===== Trace Data =====================================================================
-
-trace_data:
-  # The type of trace dataset to download when using CLI download tasks
-  # Options: "example" (smaller, for testing) or "full" (complete dataset)
-  # Default: "example"
-  dataset_type: example
-
-  # The year of trace dataset to download when using CLI download tasks
-  # Currently only 2024 is supported
-  # Default: 2024
-  dataset_year: 2024
 
 # ===== ISPyPSA templating =============================================================
 
@@ -80,6 +68,7 @@ network:
   # through custom constraint (MW).
   rez_to_sub_region_transmission_default_limit: 1e5
 
+
 # ===== Temporal =======================================================================
 
 temporal:
@@ -93,28 +82,25 @@ temporal:
     end_year: 2027
   capacity_expansion:
     resolution_min: 30
-    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs from the beginning
     # of the year (financial or calendar depending on the config) until the next the
     # period begins.
     investment_periods: [2025, 2026]
     aggregation:
-    # Representative weeks to use instead of full yearly temporal representation.
-    representative_weeks: [12]
+      # Representative weeks to use instead of full yearly temporal representation.
+      representative_weeks: [12]
   operational:
     resolution_min: 30
-    # Order to use reference years in, repeated if necessary.
     reference_year_cycle: [2018]
-    # Length of window for rolling horizon optimisation.
     horizon: 336
-    # Overlap between rolling horizon optimisation windows.
     overlap: 48
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
       representative_weeks: [12]
 
+
 # ===== Solver =======================================================================
 
-# Optimisation solver to use
+# External solver to use
 solver: highs

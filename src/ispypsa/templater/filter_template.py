@@ -103,6 +103,12 @@ def _filter_template(
     # Copy over tables that don't need filtering
     tables_no_filtering = [
         "build_costs",
+        "biomass_prices",
+        "biomethane_prices",
+        "gas_prices",
+        "gpg_emissions_reduction_biomethane",
+        "hydrogen_prices",
+        "gpg_emissions_reduction_h2",
         "new_entrant_build_costs",
         "new_entrant_wind_and_solar_connection_costs",
         "powering_australia_plan",
@@ -255,7 +261,6 @@ def _filter_generator_dependent_tables(
     generator_based_tables = [
         "closure_years",
         "coal_prices",
-        "gas_prices",
         "seasonal_ratings",
     ]
 

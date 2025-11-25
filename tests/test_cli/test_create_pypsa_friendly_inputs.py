@@ -102,13 +102,11 @@ def test_core_functionality_and_triggers(
     # Add a dummy row to trigger regeneration
     df = pd.read_csv(generators_file)
     if len(df) > 0:
-        new_row = df.iloc[0].copy()
-        new_row["generator"] = "Dummy Generator"
-        new_row["fuel_type"] = "Black Coal"
-        df = pd.concat([df, new_row.to_frame().T], ignore_index=True)
+        df.loc[:, ["maximum_capacity_mw"]] = df.loc[:, ["maximum_capacity_mw"]] + 1.0
     df.to_csv(generators_file, index=False)
 
     result = run_cli_command([f"config={mock_config}", "create_pypsa_friendly_inputs"])
+    print(result.stdout)
     assert result.returncode == 0
     assert_task_ran(result.stdout, "create_pypsa_friendly_inputs")
 
