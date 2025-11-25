@@ -111,6 +111,7 @@ def get_valid_config():
             "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
             "run_directory": "ispypsa_runs/test",
         },
+        "create_plots": True,
     }
 
 

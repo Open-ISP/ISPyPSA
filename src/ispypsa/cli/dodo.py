@@ -17,6 +17,19 @@ from ispypsa.data_fetch import (
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.plotting import (
+    create_capacity_expansion_plot_suite,
+    create_operational_plot_suite,
+    generate_results_website,
+    save_plots,
+)
+from ispypsa.results import (
+    extract_regions_and_zones_mapping,
+    extract_tabular_capacity_expansion_results,
+    extract_tabular_operational_results,
+    list_capacity_expansion_results_files,
+    list_operational_results_files,
+)
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     list_templater_output_files,
@@ -92,6 +105,26 @@ def get_operational_timeseries_location():
 def get_pypsa_outputs_directory():
     """Get PyPSA outputs directory path."""
     return get_run_directory() / "outputs"
+
+
+def get_capacity_expansion_tabular_results_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_tables"
+
+
+def get_capacity_expansion_plots_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_plots"
+
+
+def get_operational_tabular_results_directory():
+    """Get operational tabular results directory path."""
+    return get_pypsa_outputs_directory() / "operational_tables"
+
+
+def get_operational_plots_directory():
+    """Get operational plots directory path."""
+    return get_pypsa_outputs_directory() / "operational_plots"
 
 
 def return_empty_list_if_no_config(func):
@@ -176,6 +209,22 @@ def get_operational_timeseries_files():
     return list_timeseries_files(
         config, ispypsa_tables, get_operational_timeseries_location()
     )
+
+
+@return_empty_list_if_no_config
+def get_capacity_expansion_tabular_results_files():
+    """Get list of capacity expansion tabular results files."""
+    check_config_present()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    return list_capacity_expansion_results_files(results_dir)
+
+
+@return_empty_list_if_no_config
+def get_operational_tabular_results_files():
+    """Get list of operational tabular results files."""
+    check_config_present()
+    results_dir = get_operational_tabular_results_directory()
+    return list_operational_results_files(results_dir)
 
 
 def configure_logging_for_run() -> None:
@@ -387,6 +436,14 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
 
+def get_create_plots_arg() -> bool:
+    create_plots = config.create_plots
+    cli_create_plots = get_var("create_plots", None)
+    if cli_create_plots is not None:
+        create_plots = cli_create_plots.lower() == "true"
+    return create_plots
+
+
 def create_and_run_capacity_expansion_model() -> None:
     check_config_present()
     configure_logging_for_run()
@@ -397,9 +454,11 @@ def create_and_run_capacity_expansion_model() -> None:
     )
 
     # Get dont_run flag from doit variables
-    dont_run = get_var("dont_run_capacity_expansion", "False") == "True"
+    dont_run = get_var("dont_run_capacity_expansion", "False").lower == "true"
 
     create_or_clean_task_output_folder(capacity_expansion_pypsa_file.parent)
+
+    ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
 
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
@@ -408,11 +467,37 @@ def create_and_run_capacity_expansion_model() -> None:
         capacity_expansion_timeseries_location,
     )
 
+    # Save before optimising incase solving fails and you want a copy
+    # of the network for debugging.
+    network.export_to_netcdf(capacity_expansion_pypsa_file)
+
     if not dont_run:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
+        network.export_to_netcdf(capacity_expansion_pypsa_file)
+        results = extract_tabular_capacity_expansion_results(network, ispypsa_tables)
 
-    network.export_to_netcdf(capacity_expansion_pypsa_file)
+        # Load ispypsa_tables to create regions and zones mapping
+        ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+        results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+            ispypsa_tables
+        )
+
+        write_csvs(results, get_capacity_expansion_tabular_results_directory())
+
+        if get_create_plots_arg():
+            plots = create_capacity_expansion_plot_suite(results)
+            plots_dir = get_capacity_expansion_plots_directory()
+            save_plots(plots, plots_dir)
+            generate_results_website(
+                plots,
+                plots_dir,
+                get_pypsa_outputs_directory(),
+                site_name=f"{config.paths.ispypsa_run_name}",
+                output_filename="capacity_expansion_results_viewer.html",
+                subtitle="Capacity Expansion Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+            )
 
 
 def create_operational_timeseries() -> None:
@@ -477,6 +562,90 @@ def create_and_run_operational_model() -> None:
 
     # Save the network for operational optimization
     network.export_to_netcdf(operational_pypsa_file)
+
+    if not dont_run:
+        # Extract operational results
+        results = extract_tabular_operational_results(
+            network, pypsa_friendly_input_tables
+        )
+
+        # Load ispypsa_tables to create regions and zones mapping
+        ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+        results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+            ispypsa_tables
+        )
+
+        write_csvs(results, get_operational_tabular_results_directory())
+
+        if get_create_plots_arg():
+            plots = create_operational_plot_suite(results)
+            plots_dir = get_operational_plots_directory()
+            save_plots(plots, plots_dir)
+            generate_results_website(
+                plots,
+                plots_dir,
+                get_pypsa_outputs_directory(),
+                output_filename="operational_results_viewer.html",
+                site_name=f"{config.paths.ispypsa_run_name}",
+                subtitle="Operational Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+            )
+
+
+def create_capacity_expansion_plots_suite() -> None:
+    """Create and save plots from capacity expansion results."""
+    check_config_present()
+    configure_logging_for_run()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    plots_dir = get_capacity_expansion_plots_directory()
+
+    # Load results from CSV
+    results = read_csvs(results_dir)
+
+    # Create plots
+    plots = create_capacity_expansion_plot_suite(results)
+
+    # Save plots
+    save_plots(plots, plots_dir)
+
+    # Generate website
+    generate_results_website(
+        plots,
+        plots_dir,
+        get_pypsa_outputs_directory(),
+        output_filename="capacity_expansion_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
+        subtitle="Capacity Expansion Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+    )
+
+
+def create_operational_plots_suite() -> None:
+    """Create and save plots from operational results."""
+    check_config_present()
+    configure_logging_for_run()
+    results_dir = get_operational_tabular_results_directory()
+    plots_dir = get_operational_plots_directory()
+
+    # Load results from CSV
+    results = read_csvs(results_dir)
+
+    # Create plots
+    plots = create_operational_plot_suite(results)
+
+    # Save plots
+    save_plots(plots, plots_dir)
+
+    # Generate website
+    generate_results_website(
+        plots,
+        plots_dir,
+        get_pypsa_outputs_directory(),
+        output_filename="operational_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
+        subtitle="Operational Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+    )
 
 
 def remove_deps_and_targets_if_no_config(func):
@@ -554,11 +723,15 @@ def task_create_and_run_capacity_expansion_model():
         get_pypsa_friendly_input_files() + get_capacity_expansion_timeseries_files()
     )
 
+    capacity_expansion_targets = [
+        get_capacity_expansion_pypsa_file()
+    ] + get_capacity_expansion_tabular_results_files()
+
     return {
         "actions": [(create_and_run_capacity_expansion_model,)],
         "task_dep": ["create_pypsa_friendly_inputs"],
         "file_dep": capacity_expansion_deps,
-        "targets": [get_capacity_expansion_pypsa_file()],
+        "targets": capacity_expansion_targets,
     }
 
 
@@ -593,6 +766,47 @@ def task_create_and_run_operational_model():
         "actions": [create_and_run_operational_model],
         "file_dep": operational_deps,
         "targets": [get_operational_pypsa_file()],
+    }
+
+
+def check_results_files_exist():
+    """Check if all dependencies exist"""
+    dependencies = get_capacity_expansion_tabular_results_files()
+    for dep in dependencies:
+        if not os.path.exists(dep):
+            raise FileNotFoundError(
+                f"Results file {dep} not found. Please run the capacity expansion model first."
+            )
+
+
+def check_operational_results_files_exist():
+    """Check if all operational results dependencies exist"""
+    dependencies = get_operational_tabular_results_files()
+    for dep in dependencies:
+        if not os.path.exists(dep):
+            raise FileNotFoundError(
+                f"Results file {dep} not found. Please run the operational model first."
+            )
+
+
+@remove_deps_and_targets_if_no_config
+def task_create_capacity_expansion_plots():
+    """Create and save plots from capacity expansion results."""
+    return {
+        "actions": [check_results_files_exist, create_capacity_expansion_plots_suite],
+        # "uptodate": [check_results_files_exist()],
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_create_operational_plots():
+    """Create and save plots from operational results."""
+    return {
+        "actions": [
+            check_operational_results_files_exist,
+            create_operational_plots_suite,
+        ],
+        # "uptodate": [check_operational_results_files_exist()],
     }
 
 

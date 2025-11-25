@@ -24,8 +24,8 @@ def test_translate_existing_flow_path_capacity_to_links(csv_str_to_df):
     # Expected result
     expected_links_csv = """
     isp_name,    name,                 carrier,  bus0,     bus1,     p_nom,     p_min_pu, build_year, lifetime,  capital_cost,  p_nom_extendable
-    PathA-PathB, PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,     0,          INF,       ,              False
-    PathB-PathC, PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,     0,          INF,       ,              False
+    PathA-PathB, PathA-PathB_existing, AC,       NodeA,    NodeB,    1000,      -1.0,     0,       INF,       ,              False
+    PathB-PathC, PathB-PathC_existing, AC,       NodeB,    NodeC,    2000,      -1.0,     0,       INF,       ,              False
     """
     expected_links = csv_str_to_df(expected_links_csv)
     expected_links["capital_cost"] = pd.to_numeric(
@@ -33,7 +33,9 @@ def test_translate_existing_flow_path_capacity_to_links(csv_str_to_df):
     )
 
     # Convert the flow paths to links
-    result = _translate_existing_flow_path_capacity_to_links(existing_flow_paths)
+    result = _translate_existing_flow_path_capacity_to_links(
+        existing_flow_paths, start_year=2025
+    )
 
     # Assert the results match expectations
     pd.testing.assert_frame_equal(
@@ -226,8 +228,13 @@ def test_translate_flow_paths_to_links_with_expansion(csv_str_to_df):
         class MockCapacityExpansion:
             investment_periods = [2026, 2027]
 
+        class MockRange:
+            start_year = 2026
+            end_year = 2027
+
         year_type = "fy"
         capacity_expansion = MockCapacityExpansion()
+        range = MockRange()
 
     class MockNetworkConfig:
         annuitisation_lifetime = 30
@@ -276,8 +283,13 @@ def test_translate_flow_paths_to_links_without_expansion(csv_str_to_df):
         class MockCapacityExpansion:
             investment_periods = [2026, 2027]
 
+        class MockRange:
+            start_year = 2026
+            end_year = 2027
+
         year_type = "fy"
         capacity_expansion = MockCapacityExpansion()
+        range = MockRange()
 
     class MockNetworkConfig:
         annuitisation_lifetime = 30

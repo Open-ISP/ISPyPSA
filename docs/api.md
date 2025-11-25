@@ -60,4 +60,4 @@ Python script.
 
 ::: ispypsa.model.update_network_timeseries
 
-::: ispypsa.model.save_results
+::: ispypsa.model.save_pypsa_network

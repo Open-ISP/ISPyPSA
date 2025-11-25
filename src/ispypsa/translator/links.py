@@ -23,7 +23,7 @@ def _translate_flow_paths_to_links(
     """
     existing_flow_paths_df = ispypsa_tables["flow_paths"]
     existing_links = _translate_existing_flow_path_capacity_to_links(
-        existing_flow_paths_df
+        existing_flow_paths_df, config.temporal.range.start_year
     )
 
     if config.network.transmission_expansion:
@@ -44,11 +44,14 @@ def _translate_flow_paths_to_links(
         [existing_links, expansion_links], ignore_index=True, sort=False
     )
 
+    all_links["isp_type"] = "flow_path"
+
     return all_links
 
 
 def _translate_existing_flow_path_capacity_to_links(
     existing_flow_paths: pd.DataFrame,
+    start_year: int,
 ) -> pd.DataFrame:
     """Translates existing flow path capacities to PyPSA link components.
 

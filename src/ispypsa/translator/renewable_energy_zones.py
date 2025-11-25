@@ -28,13 +28,18 @@ def _translate_renewable_energy_zone_build_limits_to_links(
     existing_links = _translate_existing_rez_connections_to_links(
         renewable_energy_zone_build_limits,
         config.network.rez_to_sub_region_transmission_default_limit,
+        config.temporal.range.start_year,
     )
 
     # Create expansion links from rez expansion costs if expansion is enabled
     if config.network.rez_transmission_expansion and not rez_expansion_costs.empty:
+        links_to_duplicate = existing_links[
+            existing_links["isp_type"] != "rez_no_limit"
+        ].copy()
+
         expansion_links = _translate_expansion_costs_to_links(
             expansion_costs=rez_expansion_costs,
-            existing_links_df=existing_links.copy(),
+            existing_links_df=links_to_duplicate,
             investment_periods=config.temporal.capacity_expansion.investment_periods,
             year_type=config.temporal.year_type,
             wacc=config.wacc,
@@ -42,6 +47,9 @@ def _translate_renewable_energy_zone_build_limits_to_links(
             id_column="rez_constraint_id",
             match_column="bus0",
         )
+
+        expansion_links["isp_type"] = "rez"
+
         # Combine existing and expansion links
         all_links = pd.concat(
             [existing_links, expansion_links], ignore_index=True, sort=False
@@ -55,6 +63,7 @@ def _translate_renewable_energy_zone_build_limits_to_links(
 def _translate_existing_rez_connections_to_links(
     renewable_energy_zone_build_limits: pd.DataFrame,
     rez_to_sub_region_transmission_default_limit: float,
+    start_year: int,
 ) -> pd.DataFrame:
     """Process existing REZ connection limits to PyPSA links.
 
@@ -75,6 +84,8 @@ def _translate_existing_rez_connections_to_links(
 
     # Links without an explicit limit because their limits are modelled through
     # custom constraints are given a very large capacity
+    links["isp_type"] = "rez"
+    links.loc[links["p_nom"].isna(), "isp_type"] = "rez_no_limit"
     links["p_nom"] = links["p_nom"].fillna(rez_to_sub_region_transmission_default_limit)
 
     links["p_min_pu"] = -1.0
