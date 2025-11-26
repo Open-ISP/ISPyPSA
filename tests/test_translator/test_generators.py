@@ -50,9 +50,9 @@ def test_translate_ecaa_generators(csv_str_to_df, translated_generator_column_or
     # Define expected output
     expected_output_csv = """
     name,        p_nom,  p_min_pu,  build_year,  carrier,      lifetime,  isp_fuel_cost_mapping,  isp_vom_$/mwh_sent_out,  isp_heat_rate_gj/mwh,  bus,   marginal_cost,  p_nom_extendable,  capital_cost,  isp_technology_type,     isp_rez_id
-    Bayswater,   660.0,  0.227,     2025,        Black__Coal,  6.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical,    NaN
+    Bayswater,   660.0,  0.227,     2024,        Black__Coal,  7.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical,    NaN
     Borumba,     200.0,  0.0,       2030,        Hydro,        Infinity,  Hydro,                  0.0,                     0.0,                   SQ,    borumba,        False,             0.0,           Pumped__Hydro,           NaN
-    Tallawarra,  420.0,  0.405,     2025,        Gas,          14.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT,                    NaN
+    Tallawarra,  420.0,  0.405,     2024,        Gas,          15.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT,                    NaN
     """
     expected_output = csv_str_to_df(expected_output_csv)
     expected_output = expected_output.replace("Infinity", np.inf)

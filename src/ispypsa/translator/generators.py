@@ -62,7 +62,7 @@ def _translate_ecaa_generators(
 
     # calculate lifetime based on expected closure_year - build_year:
     ecaa_generators["lifetime"] = ecaa_generators["closure_year"].map(
-        lambda x: float(x - investment_periods[0]) if x > 0 else np.inf
+        lambda x: float(x - investment_periods[0] + 1) if x > 0 else np.inf
     )
     ecaa_generators = ecaa_generators[ecaa_generators["lifetime"] > 0].copy()
 
@@ -87,7 +87,7 @@ def _translate_ecaa_generators(
 
     ecaa_generators["commissioning_date"] = ecaa_generators["commissioning_date"].apply(
         _get_commissioning_or_build_year_as_int,
-        default_build_year=investment_periods[0],
+        default_build_year=investment_periods[0] - 1,
         year_type=year_type,
     )
     # Add marginal_cost col with a string mapping to the name of parquet file
