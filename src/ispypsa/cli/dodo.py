@@ -469,7 +469,6 @@ def create_and_run_capacity_expansion_model() -> None:
         capacity_expansion_timeseries_location,
     )
 
-
     # Save before optimising incase solving fails and you want a copy
     # of the network for debugging.
     network.export_to_netcdf(capacity_expansion_pypsa_file)

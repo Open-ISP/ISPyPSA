@@ -65,7 +65,7 @@ AEMO provides many of the inputs for its ISP models in the
 Inputs Assumptions Scenarios Report (IASR) MS Excel workbook. The workbook parsing
 step of the workflow extracts this data from the workbook and saves the data in a set of
 CSV files, with each CSV file corresponding to a table from the workbook. The parsing
-is handled by the external package [isp-workbook-parser](https://github.com/Open-ISP/isp-workbook-parser), 
+is handled by the external package [isp-workbook-parser](https://github.com/Open-ISP/isp-workbook-parser),
 but running the parser is integrated directly
 into the ISPyPSA workflow via a call to the isp-workbook-parser API. The workbook
 parsing can be run using either the ISPyPSA CLI or API:
@@ -93,7 +93,7 @@ parsing can be run using either the ISPyPSA CLI or API:
 AEMO provides time series data for wind and solar resource availability, and demand as
 CSVs. The trace parsing performs data format and naming conventions adjustments to
 integrate the data smoothly with the rest of the ISPyPSA workflow. The parsing is
-handled by the external package [isp-trace-parser](https://github.com/Open-ISP/isp-trace-parser), 
+handled by the external package [isp-trace-parser](https://github.com/Open-ISP/isp-trace-parser),
 the trace parsing is not integrated directly into
 the ISPyPSA workflow due to the long computational time required, instead pre-parsed
 trace data is provided during the initial input downloading workflow step.

@@ -225,5 +225,3 @@ def test_single_task_mode_fails_without_deps(mock_config, tmp_path, run_cli_comm
     config_path = create_config_with_missing_cache(mock_config, tmp_path)
     result = run_cli_command([f"config={config_path}", "create_ispypsa_inputs", "-s"])
     assert result.returncode != 0
-
-
