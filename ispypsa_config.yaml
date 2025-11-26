@@ -61,6 +61,13 @@ unserved_energy:
   max_per_node: 100000.0
 
 
+# ===== Regional scope =================================================================
+
+# Filter the model by NEM regions or ISP sub regions.
+filter_by_nem_regions: [NSW]
+# filter_by_isp_sub_regions: [NNSW, CNSW]
+
+
 # ===== Network ========================================================================
 
 network:

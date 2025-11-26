@@ -1022,7 +1022,7 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
         generator_traces[gen_type][gen] = trace
 
-        return generator_traces
+    return generator_traces
 
 
 def create_pypsa_friendly_new_entrant_generator_timeseries(

@@ -739,8 +739,8 @@ def test_create_vre_build_limit_constraints_offshore_wind(csv_str_to_df):
 
     expected_rhs_csv = """
     constraint_name,            rhs,        constraint_type
-    REZ1_WFL_build_limit,       1300.0,     "<="
-    REZ1_WFX_build_limit,       750.0,      "<="
+    REZ1_WFL_build_limit,       1300.0,     <=
+    REZ1_WFX_build_limit,       750.0,      <=
     """
     expected_rhs = csv_str_to_df(expected_rhs_csv)
 

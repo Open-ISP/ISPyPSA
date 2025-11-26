@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from ispypsa.translator.create_pypsa_friendly import _filter_and_save_timeseries
 from ispypsa.translator.generators import (
     _add_new_entrant_generator_build_costs,
     _add_new_entrant_generator_connection_costs,
@@ -1175,7 +1176,7 @@ def test_create_pypsa_friendly_dynamic_marginal_costs_multiple_gens(
 
 
 def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     ecaa_ispypsa = pd.DataFrame(
         {
@@ -1193,15 +1194,24 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     snapshots = _add_investment_periods(snapshots, [2025], "fy")
 
-    create_pypsa_friendly_ecaa_generator_timeseries(
+    generator_traces_by_type = create_pypsa_friendly_ecaa_generator_timeseries(
         ecaa_ispypsa,
         parsed_trace_path,
-        tmp_path,
         generator_types=["solar", "wind"],
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
+
+    if generator_traces_by_type is not None:
+        # Filter and save generator timeseries by type
+        for gen_type, gen_traces in generator_traces_by_type.items():
+            if gen_traces:
+                _filter_and_save_timeseries(
+                    gen_traces,
+                    snapshots,
+                    tmp_path,
+                    f"{gen_type}_traces",
+                )
 
     files = [
         "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
@@ -1257,7 +1267,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
 
 def test_create_pypsa_friendly_new_entrant_generator_timeseries(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     new_entrant_ispypsa = pd.DataFrame(
         {

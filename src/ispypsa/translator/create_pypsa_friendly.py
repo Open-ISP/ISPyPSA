@@ -286,25 +286,6 @@ def create_pypsa_friendly_timeseries_inputs(
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
     )
-    create_pypsa_friendly_new_entrant_generator_timeseries(
-        ispypsa_tables["new_entrant_generators"],
-        parsed_traces_directory,
-        pypsa_friendly_timeseries_inputs_location,
-        generator_types=["solar", "wind"],
-        reference_year_mapping=reference_year_mapping,
-        year_type=config.temporal.year_type,
-        snapshots=snapshots,
-    )
-    # This is needed because numbers can be converted to strings if the data has been saved to a csv.
-    generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
-    # NOTE - maybe this function needs to be somewhere separate/handled a little
-    # different because it currently requires the translated generator table as input?
-    create_pypsa_friendly_dynamic_marginal_costs(
-        ispypsa_tables,
-        generators,
-        snapshots,
-        pypsa_friendly_timeseries_inputs_location,
-    )
 
     # Load demand timeseries data
     demand_traces = create_pypsa_friendly_bus_demand_timeseries(
@@ -330,15 +311,16 @@ def create_pypsa_friendly_timeseries_inputs(
             generator_traces=all_generator_traces,
         )
 
-    # Filter and save generator timeseries by type
-    for gen_type, gen_traces in generator_traces_by_type.items():
-        if gen_traces:
-            _filter_and_save_timeseries(
-                gen_traces,
-                snapshots,
-                pypsa_friendly_timeseries_inputs_location,
-                f"{gen_type}_traces",
-            )
+    if generator_traces_by_type is not None:
+        # Filter and save generator timeseries by type
+        for gen_type, gen_traces in generator_traces_by_type.items():
+            if gen_traces:
+                _filter_and_save_timeseries(
+                    gen_traces,
+                    snapshots,
+                    pypsa_friendly_timeseries_inputs_location,
+                    f"{gen_type}_traces",
+                )
 
     # Filter and save demand timeseries
     _filter_and_save_timeseries(
@@ -346,6 +328,27 @@ def create_pypsa_friendly_timeseries_inputs(
         snapshots,
         pypsa_friendly_timeseries_inputs_location,
         "demand_traces",
+    )
+
+    create_pypsa_friendly_new_entrant_generator_timeseries(
+        ispypsa_tables["new_entrant_generators"],
+        parsed_traces_directory,
+        pypsa_friendly_timeseries_inputs_location,
+        generator_types=["solar", "wind"],
+        reference_year_mapping=reference_year_mapping,
+        year_type=config.temporal.year_type,
+        snapshots=snapshots,
+    )
+
+    # This is needed because numbers can be converted to strings if the data has been saved to a csv.
+    generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
+    # NOTE - maybe this function needs to be somewhere separate/handled a little
+    # different because it currently requires the translated generator table as input?
+    create_pypsa_friendly_dynamic_marginal_costs(
+        ispypsa_tables,
+        generators,
+        snapshots,
+        pypsa_friendly_timeseries_inputs_location,
     )
 
     return snapshots
@@ -421,7 +424,7 @@ def list_timeseries_files(
 
 def _flatten_generator_traces(
     generator_traces_by_type: dict[str, dict[str, pd.DataFrame]],
-) -> dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame] | None:
     """Flatten nested generator traces dictionary into a single level dictionary.
 
     Args:
@@ -431,6 +434,8 @@ def _flatten_generator_traces(
     Returns:
         dict[str, pd.DataFrame]: Flattened dictionary with generator names as keys
     """
+    if generator_traces_by_type is None:
+        return None
     flattened_traces = {}
     for gen_type_traces in generator_traces_by_type.values():
         flattened_traces.update(gen_type_traces)
