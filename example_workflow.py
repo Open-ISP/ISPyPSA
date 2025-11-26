@@ -12,8 +12,7 @@ from ispypsa.model import (
     update_network_timeseries,
 )
 from ispypsa.plotting import (
-    create_capacity_expansion_plot_suite,
-    create_operational_plot_suite,
+    create_plot_suite,
     generate_results_website,
     save_plots,
 )
@@ -138,9 +137,7 @@ capacity_expansion_results["regions_and_zones_mapping"] = (
 write_csvs(capacity_expansion_results, capacity_expansion_tabular_results_directory)
 
 # Create and save capacity expansion plots
-capacity_expansion_plots = create_capacity_expansion_plot_suite(
-    capacity_expansion_results
-)
+capacity_expansion_plots = create_plot_suite(capacity_expansion_results)
 save_plots(capacity_expansion_plots, capacity_expansion_plot_results_directory)
 
 # Generate capacity expansion results website
@@ -192,7 +189,7 @@ operational_results["regions_and_zones_mapping"] = extract_regions_and_zones_map
 write_csvs(operational_results, operational_tabular_results_directory)
 
 # Create and save operational plots
-operational_plots = create_operational_plot_suite(operational_results)
+operational_plots = create_plot_suite(operational_results)
 save_plots(operational_plots, operational_plot_results_directory)
 
 # Generate operational results website

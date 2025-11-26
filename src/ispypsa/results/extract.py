@@ -3,7 +3,11 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
-from ispypsa.results.generation import extract_demand, extract_generator_dispatch
+from ispypsa.results.generation import (
+    extract_demand,
+    extract_generation_expansion_results,
+    extract_generator_dispatch,
+)
 from ispypsa.results.transmission import (
     _extract_raw_link_flows,
     extract_isp_sub_region_transmission_flows,
@@ -63,6 +67,7 @@ RESULTS_FILES = {
     "rez_transmission_flows": extract_rez_transmission_flows,
     "isp_sub_region_transmission_flows": extract_isp_sub_region_transmission_flows,
     "nem_region_transmission_flows": extract_nem_region_transmission_flows,
+    "generation_expansion": extract_generation_expansion_results,
     "generator_dispatch": extract_generator_dispatch,
     "demand": extract_demand,
 }

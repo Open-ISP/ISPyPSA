@@ -12,15 +12,16 @@ def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
 
     Returns:
         DataFrame with columns:
-            - generator_name: Name of the generator
-            - bus: Bus/sub-region where generator is located
-            - carrier: Technology type (Solar, Wind, Gas, etc.)
-            - period: Investment period/year
+            - generator: Name of the generator
+            - node: Bus/sub-region where generator is located
+            - fuel_type: Technology type (Solar, Wind, Gas, etc.)
+            - technology_type: ISP technology classification
+            - investment_period: Investment period/year
             - timestep: Datetime of dispatch
             - dispatch_mw: Power output in MW
     """
     # Get generator static data
-    generators = network.generators[["bus", "carrier"]].copy()
+    generators = network.generators[["bus", "carrier", "isp_technology_type"]].copy()
     generators = generators[generators["bus"] != "bus_for_custom_constraint_gens"]
 
     # Get dispatch time series
@@ -39,16 +40,79 @@ def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
         columns={
             "generator_name": "generator",
             "bus": "node",
+            "carrier": "fuel_type",
+            "isp_technology_type": "technology_type",
             "period": "investment_period",
         }
     )
 
     # Reorder columns
     dispatch_long = dispatch_long[
-        ["generator", "node", "carrier", "investment_period", "timestep", "dispatch_mw"]
+        [
+            "generator",
+            "node",
+            "fuel_type",
+            "technology_type",
+            "investment_period",
+            "timestep",
+            "dispatch_mw",
+        ]
     ]
 
     return dispatch_long
+
+
+def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame:
+    """Extract generation expansion results from PyPSA network.
+
+    Args:
+        network: PyPSA network with solved optimization results
+
+    Returns:
+        DataFrame with columns:
+            - generator: Name of the generator
+            - fuel_type: Fuel type (carrier)
+            - technology_type: ISP technology classification
+            - node: Bus/sub-region where generator is located
+            - capacity_mw: Optimized capacity in MW
+            - investment_period: Build year
+            - closure_year: Year when generator closes (build_year + lifetime)
+    """
+    results = network.generators.copy()
+
+    # Filter out constraint dummy generators
+    results = results[results["bus"] != "bus_for_custom_constraint_gens"]
+
+    # Calculate closure_year
+    results["closure_year"] = results["build_year"] + results["lifetime"]
+
+    # Rename columns
+    results = results.rename(
+        columns={
+            "carrier": "fuel_type",
+            "isp_technology_type": "technology_type",
+            "bus": "node",
+            "p_nom_opt": "capacity_mw",
+            "build_year": "investment_period",
+        }
+    )
+
+    # Reset index to get generator name as column
+    results = results.reset_index().rename(columns={"Generator": "generator"})
+
+    # Select and order columns
+    cols = [
+        "generator",
+        "fuel_type",
+        "technology_type",
+        "node",
+        "capacity_mw",
+        "investment_period",
+        "closure_year",
+    ]
+    results = results[cols]
+
+    return results
 
 
 def extract_demand(network: pypsa.Network) -> pd.DataFrame:

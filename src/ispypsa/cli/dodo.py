@@ -18,8 +18,7 @@ from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.model import build_pypsa_network, update_network_timeseries
 from ispypsa.plotting import (
-    create_capacity_expansion_plot_suite,
-    create_operational_plot_suite,
+    create_plot_suite,
     generate_results_website,
     save_plots,
 )
@@ -486,7 +485,7 @@ def create_and_run_capacity_expansion_model() -> None:
         write_csvs(results, get_capacity_expansion_tabular_results_directory())
 
         if get_create_plots_arg():
-            plots = create_capacity_expansion_plot_suite(results)
+            plots = create_plot_suite(results)
             plots_dir = get_capacity_expansion_plots_directory()
             save_plots(plots, plots_dir)
             generate_results_website(
@@ -576,7 +575,7 @@ def create_and_run_operational_model() -> None:
         write_csvs(results, get_operational_tabular_results_directory())
 
         if get_create_plots_arg():
-            plots = create_operational_plot_suite(results)
+            plots = create_plot_suite(results)
             plots_dir = get_operational_plots_directory()
             save_plots(plots, plots_dir)
             generate_results_website(
@@ -601,7 +600,7 @@ def create_capacity_expansion_plots_suite() -> None:
     results = read_csvs(results_dir)
 
     # Create plots
-    plots = create_capacity_expansion_plot_suite(results)
+    plots = create_plot_suite(results)
 
     # Save plots
     save_plots(plots, plots_dir)
@@ -629,7 +628,7 @@ def create_operational_plots_suite() -> None:
     results = read_csvs(results_dir)
 
     # Create plots
-    plots = create_operational_plot_suite(results)
+    plots = create_plot_suite(results)
 
     # Save plots
     save_plots(plots, plots_dir)
