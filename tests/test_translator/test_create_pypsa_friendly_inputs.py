@@ -9,6 +9,7 @@ from ispypsa.translator import (
     create_pypsa_friendly_timeseries_inputs,
     list_translator_output_files,
 )
+from ispypsa.translator.create_pypsa_friendly import _flatten_generator_traces
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_new_entrant_generators,
@@ -455,3 +456,9 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
 
     # Verify matching of snapshots to investment periods
     assert set(marginal_cost_trace["investment_periods"].unique()) == {2025}
+
+
+def test_flatten_generator_traces_none_input():
+    """Test _flatten_generator_traces returns None when input is None."""
+    result = _flatten_generator_traces(None)
+    assert result is None

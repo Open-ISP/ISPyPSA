@@ -19,8 +19,7 @@ from ispypsa.plotting import (
 )
 from ispypsa.results import (
     extract_regions_and_zones_mapping,
-    extract_tabular_capacity_expansion_results,
-    extract_tabular_operational_results,
+    extract_tabular_results,
 )
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -132,9 +131,7 @@ network.optimize.solve_model(solver_name=config.solver)
 
 # Save capacity expansion results
 save_pypsa_network(network, pypsa_outputs_directory, "capacity_expansion")
-capacity_expansion_results = extract_tabular_capacity_expansion_results(
-    network, ispypsa_tables
-)
+capacity_expansion_results = extract_tabular_results(network, ispypsa_tables)
 capacity_expansion_results["regions_and_zones_mapping"] = (
     extract_regions_and_zones_mapping(ispypsa_tables)
 )
@@ -188,7 +185,7 @@ network.optimize.optimize_with_rolling_horizon(
 save_pypsa_network(network, pypsa_outputs_directory, "operational")
 
 # Extract and save operational results
-operational_results = extract_tabular_operational_results(network, ispypsa_tables)
+operational_results = extract_tabular_results(network, ispypsa_tables)
 operational_results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
     ispypsa_tables
 )

@@ -25,10 +25,8 @@ from ispypsa.plotting import (
 )
 from ispypsa.results import (
     extract_regions_and_zones_mapping,
-    extract_tabular_capacity_expansion_results,
-    extract_tabular_operational_results,
-    list_capacity_expansion_results_files,
-    list_operational_results_files,
+    extract_tabular_results,
+    list_results_files,
 )
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
@@ -216,7 +214,7 @@ def get_capacity_expansion_tabular_results_files():
     """Get list of capacity expansion tabular results files."""
     check_config_present()
     results_dir = get_capacity_expansion_tabular_results_directory()
-    return list_capacity_expansion_results_files(results_dir)
+    return list_results_files(results_dir)
 
 
 @return_empty_list_if_no_config
@@ -224,7 +222,7 @@ def get_operational_tabular_results_files():
     """Get list of operational tabular results files."""
     check_config_present()
     results_dir = get_operational_tabular_results_directory()
-    return list_operational_results_files(results_dir)
+    return list_results_files(results_dir)
 
 
 def configure_logging_for_run() -> None:
@@ -477,7 +475,7 @@ def create_and_run_capacity_expansion_model() -> None:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
         network.export_to_netcdf(capacity_expansion_pypsa_file)
-        results = extract_tabular_capacity_expansion_results(network, ispypsa_tables)
+        results = extract_tabular_results(network, ispypsa_tables)
 
         # Load ispypsa_tables to create regions and zones mapping
         ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
@@ -570,16 +568,16 @@ def create_and_run_operational_model() -> None:
 
         # Load ispypsa_tables to create regions and zones mapping
         ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
-        results = extract_tabular_capacity_expansion_results(network, ispypsa_tables)
+        results = extract_tabular_results(network, ispypsa_tables)
         results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
             ispypsa_tables
         )
 
-        write_csvs(results, get_capacity_expansion_tabular_results_directory())
+        write_csvs(results, get_operational_tabular_results_directory())
 
         if get_create_plots_arg():
-            plots = create_capacity_expansion_plot_suite(results)
-            plots_dir = get_capacity_expansion_plots_directory()
+            plots = create_operational_plot_suite(results)
+            plots_dir = get_operational_plots_directory()
             save_plots(plots, plots_dir)
             generate_results_website(
                 plots,
