@@ -3,8 +3,8 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.plotting.generation import (
+    plot_dispatch,
     plot_generation_capacity_expansion,
-    plot_node_level_dispatch,
 )
 from ispypsa.plotting.transmission import (
     plot_aggregate_transmission_capacity,
@@ -101,14 +101,18 @@ def create_plot_suite(
             results["generation_expansion"], results["regions_and_zones_mapping"]
         ),
         "dispatch": {
-            "regional": plot_node_level_dispatch(
+            "system": plot_dispatch(
+                results["generator_dispatch"],
+                results["demand"],
+            ),
+            "regional": plot_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],
                 "nem_region_id",
                 nem_region_flows,
             ),
-            "sub_regional": plot_node_level_dispatch(
+            "sub_regional": plot_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
                 results["regions_and_zones_mapping"],

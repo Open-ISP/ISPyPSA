@@ -193,6 +193,7 @@ def test_create_plot_suite(csv_str_to_df):
         "generation/sub_regional/S2.html",
         # Note: No REZ generation plots since no generators are mapped to REZ nodes in test data
         # Dispatch - Week starting 2029-12-31
+        "dispatch/system/2030/2029-12-31.html",
         "dispatch/regional/R1/2030/2029-12-31.html",
         "dispatch/regional/R2/2030/2029-12-31.html",
         "dispatch/sub_regional/S1/2030/2029-12-31.html",

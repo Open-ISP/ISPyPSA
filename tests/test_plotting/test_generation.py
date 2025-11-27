@@ -3,8 +3,8 @@ import plotly.graph_objects as go
 
 from ispypsa.plotting.generation import (
     _prepare_transmission_data,
+    plot_dispatch,
     plot_generation_capacity_expansion,
-    plot_node_level_dispatch,
     prepare_demand_data,
     prepare_dispatch_data,
     prepare_generation_capacity,
@@ -129,8 +129,8 @@ def test_prepare_transmission_data(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected_df)
 
 
-def test_plot_node_level_dispatch(csv_str_to_df):
-    """Test plot_node_level_dispatch returns expected dictionary structure."""
+def test_plot_dispatch_with_geography(csv_str_to_df):
+    """Test plot_dispatch with geography_level returns expected dictionary structure."""
     mapping_csv = """
     nem_region_id, isp_sub_region_id, rez_id
     RegionA,       SubA,              Rez1
@@ -156,7 +156,7 @@ def test_plot_node_level_dispatch(csv_str_to_df):
     demand = csv_str_to_df(demand_csv)
     transmission_flows = csv_str_to_df(transmission_csv)
 
-    result = plot_node_level_dispatch(
+    result = plot_dispatch(
         dispatch,
         demand,
         regions_and_zones_mapping,
@@ -175,6 +175,38 @@ def test_plot_node_level_dispatch(csv_str_to_df):
     assert isinstance(entry["data"], pd.DataFrame)
     assert entry["data"]["dispatch_mw"].sum() == 100
     assert entry["data"]["fuel_type"].iloc[0] == "Coal"
+
+
+def test_plot_dispatch_system_level(csv_str_to_df):
+    """Test plot_dispatch without geography_level returns system-level structure."""
+    dispatch_csv = """
+    generator, node, fuel_type, investment_period, timestep,             dispatch_mw
+    Gen1,      SubA, Coal,      2024,              2024-01-01 12:00:00,  100
+    Gen2,      SubB, Wind,      2024,              2024-01-01 12:00:00,  50
+    """
+
+    demand_csv = """
+    node, load,  investment_period, timestep,             demand_mw
+    SubA, Load1, 2024,              2024-01-01 12:00:00,  80
+    SubB, Load2, 2024,              2024-01-01 12:00:00,  70
+    """
+
+    dispatch = csv_str_to_df(dispatch_csv)
+    demand = csv_str_to_df(demand_csv)
+
+    result = plot_dispatch(dispatch, demand)
+
+    # Check structure - no node level, just investment_period and week_starting
+    assert "2024" in result
+    # 2024-01-01 is a Monday, so week_starting is 2024-01-01
+    assert "2024-01-01" in result["2024"]
+
+    entry = result["2024"]["2024-01-01"]
+    assert isinstance(entry["plot"], go.Figure)
+    assert isinstance(entry["data"], pd.DataFrame)
+    # Total dispatch should be 150 (100 + 50)
+    assert entry["data"]["dispatch_mw"].sum() == 150
+    assert set(entry["data"]["fuel_type"].unique()) == {"Coal", "Wind"}
 
 
 def test_prepare_generation_capacity(csv_str_to_df):

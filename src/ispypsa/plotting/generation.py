@@ -169,37 +169,44 @@ def plot_generation_capacity_expansion(
 
 def prepare_dispatch_data(
     dispatch: pd.DataFrame,
-    regions_and_zones_mapping: pd.DataFrame,
-    geography_level: Literal["nem_region_id", "isp_sub_region_id"],
+    regions_and_zones_mapping: pd.DataFrame | None = None,
+    geography_level: Literal["nem_region_id", "isp_sub_region_id"] | None = None,
 ) -> pd.DataFrame:
     """Prepare generator dispatch data for plotting.
 
     Aggregates dispatch by fuel type, calculates weekly groupings,
-    and maps generators to geographic regions.
+    and optionally maps generators to geographic regions.
 
     Args:
         dispatch: DataFrame from extract_generator_dispatch() with columns:
             generator, node, fuel_type, investment_period, timestep, dispatch_mw
         regions_and_zones_mapping: DataFrame mapping buses to regions with columns:
-            nem_region_id, isp_sub_region_id, (optionally rez_id)
-        geography_level: Level of geography to map to (e.g. "nem_region_id", "isp_sub_region_id")
+            nem_region_id, isp_sub_region_id, (optionally rez_id). Required if geography_level is specified.
+        geography_level: Level of geography to map to. One of:
+            - None: System-wide aggregation (no geographic breakdown)
+            - "nem_region_id": Aggregate to NEM regions
+            - "isp_sub_region_id": Aggregate to ISP sub-regions
 
     Returns:
-        DataFrame with columns: node, fuel_type, investment_period, week_starting,
-            timestep, dispatch_mw,
+        DataFrame with columns: fuel_type, investment_period, week_starting,
+            timestep, dispatch_mw (and node if geography_level is specified)
     """
     # Convert timestep to datetime
     dispatch = dispatch.copy()
     dispatch["timestep"] = pd.to_datetime(dispatch["timestep"])
 
-    # Map node to geography level
-    node_to_region = _build_node_to_geography_mapping(
-        regions_and_zones_mapping, geography_level
-    )
-    dispatch["node"] = dispatch["node"].map(node_to_region)
+    # Map node to geography level if specified
+    if geography_level is not None:
+        node_to_region = _build_node_to_geography_mapping(
+            regions_and_zones_mapping, geography_level
+        )
+        dispatch["node"] = dispatch["node"].map(node_to_region)
+        group_cols = ["node", "investment_period", "fuel_type", "timestep"]
+    else:
+        group_cols = ["investment_period", "fuel_type", "timestep"]
 
     dispatch = (
-        dispatch.groupby(["node", "investment_period", "fuel_type", "timestep"])
+        dispatch.groupby(group_cols)
         .agg(
             {
                 "dispatch_mw": "sum",
@@ -216,36 +223,44 @@ def prepare_dispatch_data(
 
 def prepare_demand_data(
     demand: pd.DataFrame,
-    regions_and_zones_mapping: pd.DataFrame,
-    geography_level: Literal["nem_region_id", "isp_sub_region_id"],
+    regions_and_zones_mapping: pd.DataFrame | None = None,
+    geography_level: Literal["nem_region_id", "isp_sub_region_id"] | None = None,
 ) -> pd.DataFrame:
     """Prepare demand data for plotting.
 
     Aggregates demand by location, calculates weekly groupings,
-    and maps loads to geographic regions.
+    and optionally maps loads to geographic regions.
 
     Args:
         demand: DataFrame from extract_demand() with columns:
             load, node, investment_period, timestep, demand_mw
-        regions_and_zones_mapping: DataFrame mapping buses to regions
-        geography_level: Level of geography to map to (e.g. "nem_region_id", "isp_sub_region_id")
+        regions_and_zones_mapping: DataFrame mapping buses to regions.
+            Required if geography_level is specified.
+        geography_level: Level of geography to map to. One of:
+            - None: System-wide aggregation (no geographic breakdown)
+            - "nem_region_id": Aggregate to NEM regions
+            - "isp_sub_region_id": Aggregate to ISP sub-regions
 
     Returns:
-        DataFrame with columns: node, investment_period, week_starting,
-            timestep, demand_mw,
+        DataFrame with columns: investment_period, week_starting,
+            timestep, demand_mw (and node if geography_level is specified)
     """
     # Convert timestep to datetime
     demand = demand.copy()
     demand["timestep"] = pd.to_datetime(demand["timestep"])
 
-    # Map node to geography level
-    node_to_region = _build_node_to_geography_mapping(
-        regions_and_zones_mapping, geography_level
-    )
-    demand["node"] = demand["node"].map(node_to_region)
+    # Map node to geography level if specified
+    if geography_level is not None:
+        node_to_region = _build_node_to_geography_mapping(
+            regions_and_zones_mapping, geography_level
+        )
+        demand["node"] = demand["node"].map(node_to_region)
+        group_cols = ["node", "investment_period", "timestep"]
+    else:
+        group_cols = ["investment_period", "timestep"]
 
     demand = (
-        demand.groupby(["node", "investment_period", "timestep"])
+        demand.groupby(group_cols)
         .agg(
             {
                 "demand_mw": "sum",
@@ -336,29 +351,29 @@ def _create_export_trace(timesteps: pd.DatetimeIndex, values: list) -> go.Scatte
 
 def _create_plotly_figure(
     dispatch: pd.DataFrame,
-    transmission: pd.DataFrame,
     demand: pd.Series,
     title: str,
+    transmission: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """Create a Plotly figure with generation, transmission, and demand."""
+    """Create a Plotly figure with generation, demand, and optionally transmission."""
     fig = go.Figure()
 
-    # Add transmission exports to generation and load stacks
-    fig.add_trace(
-        _create_generation_trace(
-            "Transmission Exports Hidden",
-            transmission["timestep"],
-            -1 * transmission["exports_mw"],
+    # Add transmission traces if provided
+    if transmission is not None and not transmission.empty:
+        fig.add_trace(
+            _create_generation_trace(
+                "Transmission Exports Hidden",
+                transmission["timestep"],
+                -1 * transmission["exports_mw"],
+            )
         )
-    )
-
-    fig.add_trace(
-        _create_generation_trace(
-            "Transmission Imports",
-            transmission["timestep"],
-            transmission["imports_mw"],
+        fig.add_trace(
+            _create_generation_trace(
+                "Transmission Imports",
+                transmission["timestep"],
+                transmission["imports_mw"],
+            )
         )
-    )
 
     # Add generation traces (sorted alphabetically)
     fuel_types = sorted(dispatch["fuel_type"].unique())
@@ -371,10 +386,13 @@ def _create_plotly_figure(
             )
         )
 
-    # Add transmission imports to generation stack
-    fig.add_trace(
-        _create_export_trace(transmission["timestep"], -1 * transmission["exports_mw"])
-    )
+    # Add export trace if transmission provided
+    if transmission is not None and not transmission.empty:
+        fig.add_trace(
+            _create_export_trace(
+                transmission["timestep"], -1 * transmission["exports_mw"]
+            )
+        )
 
     fig.add_trace(_create_demand_trace(demand["timestep"], demand["demand_mw"]))
 
@@ -384,17 +402,18 @@ def _create_plotly_figure(
     return fig
 
 
-def plot_node_level_dispatch(
+def plot_dispatch(
     dispatch: pd.DataFrame,
     demand: pd.DataFrame,
-    regions_and_zones_mapping: pd.DataFrame,
-    geography_level: Literal["nem_region_id", "isp_sub_region_id"],
-    transmission_flows: pd.DataFrame,
+    regions_and_zones_mapping: pd.DataFrame | None = None,
+    geography_level: Literal["nem_region_id", "isp_sub_region_id"] | None = None,
+    transmission_flows: pd.DataFrame | None = None,
 ) -> dict:
-    """Plot interactive dispatch charts by geography_level.
+    """Plot interactive dispatch charts, optionally by geography level.
 
     Creates interactive stacked area charts showing dispatch by technology for each
-    node and week, with demand overlaid as a line and transmission flows.
+    week, with demand overlaid as a line. When geography_level is specified,
+    creates separate charts per node with transmission flows.
 
     Args:
         dispatch: Generator dispatch data from extract_generator_dispatch().
@@ -402,18 +421,30 @@ def plot_node_level_dispatch(
         demand: Demand data from extract_demand().
             Expected columns: load, node, investment_period, timestep, demand_mw
         regions_and_zones_mapping: Geographic mapping from extract_regions_and_zones_mapping().
-            Expected columns: nem_region_id, isp_sub_region_id, rez_id
-        transmission_flows: Transmission flows from
+            Required if geography_level is specified.
+        geography_level: Level of geography to map to. One of:
+            - None: System-wide aggregation (no geographic breakdown)
+            - "nem_region_id": Aggregate to NEM regions
+            - "isp_sub_region_id": Aggregate to ISP sub-regions
+        transmission_flows: Transmission flows. Required if geography_level is specified.
             Expected columns: <geography_level>, investment_period, timestep, imports_mw, exports_mw, net_imports_mw
-        geography_level: Level of geography to map to (e.g. "nem_region_id", "isp_sub_region_id")
 
     Returns:
-        Dictionary with structure:
+        Dictionary with structure (when geography_level is None):
         {
-            node: {"plot": plotly.Figure, "data": DataFrame}
+            <investment_period>: {
+                <week_starting>: {"plot": plotly.Figure, "data": DataFrame}
+            }
+        }
+        Or when geography_level is specified:
+        {
+            <node>: {
+                <investment_period>: {
+                    <week_starting>: {"plot": plotly.Figure, "data": DataFrame}
+                }
+            }
         }
     """
-    # Prepare data
     dispatch_prepared = prepare_dispatch_data(
         dispatch, regions_and_zones_mapping, geography_level
     )
@@ -421,51 +452,63 @@ def plot_node_level_dispatch(
         demand, regions_and_zones_mapping, geography_level
     )
 
-    transmission_prepared = _prepare_transmission_data(
-        transmission_flows, geography_level
-    )
+    if geography_level is not None:
+        transmission_prepared = _prepare_transmission_data(
+            transmission_flows, geography_level
+        )
+        group_cols = ["node", "investment_period", "week_starting"]
+    else:
+        group_cols = ["investment_period", "week_starting"]
 
     plots = {}
 
-    # Group by sub-region, period, and week
-    for (
-        node,
-        investment_period,
-        week_starting,
-    ), dispatch_group in dispatch_prepared.groupby(
-        ["node", "investment_period", "week_starting"]
-    ):
-        demand_group = demand_prepared[
-            (demand_prepared["node"] == node)
-            & (demand_prepared["investment_period"] == investment_period)
-            & (demand_prepared["week_starting"] == week_starting)
-        ]
+    for group_key, dispatch_group in dispatch_prepared.groupby(group_cols):
+        if geography_level is not None:
+            node, investment_period, week_starting = group_key
+            demand_group = demand_prepared[
+                (demand_prepared["node"] == node)
+                & (demand_prepared["investment_period"] == investment_period)
+                & (demand_prepared["week_starting"] == week_starting)
+            ]
+            transmission_group = transmission_prepared[
+                (transmission_prepared["node"] == node)
+                & (transmission_prepared["investment_period"] == investment_period)
+                & (transmission_prepared["week_starting"] == week_starting)
+            ]
+            title = (
+                f"{node} - Week {week_starting} (Investment Period {investment_period})"
+            )
+        else:
+            investment_period, week_starting = group_key
+            demand_group = demand_prepared[
+                (demand_prepared["investment_period"] == investment_period)
+                & (demand_prepared["week_starting"] == week_starting)
+            ]
+            transmission_group = None
+            title = f"System Dispatch - Week {week_starting} (Investment Period {investment_period})"
 
-        transmission_group = transmission_prepared[
-            (transmission_prepared["node"] == node)
-            & (transmission_prepared["investment_period"] == investment_period)
-            & (transmission_prepared["week_starting"] == week_starting)
-        ]
-
-        # Create figure
-        title = f"{node} - Week {week_starting} (Investment Period {investment_period})"
         fig = _create_plotly_figure(
-            dispatch_group, transmission_group, demand_group, title
+            dispatch_group, demand_group, title, transmission_group
         )
 
-        # Store in nested dict
-        if node not in plots:
-            plots[node] = {}
-        if str(investment_period) not in plots[node]:
-            plots[node][str(investment_period)] = {}
-
-        # Prepare data for CSV
         plot_data = dispatch_group.copy()
         plot_data["data_type"] = "dispatch"
 
-        plots[node][str(investment_period)][str(week_starting)] = {
-            "plot": fig,
-            "data": plot_data,
-        }
+        if geography_level is not None:
+            if node not in plots:
+                plots[node] = {}
+            if str(investment_period) not in plots[node]:
+                plots[node][str(investment_period)] = {}
+            plots[node][str(investment_period)][str(week_starting)] = {
+                "plot": fig,
+                "data": plot_data,
+            }
+        else:
+            if str(investment_period) not in plots:
+                plots[str(investment_period)] = {}
+            plots[str(investment_period)][str(week_starting)] = {
+                "plot": fig,
+                "data": plot_data,
+            }
 
     return plots
