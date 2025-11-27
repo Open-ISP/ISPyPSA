@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ispypsa.translator.buses import (
@@ -80,6 +81,9 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
     expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
     # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
+    expected_trace["Value"] = np.where(
+        expected_trace["Value"] < 0.0, 0.0, expected_trace["Value"]
+    )
 
     # The function returns a dictionary with node names as keys
     # For sub_regions granularity, NNSW should be its own node
@@ -128,6 +132,9 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
     )
     # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
+    expected_trace["Value"] = np.where(
+        expected_trace["Value"] < 0.0, 0.0, expected_trace["Value"]
+    )
 
     # The function returns a dictionary with node names as keys
     # For nem_regions granularity, NSW should be aggregated from CNSW and NNSW

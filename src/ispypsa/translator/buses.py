@@ -126,6 +126,7 @@ def create_pypsa_friendly_bus_demand_timeseries(
 
         node_traces = pd.concat(node_traces)
         node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
+        node_trace["Value"] = node_trace["Value"].clip(lower=0.0)
         # datetime in nanoseconds required by PyPSA
         node_trace["Datetime"] = node_trace["Datetime"].astype("datetime64[ns]")
         demand_traces[demand_node] = node_trace
