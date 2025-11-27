@@ -84,13 +84,21 @@ def test_translate_custom_constraints_duplicate_constraint_names(csv_str_to_df):
         "renewable_energy_zones": pd.DataFrame(),
     }
 
+    # Generators must exist for LHS terms to be kept, which keeps RHS constraints
+    generators_csv = """
+    name,  bus,   p_nom
+    GEN1,  BUS1,  100
+    GEN2,  BUS2,  200
+    """
+    generators = csv_str_to_df(generators_csv)
+
     # Should raise ValueError due to duplicate CONS1 in RHS
     with pytest.raises(
         ValueError,
         match="Duplicate constraint names found in custom constraints RHS: \\['CONS1'\\]",
     ):
         _translate_custom_constraints(
-            config, ispypsa_tables_with_dup, links, pd.DataFrame()
+            config, ispypsa_tables_with_dup, links, generators
         )
 
 
@@ -125,6 +133,12 @@ def test_translate_custom_constraints_basic_integration(csv_str_to_df):
     PATH2,     PATH2_exp_2025,  AC,       BUS3,   BUS4,   0,      True
     """
 
+    # Input: generators (GEN1 must exist to not be filtered out)
+    generators_csv = """
+    name,  bus,   p_nom
+    GEN1,  BUS1,  100
+    """
+
     # Create input data
     ispypsa_tables = {
         "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
@@ -133,6 +147,7 @@ def test_translate_custom_constraints_basic_integration(csv_str_to_df):
         "renewable_energy_zones": pd.DataFrame(),
     }
     links = csv_str_to_df(links_csv)
+    generators = csv_str_to_df(generators_csv)
 
     # Mock configuration
     class MockNetworkConfig:
@@ -154,9 +169,7 @@ def test_translate_custom_constraints_basic_integration(csv_str_to_df):
     config = MockConfig()
 
     # Call the function under test
-    result = _translate_custom_constraints(
-        config, ispypsa_tables, links, pd.DataFrame()
-    )
+    result = _translate_custom_constraints(config, ispypsa_tables, links, generators)
 
     # Check that both manual and expansion limit constraints are present
     assert "custom_constraints_lhs" in result
@@ -268,6 +281,13 @@ def test_translate_custom_constraints_mismatched_lhs_rhs(csv_str_to_df):
     CONS3,          3000,  <=
     """
 
+    # Input: generators (GEN1 and GEN2 must exist to not be filtered out)
+    generators_csv = """
+    name,  bus,   p_nom
+    GEN1,  BUS1,  100
+    GEN2,  BUS2,  200
+    """
+
     # Create input data
     ispypsa_tables = {
         "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
@@ -275,6 +295,7 @@ def test_translate_custom_constraints_mismatched_lhs_rhs(csv_str_to_df):
         "renewable_energy_zones": pd.DataFrame(),
     }
     links = pd.DataFrame()
+    generators = csv_str_to_df(generators_csv)
 
     # Mock configuration
     class MockNetworkConfig:
@@ -300,7 +321,7 @@ def test_translate_custom_constraints_mismatched_lhs_rhs(csv_str_to_df):
         ValueError,
         match="LHS constraints do not have corresponding RHS definitions.*CONS2",
     ):
-        _translate_custom_constraints(config, ispypsa_tables, links, pd.DataFrame())
+        _translate_custom_constraints(config, ispypsa_tables, links, generators)
 
 
 def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_to_df):
@@ -319,6 +340,13 @@ def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_t
     PATH1,          3000,  <=
     """
 
+    # Input: generators (GEN1 and GEN2 must exist to not be filtered out)
+    generators_csv = """
+    name,  bus,   p_nom
+    GEN1,  BUS1,  100
+    GEN2,  BUS2,  200
+    """
+
     # Create input data
     ispypsa_tables = {
         "custom_constraints_lhs": csv_str_to_df(custom_constraints_lhs_csv),
@@ -326,6 +354,7 @@ def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_t
         "renewable_energy_zones": pd.DataFrame(),
     }
     links = pd.DataFrame()
+    generators = csv_str_to_df(generators_csv)
 
     # Mock configuration
     class MockNetworkConfig:
@@ -352,7 +381,7 @@ def test_translate_custom_constraints_duplicate_from_different_sources(csv_str_t
         ValueError,
         match="Duplicate constraint names found in custom constraints RHS: \\['PATH1'\\]",
     ):
-        _translate_custom_constraints(config, ispypsa_tables, links, pd.DataFrame())
+        _translate_custom_constraints(config, ispypsa_tables, links, generators)
 
 
 def test_validate_lhs_rhs_constraints_matching_constraints(csv_str_to_df):

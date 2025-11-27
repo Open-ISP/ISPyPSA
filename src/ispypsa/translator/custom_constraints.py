@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -15,6 +17,8 @@ from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
     _VRE_BUILD_LIMIT_CUSTOM_CONSTRAINT_GROUPS,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _translate_custom_constraints(
@@ -50,7 +54,7 @@ def _translate_custom_constraints(
 
     # Process manual custom constraints
     manual_lhs, manual_rhs, constraint_generators = _process_manual_custom_constraints(
-        config, ispypsa_tables, links
+        config, ispypsa_tables, links, generators
     )
 
     _append_if_not_empty(lhs, manual_lhs)
@@ -158,6 +162,7 @@ def _process_manual_custom_constraints(
     config: ModelConfig,
     ispypsa_tables: dict[str, pd.DataFrame],
     links: pd.DataFrame,
+    generators: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]:
     """Process manually specified custom constraints
 
@@ -165,6 +170,7 @@ def _process_manual_custom_constraints(
         config: `ispypsa.config.ModelConfig` object
         ispypsa_tables: dictionary of dataframes providing the `ISPyPSA` input tables.
         links: pd.DataFrame specifying the Link components to be used in the PyPSA model
+        generators: pd.DataFrame specifying the Generator components to be used in the PyPSA model
 
     Returns:
         Tuple of (lhs, rhs, generators) where:
@@ -178,7 +184,9 @@ def _process_manual_custom_constraints(
 
     lhs = _translate_custom_constraint_lhs(ispypsa_tables["custom_constraints_lhs"])
     lhs = _expand_link_flow_lhs_terms(lhs, links)
+    lhs = _filter_generator_lhs_terms(lhs, generators)
     rhs = _translate_custom_constraint_rhs(ispypsa_tables["custom_constraints_rhs"])
+    rhs = _filter_rhs_without_lhs_terms(rhs, lhs)
 
     generators = None
 
@@ -401,6 +409,9 @@ def _expand_link_flow_lhs_terms(
     """Create lhs terms for each existing link component and each expansion option
     link component.
 
+    Link flow terms referencing links that don't exist in the model are filtered
+    out and logged.
+
     Args:
         custom_constraint_lhs: pd.DataFrame specifying lhs terms of custom
             constraints in PyPSA friendly format.
@@ -408,9 +419,6 @@ def _expand_link_flow_lhs_terms(
 
     Returns: pd.DataFrame specifying lhs terms of custom
         constraints in PyPSA friendly format.
-
-    Raises:
-        ValueError: If any link_flow terms reference links that don't exist.
     """
     link_flow_mask = (custom_constraint_lhs["component"] == "Link") & (
         custom_constraint_lhs["attribute"] == "p"
@@ -418,28 +426,32 @@ def _expand_link_flow_lhs_terms(
     link_flow_terms = custom_constraint_lhs[link_flow_mask]
     non_link_flow_terms = custom_constraint_lhs[~link_flow_mask]
 
-    # Check for unmatched link_flow terms
-    if not link_flow_terms.empty:
-        unique_link_flow_names = set(link_flow_terms["variable_name"])
-
-        # Handle None or empty links DataFrame
-        if links is None or links.empty:
-            unique_link_isp_names = set()
-        else:
-            unique_link_isp_names = set(links["isp_name"])
-
-        unmatched_links = unique_link_flow_names - unique_link_isp_names
-
-        if unmatched_links:
-            raise ValueError(
-                f"The following link_flow terms reference links that don't exist: "
-                f"{sorted(unmatched_links)}"
-            )
-
     all_lhs_terms = [non_link_flow_terms]
 
-    # Only perform merge if there are link_flow terms and links is not None/empty
-    if not link_flow_terms.empty and links is not None and not links.empty:
+    if link_flow_terms.empty:
+        return pd.concat(all_lhs_terms)
+
+    # Get valid link isp_names
+    if links is None or links.empty:
+        valid_link_isp_names = set()
+    else:
+        valid_link_isp_names = set(links["isp_name"])
+
+    # Find and log filtered links
+    all_link_names = set(link_flow_terms["variable_name"])
+    filtered_links = all_link_names - valid_link_isp_names
+    if filtered_links:
+        logger.info(
+            f"Filtering out custom constraint LHS terms for links not in model: "
+            f"{sorted(filtered_links)}"
+        )
+
+    # Filter link_flow_terms to only those that exist in the model
+    link_flow_terms = link_flow_terms[
+        link_flow_terms["variable_name"].isin(valid_link_isp_names)
+    ]
+
+    if not link_flow_terms.empty:
         link_flow_terms = pd.merge(
             link_flow_terms,
             links.loc[:, ["isp_name", "name"]],
@@ -451,6 +463,94 @@ def _expand_link_flow_lhs_terms(
         all_lhs_terms.append(link_flow_terms)
 
     return pd.concat(all_lhs_terms)
+
+
+def _filter_generator_lhs_terms(
+    custom_constraint_lhs: pd.DataFrame,
+    generators: pd.DataFrame,
+) -> pd.DataFrame:
+    """Filter out generator LHS terms that reference generators not in the model.
+
+    Generator terms (both p_nom and p attributes) are filtered to only include
+    generators that exist in the generators DataFrame. Terms referencing generators
+    that don't exist (e.g., due to lifetime expiration) are filtered out and logged.
+
+    Args:
+        custom_constraint_lhs: pd.DataFrame specifying lhs terms of custom
+            constraints in PyPSA friendly format.
+        generators: pd.DataFrame detailing the PyPSA generators to be included
+            in the model. Must have a 'name' column.
+
+    Returns:
+        pd.DataFrame specifying lhs terms of custom constraints with non-existent
+        generator terms filtered out.
+    """
+    if custom_constraint_lhs.empty:
+        return custom_constraint_lhs
+
+    generator_mask = custom_constraint_lhs["component"] == "Generator"
+    generator_terms = custom_constraint_lhs[generator_mask]
+    non_generator_terms = custom_constraint_lhs[~generator_mask]
+
+    if generator_terms.empty:
+        return custom_constraint_lhs
+
+    # Get set of valid generator names
+    if generators is None or generators.empty:
+        valid_generator_names = set()
+    else:
+        valid_generator_names = set(generators["name"])
+
+    # Find and log filtered generators
+    all_generator_names = set(generator_terms["variable_name"])
+    filtered_generators = all_generator_names - valid_generator_names
+    if filtered_generators:
+        logger.info(
+            f"Filtering out custom constraint LHS terms for generators not in model: "
+            f"{sorted(filtered_generators)}"
+        )
+
+    # Filter generator terms to only those that exist in the model
+    filtered_generator_terms = generator_terms[
+        generator_terms["variable_name"].isin(valid_generator_names)
+    ]
+
+    return pd.concat([non_generator_terms, filtered_generator_terms])
+
+
+def _filter_rhs_without_lhs_terms(
+    rhs: pd.DataFrame,
+    lhs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Filter out RHS constraints that have no corresponding LHS terms.
+
+    After filtering generators and links from LHS, some constraints may have
+    no LHS terms remaining. These constraints should be removed from RHS
+    since they cannot be applied.
+
+    Args:
+        rhs: pd.DataFrame specifying rhs values of custom constraints.
+        lhs: pd.DataFrame specifying lhs terms of custom constraints.
+
+    Returns:
+        pd.DataFrame with RHS constraints that have at least one LHS term.
+    """
+    if rhs.empty:
+        return rhs
+
+    constraints_with_lhs = (
+        set(lhs["constraint_name"].unique()) if not lhs.empty else set()
+    )
+    constraints_without_lhs = set(rhs["constraint_name"]) - constraints_with_lhs
+
+    if constraints_without_lhs:
+        logger.info(
+            f"Filtering out constraints with no LHS terms after component filtering: "
+            f"{sorted(constraints_without_lhs)}"
+        )
+        rhs = rhs[rhs["constraint_name"].isin(constraints_with_lhs)]
+
+    return rhs
 
 
 def _create_expansion_limit_constraints(
