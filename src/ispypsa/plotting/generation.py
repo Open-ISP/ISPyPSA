@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from ispypsa.plotting.helpers import _calculate_week_starting
 from ispypsa.plotting.style import (
     create_plotly_professional_layout,
-    get_carrier_color,
+    get_fuel_type_color,
 )
 from ispypsa.results.helpers import _build_node_to_geography_mapping
 
@@ -95,7 +95,7 @@ def _create_generation_capacity_chart(
                 name=fuel_type,
                 x=fuel_data["year"].astype(str),
                 y=fuel_data["capacity_mw"],
-                marker_color=get_carrier_color(fuel_type),
+                marker_color=get_fuel_type_color(fuel_type),
                 hovertemplate=f"<b>{fuel_type}</b><br>%{{y:,.0f}} MW<extra></extra>",
             )
         )
@@ -294,7 +294,7 @@ def _create_generation_trace(
         name=carrier,
         mode="lines",
         stackgroup="one",
-        fillcolor=get_carrier_color(carrier),
+        fillcolor=get_fuel_type_color(carrier),
         line=dict(width=0),
         legendgroup="Generation",
         showlegend=carrier != "Transmission Exports",
@@ -325,7 +325,7 @@ def _create_export_trace(timesteps: pd.DatetimeIndex, values: list) -> go.Scatte
         name="Transmission Exports",
         mode="lines",
         stackgroup="two",
-        fillcolor=get_carrier_color("Transmission Exports"),
+        fillcolor=get_fuel_type_color("Transmission Exports"),
         line=dict(width=0),
         legendgroup="Load",  # Appears in Load legend group
         legendgrouptitle_text="Load",

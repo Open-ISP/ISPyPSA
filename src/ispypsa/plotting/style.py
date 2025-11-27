@@ -1,34 +1,49 @@
 """Shared styling and color definitions for plotting."""
 
-# Technology-specific color mapping for carrier types
-CARRIER_COLORS = {
-    "Solar": "#FFD700",  # Yellow (gold)
-    "Wind": "#228B22",  # Green (forest green)
-    "Hydro": "#4682B4",  # Blue (steel blue)
-    "Water": "#4682B4",  # Same as hydro
-    "Gas": "#FF8C00",  # Orange (dark orange)
-    "Black Coal": "#2F4F4F",  # Dark gray (dark slate gray)
-    "Brown Coal": "#8B4513",  # Brown (saddle brown)
-    "Liquid Fuel": "#9370DB",  # Purple (medium purple)
-    "Hyblend": "#DDA0DD",  # Light purple (plum)
-    "Unserved Energy": "#FF0000",  # Red
-    "Battery": "#90EE90",  # Light green
-    "Pumped Hydro": "#20B2AA",  # Teal (light sea green)
-    "Transmission Imports": "#00CED1",  # Dark turquoise
-    "Transmission Exports": "#87CEEB",  # Sky blue
+# Fuel type color mapping
+# Based on fuel types in ecaa_generators.csv and new_entrant_generators.csv
+FUEL_TYPE_COLORS = {
+    # Coal
+    "Black Coal": "#121212",
+    "Brown Coal": "#744A26",
+    # Gas
+    "Gas": "#F48E1B",
+    # Liquid Fuel
+    "Liquid Fuel": "#E15C34",
+    # Hydro
+    "Water": "#5EA0C0",
+    # Solar
+    "Solar": "#FED500",
+    # Wind
+    "Wind": "#2C7629",
+    # Bioenergy
+    "Biomass": "#1D7A7A",
+    # Hydrogen
+    "Hydrogen": "#DDA0DD",
+    "Hyblend": "#DDA0DD",
+    # Transmission (for plotting)
+    "Transmission Exports": "#927BAD",
+    "Transmission Imports": "#521986",
+    # Other
+    "Unserved Energy": "#FF0000",
 }
 
 
-def get_carrier_color(carrier: str) -> str:
-    """Get the color for a carrier type.
+def get_fuel_type_color(fuel_type: str) -> str:
+    """Get the color for a fuel type.
 
     Args:
-        carrier: Carrier/technology type
+        fuel_type: Fuel/technology type
 
     Returns:
         Hex color code
     """
-    return CARRIER_COLORS.get(carrier, "#999999")  # Default gray
+    return FUEL_TYPE_COLORS.get(fuel_type, "#999999")  # Default gray
+
+
+# Backwards compatibility alias
+CARRIER_COLORS = FUEL_TYPE_COLORS
+get_carrier_color = get_fuel_type_color
 
 
 def create_plotly_professional_layout(
