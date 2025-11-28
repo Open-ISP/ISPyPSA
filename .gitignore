@@ -175,7 +175,9 @@ ispypsa_runs/**/*.yaml
 
 
 # ignore doit database
-.doit*
+*.dir
+*.dat
+*.bak
 
 # IDE specific files
 .vscode/

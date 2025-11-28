@@ -19,31 +19,35 @@ from .cli_test_helpers import (
     get_file_timestamps,
     mock_config,
     mock_workbook_file,
+    modify_config_value,
     prepare_test_cache,
     run_cli_command,
+    run_extensive,
     verify_output_files,
 )
 
 
 def test_core_functionality_and_triggers(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command, monkeypatch
+    mock_config,
+    prepare_test_cache,
+    tmp_path,
+    run_cli_command,
+    monkeypatch,
+    run_extensive,
 ):
     """Test create_operational_timeseries: fresh run, up-to-date detection, and triggers.
 
     Combines:
     - Fresh run with timeseries generation
     - Up-to-date detection
-    - Dependency modification trigger
-    - Missing single file trigger
+    - Config file modification trigger (extensive only)
+    - Dependency modification trigger (extensive only)
+    - Missing single file trigger (extensive only)
 
-    Runs: ~5 (prerequisites + fresh + up-to-date + dependency mod + missing file)
+    Runs: 2 (fresh + up-to-date), or 5 with extensive
     """
     # Set environment variable to mock cache building in subprocess
     monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
-
-    # Run prerequisite task to generate PyPSA-friendly inputs
-    # result = run_cli_command([f"config={mock_config}", "create_pypsa_friendly_inputs"])
-    # assert result.returncode == 0, f"Prerequisite failed: {result.stdout}\n{result.stderr}"
 
     # Test fresh run
     result = run_cli_command([f"config={mock_config}", "create_operational_timeseries"])
@@ -91,7 +95,17 @@ def test_core_functionality_and_triggers(
         "Files were regenerated when they shouldn't have been"
     )
 
-    # Test dependency modification trigger
+    if not run_extensive:
+        return
+
+    # Test config file modification triggers rerun (extensive only)
+    time.sleep(0.1)
+    modify_config_value(mock_config, "discount_rate", 0.06)
+    result = run_cli_command([f"config={mock_config}", "create_operational_timeseries"])
+    assert result.returncode == 0
+    assert_task_ran(result.stdout, "create_operational_timeseries")
+
+    # Test dependency modification trigger (extensive only)
     time.sleep(0.1)
 
     # Modify an ISPyPSA input file (dependency)
@@ -118,7 +132,7 @@ def test_core_functionality_and_triggers(
     for filename, old_time in second_run_timestamps.items():
         assert new_timestamps[filename] > old_time, f"{filename} was not regenerated"
 
-    # Test missing single file trigger
+    # Test missing single file trigger (extensive only)
     # Remove one of the parquet files
     demand_dir = output_dir / "demand_traces"
     parquet_files = list(demand_dir.glob("*.parquet"))
