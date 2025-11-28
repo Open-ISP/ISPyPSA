@@ -8,8 +8,7 @@
 
       We recommend using the `uv` software to install and run Python for ISPyPSA.
 
-1.  Install `uv` by following the instructions [here](https://docs.astral.
-    sh/uv/getting-started/installation/#__tabbed_1_1)
+1.  Install `uv` by following the instructions [here](https://docs.astral.sh/uv/getting-started/installation/)
 
 2. Using the command line install Python 3.12
 
@@ -225,14 +224,14 @@ pip install or a python package manager can install ISPyPSA
         ispypsa config=ispypsa_config.yaml create_ispypsa_inputs
         ```
 
-!!! note "Mastering the ispysa command line tool (CLI)"
+!!! note "Mastering the ispypsa command line tool (CLI)"
 
       This example has shown you how to start using ISPyPSA through its command line
       interface or CLI. To view the complete CLI documentation go to [CLI](cli.md)
 
 !!! note "The API alternative"
 
-      The alternaive to using the CLI is to use the API, which offers more control than
+      The alternative to using the CLI is to use the API, which offers more control than
       the CLI but takes a little extra work.  To view the complete API documentation go
       to [API](api.md)
 

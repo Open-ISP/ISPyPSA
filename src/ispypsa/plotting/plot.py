@@ -66,8 +66,25 @@ def create_plot_suite(
 
     Works for both capacity expansion and operational model results.
 
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.results import extract_tabular_results
+        >>> from ispypsa.plotting import create_plot_suite, save_plots
+
+        Extract tabular results from the solved network.
+        >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
+        >>> results = extract_tabular_results(network, ispypsa_tables)
+
+        Create the plot suite from the results.
+        >>> plots = create_plot_suite(results)
+
+        Save the plots to disk.
+        >>> save_plots(plots, Path("outputs/plots"))
+
     Args:
-        results: A dictionary of results from the ISPyPSA model. Should contain:
+        results: A dictionary of tabular results from the ISPyPSA model. Should contain:
             - transmission_expansion
             - transmission_flows
             - nem_region_transmission_flows
@@ -127,7 +144,23 @@ def create_plot_suite(
 def save_plots(charts: dict[Path, dict], base_path: Path) -> None:
     """Save a suite of Plotly plots and their underlying data to the plots directory.
 
-    All plots are saved as interactive HTML files.
+    All plots are saved as interactive HTML files with accompanying CSV data files.
+
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.plotting import create_plot_suite, save_plots
+
+        Create plots from results (see `create_plot_suite` for how to get results).
+        >>> plots = create_plot_suite(results)
+
+        Save all plots to a directory.
+        >>> save_plots(plots, Path("outputs/capacity_expansion_plots"))
+        # Creates HTML files like:
+        # outputs/capacity_expansion_plots/transmission/aggregate_capacity.html
+        # outputs/capacity_expansion_plots/transmission/aggregate_capacity.csv
+        # outputs/capacity_expansion_plots/generation.html
+        # outputs/capacity_expansion_plots/generation.csv
 
     Args:
         charts: A dictionary with file paths as keys and dicts with "plot" and "data" as values.

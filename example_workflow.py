@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from isp_trace_parser import construct_reference_year_mapping
-
 from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache
@@ -25,9 +23,7 @@ from ispypsa.templater import (
     load_manually_extracted_tables,
 )
 from ispypsa.translator import (
-    create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_inputs,
-    create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
 )
 
@@ -145,6 +141,7 @@ generate_results_website(
     capacity_expansion_plots,
     capacity_expansion_plot_results_directory,
     pypsa_outputs_directory,
+    site_name=f"{config.paths.ispypsa_run_name}",
     output_filename="capacity_expansion_results_viewer.html",
     subtitle="Capacity Expansion Analysis",
     regions_and_zones_mapping=capacity_expansion_results["regions_and_zones_mapping"],
@@ -197,6 +194,7 @@ generate_results_website(
     operational_plots,
     operational_plot_results_directory,
     pypsa_outputs_directory,
+    site_name=f"{config.paths.ispypsa_run_name}",
     output_filename="operational_results_viewer.html",
     subtitle="Operational Analysis",
     regions_and_zones_mapping=operational_results["regions_and_zones_mapping"],

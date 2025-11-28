@@ -27,29 +27,19 @@ def create_pypsa_friendly_snapshots(
     and 'investment_periods' when overwriting an existing network.
 
     Examples:
-
+        Perform required imports.
+        >>> from pathlib import Path
         >>> from ispypsa.config import load_config
-        >>> from ispypsa.data_fetch import read_csvs
-        >>> from ispypsa.translator.create_pypsa_friendly_inputs import (
-        ...     create_pypsa_friendly_snapshots
-        ... )
+        >>> from ispypsa.translator import create_pypsa_friendly_snapshots
 
-        Get a ISPyPSA ModelConfig instance
+        Load the ISPyPSA configuration.
+        >>> config = load_config(Path("ispypsa_config.yaml"))
 
-        >>> config = load_config(Path("path/to/config/file.yaml"))
+        Create snapshots for capacity expansion modelling.
+        >>> snapshots = create_pypsa_friendly_snapshots(config, "capacity_expansion")
 
-        Get ISPyPSA inputs (inparticular these need to contain the ecaa_generators and
-        sub_regions tables).
-
-        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
-
-        Define which phase of the modelling we need the time series data for.
-
-        >>> model_phase = "capacity_expansion"
-
-        Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
-
-        >>> snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+        Create snapshots for operational modelling.
+        >>> snapshots = create_pypsa_friendly_snapshots(config, "operational")
 
     Args:
         config: ispypsa.ModelConfig instance

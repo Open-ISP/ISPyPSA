@@ -17,7 +17,11 @@ from ispypsa.data_fetch import (
 )
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.model import (
+    build_pypsa_network,
+    save_pypsa_network,
+    update_network_timeseries,
+)
 from ispypsa.plotting import (
     create_plot_suite,
     generate_results_website,
@@ -508,12 +512,12 @@ def create_and_run_capacity_expansion_model() -> None:
 
     # Save before optimising incase solving fails and you want a copy
     # of the network for debugging.
-    network.export_to_netcdf(capacity_expansion_pypsa_file)
+    save_pypsa_network(network, get_pypsa_outputs_directory(), "capacity_expansion")
 
     if run_optimisation:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
-        network.export_to_netcdf(capacity_expansion_pypsa_file)
+        save_pypsa_network(network, get_pypsa_outputs_directory(), "capacity_expansion")
         results = extract_tabular_results(network, ispypsa_tables)
 
         # Load ispypsa_tables to create regions and zones mapping
@@ -608,7 +612,7 @@ def create_and_run_operational_model() -> None:
         )
 
         # Save the network for operational optimization
-        network.export_to_netcdf(operational_pypsa_file)
+        save_pypsa_network(network, get_pypsa_outputs_directory(), "operational")
 
         # Load ispypsa_tables to create regions and zones mapping
         ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())

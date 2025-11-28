@@ -441,6 +441,37 @@ def generate_results_website(
     Creates a single HTML file with a navigation pane that mirrors
     the directory structure of the plots.
 
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.results import extract_tabular_results
+        >>> from ispypsa.plotting import (
+        ...     create_plot_suite,
+        ...     save_plots,
+        ...     generate_results_website
+        ... )
+
+        Extract results and create plots.
+        >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
+        >>> results = extract_tabular_results(network, ispypsa_tables)
+        >>> plots = create_plot_suite(results)
+
+        Save plots to disk first.
+        >>> plots_dir = Path("outputs/capacity_expansion_plots")
+        >>> save_plots(plots, plots_dir)
+
+        Generate the results website.
+        >>> generate_results_website(
+        ...     plots,
+        ...     plots_dir,
+        ...     output_dir=Path("outputs"),
+        ...     output_filename="capacity_expansion_results_viewer.html",
+        ...     subtitle="Capacity Expansion Analysis",
+        ...     regions_and_zones_mapping=results["regions_and_zones_mapping"]
+        ... )
+        # Creates outputs/capacity_expansion_results_viewer.html
+
     Args:
         plots: Dictionary with Path keys (plot file paths) and dict values
                containing "plot" and "data" keys (output from create_*_plot_suite)

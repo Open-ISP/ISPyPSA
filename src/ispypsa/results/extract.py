@@ -79,6 +79,29 @@ def extract_tabular_results(
 ) -> dict[str : pd.DataFrame]:
     """Extract the results from the PyPSA network and return a dictionary of results.
 
+    Extracts generation expansion, transmission expansion, dispatch, demand, and
+    transmission flow results from the solved PyPSA network.
+
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs, write_csvs
+        >>> from ispypsa.results import extract_tabular_results
+
+        Load ISPyPSA input tables (needed for regions mapping).
+        >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
+
+        After solving the network, extract the results.
+        >>> network.optimize.solve_model(solver_name="highs")
+        >>> results = extract_tabular_results(network, ispypsa_tables)
+
+        Access specific result tables.
+        >>> generation_expansion = results["generation_expansion"]
+        >>> transmission_flows = results["transmission_flows"]
+
+        Write results to CSV files.
+        >>> write_csvs(results, Path("outputs/results"))
+
     Args:
         network: The PyPSA network object.
         ispypsa_tables: Dictionary of ISPyPSA input tables (needed for regions mapping).

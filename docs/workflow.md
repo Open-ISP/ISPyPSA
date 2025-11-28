@@ -118,6 +118,8 @@ run using either ISPyPSA CLI or API.
 === "API"
 
     ```Python
+    from pathlib import Path
+
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs, write_csvs
     from ispypsa.templater import (
@@ -133,7 +135,7 @@ run using either ISPyPSA CLI or API.
     parsed_workbook_cache = Path(config.paths.parsed_workbook_cache)
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
+        run_directory / config.paths.ispypsa_run_name / "ispypsa_inputs"
     )
 
     # Get raw IASR tables
@@ -171,11 +173,13 @@ step can be run using either the ISPyPSA CLI or API.
 === "API"
 
     ```Python
+    from pathlib import Path
+
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs, write_csvs
-    from ispypsa.templater import (
-        create_ispypsa_inputs_template,
-        load_manually_extracted_tables,
+    from ispypsa.translator import (
+        create_pypsa_friendly_inputs,
+        create_pypsa_friendly_timeseries_inputs,
     )
 
     # Load model config
@@ -188,10 +192,10 @@ step can be run using either the ISPyPSA CLI or API.
     )
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
+        run_directory / config.paths.ispypsa_run_name / "ispypsa_inputs"
     )
     pypsa_friendly_inputs_location = (
-        run_directory / config.paths.ispypsa_run_name /"pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
     )
     capacity_expansion_timeseries_location = (
         pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
@@ -208,6 +212,7 @@ step can be run using either the ISPyPSA CLI or API.
         config,
         "capacity_expansion",
         ispypsa_tables,
+        pypsa_friendly_input_tables["generators"],
         parsed_traces_directory,
         capacity_expansion_timeseries_location,
     )
@@ -229,12 +234,11 @@ you can also create the PyPSA friendly operational timeseries data at this stage
 === "API"
 
     ```Python
+    from pathlib import Path
+
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs, write_csvs
-    from ispypsa.templater import (
-        create_ispypsa_inputs_template,
-        load_manually_extracted_tables,
-    )
+    from ispypsa.translator import create_pypsa_friendly_timeseries_inputs
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")
@@ -246,10 +250,10 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     )
     run_directory = Path(config.paths.run_directory)
     ispypsa_input_tables_directory = (
-        run_directory / config.paths.ispypsa_run_name /"ispypsa_inputs"
+        run_directory / config.paths.ispypsa_run_name / "ispypsa_inputs"
     )
     pypsa_friendly_inputs_location = (
-        run_directory / config.paths.ispypsa_run_name /"pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
     )
     operational_timeseries_location = (
         pypsa_friendly_inputs_location / "operational_timeseries"
@@ -258,11 +262,15 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     # Load ISPyPSA input tables
     ispypsa_tables = read_csvs(ispypsa_input_tables_directory)
 
+    # Load PyPSA friendly input tables (for generators)
+    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_inputs_location)
+
     # Create timeseries inputs
     operational_snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,
+        pypsa_friendly_input_tables["generators"],
         parsed_traces_directory,
         operational_timeseries_location,
     )
@@ -288,9 +296,11 @@ constraints are not preserved when the PyPSA network object is saved to disk.
 === "API"
 
     ```Python
+    from pathlib import Path
 
+    from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs
-    from ispypsa.model import build_pypsa_network, save_results
+    from ispypsa.model import build_pypsa_network, save_pypsa_network
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")
@@ -299,12 +309,14 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     # Setup directory paths
     run_directory = Path(config.paths.run_directory)
     pypsa_friendly_inputs_location = (
-        run_directory / config.ispypsa_run_name / "pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
     )
     timeseries_location = (
         pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
     )
-    pypsa_outputs_directory = run_directory / "outputs"
+    pypsa_outputs_directory = (
+        run_directory / config.paths.ispypsa_run_name / "outputs"
+    )
 
     # Load pypsa friendly inputs
     pypsa_tables = read_csvs(pypsa_friendly_inputs_location)
@@ -320,7 +332,7 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     network.optimize.solve_model(solver_name=config.solver)
 
     # Save results.
-    save_results(
+    save_pypsa_network(
         network,
         pypsa_outputs_directory,
         "capacity_expansion"
@@ -348,8 +360,13 @@ computational complexity.
 === "API"
 
     ```Python
+    from pathlib import Path
+
+    import pypsa
+
+    from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs
-    from ispypsa.model import update_network_timeseries, save_results
+    from ispypsa.model import update_network_timeseries, save_pypsa_network
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")
@@ -358,12 +375,14 @@ computational complexity.
     # Setup directory paths
     run_directory = Path(config.paths.run_directory)
     pypsa_friendly_inputs_location = (
-        run_directory / config.ispypsa_run_name / "pypsa_friendly"
+        run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
     )
     operational_timeseries_location = (
         pypsa_friendly_inputs_location / "operational_timeseries"
     )
-    pypsa_outputs_directory = run_directory / "outputs"
+    pypsa_outputs_directory = (
+        run_directory / config.paths.ispypsa_run_name / "outputs"
+    )
     capacity_expansion_pypsa_file = (
         pypsa_outputs_directory / "capacity_expansion.nc"
     )
@@ -390,7 +409,7 @@ computational complexity.
         overlap=config.temporal.operational.overlap,
     )
 
-    save_results(
+    save_pypsa_network(
         network,
         pypsa_outputs_directory,
         "operational"

@@ -8,6 +8,19 @@ def load_manually_extracted_tables(
 ) -> dict[str : pd.DataFrame]:
     """Retrieves the manually extracted template files for the IASR workbook version.
 
+    Some tables can't be handled by `isp-workbook-parser` so ISPyPSA ships with the
+    missing data pre-extracted for each supported workbook version.
+
+    Examples:
+        Perform required imports.
+        >>> from ispypsa.templater import load_manually_extracted_tables
+
+        Load the manually extracted tables for the workbook version.
+        >>> manually_extracted_tables = load_manually_extracted_tables("6.0")
+
+        Access a specific table from the dictionary.
+        >>> custom_constraints_rhs = manually_extracted_tables["custom_constraints_rhs"]
+
     Args:
         iasr_workbook_version: str specifying which version of the workbook is being
             used to create the template.

@@ -73,7 +73,7 @@ def create_pypsa_friendly_inputs(
         ... )
 
         Write the resulting dataframes to CSVs.
-        >>> write_csvs(pypsa_friendly_inputs)
+        >>> write_csvs(pypsa_friendly_inputs, Path("pypsa_friendly_inputs"))
 
     Args:
         config: `ISPyPSA` `ispypsa.config.ModelConfig` object (add link to config docs).
@@ -202,69 +202,48 @@ def create_pypsa_friendly_timeseries_inputs(
     "snapshots" (datetime) and "p_set" (float specifying load in MW).
 
     Examples:
-
+        Perform required imports.
         >>> from pathlib import Path
         >>> from ispypsa.config import load_config
         >>> from ispypsa.data_fetch import read_csvs
         >>> from ispypsa.translator import (
-        ...      create_pypsa_friendly_timeseries_inputs
+        ...     create_pypsa_friendly_inputs,
+        ...     create_pypsa_friendly_timeseries_inputs
         ... )
 
-        Get a ISPyPSA ModelConfig instance
+        Load config and ISPyPSA input tables.
+        >>> config = load_config(Path("ispypsa_config.yaml"))
+        >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
 
-        >>> config = load_config(Path("path/to/config/file.yaml"))
+        Create PyPSA-friendly inputs to get the generators table.
+        >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
-        Get ISPyPSA inputs (in particular these need to contain the ecaa_generators,
-        new_entrant_generators and sub_regions tables).
-
-        >>> ispypsa_tables = read_csvs(Path("path/to/ispypsa/inputs"))
-
-        Define which phase of the modelling we need the time series data for.
-
-        >>> model_phase = "capacity_expansion"
-
-        Now create the complete set of time series files and get the snapshots.
-
+        Create timeseries inputs for capacity expansion modelling.
         >>> snapshots = create_pypsa_friendly_timeseries_inputs(
         ...     config,
-        ...     model_phase,
+        ...     "capacity_expansion",
         ...     ispypsa_tables,
-        ...     Path("path/to/parsed/isp/traces"),
-        ...     Path("path/to/write/time/series/inputs/to")
+        ...     pypsa_friendly_inputs["generators"],
+        ...     Path("parsed_traces"),
+        ...     Path("pypsa_friendly/timeseries")
         ... )
 
     Args:
-        config: ispypsa.ModelConfig instance
-        model_phase: string defining whether the snapshots are for the operational or
-            capacity expansion phase of the modelling. This allows the correct temporal
-            config inputs to be used from the ModelConfig instance.
-        ispypsa_tables: dict of pd.DataFrames defining the ISPyPSA input tables.
-            In particular the dict needs to contain the ecaa_generators, new_entrant_generators
-            and sub_regions tables, as well as fuel cost tables for fuel types present in
-            either generator table - the other tables aren't required for the time series
-            data creation. The ecaa_generators and new_entrant_generators tables need
-            the columns 'generator' or 'generator_name' respectively (name or generator
-            as str) and 'fuel_type' (str with 'Wind' and 'Solar' fuel types as appropriate).
-            The sub_regions table needs to have the columns 'isp_sub_region_id' (str) and
-            'nem_region_id' (str) if a 'regional' granularity is used.
-        snapshots: a pd.DataFrame with the columns 'period' (int) and 'snapshots'
-            (datetime) defining the time intervals and coresponding investment periods
-            to be modelled.
-        generators: a pd.DataFrame containing PyPSA-friendly generator data, including
-            columns 'marginal_cost' (str with snake-case name of generator), 'carrier'
-            (str), 'isp_fuel_cost_mapping' (str), 'isp_heat_rate_gj/mwh' (float)
-            and 'isp_vom_$/mwh_sent_out' (float). These columns are required for the
-            calculation of dynamic marginal costs for each generator.
-        parsed_traces_directory: a pathlib.Path defining where the trace data which
-            has been parsed using isp-trace-parser is located.
-        pypsa_friendly_timeseries_inputs_location: a pathlib.Path defining where the
-            time series data which is to be created should be saved.
-        snapshots: Optional pd.DataFrame containing pre-defined snapshots to use instead
-            of generating them. If provided, must contain columns 'snapshots' (datetime)
-            and 'investment_periods' (int). This is useful for testing or when custom
-            snapshots are needed.
+        config: ISPyPSA ModelConfig instance.
+        model_phase: Either "capacity_expansion" or "operational". Determines which
+            temporal config settings to use.
+        ispypsa_tables: Dictionary of ISPyPSA input tables. Must contain
+            ecaa_generators, new_entrant_generators, sub_regions tables, and fuel
+            cost tables for fuel types present in the generator tables.
+        generators: PyPSA-friendly generators DataFrame (from create_pypsa_friendly_inputs).
+            Used for calculating dynamic marginal costs.
+        parsed_traces_directory: Path to trace data parsed using isp-trace-parser.
+        pypsa_friendly_timeseries_inputs_location: Path where timeseries data will be saved.
+        snapshots: Optional pre-defined snapshots DataFrame. If provided, must contain
+            'snapshots' (datetime) and 'investment_periods' (int) columns.
 
-    Returns: pd.DataFrame containing the snapshots used for filtering the timeseries
+    Returns:
+        pd.DataFrame containing the snapshots used for the timeseries.
     """
 
     if model_phase == "capacity_expansion":

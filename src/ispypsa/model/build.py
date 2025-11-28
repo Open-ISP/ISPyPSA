@@ -46,6 +46,8 @@ def build_pypsa_network(
         path_to_pypsa_friendly_timeseries_data: `Path` to `PyPSA` friendly time series
             data (add link to timeseries data docs.
 
+    Returns:
+        pypsa.Network: A PyPSA network object ready for optimisation.
     """
     network = _initialise_network(pypsa_friendly_tables["snapshots"])
 

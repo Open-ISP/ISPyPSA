@@ -137,27 +137,23 @@ def fetch_workbook(
     Downloads the ISP workbook for the specified version from the manifest
     to the specified file path.
 
-    Parameters
-    ----------
-    workbook_version : str
-        Version string (e.g., "6.0")
-    save_path : Path | str
-        Full path where the workbook file should be saved
-        (e.g., "data/workbooks/6.0.xlsx")
+    Examples:
+        >>> fetch_workbook("6.0", "data/workbooks/isp_6.0.xlsx")
+        # Downloads ISP 6.0 workbook to data/workbooks/isp_6.0.xlsx
 
-    Raises
-    ------
-    FileNotFoundError
-        If the manifest file does not exist
-    requests.HTTPError
-        If the download fails
-    OSError
-        If there are filesystem errors
+    Args:
+        workbook_version : str
+            Version string (e.g., "6.0")
+        save_path : Path | str
+            Full path where the workbook file should be saved
+            (e.g., "data/workbooks/6.0.xlsx")
 
-    Examples
-    --------
-    >>> fetch_workbook("6.0", "data/workbooks/isp_6.0.xlsx")
-    # Downloads ISP 6.0 workbook to data/workbooks/isp_6.0.xlsx
+    Returns:
+        None
+
+    Raises:
+        FileNotFoundError: If the manifest file does not exist
+        requests.HTTPError: If the download fails
     """
     # Construct manifest path
     manifest_path = (

@@ -1,10 +1,10 @@
 # ISPyPSA API
 
-The ISPyPSA API is the set of Python functions used to carrier out the ISPyPSA modelling workflow. When the
+The ISPyPSA API is the set of Python functions used to carry out the ISPyPSA modelling workflow. When the
 [CLI](cli.md) is used the API runs in the background to carry out the workflow.
 
 Advanced users wanting more control or flexibility from the modelling workflow might want to use ISPyPSA directly
-through the API. An example of how the default ISPyPSA workflow is implement using the API is provided
+through the API. An example of how the default ISPyPSA workflow is implemented using the API is provided
 [below](#api-default-workflow). We suggest API users start by running and understanding the default workflow
 and then adapting it for their use case.
 
@@ -37,8 +37,6 @@ Python script.
 
 ::: ispypsa.data_fetch.fetch_workbook
 
-::: ispypsa.data_fetch.fetch_trace_data
-
 ## Templating (ISPyPSA Input Creation)
 
 ::: ispypsa.templater.create_ispypsa_inputs_template
@@ -61,3 +59,15 @@ Python script.
 ::: ispypsa.model.update_network_timeseries
 
 ::: ispypsa.model.save_pypsa_network
+
+## Tabular Results Extraction
+
+::: ispypsa.results.extract_tabular_results
+
+## Plotting
+
+::: ispypsa.plotting.create_plot_suite
+
+::: ispypsa.plotting.save_plots
+
+::: ispypsa.plotting.generate_results_website
