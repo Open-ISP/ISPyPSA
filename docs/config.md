@@ -6,7 +6,8 @@ is documented on this page and an example config file can be found
 ## Paths
 
 The paths settings specify the locations of model input and output data. Either relative
-or absolute paths can be used.
+or absolute paths can be used. Relative paths assume the run directory (CLI or API) is the
+root directory of the relative path.
 
 ### paths.parsed_traces_directory
 
@@ -56,6 +57,36 @@ The name of the ISPyPSA model run. This name is used to select the output folder
 Examples:
 
 ```ispypsa_run_name: modelling_test_run```
+
+## Trace Data
+
+### trace_data.dataset_type
+
+The type of trace dataset to download when using CLI download tasks. This setting is only used by the
+`download_trace_data` CLI task.
+
+Options:
+
+- "example": Smaller dataset suitable for testing and development
+- "full": Complete dataset for production runs
+
+Default: "example"
+
+Examples:
+
+```dataset_type: example```
+
+### trace_data.dataset_year
+
+The year of trace dataset to download when using CLI download tasks. This setting is used by the `download_trace_data`
+CLI task and by other modelling tasks to select the correct data set from the trace data directory. Currently only 2024
+is supported.
+
+Default: 2024
+
+Examples:
+
+```dataset_year: 2024```
 
 ## ISPyPSA Templating
 
@@ -218,8 +249,8 @@ Examples:
 
 ### temporal.range.end_year
 
-Model ends at the end of the start year. E.g. the last time interval for a
-financial year model ending in 2028 would be 2028-06-01 23:30:00.
+Model ends at the end of the end year. E.g. the last time interval for a
+financial year model ending in 2028 would be 2028-07-01 00:00:00.
 
 Examples:
 
@@ -265,7 +296,7 @@ Representative weeks to use instead of full yearly temporal representation.
 
 Options:
 
-- "None": Full yearly temporal representation is used.
+- "None": Full yearly temporal representation is used or another aggregation.
 - list[int]: a list of integers specifying weeks of year to use as representative. Weeks
   of year are defined as full weeks (Monday-Sunday) falling within the year. For
   example, if the list is "[1]" the model will only use the first full week of each
@@ -274,6 +305,21 @@ Options:
 Examples:
 
 ```representative_weeks: [12, 25, 40]```
+
+#### temporal.capacity_expansion.aggregation.named_representative_weeks
+
+Named representative weeks to use instead of full yearly temporal representation.
+
+Options:
+
+- "None": Full yearly temporal representation is used or another aggregation.
+-  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar or financial year are considered for selection.
+
+Examples:
+
+```named_representative_weeks: [residual-peak-demand, minimum-demand]```
 
 ### temporal.operational
 
@@ -327,7 +373,7 @@ Representative weeks to use instead of full yearly temporal representation.
 
 Options:
 
-- "None": Full yearly temporal representation is used.
+- "None": Full yearly temporal representation is used or another aggregation.
 - list[int]: a list of integers specifying weeks of year to use as representative. Weeks
   of year are defined as full weeks (Monday-Sunday) falling within the year. For
   example, if the list is "[1]" the model will only use the first full week of each
@@ -336,6 +382,21 @@ Options:
 Examples:
 
 ```representative_weeks: [12, 25, 40]```
+
+#### temporal.operational.aggregation.named_representative_weeks
+
+Named representative weeks to use instead of full yearly temporal representation.
+
+Options:
+
+- "None": Full yearly temporal representation is used or another aggregation.
+-  list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar or financial year are considered for selection.
+
+Examples:
+
+```named_representative_weeks: [residual-peak-demand, minimum-demand]```
 
 ## Solver
 
@@ -368,3 +429,70 @@ Not free and must be installed by the user:
 Examples:
 
 ```solver: highs```
+
+## Plotting
+
+### create_plots
+
+Whether to automatically generate plots and a results website after the capacity
+expansion and operational models complete.
+
+Options:
+
+- true: Enable automatic plot generation after model runs
+- false: Disable automatic plot generation (plots can still be generated separately
+  using the `create_capacity_expansion_plots` or `create_operational_plots` CLI tasks)
+
+Default: false
+
+Examples:
+
+```create_plots: true```
+
+Can also be overridden on the command line:
+
+```bash
+ispypsa config=config.yaml create_plots=True create_and_run_capacity_expansion_model
+```
+
+## Filtering
+
+### filter_by_nem_regions
+
+Filter the model to only include specified NEM regions. If set, all NEM regions not
+in this list will be excluded from the model. This is useful for running smaller,
+faster models focused on specific regions.
+
+Cannot be used together with `filter_by_isp_sub_regions`.
+
+Default: None (all regions included)
+
+Examples:
+
+```yaml
+# Single region
+filter_by_nem_regions: ["NSW"]
+
+# Multiple regions
+filter_by_nem_regions: ["NSW", "VIC", "QLD"]
+```
+
+### filter_by_isp_sub_regions
+
+Filter the model to only include specified ISP sub-regions. If set, all sub-regions
+not in this list will be excluded from the model. This provides finer-grained control
+than `filter_by_nem_regions`.
+
+Cannot be used together with `filter_by_nem_regions`.
+
+Default: None (all sub-regions included)
+
+Examples:
+
+```yaml
+# Single sub-region
+filter_by_isp_sub_regions: ["CNSW"]
+
+# Multiple sub-regions
+filter_by_isp_sub_regions: ["CNSW", "NNSW", "SNW"]
+```

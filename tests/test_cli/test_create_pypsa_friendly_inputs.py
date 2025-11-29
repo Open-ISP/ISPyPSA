@@ -23,24 +23,32 @@ from .cli_test_helpers import (
     get_file_timestamps,
     mock_config,
     mock_workbook_file,
+    modify_config_value,
     prepare_test_cache,
     run_cli_command,
+    run_extensive,
     verify_output_files,
 )
 
 
 def test_core_functionality_and_triggers(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command, monkeypatch
+    mock_config,
+    prepare_test_cache,
+    tmp_path,
+    run_cli_command,
+    monkeypatch,
+    run_extensive,
 ):
     """Test create_pypsa_friendly_inputs: fresh run, up-to-date detection, and triggers.
 
     Combines:
     - Fresh run with trace data processing
     - Up-to-date detection
-    - Dependency modification trigger
-    - Missing single file trigger
+    - Config file modification trigger (extensive only)
+    - Dependency modification trigger (extensive only)
+    - Missing single file trigger (extensive only)
 
-    Runs: 4 (fresh + up-to-date + dependency mod + missing file)
+    Runs: 2 (fresh + up-to-date), or 5 with extensive
     """
     # Set environment variable to mock cache building in subprocess
     monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
@@ -92,7 +100,17 @@ def test_core_functionality_and_triggers(
     second_run_timestamps = get_file_timestamps(output_dir)
     assert first_run_timestamps == second_run_timestamps
 
-    # Test dependency modification trigger
+    if not run_extensive:
+        return
+
+    # Test config file modification triggers rerun (extensive only)
+    time.sleep(0.1)
+    modify_config_value(mock_config, "discount_rate", 0.06)
+    result = run_cli_command([f"config={mock_config}", "create_pypsa_friendly_inputs"])
+    assert result.returncode == 0
+    assert_task_ran(result.stdout, "create_pypsa_friendly_inputs")
+
+    # Test dependency modification trigger (extensive only)
     time.sleep(0.1)
 
     # Modify an ISPyPSA input file (dependency)
@@ -116,7 +134,7 @@ def test_core_functionality_and_triggers(
     for filename, old_time in second_run_timestamps.items():
         assert new_timestamps[filename] > old_time
 
-    # Test missing single file trigger
+    # Test missing single file trigger (extensive only)
     target_file = output_dir / "buses.csv"
     target_file.unlink()
 

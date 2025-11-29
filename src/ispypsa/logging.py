@@ -18,12 +18,35 @@ def configure_logging(
 ) -> None:
     """Configures ISPyPSA logging
 
+    Examples:
+        Perform required imports.
+        >>> import logging
+        >>> from ispypsa.logging import configure_logging
+
+        Configure logging with default settings (console warnings, file info).
+        >>> configure_logging()
+
+        Configure logging with custom settings.
+        >>> configure_logging(
+        ...     console=True,
+        ...     console_level=logging.INFO,
+        ...     file=True,
+        ...     file_level=logging.DEBUG,
+        ...     log_file="my_run.log"
+        ... )
+
+        Disable file logging.
+        >>> configure_logging(file=False)
+
     Args:
         console: Whether to log to the console. Defaults to True.
         console_level: Level of the console logging. Defaults to logging.WARNING.
         file: Whether to log to a log file. Defaults to True.
         file_level: Level of the file logging. Defaults to logging.INFO.
         log_file: Name of the logging file. Defaults to "ISPyPSA.log".
+
+    Returns:
+        None
     """
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)

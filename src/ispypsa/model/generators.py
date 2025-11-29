@@ -91,7 +91,7 @@ def _add_generator_to_network(
     pypsa_attributes_only = {
         key: value
         for key, value in generator_definition.items()
-        if not key.startswith("isp_")
+        if not key.startswith("isp_") or key == "isp_technology_type"
     }
     network.add(**pypsa_attributes_only)
 

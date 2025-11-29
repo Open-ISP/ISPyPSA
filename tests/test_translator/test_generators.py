@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from ispypsa.translator.create_pypsa_friendly import _filter_and_save_timeseries
 from ispypsa.translator.generators import (
     _add_new_entrant_generator_build_costs,
     _add_new_entrant_generator_connection_costs,
@@ -49,9 +50,9 @@ def test_translate_ecaa_generators(csv_str_to_df, translated_generator_column_or
     # Define expected output
     expected_output_csv = """
     name,        p_nom,  p_min_pu,  build_year,  carrier,      lifetime,  isp_fuel_cost_mapping,  isp_vom_$/mwh_sent_out,  isp_heat_rate_gj/mwh,  bus,   marginal_cost,  p_nom_extendable,  capital_cost,  isp_technology_type,     isp_rez_id
-    Bayswater,   660.0,  0.227,     2025,        Black__Coal,  6.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical,    NaN
+    Bayswater,   660.0,  0.227,     2024,        Black__Coal,  7.0,       Bayswater,              2.5,                     9.8,                   CNSW,  bayswater,      False,             0.0,           Steam__Sub__Critical,    NaN
     Borumba,     200.0,  0.0,       2030,        Hydro,        Infinity,  Hydro,                  0.0,                     0.0,                   SQ,    borumba,        False,             0.0,           Pumped__Hydro,           NaN
-    Tallawarra,  420.0,  0.405,     2025,        Gas,          14.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT,                    NaN
+    Tallawarra,  420.0,  0.405,     2024,        Gas,          15.0,      Tallawarra,             3.5,                     7.2,                   SNSW,  tallawarra,     False,             0.0,           CCGT,                    NaN
     """
     expected_output = csv_str_to_df(expected_output_csv)
     expected_output = expected_output.replace("Infinity", np.inf)
@@ -143,8 +144,8 @@ def test_translate_new_entrant_generators(
             "fom_$/kw/annum": [10.0, 15.0, 25.0],
             "vom_$/mwh_sent_out": [4.0, 0.0, 0.0],
             "heat_rate_gj/mwh": [7.2, 0.0, 0.0],
-            "maximum_capacity_mw": [400, None, None],
-            "unit_capacity_mw": [50, None, None],
+            # "maximum_capacity_mw": [400, None, None],
+            # "unit_capacity_mw": [50, None, None],
             "lifetime": [40, 30, 30],
             "connection_cost_technology": ["CCGT", "Large scale Solar PV", "Wind"],
             "connection_cost_rez/_region_id": ["SA", "Tumut", "Far North Queensland"],
@@ -184,8 +185,8 @@ def test_translate_new_entrant_generators(
                 "wind_q1_wm_2025",
             ],
             "p_nom": [0.0, 0.0, 0.0],
-            "p_nom_mod": [50, 0.0, 0.0],
-            "p_nom_max": [400, np.inf, np.inf],
+            # "p_nom_mod": [50, 0.0, 0.0],
+            # "p_nom_max": [400, np.inf, np.inf],
             "p_min_pu": [0.45, 0.0, 0.0],
             "build_year": [2025, 2025, 2025],
             "carrier": ["Gas", "Solar", "Wind"],
@@ -1175,7 +1176,7 @@ def test_create_pypsa_friendly_dynamic_marginal_costs_multiple_gens(
 
 
 def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     ecaa_ispypsa = pd.DataFrame(
         {
@@ -1193,15 +1194,24 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     snapshots = _add_investment_periods(snapshots, [2025], "fy")
 
-    create_pypsa_friendly_ecaa_generator_timeseries(
+    generator_traces_by_type = create_pypsa_friendly_ecaa_generator_timeseries(
         ecaa_ispypsa,
         parsed_trace_path,
-        tmp_path,
         generator_types=["solar", "wind"],
         reference_year_mapping={2025: 2011, 2026: 2018},
         year_type="fy",
-        snapshots=snapshots,
     )
+
+    if generator_traces_by_type is not None:
+        # Filter and save generator timeseries by type
+        for gen_type, gen_traces in generator_traces_by_type.items():
+            if gen_traces:
+                _filter_and_save_timeseries(
+                    gen_traces,
+                    snapshots,
+                    tmp_path,
+                    f"{gen_type}_traces",
+                )
 
     files = [
         "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
@@ -1257,7 +1267,7 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
 
 def test_create_pypsa_friendly_new_entrant_generator_timeseries(tmp_path):
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
 
     new_entrant_ispypsa = pd.DataFrame(
         {

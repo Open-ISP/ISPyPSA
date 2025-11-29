@@ -37,30 +37,37 @@ def _annuitised_investment_costs(
 def _get_commissioning_or_build_year_as_int(
     commissioning_date_str: str, default_build_year: int, year_type: str = "fy"
 ) -> int:
-    """Return build year of CAA generator as an int, or 0 if no build year given.
+    """Return build year of CAA generator as an int, or default_build_year if no build year given.
 
     Build years are related to investment periods, so the year type (financial or
     calendar) is used to determine the correct integer year to return.
 
+    If the commissioning date results in a year earlier than default_build_year,
+    default_build_year is returned instead to align existing generators with the
+    model's first investment period.
+
     Args:
         commissioning_date_str: string describing commissioning date of committed, anticipated
             or additional generator. Expects a date string in the format "%Y-%m-%d".
-        default_build_year: integer to return if no build year is given. Typically
-            this will be the first investment period year.
+        default_build_year: integer to return if no build year is given or if the
+            commissioning year is earlier than this value. Typically this will be
+            one year before the first investment period year.
         year_type: str which should be "fy" or "calendar". If "fy" then investment
             periods are interpreted as specifying financial years (according to the
             calendar year the financial year ends in).
 
-    Returns: integer, default_build_year or year of commissioning date.
+    Returns: integer, default_build_year or year of commissioning date (whichever is later).
     """
     if not isinstance(commissioning_date_str, str):
         return default_build_year
     else:
         commissioning_date = pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")
         if commissioning_date.month < 7 or year_type == "calendar":
-            return int(commissioning_date.year)
+            commissioning_year = int(commissioning_date.year)
         else:
-            return int(commissioning_date.year) + 1
+            commissioning_year = int(commissioning_date.year) + 1
+        # Cap at default_build_year to align early generators with model start
+        return max(commissioning_year, default_build_year)
 
 
 def _get_financial_year_int_from_string(

@@ -13,12 +13,20 @@ from ispypsa.config.validators import ModelConfig
 @pytest.mark.parametrize("nodes_rezs", ["discrete_nodes", "attached_to_parent_node"])
 @pytest.mark.parametrize("year_type", ["fy", "calendar"])
 @pytest.mark.parametrize("representative_weeks", [None, [0], [12, 20]])
+@pytest.mark.parametrize(
+    "named_representative_weeks",
+    [
+        None,
+        ["residual-peak-demand", "minimum-demand"],
+    ],
+)
 def test_valid_config(
     scenario,
     regional_granularity,
     nodes_rezs,
     year_type,
     representative_weeks,
+    named_representative_weeks,
 ):
     config = get_valid_config()
 
@@ -32,6 +40,12 @@ def test_valid_config(
     )
     config["temporal"]["operational"]["aggregation"]["representative_weeks"] = (
         representative_weeks
+    )
+    config["temporal"]["capacity_expansion"]["aggregation"][
+        "named_representative_weeks"
+    ] = named_representative_weeks
+    config["temporal"]["operational"]["aggregation"]["named_representative_weeks"] = (
+        named_representative_weeks
     )
 
     ModelConfig(**config)
@@ -86,6 +100,10 @@ def get_valid_config():
         "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
         "iasr_workbook_version": "6.0",
+        "trace_data": {
+            "dataset_type": "example",
+            "dataset_year": 2024,
+        },
         "paths": {
             "ispypsa_run_name": "test",
             "parsed_traces_directory": "tests/trace_data",
@@ -93,6 +111,7 @@ def get_valid_config():
             "workbook_path": "tests/test_workbooks/test-workbook.xlsx",
             "run_directory": "ispypsa_runs/test",
         },
+        "create_plots": True,
     }
 
 
@@ -268,6 +287,23 @@ def invalid_env_variable_not_set(config):
     return config, ValueError
 
 
+def invalid_trace_dataset_type(config):
+    config["trace_data"]["dataset_type"] = "invalid"
+    return config, ValidationError
+
+
+def invalid_trace_dataset_year(config):
+    config["trace_data"]["dataset_year"] = "invalid"  # Should be int
+    return config, ValidationError
+
+
+def invalid_named_representative_weeks(config):
+    config["temporal"]["capacity_expansion"]["aggregation"][
+        "named_representative_weeks"
+    ] = ["invalid-week-type"]
+    return config, ValidationError
+
+
 @pytest.mark.parametrize(
     "modifier_func",
     [
@@ -284,7 +320,6 @@ def invalid_env_variable_not_set(config):
         invalid_rez_transmission_limit,
         invalid_end_year,
         invalid_path_not_directory,
-        invalid_path_wrong_structure,
         invalid_resolution_min_not_30,
         invalid_resolution_min_less_than_30,
         invalid_resolution_min_not_multiple_of_30,
@@ -303,6 +338,9 @@ def invalid_env_variable_not_set(config):
         invalid_missing_run_directory,
         invalid_missing_workbook_path,
         invalid_env_variable_not_set,
+        invalid_trace_dataset_type,
+        invalid_trace_dataset_year,
+        invalid_named_representative_weeks,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
@@ -393,6 +431,7 @@ def test_base_paths_only():
 
     # Verify only base paths are present
     assert model.paths.parsed_traces_directory == "tests/trace_data"
+
     assert model.paths.parsed_workbook_cache == "ispypsa_runs/workbook_table_cache"
     assert model.paths.workbook_path == "tests/test_workbooks/test-workbook.xlsx"
     assert model.paths.run_directory == "ispypsa_runs/test"

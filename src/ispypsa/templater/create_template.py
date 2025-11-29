@@ -92,7 +92,7 @@ def create_ispypsa_inputs_template(
         ... )
 
         Write the template tables to a directory as CSVs.
-        >>> write_csvs(ispypsa_inputs_template)
+        >>> write_csvs(ispypsa_inputs_template, Path("ispypsa_inputs"))
 
     Args:
         scenario: ISP scenario to generate template inputs based on.

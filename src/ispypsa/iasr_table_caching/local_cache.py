@@ -107,11 +107,26 @@ def build_local_cache(
 ) -> None:
     """Uses `isp-workbook-parser` to build a local cache of parsed workbook CSVs
 
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.iasr_table_caching import build_local_cache
+
+        Build the local cache of parsed workbook CSVs.
+        >>> build_local_cache(
+        ...     cache_path=Path("parsed_workbook_cache"),
+        ...     workbook_path=Path("path/to/ISP_Workbook.xlsx"),
+        ...     iasr_workbook_version="6.0"
+        ... )
+
     Args:
         cache_path: Path that should be created for the local cache
         workbook_path: Path to an ISP Assumptions Workbook that is supported by
             `isp-workbook-parser`
         iasr_workbook_version: str specifying the version of the work being used.
+
+    Returns:
+        None
     """
     workbook = Parser(Path(workbook_path))
     if workbook.workbook_version != iasr_workbook_version:

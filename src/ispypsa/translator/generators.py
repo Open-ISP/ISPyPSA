@@ -7,7 +7,6 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.templater.helpers import (
-    _fuzzy_match_names,
     _snakecase_string,
     _where_any_substring_appears,
 )
@@ -62,7 +61,7 @@ def _translate_ecaa_generators(
 
     # calculate lifetime based on expected closure_year - build_year:
     ecaa_generators["lifetime"] = ecaa_generators["closure_year"].map(
-        lambda x: float(x - investment_periods[0]) if x > 0 else np.inf
+        lambda x: float(x - investment_periods[0] + 1) if x > 0 else np.inf
     )
     ecaa_generators = ecaa_generators[ecaa_generators["lifetime"] > 0].copy()
 
@@ -87,7 +86,7 @@ def _translate_ecaa_generators(
 
     ecaa_generators["commissioning_date"] = ecaa_generators["commissioning_date"].apply(
         _get_commissioning_or_build_year_as_int,
-        default_build_year=investment_periods[0],
+        default_build_year=investment_periods[0] - 1,
         year_type=year_type,
     )
     # Add marginal_cost col with a string mapping to the name of parquet file
@@ -956,22 +955,18 @@ def _create_unserved_energy_generators(
 def create_pypsa_friendly_ecaa_generator_timeseries(
     ecaa_generators: pd.DataFrame,
     trace_data_path: Path | str,
-    pypsa_timeseries_inputs_path: Path | str,
     generator_types: List[Literal["solar", "wind"]],
     reference_year_mapping: dict[int, int],
     year_type: Literal["fy", "calendar"],
-    snapshots: pd.DataFrame,
-) -> None:
+) -> dict[str, dict[str, pd.DataFrame]]:
     """Gets trace data for generators by constructing a timeseries from the start to end
-    year using the reference year cycle provided. Trace data is then saved as a parquet
-    file to subdirectories labeled with their generator type.
+    year using the reference year cycle provided. Returns a dictionary organized by
+    generator type, with generator names as keys in the nested dictionaries.
 
     Args:
         ecaa_generators: `ISPyPSA` formatted pd.DataFrame detailing the ECAA generators.
         trace_data_path: Path to directory containing trace data parsed by
             isp-trace-parser
-        pypsa_timeseries_inputs_path: Path to director where timeseries inputs
-            translated to pypsa format will be saved
         reference_year_mapping: dict[int: int], mapping model years to trace data
             reference years
         generator_types: List[Literal['solar', 'wind']], which types of generator to
@@ -980,10 +975,11 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
             year with start_year and end_year specifiying the financial year to return
             data for, using year ending nomenclature (2016 -> FY2015/2016). If
             'calendar', then filtering is by calendar year.
-        snapshots: pd.DataFrame containing the expected time series values.
 
     Returns:
-        None
+        dict[str, dict[str, pd.DataFrame]]: Dictionary with generator types as keys
+            ('solar', 'wind'), each containing a dictionary with generator names as keys
+            and trace dataframes as values. Each dataframe contains columns: Datetime, Value
     """
 
     if ecaa_generators.empty:
@@ -995,19 +991,11 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
         gen_type: trace_data_path / Path(gen_type) for gen_type in generator_types
     }
 
-    output_paths = {
-        gen_type: Path(pypsa_timeseries_inputs_path, f"{gen_type}_traces")
-        for gen_type in generator_types
-    }
+    generator_types_caps = [gen_type.capitalize() for gen_type in generator_types]
 
-    for output_trace_path in output_paths.values():
-        if not output_trace_path.exists():
-            output_trace_path.mkdir(parents=True)
-
-    where_gen_type = _where_any_substring_appears(
-        ecaa_generators["fuel_type"], generator_types
-    )
-    generators = list(ecaa_generators.loc[where_gen_type, "generator"])
+    generators = ecaa_generators[
+        ecaa_generators["fuel_type"].isin(generator_types_caps)
+    ].copy()
 
     query_functions = {
         "solar": get_data.solar_project_multiple_reference_years,
@@ -1016,8 +1004,13 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
 
     gen_to_type = dict(zip(ecaa_generators["generator"], ecaa_generators["fuel_type"]))
 
-    for gen in generators:
+    # Initialize dict with generator types
+    generator_traces = {gen_type: {} for gen_type in generator_types}
+
+    for _, gen_row in generators.iterrows():
+        gen = gen_row["generator"]
         gen_type = gen_to_type[gen].lower()
+
         trace = query_functions[gen_type](
             reference_years=reference_year_mapping,
             project=gen,
@@ -1026,14 +1019,9 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
         )
         # datetime in nanoseconds required by PyPSA
         trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-        trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
-        trace = _time_series_filter(trace, snapshots)
-        _check_time_series(
-            trace["snapshots"], snapshots["snapshots"], "generator trace data", gen
-        )
-        trace = pd.merge(trace, snapshots, on="snapshots")
-        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
-        trace.to_parquet(Path(output_paths[gen_type], f"{gen}.parquet"), index=False)
+        generator_traces[gen_type][gen] = trace
+
+    return generator_traces
 
 
 def create_pypsa_friendly_new_entrant_generator_timeseries(

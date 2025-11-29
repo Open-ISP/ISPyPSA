@@ -73,8 +73,8 @@ _ECAA_GENERATOR_NEW_COLUMN_MAPPING = {
 
 _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING = {
     "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
-    "maximum_capacity_mw": "generator_name",
-    "unit_capacity_mw": "generator_name",
+    # "maximum_capacity_mw": "generator_name",
+    # "unit_capacity_mw": "generator_name",
     "lifetime": "generator_name",
     "minimum_stable_level_%": "technology_type",
     "summer_peak_rating_%": "summer_rating_mw",
@@ -195,16 +195,16 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         table_value="Winter (% of nameplate)",
         new_col_name="winter_rating_%",
     ),
-    "maximum_capacity_mw": dict(
-        table="maximum_capacity_new_entrants",
-        table_lookup="Generator type",
-        table_value="Total plant size (MW)",
-    ),
-    "unit_capacity_mw": dict(
-        table="maximum_capacity_new_entrants",
-        table_lookup="Generator type",
-        table_value="Unit size (MW)",
-    ),
+    # "maximum_capacity_mw": dict(
+    #     table="maximum_capacity_new_entrants",
+    #     table_lookup="Generator type",
+    #     table_value="Total plant size (MW)",
+    # ),
+    # "unit_capacity_mw": dict(
+    #     table="maximum_capacity_new_entrants",
+    #     table_lookup="Generator type",
+    #     table_value="Unit size (MW)",
+    # ),
     "maintenance_duration_%": dict(
         table="maintenance_new_entrants",
         table_lookup="Generator type",

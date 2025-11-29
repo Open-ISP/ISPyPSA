@@ -27,25 +27,36 @@ from .cli_test_helpers import (
     get_file_timestamps,
     mock_config,
     mock_workbook_file,
+    modify_config_value,
     prepare_test_cache,
     run_cli_command,
+    run_extensive,
     verify_output_files,
 )
 
 
 def test_create_ispypsa_inputs_task(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
+    mock_config,
+    prepare_test_cache,
+    tmp_path,
+    run_cli_command,
+    monkeypatch,
+    run_extensive,
 ):
-    """Test fresh run, up-to-date detection, and various triggers.
+    """Test fresh run, up-to-date detection, config_changed, and various triggers.
 
     Combines:
     - test_fresh_run_creates_all_outputs
     - test_up_to_date_skips_execution
-    - test_dependency_modified_triggers_rerun
-    - test_missing_some_target_files_triggers_rerun
+    - test_config_changed_irrelevant_does_not_trigger
+    - test_config_changed_relevant_triggers_rerun
+    - test_dependency_modified_triggers_rerun (extensive only)
+    - test_missing_some_target_files_triggers_rerun (extensive only)
 
-    Runs: 4 (fresh + up-to-date + dependency mod + missing file)
+    Runs: 4 (fresh + up-to-date + 2 config_changed), or 6 with extensive
     """
+    monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
+
     # Test fresh run
     cache_dir = tmp_path / "cache"
     assert cache_dir.exists()
@@ -81,7 +92,27 @@ def test_create_ispypsa_inputs_task(
     second_run_timestamps = get_file_timestamps(output_dir)
     assert first_run_timestamps == second_run_timestamps
 
-    # Test dependency modification trigger
+    # Test config_changed: irrelevant change should NOT trigger rerun
+    time.sleep(0.1)
+    modify_config_value(mock_config, "solver", "gurobi")
+    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
+    assert result.returncode == 0
+    assert_task_up_to_date(result.stdout, "create_ispypsa_inputs")
+
+    # Test config_changed: relevant change SHOULD trigger rerun
+    time.sleep(0.1)
+    modify_config_value(mock_config, "scenario", "Progressive Change")
+    result = run_cli_command([f"config={mock_config}", "create_ispypsa_inputs"])
+    assert result.returncode == 0
+    assert_task_ran(result.stdout, "create_ispypsa_inputs")
+
+    # Get new timestamps after config change rerun
+    config_change_timestamps = get_file_timestamps(output_dir)
+
+    if not run_extensive:
+        return
+
+    # Test dependency modification trigger (extensive only)
     time.sleep(0.1)
     cache_file = tmp_path / "cache" / "existing_generators_summary.csv"
     df = pd.read_csv(cache_file)
@@ -96,11 +127,11 @@ def test_create_ispypsa_inputs_task(
 
     # Verify timestamps changed
     new_timestamps = get_file_timestamps(output_dir)
-    assert new_timestamps != second_run_timestamps
-    for filename, old_time in second_run_timestamps.items():
+    assert new_timestamps != config_change_timestamps
+    for filename, old_time in config_change_timestamps.items():
         assert new_timestamps[filename] > old_time
 
-    # Test missing single file trigger
+    # Test missing single file trigger (extensive only)
     target_file = output_dir / "ecaa_generators.csv"
     target_file.unlink()
 
@@ -158,7 +189,12 @@ def test_cli_flags_and_dependency_chain(
 
 
 def test_config_path_variations(
-    mock_config, prepare_test_cache, tmp_path, run_cli_command
+    mock_config,
+    prepare_test_cache,
+    tmp_path,
+    run_cli_command,
+    monkeypatch,
+    run_extensive,
 ):
     """Test different config path scenarios.
 
@@ -166,8 +202,13 @@ def test_config_path_variations(
     - test_relative_config_path
     - test_absolute_config_path
 
-    Runs: 2 (relative + absolute)
+    Runs: 2 (relative + absolute) - extensive only
     """
+    if not run_extensive:
+        pytest.skip("Skipped unless ISPYPSA_RUN_EXTENSIVE=1")
+
+    monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
+
     # Test 1: Relative config path
     subdir = tmp_path / "configs"
     subdir.mkdir()

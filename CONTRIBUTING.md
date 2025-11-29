@@ -67,6 +67,19 @@ Ready to contribute? Here's how to set up `ispypsa` for local development.
 
     - Run tests by running `uv run --frozen pytest`
 
+    - To run extensive CLI tests (slower, includes dependency modification and missing file triggers), set the `ISPYPSA_RUN_EXTENSIVE` environment variable:
+
+      ```bash
+      # Unix/Linux/Mac/WSL
+      ISPYPSA_RUN_EXTENSIVE=1 uv run pytest tests/test_cli/
+
+      # Windows PowerShell
+      $env:ISPYPSA_RUN_EXTENSIVE="1"; uv run pytest tests/test_cli/
+
+      # Windows CMD
+      set ISPYPSA_RUN_EXTENSIVE=1 && uv run pytest tests/test_cli/
+      ```
+
 7. Commit your changes and open a pull request.
 
 ## Pull Request Guidelines

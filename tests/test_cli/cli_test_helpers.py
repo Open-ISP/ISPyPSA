@@ -20,6 +20,37 @@ import yaml
 
 
 @pytest.fixture
+def run_extensive():
+    """Return True if extensive tests should run.
+
+    Set ISPYPSA_RUN_EXTENSIVE=1 to enable extensive testing which includes
+    slower tests like dependency modification triggers and missing file triggers.
+    """
+    return os.environ.get("ISPYPSA_RUN_EXTENSIVE", "0") == "1"
+
+
+def modify_config_value(config_path, key_path, new_value):
+    """Modify a nested value in a YAML config file.
+
+    Args:
+        config_path: Path to the config file
+        key_path: Dot-separated path to the key (e.g. 'network.nodes.regional_granularity')
+        new_value: New value to set
+    """
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    keys = key_path.split(".")
+    obj = config
+    for key in keys[:-1]:
+        obj = obj[key]
+    obj[keys[-1]] = new_value
+
+    with open(config_path, "w") as f:
+        yaml.dump(config, f)
+
+
+@pytest.fixture
 def prepare_test_cache(tmp_path, mock_workbook_file):
     """Prepare test cache by copying from test_workbook_table_cache.
 
@@ -129,6 +160,10 @@ def mock_config(tmp_path, mock_workbook_file):
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
+        },
+        "trace_data": {
+            "dataset_type": "example",
+            "dateset_year": 2024,
         },
         "filter_by_isp_sub_regions": ["NNSW", "SQ"],
     }
