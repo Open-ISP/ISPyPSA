@@ -1,0 +1,23 @@
+:root {
+    --md-primary-fg-color: #5291BF;
+    --md-primary-fg-color--light: #7AABCF;
+    --md-primary-fg-color--dark: #3A7BA9;
+    --md-accent-fg-color: #3A7BA9;
+    --md-default-fg-color--lighter: #5291BF40;
+}
+
+
+h2 {
+  border-bottom: 2px solid var(--md-primary-fg-color);
+  padding-bottom: 0.3rem;
+}
+
+.md-typeset h3 {
+  border-bottom: 1px solid var(--md-default-fg-color--lighter);
+  padding-bottom: 0.2rem;
+}
+
+/* Force monospace font for code blocks and inline code */
+code, pre {
+  font-family: "Fira Code", "DejaVu Sans Mono", "Cascadia Code", monospace !important;
+}

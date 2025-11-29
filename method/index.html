@@ -1,0 +1,1289 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ispypsa.github.io/method/">
+      
+      
+        <link rel="prev" href="../workflow/">
+      
+      
+        <link rel="next" href="../config/">
+      
+      
+      <link rel="icon" href="../assets/Logo Voltage.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+    
+    
+      
+        <title>Modelling method - ISPyPSA Documentation LIVE FOR TESTING ONLY</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-header__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ISPyPSA Documentation LIVE FOR TESTING ONLY
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Modelling method
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-nav__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    ISPyPSA Documentation LIVE FOR TESTING ONLY
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Documentation guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Modelling method
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Modelling method
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nodal-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Nodal representation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demand" class="md-nav__link">
+    <span class="md-ellipsis">
+      Demand
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transmission" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transmission
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transmission">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sub-region-to-sub-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sub-region to sub-region
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rez-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      REZ exports
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-years" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reference years
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal aggregation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal aggregation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#representative-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Representative weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#named-representative-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Named representative weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capacity-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Capacity expansion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capacity expansion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#investment-periodisation-and-discounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Investment periodisation and discounting
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transmission_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transmission
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operational
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Config
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Tables
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Tables
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/ispypsa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ISPyPSA input tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/pypsa_friendly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PyPSA friendly Tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_api_workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default config file
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nodal-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Nodal representation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demand" class="md-nav__link">
+    <span class="md-ellipsis">
+      Demand
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transmission" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transmission
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transmission">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sub-region-to-sub-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sub-region to sub-region
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rez-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      REZ exports
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-years" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reference years
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal aggregation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal aggregation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#representative-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Representative weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#named-representative-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Named representative weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capacity-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Capacity expansion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capacity expansion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#investment-periodisation-and-discounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Investment periodisation and discounting
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transmission_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Transmission
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operational
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>Modelling method</h1>
+
+<p>The method description provided here is intended as a plain english
+explanation that links the ISPyPSA inputs and model config to the formulation of the
+optimisation model in PyPSA.</p>
+<h2 id="overview">Overview</h2>
+<p>Mixed-integer linear programing is used to represent the National Electricity Market's
+generation and transmission infrastructure, future costs, resource
+availability, demand for electricity, policy objectives, and operational and investment
+decisions. Optimisation can then be used to determine which combination of operational
+and investment decisions would result in the lowest total cost. The methods description
+which follows is a plain english description of how various aspects of the NEM are
+represented within the mixed-integer linear model.</p>
+<h2 id="nodal-representation">Nodal representation</h2>
+<p>Each sub region and REZ is represented as a separate node within the model:</p>
+<ul>
+<li>
+<p>Generators, storages, and loads are located at particular nodes, with energy able to
+flow freely, without constraint or losses between any generator, storage, or load
+connected to the same node.</p>
+</li>
+<li>
+<p>The sub region nodes are defined by the <code>isp_sub_region_id</code> column in the
+ISPyPSA <a href="../tables/ispypsa/#sub_regions">sub_regions</a> input table.</p>
+</li>
+<li>The REZ nodes are defined by the <code>rez_id</code> column in the
+ISPyPSA <a href="../tables/ispypsa/#renewable_energy_zones">renewable_energy_zones</a> input table.</li>
+</ul>
+<h2 id="demand">Demand</h2>
+<p>Demand is represented as a time varying quantity at each sub region node.</p>
+<ul>
+<li>Local supply at the node must equal demand, plus net transmission outflow, minus the
+  quantity of unserved energy at the node.</li>
+<li>The model config parameters <a href="../config/#unserved_energycost">unserved_energy.cost</a> and
+<a href="../config/#unserved_energymax_per_node">unserved_energy.max_per_node</a> can be used to
+configure cost and the allowable quantity of unserved energy. The default cost of unserved
+energy is set very high (10,000 $/MWh) to incentivise the optimisation to allow unserved
+energy only as a last resort. However, allowing some unserved energy helps prevent model
+infeasibility.</li>
+<li>The sub region demand data used is the demand data published by AEMO.</li>
+<li>The historical weather years, or reference years, used as a basis for deriving the time vary
+demand data are defined using the <code>reference_year_cycle</code> options in the config. <a href="#reference-years">More detail on
+reference years</a>.</li>
+<li>The time varying quantity of demand at each node is also dependent on the model year.
+AEMO publishes demand data for every year in modelling horizon for each reference year, with demand
+changing over time due to economic growth, CER uptake, energy efficiency etc.</li>
+</ul>
+<h2 id="transmission">Transmission</h2>
+<p>The transmission network is represented as the ability for energy to flow from node
+to node subject to a power constraint:</p>
+<ul>
+<li>Currently, transmission losses are not implemented in the model.</li>
+</ul>
+<h3 id="sub-region-to-sub-region">Sub-region to sub-region</h3>
+<p>Transmission between sub regions is implemented with static constraints on power
+flow in each direction:</p>
+<ul>
+<li>The column <code>flow_path</code> in the ISPyPSA input table <a href="../tables/ispypsa/#flow_paths">flow_paths</a>
+defines the names of the model flow paths and the columns <code>node_from</code> and <code>node_to</code> define the
+nodes linked by the flow path.</li>
+<li>The two values <code>forward_direction_mw_summer_typical</code> and
+<code>reverse_direction_mw_summer_typical</code> from the ISPyPSA inputs table <code>flow_paths</code>
+set the limits on power flow in the forward and reverse flow directions.</li>
+<li>TODO: Implement time varying transmission limits making use of the peak demand and
+winter limits provided in the IASR workbook.</li>
+</ul>
+<h3 id="rez-exports">REZ exports</h3>
+<p>REZ exports are implemented with a single static limit on power flow that applies in
+both directions of flow:</p>
+<ul>
+<li>The value <code>rez_transmission_network_limit_summer_typical</code> from the ISPyPSA input table
+<code>renewable_energy_zones</code> is used to set power flow limit.</li>
+<li>TODO: Implement time varying export limits making use of the peak demand and
+winter limits provided in the IASR workbook.</li>
+<li>If a NA or blank value is provided then the <code>rez_to_sub_region_transmission_default_limit</code>
+from the config file is used to set the limit. This is typically set to high value (1e5). Using
+the default limit is done for REZs where <a href="#custom-constraints">custom contraints</a> are used to
+model REZ export limits, such that the static limit will not influence the optimisation.</li>
+</ul>
+<h3 id="custom-constraints">Custom constraints</h3>
+<p>Custom constraints create arbitrary linear constraints linking the capacity or output of model
+components:</p>
+<ul>
+<li>In the base model implemented by the default work flow, custom constraints are used to
+represent complex network dynamics which link REZ exports to transmission flow between ISP
+sub regions and the dispatch of existing generators.</li>
+<li>The ISPyPSA tables <a href="../tables/ispypsa/#custom_constraints_rhs">custom_constraints_rhs</a> and
+<a href="../tables/ispypsa/#custom_constraints_rhs">custom_constraint_lhs</a> are used to define
+the custom linear constraints applied to the model. See the docs for these tables for
+further information on custom constraint implementation.</li>
+</ul>
+<h2 id="generation">Generation</h2>
+<h2 id="storage">Storage</h2>
+<h2 id="reference-years">Reference years</h2>
+<p>Weather reference years are used ensure weather correlations are consistent between demand
+and renewable energy availability, and to ensure the modelling considers diverse weather
+conditions:</p>
+<ul>
+<li>For each model year between the model start year and model end year, a historical reference year
+is chosen from which to derive both demand and renewable energy availability.</li>
+<li>In the model config the inputs <a href="../config/#temporalcapacity_expansionreference_year_cycle">temporal.capacity_expansion.reference_year_cycle</a>
+and <a href="../config/#temporaloperationalreference_year_cycle">temporal.operational.reference_year_cycle</a>
+are used to specify the ordering of reference years.</li>
+<li>If the <code>reference_year_cycle</code> is shorter than the model horizon then the cycle is repeated as many
+times as needed.</li>
+</ul>
+<h2 id="temporal-aggregation">Temporal aggregation</h2>
+<p>Temporal aggregation is used condense the temporal representation of time varying quantities
+within the model to improve computational tractability while retaining good representation of
+their characteristics:</p>
+<ul>
+<li>If no temporal aggregation is specified then a full half hourly representation is retained for
+each year.</li>
+<li>If temporal aggregation is used, the contribution of each time interval in the model are scaled
+up so that operational costs, fuel use, and emissions are equivalent to a fully time resolved model.
+See <a href="#investment-periodisation-and-discounting">Investment periodisation and discounting</a> for
+further detail on interval weighting.</li>
+</ul>
+<h3 id="representative-weeks">Representative weeks</h3>
+<p>The <code>representative_weeks</code> input in the model config can be used to specify particular weeks
+to include in the temporal representation:</p>
+<ul>
+<li>A list of integers is provided for <code>representative_weeks</code> and these number weeks with in the
+year will retained in the time sequence used by the model. For example, if <code>[1, 25]</code> are provided
+then the first and twenty fifth weeks in each model year will be retained.</li>
+<li>Counting of weeks within the year starts from the first whole week (Monday to Sunday) which
+falls within the year.</li>
+<li>Separate sets of representative weeks can be specified for capacity expansion and operational
+modelling using the <a href="../config/#temporalcapacity_expansionaggregationrepresentative_weeks">temporal.capacity_expansion.aggregation.representative_weeks</a>
+and <a href="../config/#temporaloperationalaggregationrepresentative_weeks">temporal.operational.aggregation.representative_weeks</a>
+config inputs.</li>
+<li>If both <code>representative_weeks</code> and <code>named_representative_weeks</code> are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.</li>
+<li>TODO: Clarify that representative weeks treated sequential by PyPSA.</li>
+</ul>
+<h3 id="named-representative-weeks">Named representative weeks</h3>
+<p>The <code>named_representative_weeks</code> input in the model config can be used to specify particular weeks
+to include in the temporal representation:</p>
+<ul>
+<li>A list of strings is provided for <code>named_representative_weeks</code> specifying the weeks to be
+extracted from the yearly data. For example, ["residual-peak-demand", "residual-minimum-demand"].</li>
+<li>
+<p>The named representative week options are:</p>
+<ul>
+<li>peak-demand: Week with highest instantaneous demand</li>
+<li>minimum-demand: Week with lowest instantaneous demand</li>
+<li>peak-consumption: Week with highest average demand (energy consumption)</li>
+<li>residual-peak-demand: Week with highest demand net of renewables</li>
+<li>residual-minimum-demand: Week with lowest demand net of renewables</li>
+<li>residual-peak-consumption: Week with highest average demand net of renewables</li>
+</ul>
+</li>
+<li>
+<p>Only whole weeks which fall entirely within a model year are considered for selection.</p>
+</li>
+<li>Separate sets of named representative weeks can be specified for capacity expansion and operational
+modelling using the <a href="../config/#temporalcapacity_expansionaggregationnamed_representative_weeks">temporal.capacity_expansion.aggregation.named_representative_weeks</a>
+and <a href="../config/#temporaloperationalaggregationnamed_representative_weeks">temporal.operational.aggregation.named_representative_weeks</a>
+config inputs.</li>
+<li>If both <code>representative_weeks</code> and <code>named_representative_weeks</code> are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.</li>
+</ul>
+<h2 id="capacity-expansion">Capacity expansion</h2>
+<p>Capacity expansion is the first modelling phase. In this phase investment in generation and capacity expansion are
+co-optimised with operational dispatch decisions. The optimisation assumes perfect foresight.</p>
+<h3 id="investment-periodisation-and-discounting">Investment periodisation and discounting</h3>
+<p>Capacity expansion decisions are periodised with investment decisions made at the start of each
+multiyear period:</p>
+<ul>
+<li>Instead of investment decisions being available every year, they are only available at the being
+of each investment period. This reduces computational complexity.</li>
+<li>The config input <a href="../config/#temporalcapacity_expansioninvestment_periods">temporal.capacity_expansion.investment_periods</a>
+can be used to specify the investment periodisation. For example, specify <code>[2025, 2030]</code> will create
+two investment periods in the model, one starting at the beginning of 2025 and ending at the
+beginning of 2030, and a second period starting at the beginning of 2030 and lasting to the end of
+the modelling horizon.</li>
+<li>The periodisation is not myopic. The optimisation considers investment across all periods
+simultaneously.</li>
+</ul>
+<p>The periodisation is also used to structure the application of discount rates to the model:</p>
+<ul>
+<li>An objective function weighting is calculated for each investment period and applied to both capacity expansion and
+operational costs accrued during an investment period.</li>
+<li>The weighting for a period is calculated as the sum of discount factors used to adjust costs to Net Present Value on
+yearly basis over the duration of an investment period:</li>
+</ul>
+<div class="arithmatex">\[
+w_{p}=\sum_{i=t_{period\_start}}^{t_{period\_end}}\frac{1}{(1 + r)^i}
+\]</div>
+<p>Where <span class="arithmatex">\(r\)</span> is the <a href="../config/#discount_rate">discount_rate</a> specified in the model config.</p>
+<ul>
+<li>The sum of discount factors rather than the average is used such that capital cost which are applied once per
+investment period are scaled up by the number of years in the investment period. This is equivalent to taking the
+average discount factor for the period and multiplying by the number of years.</li>
+<li>Note: because the period weighting is also applied to operational costs, the interval level weighting/scaling used
+to account for temporal aggregation is calculated so that all intervals in an investment period have the equivalent
+weight of one year of full time resolved intervals. Then, when the period weighting is applied the costs are scaled back
+up to match the number of years in the investment period.</li>
+</ul>
+<h3 id="transmission_1">Transmission</h3>
+<p>The model considers the expansion of sub region to sub region and REZ export transmission capacity at the start of every
+<a href="#investment-periodisation-and-discounting">investment period</a>:</p>
+<ul>
+<li>The capital costs in $/MW for transmission expansion are provided in the ISPyPSA tables
+<a href="../tables/ispypsa/#flow_path_expansion_costs">flow_path_expansion_costs</a> and
+<a href="../tables/ispypsa/#rez_transmission_expansion_costs">rez_transmission_expansion_costs</a>. The costs used are those in cost
+columns corresponding to the start years of each investment period.</li>
+<li>Costs are annuitised according to the following formula:</li>
+</ul>
+<div class="arithmatex">\[
+c_{a} =\frac{c_{o} \times r }{1 - (1 + r)^{-t}}
+\]</div>
+<p>Where <span class="arithmatex">\(c_{a}\)</span> is the annuitised cost, <span class="arithmatex">\(c_{o}\)</span> is the overnight build cost, <span class="arithmatex">\(r\)</span> is the <a href="../config/#wacc">WACC</a>, and <span class="arithmatex">\(t\)</span> is
+the network cost <a href="../config/#networkannuitisation_lifetime">annuitisation_lifetime</a>.</p>
+<ul>
+<li>If a transmission flow path or REZ connection is expanded in one investment period it's annuitised cost multiplied by
+the size of the expansion is incurred in all subsequent investment periods. Transmission expansions are not considered
+to retire.</li>
+<li>The value in column <code>additional_network_capacity_mw</code> in
+<a href="../tables/ispypsa/#flow_path_expansion_costs">flow_path_expansion_costs</a> and
+<a href="../tables/ispypsa/#rez_transmission_expansion_costs">rez_transmission_expansion_costs</a> sets a limit on the total
+expansion allowed for each flow path and REZ connection.</li>
+<li>Where REZ export limits are set by <a href="#custom-constraints">custom constraints</a> the expansion of the REZ connection is
+modelled as relaxing the custom constraint limit.</li>
+</ul>
+<h3 id="generation_1">Generation</h3>
+<h2 id="operational">Operational</h2>
+<p>Operational is the second modelling phase. In this modelling phase capacity expansion decisions are taken as fixed,
+at the values found during the capacity expansion phase, and only operational decisions are optimised:</p>
+<ul>
+<li>Operational optimisation is done using a rolling horizon, breaking up the optimisation into many smaller problems
+which can be solved sequentially.</li>
+<li>The rolling horizon formulation has two additional config parameters <a href="../config/#temporaloperationalhorizon">horizon</a>
+and <a href="../config/#temporaloperationaloverlap">overlap</a>. <code>horizon</code> controls the number of intervals in each sub problem and
+<code>overlap</code> controls the number of intervals overlapping between each sub problem. If <code>overlap</code> is greater than zero then
+the second optimisations decisions are recorded as the model dispatch values. The overlap gives each sub problem a look
+ahead so it is not completely naive to future conditions.</li>
+<li>Fixing investment decisions and using rolling horizons reduce model complexity and speed up run time, allowing for
+operation to be modelled with greater temporal resolution than capacity expansion.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

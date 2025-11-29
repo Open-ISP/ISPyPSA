@@ -1,0 +1,1797 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ispypsa.github.io/cli/">
+      
+      
+        <link rel="prev" href="../api/">
+      
+      
+        <link rel="next" href="../examples/example_api_workflow/">
+      
+      
+      <link rel="icon" href="../assets/Logo Voltage.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+    
+    
+      
+        <title>CLI - ISPyPSA Documentation LIVE FOR TESTING ONLY</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ispypsa-command-line-interface" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-header__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ISPyPSA Documentation LIVE FOR TESTING ONLY
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-nav__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    ISPyPSA Documentation LIVE FOR TESTING ONLY
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Documentation guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../method/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Modelling method
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Config
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Tables
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Tables
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/ispypsa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ISPyPSA input tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/pypsa_friendly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PyPSA friendly Tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#download_workbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_workbook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#download_trace_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_trace_data
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cache_required_iasr_workbook_tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      cache_required_iasr_workbook_tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_ispypsa_inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_ispypsa_inputs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_pypsa_friendly_inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_pypsa_friendly_inputs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_and_run_capacity_expansion_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_and_run_capacity_expansion_model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_capacity_expansion_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_capacity_expansion_plots
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_operational_timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_operational_timeseries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_and_run_operational_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_and_run_operational_model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_operational_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_operational_plots
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#list" class="md-nav__link">
+    <span class="md-ellipsis">
+      list
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simplified-complete-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simplified Complete Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-from-different-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running from Different Directories
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-different-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Different Configurations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip-optimization-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skip Optimization Flags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#path-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Path Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-ispypsa-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How ispypsa Works
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#passing-additional-doit-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Passing Additional doit Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commands-without-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commands Without Config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-directory-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Working Directory Behavior
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_api_workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default config file
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#download_workbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_workbook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#download_trace_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      download_trace_data
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cache_required_iasr_workbook_tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      cache_required_iasr_workbook_tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_ispypsa_inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_ispypsa_inputs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_pypsa_friendly_inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_pypsa_friendly_inputs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_and_run_capacity_expansion_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_and_run_capacity_expansion_model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_capacity_expansion_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_capacity_expansion_plots
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_operational_timeseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_operational_timeseries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_and_run_operational_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_and_run_operational_model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create_operational_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_operational_plots
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#list" class="md-nav__link">
+    <span class="md-ellipsis">
+      list
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simplified-complete-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simplified Complete Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-from-different-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running from Different Directories
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-different-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Different Configurations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip-optimization-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skip Optimization Flags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#path-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Path Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-ispypsa-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How ispypsa Works
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#passing-additional-doit-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Passing Additional doit Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commands-without-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commands Without Config
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-directory-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Working Directory Behavior
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="ispypsa-command-line-interface">ISPyPSA Command Line Interface</h1>
+<p>The <code>ispypsa</code> command provides a user-friendly interface for running ISPyPSA workflows.
+It's the simplest and quickest way to run the predefined workflows. However, if more
+flexibility is required the <a href="../api/">API</a> might be a better option.</p>
+<h2 id="overview">Overview</h2>
+<p>The <code>ispypsa</code> command and sub-tasks allow you to:</p>
+<ul>
+<li>Download data</li>
+<li>Extract data from ISP workbooks</li>
+<li>Generate model input files</li>
+<li>Run capacity expansion and operational models</li>
+<li>Manage workflow outputs</li>
+</ul>
+<p>Most tasks require a configuration file that specifies paths and model parameters.
+See the <a href="../workflow/">Workflow overview</a> section for a high-level overview of
+the default ISPyPSA workflow.</p>
+<h2 id="installation">Installation</h2>
+<p>See the <a href="../getting_started/#installation">Installation section</a> in the Getting Started guide.</p>
+<h2 id="basic-usage">Basic Usage</h2>
+<p>The basic command structure is:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">uv</label><label for="__tabbed_1_2">plain python</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv run ispypsa config=&lt;config_file&gt; [task]
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ispypsa config=&lt;config_file&gt; [task]
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The <code>config=&lt;config_file&gt;</code> argument is required for task execution and must point to a valid ISPyPSA configuration YAML file.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>For the sake of brevity the commands on the rest of this page are given in plain
+Python, but can be run with <code>uv run</code> as well.</p>
+</div>
+<h3 id="examples">Examples</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># List available tasks (no config required)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ispypsa<span class="w"> </span>list
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run a specific task with config</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>my_config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Run all tasks with config</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>my_config.yaml
+</code></pre></div>
+<h2 id="tasks">Tasks</h2>
+<p>The ISPyPSA CLI workflow consists of a series of tasks, each dependent on the
+outputs of previous tasks. The following diagram shows the task dependency
+graph:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>save_config
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>│
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>└──&gt; cache_required_iasr_workbook_tables
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>     │
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>     └──&gt; create_ispypsa_inputs
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>          │
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>          ├──&gt; create_pypsa_friendly_inputs
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>          │    │
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>          │    ├──&gt; create_and_run_capacity_expansion_model
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>          │    │    │
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>          └────┼────┼──&gt; create_operational_timeseries
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>               │    │    │
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>               └────┴────┴──&gt; create_and_run_operational_model
+</code></pre></div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Each task depends on the outputs of previous tasks. If a particular task is run, but the
+previous tasks' runs on which it depends isn't up to date, then the CLI will
+detect this and also run the previous tasks. The detection of a previous task's
+being 'up to date' is based on two checks 1) its input files haven't been modified
+since it last ran and 2) its output files exist. If either 1) or 2) aren't true then
+a task is not up to date and will be rerun. This applies to both the primary target
+task and all of its dependencies.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>ISPyPSA provides independent <strong>download and plotting</strong> tasks. These tasks are
+<strong>not part of the main workflow task dependency</strong> and need be explicity run when needed.</p>
+</div>
+<h3 id="download_workbook">download_workbook</h3>
+<p>Downloads the ISP workbook Excel file from the data repository.</p>
+<p><strong>Usage with config file:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>download_workbook
+</code></pre></div>
+<p><strong>Usage with direct parameters (no config file needed):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ispypsa<span class="w"> </span><span class="nv">workbook_version</span><span class="o">=</span><span class="m">6</span>.0<span class="w"> </span><span class="nv">workbook_path</span><span class="o">=</span>data/workbooks/6.0.xlsx<span class="w"> </span>download_workbook
+</code></pre></div>
+<p><strong>Parameters (if not using config):</strong></p>
+<ul>
+<li><code>workbook_version</code> (required): Version of workbook to download (e.g., "6.0")</li>
+<li><code>workbook_path</code> (required): Full path where workbook should be saved (must end with .xlsx)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Excel workbook file at the specified path</li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>This task will overwrite any existing workbook file at the target location</li>
+<li>If download fails partway through, partial files will remain</li>
+<li>Task always runs when invoked (never considers itself up-to-date)</li>
+</ul>
+<h3 id="download_trace_data">download_trace_data</h3>
+<p>Downloads trace data (demand, wind, solar) from the data repository.</p>
+<p><strong>Usage with config file:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Download example dataset (default - smaller, for testing)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>download_trace_data
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Download full dataset (override config default)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">trace_dataset_type</span><span class="o">=</span>full<span class="w"> </span>download_trace_data
+</code></pre></div>
+<p><strong>Usage with direct parameters (no config file needed):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Download example dataset to specified directory</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ispypsa<span class="w"> </span><span class="nv">save_directory</span><span class="o">=</span>data/traces<span class="w"> </span>download_trace_data
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Download full dataset to specified directory</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>ispypsa<span class="w"> </span><span class="nv">save_directory</span><span class="o">=</span>data/traces<span class="w"> </span><span class="nv">trace_dataset_type</span><span class="o">=</span>full<span class="w"> </span>download_trace_data
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Specify all parameters</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>ispypsa<span class="w"> </span><span class="nv">save_directory</span><span class="o">=</span>data/traces<span class="w"> </span><span class="nv">trace_dataset_type</span><span class="o">=</span>example<span class="w"> </span><span class="nv">trace_dataset_year</span><span class="o">=</span><span class="m">2024</span><span class="w"> </span>download_trace_data
+</code></pre></div>
+<p><strong>Parameters (if not using config):</strong></p>
+<ul>
+<li><code>save_directory</code>: Directory where trace data should be saved</li>
+<li><code>trace_dataset_type</code> (optional): Either "example" or "full"<ul>
+<li>Defaults to "example"</li>
+<li>"example": Smaller dataset suitable for testing and development</li>
+<li>"full": Complete dataset for production runs</li>
+</ul>
+</li>
+<li><code>trace_dataset_year</code> (optional): Year of dataset<ul>
+<li>Defaults to 2024</li>
+<li>Currently only 2024 is supported</li>
+</ul>
+</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Trace data files in the specified directory</li>
+<li>Files organized in subdirectories: <code>isp_{year}/project/</code>, <code>isp_{year}/zone/</code>, <code>isp_{year}/demand/</code></li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>This task will re-download all files, overwriting any existing trace data</li>
+<li>If download fails partway through, partial files will remain</li>
+<li>Task always runs when invoked (never considers itself up-to-date)</li>
+<li>The "full" dataset manifest is currently empty and will be populated in future releases</li>
+<li>Direct mode is useful for downloading data before creating a config file</li>
+</ul>
+<h3 id="cache_required_iasr_workbook_tables">cache_required_iasr_workbook_tables</h3>
+<p>Extracts data from the ISP Excel workbook and caches it as CSV files.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>cache_required_iasr_workbook_tables
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>IASR Excel workbook (specified in config <code>paths.workbook_path</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>CSV files in the workbook cache directory (location specified in config <code>paths.
+  parsed_workbook_cache</code>)</li>
+</ul>
+<h3 id="create_ispypsa_inputs">create_ispypsa_inputs</h3>
+<p>Generates ISPyPSA format input tables from the cached workbook data.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_ispypsa_inputs
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>Cached workbook CSV files (location specified in config <code>paths.
+  parsed_workbook_cache</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>ISPyPSA input tables in <code>{run_directory}/{ispypsa_run_name}/ispypsa_inputs/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+</ul>
+<h3 id="create_pypsa_friendly_inputs">create_pypsa_friendly_inputs</h3>
+<p>Converts ISPyPSA format tables to PyPSA-compatible format and generates time series data for capacity expansion.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_pypsa_friendly_inputs
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>ISPyPSA input tables in <code>{run_directory}/{ispypsa_run_name}/ispypsa_inputs/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+<li>Trace data (demand, wind, solar) (location specified in config <code>paths.
+  parsed_traces_directory</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>PyPSA-friendly tables in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+<li>Time series data in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+</ul>
+<h3 id="create_and_run_capacity_expansion_model">create_and_run_capacity_expansion_model</h3>
+<p>Creates the PyPSA network object and runs the capacity expansion optimization.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>PyPSA-friendly tables in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+<li>Time series data in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Optimized capacity expansion results in <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion.nc</code></li>
+</ul>
+<p><strong>Plotting Option:</strong></p>
+<p>By default, a suite of plots is automatically generated after the capacity expansion model runs.
+This behaviour is controlled by the <code>create_plots</code> setting in <code>config.yaml</code>, which is set to <code>True</code>
+in the default workflow.</p>
+<p>When enabled, the task will create and save a suite of plots to the <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_plots/</code> directory.</p>
+<p>This provides a convenient way to visualise model outputs without needing to run the <code>create_capacity_expansion_plots</code> task separately.</p>
+<p>You can disable plot creation by setting <code>create_plots: False</code> in your config or by passing it as a command-line argument:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Disable plot generation for this run</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">create_plots</span><span class="o">=</span>False<span class="w"> </span>create_and_run_capacity_expansion_model
+</code></pre></div>
+<p><strong>Skip Optimization Option:</strong></p>
+<p>You can skip the optimization step and only build the network using the <code>run_optimisation</code> flag:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">run_optimisation</span><span class="o">=</span>False<span class="w"> </span>create_and_run_capacity_expansion_model
+</code></pre></div>
+<p>This is particularly useful for:</p>
+<ul>
+<li>Testing that your model configuration is valid</li>
+<li>Verifying network construction without waiting for optimization</li>
+<li>Debugging model setup issues</li>
+<li>Creating a network file for manual inspection or custom optimization</li>
+</ul>
+<p>When this flag is set to <code>False</code>, the task will:</p>
+<ol>
+<li>Build the complete PyPSA network with all components and constraints</li>
+<li>Save the unoptimized network to the output file</li>
+<li>Skip the potentially time-consuming optimization step</li>
+</ol>
+<h3 id="create_capacity_expansion_plots">create_capacity_expansion_plots</h3>
+<p>Generates plots from the capacity expansion model results.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_capacity_expansion_plots
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>Tabular results from capacity expansion model in <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_tables/</code> (generated by <code>create_and_run_capacity_expansion_model</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Plot files (interactive HTML format) in <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_plots/</code></li>
+<li>Results viewer website: <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_results_viewer.html</code></li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>This task is not part of the main workflow dependency chain and must be run explicitly.</li>
+<li>It will fail if the capacity expansion results are not present.</li>
+<li>Generated plots include:</li>
+<li>Regional and sub-regional dispatch plots</li>
+<li>Transmission flow plots for all links</li>
+<li>Transmission capacity expansion plots</li>
+<li>Regional transmission expansion plots</li>
+</ul>
+<h3 id="create_operational_timeseries">create_operational_timeseries</h3>
+<p>Creates time series data for operational modeling.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_operational_timeseries
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>ISPyPSA input tables in <code>{run_directory}/{ispypsa_run_name}/ispypsa_inputs/</code>
+  (run_directory and ispypsa_run_name specified in config)</li>
+<li>Trace data (demand, wind, solar) (location specified in config <code>paths.
+  parsed_traces_directory</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Operational time series data in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries/</code></li>
+</ul>
+<h3 id="create_and_run_operational_model">create_and_run_operational_model</h3>
+<p>Prepares the PyPSA network object for operational modeling using fixed capacities from capacity expansion and runs the operational optimization.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>Capacity expansion results in <code>{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion.nc</code></li>
+<li>PyPSA-friendly tables in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/</code></li>
+<li>Operational time series data in <code>{run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries/</code></li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Operational optimization results in <code>{run_directory}/{ispypsa_run_name}/outputs/operational.nc</code></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Running Without Capacity Expansion</p>
+<p>The operational model can be built and run even if the capacity expansion optimization was
+skipped (using <code>run_optimisation=False</code>). However, this will significantly affect
+the operational model outputs because:</p>
+<ul>
+<li>The network will use initial capacities rather than optimized capacities</li>
+<li>No new generation or transmission capacity will have been added</li>
+<li>The operational model may be infeasible if initial capacities are insufficient</li>
+<li>Results will not reflect least-cost capacity investment decisions</li>
+</ul>
+</div>
+<p><strong>Skip Optimization Option:</strong></p>
+<p>You can skip the optimization step and only prepare the network using the <code>run_optimisation</code> flag:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">run_optimisation</span><span class="o">=</span>False<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<p>This is particularly useful for:</p>
+<ul>
+<li>Testing operational model setup without running the full optimization</li>
+<li>Verifying that capacity expansion results load correctly</li>
+<li>Debugging time series data integration</li>
+<li>Creating a prepared network for custom operational analysis</li>
+</ul>
+<p>When this flag is set to <code>False</code>, the task will:</p>
+<ol>
+<li>Load the capacity expansion results</li>
+<li>Update the network with operational time series data</li>
+<li>Fix the optimal capacities from capacity expansion</li>
+<li>Save the prepared network without running the rolling horizon optimization</li>
+<li>Skip the potentially very long operational optimization process</li>
+</ol>
+<p><strong>Plotting Option:</strong></p>
+<p>Similar to capacity expansion, plots can be automatically generated after the operational model runs.
+This behaviour is controlled by the <code>create_plots</code> setting in <code>config.yaml</code>, which defaults to <code>True</code>.</p>
+<p>When enabled, the task will create and save a suite of plots to the <code>{run_directory}/{ispypsa_run_name}/outputs/operational_plots/</code> directory.</p>
+<p>You can disable plot creation by setting <code>create_plots: False</code> in your config or by passing it as a command-line argument:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Disable plot generation for this run</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">create_plots</span><span class="o">=</span>False<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<h3 id="create_operational_plots">create_operational_plots</h3>
+<p>Generates plots from the operational model results.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_operational_plots
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>Tabular results from operational model in <code>{run_directory}/{ispypsa_run_name}/outputs/operational_tables/</code> (generated by <code>create_and_run_operational_model</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Plot files (interactive HTML format) in <code>{run_directory}/{ispypsa_run_name}/outputs/operational_plots/</code></li>
+<li>Results viewer website: <code>{run_directory}/{ispypsa_run_name}/outputs/operational_results_viewer.html</code></li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>This task is not part of the main workflow dependency chain and must be run explicitly.</li>
+<li>It will fail if the operational results are not present.</li>
+<li>Generated plots include:</li>
+<li>Regional and sub-regional dispatch plots</li>
+<li>Transmission flow plots for all links</li>
+</ul>
+<h3 id="list">list</h3>
+<p>Shows all available tasks and their status. No config file required.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>ispypsa<span class="w"> </span>list
+</code></pre></div>
+<h3 id="save_config">save_config</h3>
+<p>Saves a copy of the configuration file to the run directory. This task runs automatically as a dependency of other tasks to preserve the exact configuration used for reproducibility.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>save_config
+</code></pre></div>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li>Configuration YAML file (specified with <code>config=</code>)</li>
+</ul>
+<p><strong>Outputs:</strong></p>
+<ul>
+<li>Copy of the configuration file in <code>{run_directory}/{ispypsa_run_name}/</code>
+  (preserves the exact config used for the run)</li>
+</ul>
+<p><strong>Note:</strong> This task always runs (never considers itself up-to-date) to ensure the config file is always current.</p>
+<h2 id="configuration">Configuration</h2>
+<p>The <code>config=</code> argument is required for most tasks. It accepts either absolute or relative
+paths:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Absolute path</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>/home/user/projects/my_config.yaml<span class="w"> </span>task_name
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Relative path (from current directory)</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>../configs/my_config.yaml<span class="w"> </span>task_name
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="c1"># File in current directory</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>my_config.yaml<span class="w"> </span>task_name
+</code></pre></div>
+<p>See the <a href="../examples/example_config/">example configuration file</a> for the required format.</p>
+<h2 id="examples_1">Examples</h2>
+<h3 id="complete-workflow">Complete Workflow</h3>
+<p>Run all tasks one by one to generate model results:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Extract workbook data</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>cache_required_iasr_workbook_tables
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c1"># Generate ISPyPSA inputs</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_ispypsa_inputs
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="c1"># At this stage the ISPyPSA inputs could be edited to adjust build costs or any other</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="c1"># inputs set out in {run_directory}/{ispypsa_run_name}/ispypsa_inputs/</span>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="c1"># Convert to PyPSA format and run capacity expansion</span>
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="c1"># Create operational time series</span>
+<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_operational_timeseries
+<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>
+<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="c1"># Run operational optimization</span>
+<a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_and_run_operational_model
+<a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a>
+<a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="c1"># Generate plots (optional - also runs automatically if create_plots=True)</span>
+<a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_capacity_expansion_plots
+<a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_operational_plots
+</code></pre></div>
+<h3 id="simplified-complete-workflow">Simplified Complete Workflow</h3>
+<p>The complete workflow can be run in fewer steps, with intermediate tasks run
+automatically when their outputs are required.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Generate ISPyPSA inputs</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_ispypsa_inputs
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># At this stage the ISPyPSA inputs could be edited to adjust build cost or any other</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># inputs set out in {run_directory}/{ispypsa_run_name}/ispypsa_inputs/</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="c1"># Run complete workflow (all remaining tasks)</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<h3 id="running-from-different-directories">Running from Different Directories</h3>
+<p>The CLI works correctly from any directory and handles relative paths appropriately:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># From project root - no config needed for list</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>ispypsa<span class="w"> </span>list
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># From project root - config for task execution</span>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>ispypsa_config.yaml<span class="w"> </span>create_ispypsa_inputs
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="c1"># From a subdirectory</span>
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="nb">cd</span><span class="w"> </span>analysis
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>../ispypsa_config.yaml<span class="w"> </span>create_ispypsa_inputs
+<a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>
+<a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="c1"># Using an absolute path (works from anywhere)</span>
+<a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>/home/user/ispypsa/config.yaml<span class="w"> </span>create_ispypsa_inputs
+</code></pre></div>
+<h3 id="using-different-configurations">Using Different Configurations</h3>
+<p>You can easily switch between different model configurations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Development configuration</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>configs/dev_config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Production configuration with different parameters</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>configs/prod_config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="c1"># Test configuration with smaller dataset</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>configs/test_config.yaml<span class="w"> </span>create_and_run_capacity_expansion_model
+</code></pre></div>
+<h3 id="skip-optimization-flags">Skip Optimization Flags</h3>
+<p>You can skip the optimization step in modeling tasks using these flags:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Skip capacity expansion optimization (only prepare the network)</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">run_optimisation</span><span class="o">=</span>False<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c1"># Skip operational optimization (only prepare the network, capacity expansion will also be skipped)</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">run_optimisation</span><span class="o">=</span>False<span class="w"> </span>create_and_run_operational_model
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="c1"># Run both optimizations normally (default behavior)</span>
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">run_optimisation</span><span class="o">=</span>True<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<p>These flags are useful for:</p>
+<ul>
+<li>Debugging network construction without waiting for optimization</li>
+<li>Testing model setup and configuration</li>
+<li>Preparing networks for manual optimization or analysis</li>
+</ul>
+<h3 id="path-issues">Path Issues</h3>
+<p>If you encounter path-related errors:</p>
+<ol>
+<li>Use <code>debug=True</code> to see how paths are being resolved</li>
+<li>Try using absolute paths in your config file</li>
+<li>Ensure all directories exist before running tasks</li>
+<li>Check file permissions for input/output directories</li>
+</ol>
+<h2 id="advanced-usage">Advanced Usage</h2>
+<h3 id="how-ispypsa-works">How ispypsa Works</h3>
+<p>The <code>ispypsa</code> command is built on the <code>doit</code> task automation tool with ISPyPSA-specific enhancements:</p>
+<ol>
+<li><strong>run command</strong>: Uses doit's native run command with <code>config=value</code> parameter support</li>
+<li><strong>Other commands</strong>: Uses doit's built-in commands (list, help, etc.) directly</li>
+<li><strong>Lazy loading</strong>: Configuration is only loaded when tasks actually execute</li>
+<li><strong>Path resolution</strong>: All paths work relative to where you run the command</li>
+</ol>
+<h3 id="passing-additional-doit-options">Passing Additional doit Options</h3>
+<p>You can pass any doit option to the run command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Run with verbose output</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>-v<span class="w"> </span>create_and_run_capacity_expansion_model
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># Always execute task ignoring up-to-date checks</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>-a<span class="w"> </span>create_ispypsa_inputs
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="c1"># Continue executing even after task failure</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span>--continue<span class="w"> </span>create_and_run_operational_model
+</code></pre></div>
+<p>Common doit options for the run command:</p>
+<ul>
+<li><code>-v</code> / <code>--verbosity</code>: Set verbosity level (0-2)</li>
+<li><code>-a</code> / <code>--always-execute</code>: Always execute tasks even if up-to-date</li>
+<li><code>--continue</code>: Continue executing tasks even after failure</li>
+<li><code>-s</code> / <code>--single</code>: Execute only specified tasks ignoring their dependencies</li>
+</ul>
+<h3 id="commands-without-config">Commands Without Config</h3>
+<p>Some commands work without requiring a config file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># List all available tasks</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>ispypsa<span class="w"> </span>list
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="c1"># Show help</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>ispypsa<span class="w"> </span><span class="nb">help</span>
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="c1"># Show help for specific command</span>
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>ispypsa<span class="w"> </span><span class="nb">help</span><span class="w"> </span>run
+</code></pre></div>
+<h3 id="working-directory-behavior">Working Directory Behavior</h3>
+<p>The CLI maintains your current working directory:</p>
+<ul>
+<li>All paths in config files work relative to where you run the command</li>
+<li>No directory changes occur during execution</li>
+<li>Output files are created according to paths in your config file</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

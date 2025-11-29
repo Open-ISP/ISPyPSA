@@ -1,0 +1,2034 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://ispypsa.github.io/config/">
+      
+      
+        <link rel="prev" href="../method/">
+      
+      
+        <link rel="next" href="../tables/ispypsa/">
+      
+      
+      <link rel="icon" href="../assets/Logo Voltage.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+    
+    
+      
+        <title>Config - ISPyPSA Documentation LIVE FOR TESTING ONLY</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#paths" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-header__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ISPyPSA Documentation LIVE FOR TESTING ONLY
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Config
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ISPyPSA Documentation LIVE FOR TESTING ONLY" class="md-nav__button md-logo" aria-label="ISPyPSA Documentation LIVE FOR TESTING ONLY" data-md-component="logo">
+      
+  <img src="../assets/Logo White.png" alt="logo">
+
+    </a>
+    ISPyPSA Documentation LIVE FOR TESTING ONLY
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Documentation guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../method/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Modelling method
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Config
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Config
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paths
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paths">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pathsparsed_traces_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.parsed_traces_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsworkbook_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.workbook_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsparsed_workbook_cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.parsed_workbook_cache
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsrun_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.run_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsispypsa_run_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.ispypsa_run_name
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trace-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trace Data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Trace Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trace_datadataset_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      trace_data.dataset_type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trace_datadataset_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      trace_data.dataset_year
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ispypsa-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      ISPyPSA Templating
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ISPyPSA Templating">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iasr_workbook_version" class="md-nav__link">
+    <span class="md-ellipsis">
+      iasr_workbook_version
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#financialeconomic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Financial/Economic
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Financial/Economic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wacc" class="md-nav__link">
+    <span class="md-ellipsis">
+      wacc
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discount_rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      discount_rate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unserved-energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unserved Energy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unserved Energy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unserved_energycost" class="md-nav__link">
+    <span class="md-ellipsis">
+      unserved_energy.cost
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unserved_energymax_per_node" class="md-nav__link">
+    <span class="md-ellipsis">
+      unserved_energy.max_per_node
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Network
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Network">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#networktransmission_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.transmission_expansion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkrez_transmission_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.rez_transmission_expansion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkannuitisation_lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.annuitisation_lifetime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networknodesregional_granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.nodes.regional_granularity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networknodesrezs" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.nodes.rezs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkrez_to_sub_region_transmission_default_limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.rez_to_sub_region_transmission_default_limit
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporalyear_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.year_type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalrangestart_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.range.start_year
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalrangeend_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.range.end_year
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="temporal.capacity_expansion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionresolution_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.resolution_min
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionreference_year_cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.reference_year_cycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansioninvestment_periods" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.investment_periods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionaggregationrepresentative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.aggregation.representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionaggregationnamed_representative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.aggregation.named_representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperational" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="temporal.operational">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalresolution_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.resolution_min
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalreference_year_cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.reference_year_cycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalhorizon" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.horizon
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationaloverlap" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.overlap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalaggregationrepresentative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.aggregation.representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalaggregationnamed_representative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.aggregation.named_representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solver" class="md-nav__link">
+    <span class="md-ellipsis">
+      Solver
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Solver">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solver_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      solver
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plotting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plotting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plotting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_plots
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtering
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filter_by_nem_regions" class="md-nav__link">
+    <span class="md-ellipsis">
+      filter_by_nem_regions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filter_by_isp_sub_regions" class="md-nav__link">
+    <span class="md-ellipsis">
+      filter_by_isp_sub_regions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Tables
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Tables
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/ispypsa/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ISPyPSA input tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tables/pypsa_friendly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PyPSA friendly Tables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_api_workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default workflow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/example_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Default config file
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paths
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Paths">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pathsparsed_traces_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.parsed_traces_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsworkbook_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.workbook_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsparsed_workbook_cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.parsed_workbook_cache
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsrun_directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.run_directory
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pathsispypsa_run_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      paths.ispypsa_run_name
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trace-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trace Data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Trace Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trace_datadataset_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      trace_data.dataset_type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trace_datadataset_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      trace_data.dataset_year
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ispypsa-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      ISPyPSA Templating
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ISPyPSA Templating">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iasr_workbook_version" class="md-nav__link">
+    <span class="md-ellipsis">
+      iasr_workbook_version
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#financialeconomic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Financial/Economic
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Financial/Economic">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wacc" class="md-nav__link">
+    <span class="md-ellipsis">
+      wacc
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discount_rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      discount_rate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unserved-energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unserved Energy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unserved Energy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unserved_energycost" class="md-nav__link">
+    <span class="md-ellipsis">
+      unserved_energy.cost
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unserved_energymax_per_node" class="md-nav__link">
+    <span class="md-ellipsis">
+      unserved_energy.max_per_node
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Network
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Network">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#networktransmission_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.transmission_expansion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkrez_transmission_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.rez_transmission_expansion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkannuitisation_lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.annuitisation_lifetime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networknodesregional_granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.nodes.regional_granularity
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networknodesrezs" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.nodes.rezs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkrez_to_sub_region_transmission_default_limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      network.rez_to_sub_region_transmission_default_limit
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporalyear_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.year_type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalrangestart_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.range.start_year
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalrangeend_year" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.range.end_year
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="temporal.capacity_expansion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionresolution_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.resolution_min
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionreference_year_cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.reference_year_cycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansioninvestment_periods" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.investment_periods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionaggregationrepresentative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.aggregation.representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporalcapacity_expansionaggregationnamed_representative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.capacity_expansion.aggregation.named_representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperational" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="temporal.operational">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalresolution_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.resolution_min
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalreference_year_cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.reference_year_cycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalhorizon" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.horizon
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationaloverlap" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.overlap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalaggregationrepresentative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.aggregation.representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporaloperationalaggregationnamed_representative_weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      temporal.operational.aggregation.named_representative_weeks
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solver" class="md-nav__link">
+    <span class="md-ellipsis">
+      Solver
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Solver">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solver_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      solver
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plotting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plotting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plotting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create_plots" class="md-nav__link">
+    <span class="md-ellipsis">
+      create_plots
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtering
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filter_by_nem_regions" class="md-nav__link">
+    <span class="md-ellipsis">
+      filter_by_nem_regions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filter_by_isp_sub_regions" class="md-nav__link">
+    <span class="md-ellipsis">
+      filter_by_isp_sub_regions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>Config</h1>
+
+<p>The config is a yaml file used to specify all the modelling settings or
+inputs that are not otherwise provided in the ISPyPSA input tables. Each of the settings
+is documented on this page and an example config file can be found
+<a href="../examples/example_config/">here</a>.</p>
+<h2 id="paths">Paths</h2>
+<p>The paths settings specify the locations of model input and output data. Either relative
+or absolute paths can be used. Relative paths assume the run directory (CLI or API) is the
+root directory of the relative path.</p>
+<h3 id="pathsparsed_traces_directory">paths.parsed_traces_directory</h3>
+<p>The path to the folder containing parsed demand, wind and solar traces.  If set to
+ENV the path will be retrieved from the environment variable "PATH_TO_PARSED_TRACES".</p>
+<p>Examples:</p>
+<p><code>parsed_traces_directory: ENV</code></p>
+<p><code>parsed_traces_directory: "path/to/traces"</code></p>
+<h3 id="pathsworkbook_path">paths.workbook_path</h3>
+<p>The path to the ISP workbook Excel file.</p>
+<p>Examples:</p>
+<p><code>workbook_path: "path/to/workbook"</code></p>
+<h3 id="pathsparsed_workbook_cache">paths.parsed_workbook_cache</h3>
+<p>The path to the workbook table cache directory.</p>
+<p>Examples:</p>
+<p><code>parsed_workbook_cache: path/to/workbook/cache</code></p>
+<h3 id="pathsrun_directory">paths.run_directory</h3>
+<p>The run directory where all inputs and outputs will be stored. Subdirectories will be created automatically:</p>
+<ul>
+<li>{run_directory}/{ispypsa_run_name}/ispypsa_inputs</li>
+<li>{run_directory}/{ispypsa_run_name}/pypsa_friendly</li>
+<li>{run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries</li>
+<li>{run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries</li>
+<li>{run_directory}/{ispypsa_run_name}/outputs</li>
+</ul>
+<p>Examples:</p>
+<p><code>run_directory: "path/to/directory"</code></p>
+<h3 id="pathsispypsa_run_name">paths.ispypsa_run_name</h3>
+<p>The name of the ISPyPSA model run. This name is used to select the output folder within <code>run_directory</code>.</p>
+<p>Examples:</p>
+<p><code>ispypsa_run_name: modelling_test_run</code></p>
+<h2 id="trace-data">Trace Data</h2>
+<h3 id="trace_datadataset_type">trace_data.dataset_type</h3>
+<p>The type of trace dataset to download when using CLI download tasks. This setting is only used by the
+<code>download_trace_data</code> CLI task.</p>
+<p>Options:</p>
+<ul>
+<li>"example": Smaller dataset suitable for testing and development</li>
+<li>"full": Complete dataset for production runs</li>
+</ul>
+<p>Default: "example"</p>
+<p>Examples:</p>
+<p><code>dataset_type: example</code></p>
+<h3 id="trace_datadataset_year">trace_data.dataset_year</h3>
+<p>The year of trace dataset to download when using CLI download tasks. This setting is used by the <code>download_trace_data</code>
+CLI task and by other modelling tasks to select the correct data set from the trace data directory. Currently only 2024
+is supported.</p>
+<p>Default: 2024</p>
+<p>Examples:</p>
+<p><code>dataset_year: 2024</code></p>
+<h2 id="ispypsa-templating">ISPyPSA Templating</h2>
+<h3 id="iasr_workbook_version">iasr_workbook_version</h3>
+<p>The version of IASR workbook that the template inputs are generated from. The workbook
+version is used to retrieve IASR data which has been manually extracted (rather than via
+isp-workbook-parser) and packaged with ISPyPSA. Some data needs to be manually extracted
+because of the formatting of the IASR workbook.</p>
+<p>Examples:</p>
+<p><code>iasr_workbook_version: "6.0"</code></p>
+<h3 id="scenario">scenario</h3>
+<p>The ISP scenario for which to generate ISPyPSA inputs.</p>
+<p>Options (descriptions lifted from the 2024 ISP):</p>
+<ul>
+<li>"Progressive Change": Reflects slower economic growth and energy investment with economic and international factors placing industrial demands at greater risk and slower decarbonisation action beyond current commitments</li>
+<li>"Step Change": Fulfils Australia's emission reduction commitments in a growing economy</li>
+<li>"Green Energy Exports": Sees very strong industrial decarbonisation and low-emission energy exports</li>
+</ul>
+<p>Examples:</p>
+<p><code>scenario: Step Change</code></p>
+<h2 id="financialeconomic">Financial/Economic</h2>
+<h3 id="wacc">wacc</h3>
+<p>Weighted average cost of capital for annuitisation of generation and transmission costs,
+as a fraction, i.e. 0.07 is 7%.</p>
+<p>Examples:</p>
+<p><code>wacc: 0.07</code></p>
+<h3 id="discount_rate">discount_rate</h3>
+<p>Discount rate applied to model objective function, as a fraction, i.e. 0.05 is 5%.</p>
+<p>Examples:</p>
+<p><code>discount_rate: 0.05</code></p>
+<h2 id="unserved-energy">Unserved Energy</h2>
+<p>Unserved energy can be allowed at each node in the network with energy demand to prevent
+model infeasibility.</p>
+<h3 id="unserved_energycost">unserved_energy.cost</h3>
+<p>Cost of unserved energy in $/MWh.</p>
+<p>Set to 'None' to disable unserved energy generators.</p>
+<p>Examples:</p>
+<p><code>cost: 10000.0</code></p>
+<h3 id="unserved_energymax_per_node">unserved_energy.max_per_node</h3>
+<p>Maximum allowed unserved demand MW per demand network node. Defaults to 1e5
+(100,000 MW). Larger values may cause problems for optimisation solvers.</p>
+<p>Examples:</p>
+<p><code>max_per_node: 100000.0</code></p>
+<h2 id="network">Network</h2>
+<h3 id="networktransmission_expansion">network.transmission_expansion</h3>
+<p>Does the model consider the expansion of sub-region to sub-region transmission capacity.</p>
+<p>Examples:</p>
+<p><code>transmission_expansion: True</code></p>
+<h3 id="networkrez_transmission_expansion">network.rez_transmission_expansion</h3>
+<p>Does the model consider the expansion of renewable energy zone transmission capacity.</p>
+<p>Examples:</p>
+<p><code>rez_transmission_expansion: True</code></p>
+<h3 id="networkannuitisation_lifetime">network.annuitisation_lifetime</h3>
+<p>Years to annuitise transmission project capital costs over.</p>
+<p>Examples:</p>
+<p><code>annuitisation_lifetime: 30</code></p>
+<h3 id="networknodesregional_granularity">network.nodes.regional_granularity</h3>
+<p>The regional granularity of the nodes in the modelled network. Only "sub_regions" is
+implemented and allowed currently.</p>
+<p>Options:</p>
+<ul>
+<li>"sub_regions": ISP sub-regions are added as network nodes (12 nodes)</li>
+<li>"nem_regions": NEM regions are added as network nodes (5 nodes)</li>
+<li>"single_region": A single node, the Victorian sub-region, is added as a network node (1 node)</li>
+</ul>
+<p>Examples:</p>
+<p><code>regional_granularity: sub_regions</code></p>
+<h3 id="networknodesrezs">network.nodes.rezs</h3>
+<p>Whether Renewable Energy Zones (REZs) are modelled as distinct nodes.</p>
+<p>Options:</p>
+<ul>
+<li>"discrete_nodes": REZs are added as network nodes to model REZ transmission limits</li>
+<li>"attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)</li>
+</ul>
+<p>Examples:</p>
+<p><code>rezs: discrete_nodes</code></p>
+<h3 id="networkrez_to_sub_region_transmission_default_limit">network.rez_to_sub_region_transmission_default_limit</h3>
+<p>Link capacity limit for rez to node connections that have their limit's modelled
+through custom constraint (MW).</p>
+<p>The export limits for some REZs are modelled via custom constraints which
+incorporate multiple transmission line flows and/or generator dispatch levels. For these
+REZs a PyPSA link object between the REZ and sub region node is still created but with a
+very high capacity limit such the that the custom constraint always sets the actual REZ
+export limit.</p>
+<p>Examples:</p>
+<p><code>rez_to_sub_region_transmission_default_limit: 1e5</code></p>
+<h2 id="temporal">Temporal</h2>
+<h3 id="temporalyear_type">temporal.year_type</h3>
+<p>Whether the model uses financial ("fy") or calendar ("calendar") years.</p>
+<p>Examples:</p>
+<p><code>year_type: fy</code></p>
+<h3 id="temporalrangestart_year">temporal.range.start_year</h3>
+<p>Model begins at the start of the start year. E.g. the first time interval for a
+financial year model starting in 2025 would be 2024-07-01 00:30:00.</p>
+<p>Examples:</p>
+<p><code>start_year: 2025</code></p>
+<h3 id="temporalrangeend_year">temporal.range.end_year</h3>
+<p>Model ends at the end of the end year. E.g. the last time interval for a
+financial year model ending in 2028 would be 2028-07-01 00:00:00.</p>
+<p>Examples:</p>
+<p><code>end_year: 2035</code></p>
+<h3 id="temporalcapacity_expansion">temporal.capacity_expansion</h3>
+<p>The temporal settings for the capacity expansion phase of the modelling.</p>
+<h4 id="temporalcapacity_expansionresolution_min">temporal.capacity_expansion.resolution_min</h4>
+<p>The temporal resolution in minutes. Currently, only the 30 min resolution is
+implemented/allowed. Value should be provided as an integer.</p>
+<p>Examples:</p>
+<p><code>resolution_min: 30</code></p>
+<h4 id="temporalcapacity_expansionreference_year_cycle">temporal.capacity_expansion.reference_year_cycle</h4>
+<p>The order in which different weather reference years are used in the model. If the
+number of reference years is less than the number of model years the reference years
+will be reused in the order provided. For example, if there are 5 model years and 2
+references years, [A, B], are given in reference_year_cycle, the reference years are used
+in the order [A, B, A, B, A].</p>
+<p>Examples:</p>
+<p><code>reference_year_cycle: [2018, 2021, 2023]</code></p>
+<h4 id="temporalcapacity_expansioninvestment_periods">temporal.capacity_expansion.investment_periods</h4>
+<p>List of investment period start years. An investment period runs from the beginning of
+the year (financial or calendar) until the next the period begins or the model end year is reached.</p>
+<p>Examples:</p>
+<p><code>investment_periods: [2025, 2030]</code></p>
+<h4 id="temporalcapacity_expansionaggregationrepresentative_weeks">temporal.capacity_expansion.aggregation.representative_weeks</h4>
+<p>Representative weeks to use instead of full yearly temporal representation.</p>
+<p>Options:</p>
+<ul>
+<li>"None": Full yearly temporal representation is used or another aggregation.</li>
+<li>list[int]: a list of integers specifying weeks of year to use as representative. Weeks
+  of year are defined as full weeks (Monday-Sunday) falling within the year. For
+  example, if the list is "[1]" the model will only use the first full week of each
+  modelled year.</li>
+</ul>
+<p>Examples:</p>
+<p><code>representative_weeks: [12, 25, 40]</code></p>
+<h4 id="temporalcapacity_expansionaggregationnamed_representative_weeks">temporal.capacity_expansion.aggregation.named_representative_weeks</h4>
+<p>Named representative weeks to use instead of full yearly temporal representation.</p>
+<p>Options:</p>
+<ul>
+<li>"None": Full yearly temporal representation is used or another aggregation.</li>
+<li>list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar or financial year are considered for selection.</li>
+</ul>
+<p>Examples:</p>
+<p><code>named_representative_weeks: [residual-peak-demand, minimum-demand]</code></p>
+<h3 id="temporaloperational">temporal.operational</h3>
+<p>The temporal settings for the operational phase of the modelling.</p>
+<h4 id="temporaloperationalresolution_min">temporal.operational.resolution_min</h4>
+<p>The temporal resolution in minutes. Currently, only the 30 min resolution is
+implemented/allowed. Value should be provided as an integer.</p>
+<p>Examples:</p>
+<p><code>resolution_min: 30</code></p>
+<h4 id="temporaloperationalreference_year_cycle">temporal.operational.reference_year_cycle</h4>
+<p>The order in which different weather reference years are used in the model. If the
+number of reference years is less than the number of model years the reference years
+will be reused in the order provided. For example, if there are 5 model years and 2
+references years, [A, B], are given in reference_year_cycle, the reference years are used
+in the order [A, B, A, B, A].</p>
+<p>Examples:</p>
+<p><code>reference_year_cycle: [2018, 2021, 2023]</code></p>
+<h4 id="temporaloperationalhorizon">temporal.operational.horizon</h4>
+<p>The number of time intervals to optimise over per iteration of the operational rolling
+horizon optimisation.</p>
+<p>Examples:</p>
+<p><code>horizon: 96</code></p>
+<h4 id="temporaloperationaloverlap">temporal.operational.overlap</h4>
+<p>The number of time intervals to overlap between the current and previous iterations
+of the rolling horizon optimisation.</p>
+<p>If a horizon of 96 (48*2) and overlap of 48 was used, with a 30 min resolution, this
+would be equivalent to daily rolling horizon with a one day look ahead.</p>
+<p>Examples:</p>
+<p><code>overlap: 48</code></p>
+<h4 id="temporaloperationalaggregationrepresentative_weeks">temporal.operational.aggregation.representative_weeks</h4>
+<p>Representative weeks to use instead of full yearly temporal representation.</p>
+<p>Options:</p>
+<ul>
+<li>"None": Full yearly temporal representation is used or another aggregation.</li>
+<li>list[int]: a list of integers specifying weeks of year to use as representative. Weeks
+  of year are defined as full weeks (Monday-Sunday) falling within the year. For
+  example, if the list is "[1]" the model will only use the first full week of each
+  modelled year.</li>
+</ul>
+<p>Examples:</p>
+<p><code>representative_weeks: [12, 25, 40]</code></p>
+<h4 id="temporaloperationalaggregationnamed_representative_weeks">temporal.operational.aggregation.named_representative_weeks</h4>
+<p>Named representative weeks to use instead of full yearly temporal representation.</p>
+<p>Options:</p>
+<ul>
+<li>"None": Full yearly temporal representation is used or another aggregation.</li>
+<li>list[str]: A list of strings from the following options: peak-demand, residual-peak-demand, minimum-demand,
+   residual-minimum-demand, peak-consumption, residual-peak-consumption. Only weeks which fall fully within a model
+   calendar or financial year are considered for selection.</li>
+</ul>
+<p>Examples:</p>
+<p><code>named_representative_weeks: [residual-peak-demand, minimum-demand]</code></p>
+<h2 id="solver">Solver</h2>
+<h3 id="solver_1">solver</h3>
+<p>External solver to use.</p>
+<p>Options (refer to https://pypsa.readthedocs.io/en/latest/getting-started/installation.html):</p>
+<p>Free, and by default, installed with ISPyPSA:</p>
+<ul>
+<li>"highs"</li>
+</ul>
+<p>Free, but must be installed by the user:</p>
+<ul>
+<li>"cbc"</li>
+<li>"glpk"</li>
+<li>"scip"</li>
+</ul>
+<p>Not free and must be installed by the user:</p>
+<ul>
+<li>"cplex"</li>
+<li>"gurobi"</li>
+<li>"xpress"</li>
+<li>"mosek"</li>
+<li>"copt"</li>
+<li>"mindopt"</li>
+<li>"pips"</li>
+</ul>
+<p>Examples:</p>
+<p><code>solver: highs</code></p>
+<h2 id="plotting">Plotting</h2>
+<h3 id="create_plots">create_plots</h3>
+<p>Whether to automatically generate plots and a results website after the capacity
+expansion and operational models complete.</p>
+<p>Options:</p>
+<ul>
+<li>true: Enable automatic plot generation after model runs</li>
+<li>false: Disable automatic plot generation (plots can still be generated separately
+  using the <code>create_capacity_expansion_plots</code> or <code>create_operational_plots</code> CLI tasks)</li>
+</ul>
+<p>Default: false</p>
+<p>Examples:</p>
+<p><code>create_plots: true</code></p>
+<p>Can also be overridden on the command line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ispypsa<span class="w"> </span><span class="nv">config</span><span class="o">=</span>config.yaml<span class="w"> </span><span class="nv">create_plots</span><span class="o">=</span>True<span class="w"> </span>create_and_run_capacity_expansion_model
+</code></pre></div>
+<h2 id="filtering">Filtering</h2>
+<h3 id="filter_by_nem_regions">filter_by_nem_regions</h3>
+<p>Filter the model to only include specified NEM regions. If set, all NEM regions not
+in this list will be excluded from the model. This is useful for running smaller,
+faster models focused on specific regions.</p>
+<p>Cannot be used together with <code>filter_by_isp_sub_regions</code>.</p>
+<p>Default: None (all regions included)</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Single region</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">filter_by_nem_regions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;NSW&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Multiple regions</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">filter_by_nem_regions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;NSW&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;VIC&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;QLD&quot;</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<h3 id="filter_by_isp_sub_regions">filter_by_isp_sub_regions</h3>
+<p>Filter the model to only include specified ISP sub-regions. If set, all sub-regions
+not in this list will be excluded from the model. This provides finer-grained control
+than <code>filter_by_nem_regions</code>.</p>
+<p>Cannot be used together with <code>filter_by_nem_regions</code>.</p>
+<p>Default: None (all sub-regions included)</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Single sub-region</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">filter_by_isp_sub_regions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CNSW&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Multiple sub-regions</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">filter_by_isp_sub_regions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CNSW&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;NNSW&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;SNW&quot;</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
