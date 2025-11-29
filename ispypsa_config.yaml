@@ -17,7 +17,7 @@ paths:
 
   # The name of the ISPyPSA model run
   # This name is used to select the output folder within `ispypsa_runs`
-  ispypsa_run_name: development
+  ispypsa_run_name: overnight_build_nsw_2050
 
 
 # ===== Trace Data =====================================================================
@@ -97,17 +97,17 @@ temporal:
   range:
     # Model begin at the start of the start year. E.g. the first time interval for a
     # financial year model starting in 2025 would be 2024-07-01 00:30:00.
-    start_year: 2025
+    start_year: 2050
     # Model ends at the end of the start year. E.g. the last time interval for a
     # financial year model ending in 2028 would be 2028-06-01 23:30:00.
-    end_year: 2027
+    end_year: 2050
   capacity_expansion:
     resolution_min: 30
     reference_year_cycle: [2018]
     # List of investment period start years. An investment period runs from the beginning
     # of the year (financial or calendar depending on the config) until the next the
     # period begins.
-    investment_periods: [2025, 2026]
+    investment_periods: [2050]
     aggregation:
       # Representative weeks to use instead of full yearly temporal representation.
       # Options:
@@ -122,7 +122,7 @@ temporal:
       #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
       #     residual-minimum-demand, peak-consumption, residual-peak-consumption
-      named_representative_weeks: [residual-peak-demand]
+      named_representative_weeks: [residual-peak-demand, peak-consumption, residual-minimum-demand]
 
   operational:
     resolution_min: 30
@@ -142,7 +142,7 @@ temporal:
       #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
       #     residual-minimum-demand, peak-consumption, residual-peak-consumption
-      named_representative_weeks: [residual-peak-demand]
+      named_representative_weeks: [residual-peak-demand, peak-consumption, residual-minimum-demand]
 
 
 # ===== Solver =======================================================================
