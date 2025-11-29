@@ -177,7 +177,7 @@ def _generate_html_template(
         }}
 
         .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5291BF 0%, #3d6d8f 100%);
             color: white;
             padding: 1.5rem 2rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -317,13 +317,13 @@ def _generate_html_template(
         }}
 
         .file:hover {{
-            background: #667eea;
+            background: #6aa3cc;
             color: white;
             transform: translateX(-2px);
         }}
 
         .file.active {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5291BF 0%, #3d6d8f 100%);
             color: white;
             font-weight: 500;
         }}

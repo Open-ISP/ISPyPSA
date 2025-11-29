@@ -201,6 +201,9 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
         snapshots=snapshots,
     )
 
+    returned_snapshots["generators"] = 1.0
+    returned_snapshots["objective"] = 1.0
+
     # Add snapshots to pypsa_tables for network building
     pypsa_tables["snapshots"] = returned_snapshots
 

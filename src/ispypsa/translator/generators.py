@@ -7,7 +7,6 @@ import pandas as pd
 from isp_trace_parser import get_data
 
 from ispypsa.templater.helpers import (
-    _fuzzy_match_names,
     _snakecase_string,
     _where_any_substring_appears,
 )

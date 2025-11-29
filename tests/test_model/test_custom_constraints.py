@@ -20,6 +20,9 @@ def test_custom_constraints():
         {
             "investment_periods": 2025,
             "snapshots": snapshots,
+            "generators": 1.0,
+            "objective": 1.0,
+            "stores": 1.0,
         }
     )
     pypsa_friendly_inputs_location = Path(

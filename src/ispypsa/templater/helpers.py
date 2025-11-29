@@ -186,7 +186,7 @@ def _where_any_substring_appears(
         Boolean :class:`pd.Series` with `True` where a substring appears in a string
     """
     series_where_str = series.apply(lambda x: isinstance(x, str))
-    false_series = pd.Series(np.repeat(False, len(series)))
+    false_series = pd.Series(False, index=series_where_str.index)
     if not any(series_where_str):
         return false_series
     substrings = list(substrings)
