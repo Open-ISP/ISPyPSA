@@ -32,6 +32,7 @@ from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_links,
 )
 from ispypsa.translator.snapshots import (
+    _add_snapshot_weightings,
     _create_investment_period_weightings,
     create_pypsa_friendly_snapshots,
 )
@@ -328,6 +329,10 @@ def create_pypsa_friendly_timeseries_inputs(
         generators,
         snapshots,
         pypsa_friendly_timeseries_inputs_location,
+    )
+
+    snapshots = _add_snapshot_weightings(
+        snapshots, config.temporal.capacity_expansion.resolution_min
     )
 
     return snapshots
