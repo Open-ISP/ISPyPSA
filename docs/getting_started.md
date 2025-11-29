@@ -167,7 +167,7 @@ pip install or a python package manager can install ISPyPSA
        └── <ispypsa_run_name>/
            ├── ispypsa_inputs/
            │   ├── build_costs.csv
-           │   ├── ...
+           │   └── ...
            ├── pypsa_friendly/
            │   ├── buses.csv
            │   ├── ...
@@ -182,10 +182,16 @@ pip install or a python package manager can install ISPyPSA
            │   │       ├── Ararat Wind Farm.parquet
            │   │       └── ...
            │   └── operational_timeseries/
-           │       └── (same structure as capacity_expansion)
+           │       └── (same structure as capacity_expansion_timeseries)
            └── outputs/
-               ├── development_capacity_expansion.h5
-               └── development_operational.h5
+               ├── capacity_expansion.nc
+               ├── capacity_expansion_results_viewer.html
+               ├── capacity_expansion_tables
+               ├── capacity_expansion_plots
+               ├── operational.nc
+               ├── operational_results_viewer.html
+               ├── operational_tables
+               └── operational_plots
        ```
 
 7. The previous model run used the default inputs for the ISP scenario specified in the
