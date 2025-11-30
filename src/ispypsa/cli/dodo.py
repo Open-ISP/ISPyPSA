@@ -7,10 +7,10 @@ from shutil import copy2, rmtree
 import pypsa
 from doit import create_after, get_var
 from doit.tools import config_changed
+from isp_trace_parser.remote import fetch_trace_data
 
 from ispypsa.config import load_config
 from ispypsa.data_fetch import (
-    fetch_trace_data,
     fetch_workbook,
     read_csvs,
     write_csvs,
@@ -406,7 +406,11 @@ def download_trace_data_from_config() -> None:
 
     # Download (fetch_trace_data handles directory creation)
     # Note: Partial downloads from network errors will be left as-is
-    fetch_trace_data(dataset_type, dataset_year, trace_dir)
+    fetch_trace_data(
+        dataset_type=dataset_type,
+        dataset_src=f"isp_{dataset_year}",
+        save_directory=trace_dir.parent,  # parent to remove isp_{year} level
+    )
 
     # Log completion
     logging.info("Trace data download completed successfully")

@@ -93,9 +93,8 @@ def create_pypsa_friendly_bus_demand_timeseries(
         dict[str, pd.DataFrame]: Dictionary with demand node names as keys and trace
             dataframes as values. Each dataframe contains columns: Datetime, Value
     """
-    trace_data_path = trace_data_path / Path("demand")
 
-    # remove "s" unless single_region for for type filtering
+    # remove "s" unless single_region for type filtering
     if regional_granularity == "single_region":
         isp_sub_regions["demand_nodes"] = "NEM"
     elif regional_granularity == "nem_regions":
@@ -105,30 +104,29 @@ def create_pypsa_friendly_bus_demand_timeseries(
 
     demand_nodes = list(isp_sub_regions["demand_nodes"].unique())
 
+    trace_data = get_data.get_demand_multiple_reference_years(
+        reference_year_mapping=reference_year_mapping,
+        subregion=list(isp_sub_regions["isp_sub_region_id"].unique()),
+        scenario=scenario,
+        poe="POE50",
+        demand_type="OPSO_MODELLING",
+        directory=trace_data_path / Path("demand"),
+        year_type=year_type,
+        select_columns=["subregion", "datetime", "value"],
+    )
+
     demand_traces = {}
 
     for demand_node in demand_nodes:
         mask = isp_sub_regions["demand_nodes"] == demand_node
         sub_regions_to_aggregate = list(isp_sub_regions.loc[mask, "isp_sub_region_id"])
-
-        node_traces = []
-        for sub_regions in sub_regions_to_aggregate:
-            trace = get_data.demand_multiple_reference_years(
-                reference_years=reference_year_mapping,
-                directory=trace_data_path,
-                subregion=sub_regions,
-                scenario=scenario,
-                year_type=year_type,
-                demand_type="OPSO_MODELLING",
-                poe="POE50",
-            )
-            node_traces.append(trace)
-
-        node_traces = pd.concat(node_traces)
-        node_trace = node_traces.groupby("Datetime", as_index=False)["Value"].sum()
-        node_trace["Value"] = node_trace["Value"].clip(lower=0.0)
+        node_traces = trace_data[
+            trace_data["subregion"].isin(sub_regions_to_aggregate)
+        ].copy()
+        node_trace = node_traces.groupby("datetime", as_index=False)["value"].sum()
+        node_trace["value"] = node_trace["value"].clip(lower=0.0)
         # datetime in nanoseconds required by PyPSA
-        node_trace["Datetime"] = node_trace["Datetime"].astype("datetime64[ns]")
+        node_trace["datetime"] = node_trace["datetime"].astype("datetime64[ns]")
         demand_traces[demand_node] = node_trace
 
     return demand_traces

@@ -29,7 +29,7 @@ def _time_series_filter(time_series_data: pd.DataFrame, snapshots: pd.DataFrame)
     48 2020-01-03 00:00:00     48
 
     Args:
-        time_series_data: pd.DataFrame with time series column called 'Datetime'
+        time_series_data: pd.DataFrame with time series column called 'datetime'
         snapshots: pd.DataFrame with datetime index
 
     """
@@ -281,8 +281,8 @@ def _filter_snapshots_for_named_representative_weeks(
     ...     'snapshots': pd.date_range('2024-01-01', '2024-01-31', freq='D')
     ... })
     >>> demand_data = pd.DataFrame({
-    ...     'Datetime': pd.date_range('2024-01-01', '2024-01-31', freq='D'),
-    ...     'Value': [100, 110, 120, 130, 140, 150, 160,  # Week 1 (Jan 1-7)
+    ...     'datetime': pd.date_range('2024-01-01', '2024-01-31', freq='D'),
+    ...     'value': [100, 110, 120, 130, 140, 150, 160,  # Week 1 (Jan 1-7)
     ...               170, 300, 250, 200, 180, 160, 140,  # Week 2 (Jan 8-14) - peak
     ...               120, 110, 100, 90, 80, 70, 60,      # Week 3 (Jan 15-21) - minimum
     ...               50, 60, 70, 80, 90, 100, 110,       # Week 4 (Jan 22-28)
@@ -363,22 +363,22 @@ def _prepare_demand_with_residual(
     named representative weeks require residual metrics.
 
     Args:
-        demand_data: DataFrame with columns "Datetime" and "Value" containing demand time series
-        renewable_data: Optional DataFrame with columns "Datetime" and "Value" containing
+        demand_data: DataFrame with columns "datetime" and "value" containing demand time series
+        renewable_data: Optional DataFrame with columns "datetime" and "value" containing
             renewable generation time series
         named_representative_weeks: List of named week types to determine if residual is needed
 
     Returns:
-        DataFrame with columns "Datetime", "demand", and optionally "residual_demand"
+        DataFrame with columns "datetime", "demand", and optionally "residual_demand"
     """
-    df = demand_data.rename(columns={"Value": "demand"})
+    df = demand_data.rename(columns={"value": "demand"})
 
     needs_residual = any("residual" in metric for metric in named_representative_weeks)
 
     if renewable_data is not None:
         df = df.merge(
-            renewable_data.rename(columns={"Value": "renewable"}),
-            on="Datetime",
+            renewable_data.rename(columns={"value": "renewable"}),
+            on="datetime",
             how="left",
         )
         df["residual_demand"] = df["demand"] - df["renewable"].fillna(0)
@@ -401,7 +401,7 @@ def _filter_and_assign_weeks(
     year boundaries are excluded from the result.
 
     Args:
-        demand_df: DataFrame with "Datetime" column containing demand time series data
+        demand_df: DataFrame with "datetime" column containing demand time series data
         start_year: First year to include in the analysis
         end_year: Last year to include in the analysis (exclusive)
         month: Starting month for each year (1 for calendar year, 7 for Australian financial year)
@@ -422,7 +422,7 @@ def _filter_and_assign_weeks(
 
     for year_start, year_end in zip(year_starts, year_ends):
         df = demand_df[
-            (demand_df["Datetime"] > year_start) & (demand_df["Datetime"] <= year_end)
+            (demand_df["datetime"] > year_start) & (demand_df["datetime"] <= year_end)
         ].copy()
 
         if month == 1:
@@ -430,21 +430,21 @@ def _filter_and_assign_weeks(
         else:
             df["year"] = year_end.year
 
-        days_until_next_monday = (7 - df["Datetime"].dt.weekday) % 7
+        days_until_next_monday = (7 - df["datetime"].dt.weekday) % 7
         days_until_next_monday = days_until_next_monday.where(
             days_until_next_monday != 0, 7
         )
 
         already_week_end_time = (
-            (df["Datetime"].dt.weekday == 0)
-            & (df["Datetime"].dt.hour == 0)
-            & (df["Datetime"].dt.minute == 0)
+            (df["datetime"].dt.weekday == 0)
+            & (df["datetime"].dt.hour == 0)
+            & (df["datetime"].dt.minute == 0)
         )
 
         df["week_end_time"] = np.where(
             already_week_end_time,
-            df["Datetime"],
-            df["Datetime"] + pd.to_timedelta(days_until_next_monday, unit="days"),
+            df["datetime"],
+            df["datetime"] + pd.to_timedelta(days_until_next_monday, unit="days"),
         )
 
         # round back to midnight
@@ -610,12 +610,12 @@ def _aggregate_demand_traces(
         demand_traces: Dictionary with node names as keys and demand traces as values
 
     Returns:
-        DataFrame with columns: Datetime, Value (total demand in MW)
+        DataFrame with columns: datetime, value (total demand in MW)
     """
     # Combine all demand data
     all_demand_data = list(demand_traces.values())
     combined_demand = pd.concat(all_demand_data)
-    aggregated_demand = combined_demand.groupby("Datetime")["Value"].sum().reset_index()
+    aggregated_demand = combined_demand.groupby("datetime")["value"].sum().reset_index()
 
     return aggregated_demand
 
@@ -631,7 +631,7 @@ def _aggregate_wind_solar_traces(
         existing_generators: DataFrame with generator data including fuel_type and maximum_capacity_mw
 
     Returns:
-        DataFrame with columns: Datetime, Value (total wind+solar MW)
+        DataFrame with columns: datetime, value (total wind+solar MW)
     """
     # Create mapping of generator name to fuel type and capacity
     gen_info = existing_generators.set_index("generator")[
@@ -652,19 +652,19 @@ def _aggregate_wind_solar_traces(
         if "Wind" in gen_fuel_type or "Solar" in gen_fuel_type:
             # Convert from per-unit to MW
             trace_mw = trace.copy()
-            trace_mw["Value"] = trace_mw["Value"] * gen_capacity
+            trace_mw["value"] = trace_mw["value"] * gen_capacity
             renewable_data.append(trace_mw)
 
     # Aggregate all renewable data
     if renewable_data:
         renewable_combined = pd.concat(renewable_data)
         renewable_aggregated = (
-            renewable_combined.groupby("Datetime")["Value"].sum().reset_index()
+            renewable_combined.groupby("datetime")["value"].sum().reset_index()
         )
     else:
         # Return empty dataframe with proper structure
         renewable_aggregated = pd.DataFrame(
-            {"Datetime": pd.to_datetime([]), "Value": []}
+            {"datetime": pd.to_datetime([]), "value": []}
         )
 
     return renewable_aggregated

@@ -436,7 +436,7 @@ def _filter_and_save_timeseries(
 
     Args:
         timeseries_data: Dictionary of timeseries dataframes with names as keys.
-            Each dataframe must have columns: Datetime, Value
+            Each dataframe must have columns: datetime, value
         snapshots: DataFrame containing the expected time series values
         output_path: Path to directory where files will be saved
         trace_type: Type of trace data (e.g., "demand_traces", "solar_traces", "wind_traces")
@@ -454,7 +454,7 @@ def _filter_and_save_timeseries(
     for name, trace in timeseries_data.items():
         # Rename columns to PyPSA format
         trace = trace.rename(
-            columns={"Datetime": "snapshots", "Value": value_column_name}
+            columns={"datetime": "snapshots", "value": value_column_name}
         )
 
         # Filter by snapshots

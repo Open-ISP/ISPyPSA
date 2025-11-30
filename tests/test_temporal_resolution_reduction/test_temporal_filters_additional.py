@@ -49,7 +49,7 @@ def test_filter_snapshots_with_both_representative_and_named_weeks(csv_str_to_df
 
     # Create demand data
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,500
     2024-01-08__00:00:00,600
     2024-01-15__00:00:00,700
@@ -57,7 +57,7 @@ def test_filter_snapshots_with_both_representative_and_named_weeks(csv_str_to_df
     2024-12-23__00:00:00,800
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     demand_traces = {"node1": demand_data}
 
@@ -122,13 +122,13 @@ def test_filter_snapshots_no_filtering_returns_original(csv_str_to_df):
 def test_prepare_data_for_named_weeks_no_residual_metrics(csv_str_to_df):
     """Test _prepare_data_for_named_weeks when no residual metrics are requested."""
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     demand_traces = {"node1": demand_data}
     named_weeks = ["peak-demand", "minimum-demand"]  # No residual metrics
@@ -142,13 +142,13 @@ def test_prepare_data_for_named_weeks_no_residual_metrics(csv_str_to_df):
 
     # Expected aggregated demand
     expected_demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     expected_demand = csv_str_to_df(expected_demand_csv)
-    expected_demand["Datetime"] = pd.to_datetime(expected_demand["Datetime"])
+    expected_demand["datetime"] = pd.to_datetime(expected_demand["datetime"])
 
     pd.testing.assert_frame_equal(demand_result, expected_demand)
     assert renewable_result is None
@@ -157,13 +157,13 @@ def test_prepare_data_for_named_weeks_no_residual_metrics(csv_str_to_df):
 def test_prepare_data_for_named_weeks_with_residual_metrics_error(csv_str_to_df):
     """Test _prepare_data_for_named_weeks raises error when residual metrics requested without generator data."""
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     demand_traces = {"node1": demand_data}
     named_weeks = ["residual-peak-demand"]  # Residual metric
@@ -183,22 +183,22 @@ def test_prepare_data_for_named_weeks_with_residual_metrics_error(csv_str_to_df)
 def test_prepare_data_for_named_weeks_with_residual_metrics_success(csv_str_to_df):
     """Test _prepare_data_for_named_weeks successfully prepares data for residual metrics."""
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     gen_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.5
     2024-01-02__00:00:00,0.6
     2024-01-03__00:00:00,0.7
     """
     gen_data = csv_str_to_df(gen_csv)
-    gen_data["Datetime"] = pd.to_datetime(gen_data["Datetime"])
+    gen_data["datetime"] = pd.to_datetime(gen_data["datetime"])
 
     demand_traces = {"node1": demand_data}
     generator_traces = {"wind1": gen_data, "solar1": gen_data}
@@ -221,23 +221,23 @@ def test_prepare_data_for_named_weeks_with_residual_metrics_success(csv_str_to_d
 
     # Expected demand result
     expected_demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     expected_demand = csv_str_to_df(expected_demand_csv)
-    expected_demand["Datetime"] = pd.to_datetime(expected_demand["Datetime"])
+    expected_demand["datetime"] = pd.to_datetime(expected_demand["datetime"])
 
     # Expected renewable result (0.5*100 + 0.5*50, etc.)
     expected_renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,75.0
     2024-01-02__00:00:00,90.0
     2024-01-03__00:00:00,105.0
     """
     expected_renewable = csv_str_to_df(expected_renewable_csv)
-    expected_renewable["Datetime"] = pd.to_datetime(expected_renewable["Datetime"])
+    expected_renewable["datetime"] = pd.to_datetime(expected_renewable["datetime"])
 
     pd.testing.assert_frame_equal(demand_result, expected_demand)
     pd.testing.assert_frame_equal(renewable_result, expected_renewable)
@@ -246,13 +246,13 @@ def test_prepare_data_for_named_weeks_with_residual_metrics_success(csv_str_to_d
 def test_aggregate_demand_traces_single_node(csv_str_to_df):
     """Test _aggregate_demand_traces with single node."""
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     demand_traces = {"node1": demand_data}
 
@@ -260,13 +260,13 @@ def test_aggregate_demand_traces_single_node(csv_str_to_df):
 
     # Expected result is same as input for single node
     expected_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -274,22 +274,22 @@ def test_aggregate_demand_traces_single_node(csv_str_to_df):
 def test_aggregate_demand_traces_multiple_nodes(csv_str_to_df):
     """Test _aggregate_demand_traces with multiple nodes."""
     demand1_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,100
     2024-01-02__00:00:00,200
     2024-01-03__00:00:00,300
     """
     demand_data1 = csv_str_to_df(demand1_csv)
-    demand_data1["Datetime"] = pd.to_datetime(demand_data1["Datetime"])
+    demand_data1["datetime"] = pd.to_datetime(demand_data1["datetime"])
 
     demand2_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,50
     2024-01-02__00:00:00,60
     2024-01-03__00:00:00,70
     """
     demand_data2 = csv_str_to_df(demand2_csv)
-    demand_data2["Datetime"] = pd.to_datetime(demand_data2["Datetime"])
+    demand_data2["datetime"] = pd.to_datetime(demand_data2["datetime"])
 
     demand_traces = {"node1": demand_data1, "node2": demand_data2}
 
@@ -297,13 +297,13 @@ def test_aggregate_demand_traces_multiple_nodes(csv_str_to_df):
 
     # Expected aggregated result
     expected_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,150
     2024-01-02__00:00:00,260
     2024-01-03__00:00:00,370
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -312,23 +312,23 @@ def test_aggregate_wind_solar_traces_basic(csv_str_to_df):
     """Test _aggregate_wind_solar_traces with wind and solar generators."""
     # Wind trace (per-unit values)
     wind_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.5
     2024-01-02__00:00:00,0.6
     2024-01-03__00:00:00,0.7
     """
     wind_trace = csv_str_to_df(wind_csv)
-    wind_trace["Datetime"] = pd.to_datetime(wind_trace["Datetime"])
+    wind_trace["datetime"] = pd.to_datetime(wind_trace["datetime"])
 
     # Solar trace (per-unit values)
     solar_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.8
     2024-01-02__00:00:00,0.9
     2024-01-03__00:00:00,0.4
     """
     solar_trace = csv_str_to_df(solar_csv)
-    solar_trace["Datetime"] = pd.to_datetime(solar_trace["Datetime"])
+    solar_trace["datetime"] = pd.to_datetime(solar_trace["datetime"])
 
     generator_traces = {"wind_farm_1": wind_trace, "solar_farm_1": solar_trace}
 
@@ -343,13 +343,13 @@ def test_aggregate_wind_solar_traces_basic(csv_str_to_df):
 
     # Expected MW values: (0.5*100 + 0.8*50), (0.6*100 + 0.9*50), (0.7*100 + 0.4*50)
     expected_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,90.0
     2024-01-02__00:00:00,105.0
     2024-01-03__00:00:00,90.0
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -357,13 +357,13 @@ def test_aggregate_wind_solar_traces_basic(csv_str_to_df):
 def test_aggregate_wind_solar_traces_missing_generator(csv_str_to_df):
     """Test _aggregate_wind_solar_traces when generator is not in existing_generators."""
     gen_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.5
     2024-01-02__00:00:00,0.6
     2024-01-03__00:00:00,0.7
     """
     gen_trace = csv_str_to_df(gen_csv)
-    gen_trace["Datetime"] = pd.to_datetime(gen_trace["Datetime"])
+    gen_trace["datetime"] = pd.to_datetime(gen_trace["datetime"])
 
     generator_traces = {
         "wind_farm_1": gen_trace,
@@ -380,13 +380,13 @@ def test_aggregate_wind_solar_traces_missing_generator(csv_str_to_df):
 
     # Expected: only wind_farm_1 included
     expected_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,50.0
     2024-01-02__00:00:00,60.0
     2024-01-03__00:00:00,70.0
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -394,13 +394,13 @@ def test_aggregate_wind_solar_traces_missing_generator(csv_str_to_df):
 def test_aggregate_wind_solar_traces_non_renewable_generators(csv_str_to_df):
     """Test _aggregate_wind_solar_traces ignores non-wind/solar generators."""
     gen_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.5
     2024-01-02__00:00:00,0.6
     2024-01-03__00:00:00,0.7
     """
     gen_trace = csv_str_to_df(gen_csv)
-    gen_trace["Datetime"] = pd.to_datetime(gen_trace["Datetime"])
+    gen_trace["datetime"] = pd.to_datetime(gen_trace["datetime"])
 
     generator_traces = {
         "wind_farm_1": gen_trace,
@@ -420,13 +420,13 @@ def test_aggregate_wind_solar_traces_non_renewable_generators(csv_str_to_df):
 
     # Expected: only wind_farm_1 included
     expected_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,50.0
     2024-01-02__00:00:00,60.0
     2024-01-03__00:00:00,70.0
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -434,13 +434,13 @@ def test_aggregate_wind_solar_traces_non_renewable_generators(csv_str_to_df):
 def test_aggregate_wind_solar_traces_no_renewable_generators(csv_str_to_df):
     """Test _aggregate_wind_solar_traces when no renewable generators exist."""
     gen_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,0.5
     2024-01-02__00:00:00,0.6
     2024-01-03__00:00:00,0.7
     """
     gen_trace = csv_str_to_df(gen_csv)
-    gen_trace["Datetime"] = pd.to_datetime(gen_trace["Datetime"])
+    gen_trace["datetime"] = pd.to_datetime(gen_trace["datetime"])
 
     generator_traces = {"coal_plant": gen_trace, "gas_plant": gen_trace}
 
@@ -454,7 +454,7 @@ def test_aggregate_wind_solar_traces_no_renewable_generators(csv_str_to_df):
     result = _aggregate_wind_solar_traces(generator_traces, existing_generators)
 
     # Should return empty DataFrame with correct structure
-    expected = pd.DataFrame({"Datetime": pd.to_datetime([]), "Value": []})
+    expected = pd.DataFrame({"datetime": pd.to_datetime([]), "value": []})
 
     pd.testing.assert_frame_equal(result, expected)
 
@@ -465,13 +465,13 @@ def test_filter_and_assign_weeks_financial_year_logic(csv_str_to_df):
 
     # Let's test with calendar year first to ensure the function works
     demand_csv = """
-    Datetime,demand
+    datetime,demand
     2024-01-08__00:00:00,100
     2024-01-10__00:00:00,200
     2024-01-15__00:00:00,150
     """
     demand_df = csv_str_to_df(demand_csv)
-    demand_df["Datetime"] = pd.to_datetime(demand_df["Datetime"])
+    demand_df["datetime"] = pd.to_datetime(demand_df["datetime"])
 
     result = _filter_and_assign_weeks(
         demand_df=demand_df,
@@ -483,13 +483,13 @@ def test_filter_and_assign_weeks_financial_year_logic(csv_str_to_df):
     # Expected result - Jan 8 00:00:00 is already a Monday, so it marks end of its own week
     # Jan 10 and 15 are in week ending Jan 15
     expected_csv = """
-    Datetime,demand,year,week_end_time
+    datetime,demand,year,week_end_time
     2024-01-08__00:00:00,100,2024,2024-01-08__00:00:00
     2024-01-10__00:00:00,200,2024,2024-01-15__00:00:00
     2024-01-15__00:00:00,150,2024,2024-01-15__00:00:00
     """
     expected = csv_str_to_df(expected_csv)
-    expected["Datetime"] = pd.to_datetime(expected["Datetime"])
+    expected["datetime"] = pd.to_datetime(expected["datetime"])
     expected["week_end_time"] = pd.to_datetime(expected["week_end_time"])
 
     pd.testing.assert_frame_equal(
@@ -503,14 +503,14 @@ def test_calculate_week_metrics_without_residual(csv_str_to_df):
 
     # Create demand data with week assignments
     demand_csv = """
-    Datetime,demand,year,week_end_time
+    datetime,demand,year,week_end_time
     2024-01-01__00:00:00,100,2024,2024-01-08__00:00:00
     2024-01-02__00:00:00,200,2024,2024-01-08__00:00:00
     2024-01-08__00:00:00,150,2024,2024-01-15__00:00:00
     2024-01-09__00:00:00,250,2024,2024-01-15__00:00:00
     """
     demand_df = csv_str_to_df(demand_csv)
-    demand_df["Datetime"] = pd.to_datetime(demand_df["Datetime"])
+    demand_df["datetime"] = pd.to_datetime(demand_df["datetime"])
     demand_df["week_end_time"] = pd.to_datetime(demand_df["week_end_time"])
 
     result = _calculate_week_metrics(demand_df)

@@ -47,7 +47,7 @@ def test_calendar_year_peak_demand_weeks(csv_str_to_df):
 
     # Create demand data with clear peaks
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,500
     2024-01-08__00:00:00,600
     2024-01-15__00:00:00,700
@@ -61,7 +61,7 @@ def test_calendar_year_peak_demand_weeks(csv_str_to_df):
     2025-12-31__00:00:00,400
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for peak demand weeks
     result = _filter_snapshots_for_named_representative_weeks(
@@ -118,7 +118,7 @@ def test_financial_year_minimum_demand_weeks(csv_str_to_df):
 
     # Create demand data with clear minimums
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2023-07-01__00:00:00,500
     2023-09-11__00:00:00,100
     2023-09-15__00:00:00,300
@@ -129,7 +129,7 @@ def test_financial_year_minimum_demand_weeks(csv_str_to_df):
     2025-06-30__00:00:00,500
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for minimum demand weeks
     result = _filter_snapshots_for_named_representative_weeks(
@@ -181,25 +181,25 @@ def test_residual_peak_demand_weeks(csv_str_to_df):
 
     # Create demand data
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,900
     2024-01-10__00:00:00,800
     2024-01-22__00:00:00,700
     2024-01-24__00:00:00,600
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Create renewable data
     renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,400
     2024-01-10__00:00:00,350
     2024-01-22__00:00:00,100
     2024-01-24__00:00:00,50
     """
     renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
+    renewable_data["datetime"] = pd.to_datetime(renewable_data["datetime"])
 
     # Filter for residual peak demand weeks
     result = _filter_snapshots_for_named_representative_weeks(
@@ -263,7 +263,7 @@ def test_multiple_week_types_selection(csv_str_to_df):
 
     # Create demand data
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-08__12:00:00,900
     2024-01-09__00:00:00,800
@@ -275,7 +275,7 @@ def test_multiple_week_types_selection(csv_str_to_df):
     2024-02-06__00:00:00,955
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for multiple week types
     result = _filter_snapshots_for_named_representative_weeks(
@@ -323,12 +323,12 @@ def test_residual_metrics_without_renewable_data(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-15__00:00:00,800
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Request residual metrics without providing renewable data
     result = _filter_snapshots_for_named_representative_weeks(
@@ -372,23 +372,23 @@ def test_residual_minimum_demand_week(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-15__00:00:00,800
     2024-01-22__00:00:00,900
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Renewable data that creates lowest residual in week 2
     renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,200
     2024-01-15__00:00:00,700
     2024-01-22__00:00:00,100
     """
     renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
+    renewable_data["datetime"] = pd.to_datetime(renewable_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["residual-minimum-demand"],
@@ -433,7 +433,7 @@ def test_residual_peak_consumption_week(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-08__12:00:00,1100
     2024-01-09__00:00:00,900
@@ -442,10 +442,10 @@ def test_residual_peak_consumption_week(csv_str_to_df):
     2024-01-16__00:00:00,900
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,100
     2024-01-08__12:00:00,150
     2024-01-09__00:00:00,50
@@ -454,7 +454,7 @@ def test_residual_peak_consumption_week(csv_str_to_df):
     2024-01-16__00:00:00,500
     """
     renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
+    renewable_data["datetime"] = pd.to_datetime(renewable_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["residual-peak-consumption"],
@@ -499,13 +499,13 @@ def test_multiple_weeks_with_identical_metrics(csv_str_to_df):
 
     # Create demand data with identical peaks in weeks 1 and 3
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-15__00:00:00,800
     2024-01-22__00:00:00,1000
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["peak-demand"],
@@ -545,21 +545,21 @@ def test_negative_residual_demand(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,500
     2024-01-15__00:00:00,600
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Renewable exceeds demand
     renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,800
     2024-01-15__00:00:00,400
     """
     renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
+    renewable_data["datetime"] = pd.to_datetime(renewable_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["residual-minimum-demand"],
@@ -590,11 +590,11 @@ def test_empty_snapshots_dataframe(csv_str_to_df):
     snapshots = pd.DataFrame({"snapshots": pd.Series([], dtype="datetime64[ns]")})
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["peak-demand"],
@@ -630,7 +630,7 @@ def test_all_residual_week_types(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,1000
     2024-01-08__12:00:00,1100
     2024-01-15__00:00:00,600
@@ -641,10 +641,10 @@ def test_all_residual_week_types(csv_str_to_df):
     2024-01-29__12:00:00,950
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     renewable_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-08__00:00:00,100
     2024-01-08__12:00:00,150
     2024-01-15__00:00:00,500
@@ -655,7 +655,7 @@ def test_all_residual_week_types(csv_str_to_df):
     2024-01-29__12:00:00,100
     """
     renewable_data = csv_str_to_df(renewable_csv)
-    renewable_data["Datetime"] = pd.to_datetime(renewable_data["Datetime"])
+    renewable_data["datetime"] = pd.to_datetime(renewable_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=[
@@ -712,7 +712,7 @@ def test_calendar_year_week_52_53_handling(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2020-12-21__00:00:00,700
     2020-12-24__00:00:00,800
     2020-12-28__00:00:00,900
@@ -722,7 +722,7 @@ def test_calendar_year_week_52_53_handling(csv_str_to_df):
     2021-12-27__00:00:00,850
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for peak demand in 2020 and 2021
     result = _filter_snapshots_for_named_representative_weeks(
@@ -771,7 +771,7 @@ def test_leap_year_february_week_handling(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-02-26__00:00:00,700
     2024-02-28__00:00:00,800
     2024-02-29__00:00:00,900
@@ -779,7 +779,7 @@ def test_leap_year_february_week_handling(csv_str_to_df):
     2024-03-04__00:00:00,750
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["peak-demand"],
@@ -825,13 +825,13 @@ def test_financial_year_single_week_data(csv_str_to_df):
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-07-03__00:00:00,600
     2024-07-05__00:00:00,700
     2024-07-08__00:00:00,550
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=[
@@ -890,7 +890,7 @@ def test_calendar_year_partial_weeks_excluded(csv_str_to_df):
 
     # Create demand data with peaks in partial weeks and full weeks
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2023-12-25__00:00:00,800
     2023-12-28__12:00:00,900
     2023-12-31__00:00:00,1500
@@ -904,7 +904,7 @@ def test_calendar_year_partial_weeks_excluded(csv_str_to_df):
     2025-01-06__00:00:00,500
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for peak demand weeks in 2024
     result = _filter_snapshots_for_named_representative_weeks(
@@ -959,7 +959,7 @@ def test_financial_year_partial_weeks_excluded(csv_str_to_df):
 
     # Create demand data with peaks in partial weeks
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2023-06-26__00:00:00,800
     2023-06-29__12:00:00,900
     2023-07-01__00:00:00,1600
@@ -973,7 +973,7 @@ def test_financial_year_partial_weeks_excluded(csv_str_to_df):
     2024-07-08__00:00:00,500
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Filter for peak demand weeks in FY2024 (July 2023 - June 2024)
     result = _filter_snapshots_for_named_representative_weeks(
@@ -1034,7 +1034,7 @@ def test_calendar_years_partial_weeks_excluded(csv_str_to_df):
 
     # Create demand data with highest values in partial weeks
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2021-12-27__00:00:00,2000
     2021-12-30__00:00:00,2100
     2022-01-03__00:00:00,1900
@@ -1051,7 +1051,7 @@ def test_calendar_years_partial_weeks_excluded(csv_str_to_df):
     2024-01-08__00:00:00,1000
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Test calendar years
     result = _filter_snapshots_for_named_representative_weeks(
@@ -1118,7 +1118,7 @@ def test_financial_years_partial_weeks_excluded(csv_str_to_df):
 
     # Create demand data with highest values in partial weeks to test exclusion
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2021-06-28__00:00:00,2100
     2021-06-30__00:00:00,2200
     2021-07-01__00:00:00,2000
@@ -1141,7 +1141,7 @@ def test_financial_years_partial_weeks_excluded(csv_str_to_df):
     2024-07-01__00:00:00,2650
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     # Test financial years FY2022-FY2024
     result = _filter_snapshots_for_named_representative_weeks(
@@ -1198,7 +1198,7 @@ def test_year_starting_on_monday(csv_str_to_df):
 
     # Create demand data
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2024-01-01__00:00:00,1000
     2024-01-01__12:00:00,1100
     2024-01-04__00:00:00,900
@@ -1206,7 +1206,7 @@ def test_year_starting_on_monday(csv_str_to_df):
     2024-01-15__00:00:00,700
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["peak-demand"],
@@ -1255,7 +1255,7 @@ def test_year_ending_on_sunday(csv_str_to_df):
 
     # Create demand data
     demand_csv = """
-    Datetime,Value
+    datetime,value
     2023-12-18__00:00:00,600
     2023-12-25__00:00:00,700
     2023-12-27__00:00:00,800
@@ -1265,7 +1265,7 @@ def test_year_ending_on_sunday(csv_str_to_df):
     2024-01-01__00:00:00,1100
     """
     demand_data = csv_str_to_df(demand_csv)
-    demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
 
     result = _filter_snapshots_for_named_representative_weeks(
         named_representative_weeks=["peak-demand"],

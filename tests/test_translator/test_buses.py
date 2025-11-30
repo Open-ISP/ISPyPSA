@@ -67,22 +67,32 @@ def test_create_pypsa_friendly_bus_timeseries_data_sub_regions(tmp_path):
         year_type="fy",
     )
 
-    # Build expected trace from the same source files
-    files = [
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+    # Build expected trace from consolidated format
+    # FY2025 uses RefYear2011, FY2026 uses RefYear2018
+    demand_2011 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING.parquet"
+    )
+    demand_2018 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING.parquet"
+    )
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    demand_fy2025 = demand_2011[
+        (demand_2011["datetime"] > "2024-07-01")
+        & (demand_2011["datetime"] <= "2025-07-01")
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
-    # Don't rename columns or filter by snapshots - keep as raw data
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    demand_fy2026 = demand_2018[
+        (demand_2018["datetime"] > "2025-07-01")
+        & (demand_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([demand_fy2025, demand_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
+    expected_trace = expected_trace.loc[:, ["datetime", "value"]]
     expected_trace = expected_trace.reset_index(drop=True)
-    expected_trace["Value"] = np.where(
-        expected_trace["Value"] < 0.0, 0.0, expected_trace["Value"]
+    expected_trace["value"] = np.where(
+        expected_trace["value"] < 0.0, 0.0, expected_trace["value"]
     )
 
     # The function returns a dictionary with node names as keys
@@ -114,26 +124,36 @@ def test_create_pypsa_friendly_bus_timeseries_data_nem_regions(tmp_path):
         year_type="fy",
     )
 
-    files = [
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
-    ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
-
-    # For nem_regions, aggregate by Datetime to combine CNSW and NNSW into NSW
-    expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
-        {"Value": "sum"}
+    # Build expected trace from consolidated format
+    # FY2025 uses RefYear2011, FY2026 uses RefYear2018
+    demand_2011 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING.parquet"
     )
-    # Don't rename columns or filter by snapshots - keep as raw data
+    demand_2018 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING.parquet"
+    )
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    demand_fy2025 = demand_2011[
+        (demand_2011["datetime"] > "2024-07-01")
+        & (demand_2011["datetime"] <= "2025-07-01")
+    ]
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    demand_fy2026 = demand_2018[
+        (demand_2018["datetime"] > "2025-07-01")
+        & (demand_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([demand_fy2025, demand_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
+
+    # For nem_regions, aggregate by datetime to combine CNSW and NNSW into NSW
+    expected_trace = expected_trace.groupby("datetime", as_index=False).agg(
+        {"value": "sum"}
+    )
     expected_trace = expected_trace.reset_index(drop=True)
-    expected_trace["Value"] = np.where(
-        expected_trace["Value"] < 0.0, 0.0, expected_trace["Value"]
+    expected_trace["value"] = np.where(
+        expected_trace["value"] < 0.0, 0.0, expected_trace["value"]
     )
 
     # The function returns a dictionary with node names as keys
@@ -165,27 +185,47 @@ def test_create_pypsa_friendly_bus_timeseries_data_single_region(tmp_path):
         year_type="fy",
     )
 
-    files = [
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/NNSW/POE50/OPSO_MODELLING/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
-        "demand/Step_Change/RefYear2011/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_SQ_POE50_OPSO_MODELLING_HalfYear2024-2.parquet",
-        "demand/Step_Change/RefYear2011/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2011_SQ_POE50_OPSO_MODELLING_HalfYear2025-1.parquet",
-        "demand/Step_Change/RefYear2018/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_SQ_POE50_OPSO_MODELLING_HalfYear2025-2.parquet",
-        "demand/Step_Change/RefYear2018/SQ/POE50/OPSO_MODELLING/Step_Change_RefYear2018_SQ_POE50_OPSO_MODELLING_HalfYear2026-1.parquet",
+    # Build expected trace from consolidated format for both subregions
+    # FY2025 uses RefYear2011, FY2026 uses RefYear2018
+    nnsw_2011 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2011_NNSW_POE50_OPSO_MODELLING.parquet"
+    )
+    nnsw_2018 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2018_NNSW_POE50_OPSO_MODELLING.parquet"
+    )
+    sq_2011 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2011_SQ_POE50_OPSO_MODELLING.parquet"
+    )
+    sq_2018 = pd.read_parquet(
+        parsed_trace_path
+        / "demand/Step_Change_RefYear2018_SQ_POE50_OPSO_MODELLING.parquet"
+    )
+
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    nnsw_fy2025 = nnsw_2011[
+        (nnsw_2011["datetime"] > "2024-07-01") & (nnsw_2011["datetime"] <= "2025-07-01")
+    ]
+    sq_fy2025 = sq_2011[
+        (sq_2011["datetime"] > "2024-07-01") & (sq_2011["datetime"] <= "2025-07-01")
+    ]
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    nnsw_fy2026 = nnsw_2018[
+        (nnsw_2018["datetime"] > "2025-07-01") & (nnsw_2018["datetime"] <= "2026-07-01")
+    ]
+    sq_fy2026 = sq_2018[
+        (sq_2018["datetime"] > "2025-07-01") & (sq_2018["datetime"] <= "2026-07-01")
     ]
 
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    expected_trace = pd.concat([nnsw_fy2025, nnsw_fy2026, sq_fy2025, sq_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
 
     # For single_region, aggregate all sub-regions into NEM
-    expected_trace = expected_trace.groupby("Datetime", as_index=False).agg(
-        {"Value": "sum"}
+    expected_trace = expected_trace.groupby("datetime", as_index=False).agg(
+        {"value": "sum"}
     )
-    # Don't rename columns or filter by snapshots - keep as raw data
     expected_trace = expected_trace.reset_index(drop=True)
 
     # The function returns a dictionary with node names as keys

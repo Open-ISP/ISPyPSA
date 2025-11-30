@@ -1213,19 +1213,28 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
                     f"{gen_type}_traces",
                 )
 
-    files = [
-        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2024-2.parquet",
-        "solar/RefYear2011/Project/Moree_Solar_Farm/RefYear2011_Moree_Solar_Farm_SAT_HalfYear2025-1.parquet",
-        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2025-2.parquet",
-        "solar/RefYear2018/Project/Moree_Solar_Farm/RefYear2018_Moree_Solar_Farm_SAT_HalfYear2026-1.parquet",
+    # Build expected solar trace from consolidated format
+    # FY2025 uses RefYear2011, FY2026 uses RefYear2018
+    solar_2011 = pd.read_parquet(
+        parsed_trace_path / "project/RefYear2011_Moree_Solar_Farm_SAT.parquet"
+    )
+    solar_2018 = pd.read_parquet(
+        parsed_trace_path / "project/RefYear2018_Moree_Solar_Farm_SAT.parquet"
+    )
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    solar_fy2025 = solar_2011[
+        (solar_2011["datetime"] > "2024-07-01")
+        & (solar_2011["datetime"] <= "2025-07-01")
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    solar_fy2026 = solar_2018[
+        (solar_2018["datetime"] > "2025-07-01")
+        & (solar_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([solar_fy2025, solar_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
     expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+        columns={"datetime": "snapshots", "value": "p_max_pu"}
     )
     expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
     expected_trace = expected_trace.loc[
@@ -1239,19 +1248,25 @@ def test_create_pypsa_friendly_existing_generator_timeseries(tmp_path):
 
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
-    files = [
-        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2024-2.parquet",
-        "wind/RefYear2011/Project/Canunda_Wind_Farm/RefYear2011_Canunda_Wind_Farm_HalfYear2025-1.parquet",
-        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2025-2.parquet",
-        "wind/RefYear2018/Project/Canunda_Wind_Farm/RefYear2018_Canunda_Wind_Farm_HalfYear2026-1.parquet",
+    # Build expected wind trace from consolidated format
+    wind_2011 = pd.read_parquet(
+        parsed_trace_path / "project/RefYear2011_Canunda_Wind_Farm.parquet"
+    )
+    wind_2018 = pd.read_parquet(
+        parsed_trace_path / "project/RefYear2018_Canunda_Wind_Farm.parquet"
+    )
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    wind_fy2025 = wind_2011[
+        (wind_2011["datetime"] > "2024-07-01") & (wind_2011["datetime"] <= "2025-07-01")
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    wind_fy2026 = wind_2018[
+        (wind_2018["datetime"] > "2025-07-01") & (wind_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([wind_fy2025, wind_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
     expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+        columns={"datetime": "snapshots", "value": "p_max_pu"}
     )
     expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
     expected_trace = expected_trace.loc[
@@ -1297,19 +1312,25 @@ def test_create_pypsa_friendly_new_entrant_generator_timeseries(tmp_path):
         snapshots=snapshots,
     )
 
-    files = [
-        "solar/RefYear2011/Area/N1/SAT/RefYear2011_N1_SAT_HalfYear2024-2.parquet",
-        "solar/RefYear2011/Area/N1/SAT/RefYear2011_N1_SAT_HalfYear2025-1.parquet",
-        "solar/RefYear2018/Area/N1/SAT/RefYear2018_N1_SAT_HalfYear2025-2.parquet",
-        "solar/RefYear2018/Area/N1/SAT/RefYear2018_N1_SAT_HalfYear2026-1.parquet",
+    # Build expected solar trace from new consolidated format
+    # FY2025 uses RefYear2011, FY2026 uses RefYear2018
+    solar_2011 = pd.read_parquet(parsed_trace_path / "zone/RefYear2011_N1_SAT.parquet")
+    solar_2018 = pd.read_parquet(parsed_trace_path / "zone/RefYear2018_N1_SAT.parquet")
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    # Note: 2024-07-01 00:00:00 belongs to FY2024, first FY2025 timestamp is 2024-07-01 00:30:00
+    solar_fy2025 = solar_2011[
+        (solar_2011["datetime"] > "2024-07-01")
+        & (solar_2011["datetime"] <= "2025-07-01")
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    solar_fy2026 = solar_2018[
+        (solar_2018["datetime"] > "2025-07-01")
+        & (solar_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([solar_fy2025, solar_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
     expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+        columns={"datetime": "snapshots", "value": "p_max_pu"}
     )
     expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
     expected_trace = expected_trace.loc[
@@ -1323,19 +1344,21 @@ def test_create_pypsa_friendly_new_entrant_generator_timeseries(tmp_path):
 
     pd.testing.assert_frame_equal(expected_trace, got_trace)
 
-    files = [
-        "wind/RefYear2011/Area/Q1/WM/RefYear2011_Q1_WM_HalfYear2024-2.parquet",
-        "wind/RefYear2011/Area/Q1/WM/RefYear2011_Q1_WM_HalfYear2025-1.parquet",
-        "wind/RefYear2018/Area/Q1/WM/RefYear2018_Q1_WM_HalfYear2025-2.parquet",
-        "wind/RefYear2018/Area/Q1/WM/RefYear2018_Q1_WM_HalfYear2026-1.parquet",
+    # Build expected wind trace from new consolidated format
+    wind_2011 = pd.read_parquet(parsed_trace_path / "zone/RefYear2011_Q1_WM.parquet")
+    wind_2018 = pd.read_parquet(parsed_trace_path / "zone/RefYear2018_Q1_WM.parquet")
+    # Filter FY2025 (Jul 2024 - Jun 2025) from RefYear2011
+    wind_fy2025 = wind_2011[
+        (wind_2011["datetime"] > "2024-07-01") & (wind_2011["datetime"] <= "2025-07-01")
     ]
-
-    files = [parsed_trace_path / Path(file) for file in files]
-
-    expected_trace = pd.concat([pd.read_parquet(file) for file in files])
-    expected_trace["Datetime"] = expected_trace["Datetime"].astype("datetime64[ns]")
+    # Filter FY2026 (Jul 2025 - Jun 2026) from RefYear2018
+    wind_fy2026 = wind_2018[
+        (wind_2018["datetime"] > "2025-07-01") & (wind_2018["datetime"] <= "2026-07-01")
+    ]
+    expected_trace = pd.concat([wind_fy2025, wind_fy2026])
+    expected_trace["datetime"] = expected_trace["datetime"].astype("datetime64[ns]")
     expected_trace = expected_trace.rename(
-        columns={"Datetime": "snapshots", "Value": "p_max_pu"}
+        columns={"datetime": "snapshots", "value": "p_max_pu"}
     )
     expected_trace = pd.merge(expected_trace, snapshots, on="snapshots")
     expected_trace = expected_trace.loc[

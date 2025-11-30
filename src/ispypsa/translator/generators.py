@@ -987,39 +987,39 @@ def create_pypsa_friendly_ecaa_generator_timeseries(
         # raise error? (prob not necessary to error...)
         return
 
-    trace_data_paths = {
-        gen_type: trace_data_path / Path(gen_type) for gen_type in generator_types
-    }
+    where_gen_type = _where_any_substring_appears(
+        ecaa_generators["fuel_type"], generator_types
+    )
+    generators = ecaa_generators.loc[where_gen_type, ["generator", "fuel_type"]]
 
-    generator_types_caps = [gen_type.capitalize() for gen_type in generator_types]
+    if generators.empty:
+        return
 
-    generators = ecaa_generators[
-        ecaa_generators["fuel_type"].isin(generator_types_caps)
-    ].copy()
-
-    query_functions = {
-        "solar": get_data.solar_project_multiple_reference_years,
-        "wind": get_data.wind_project_multiple_reference_years,
-    }
-
-    gen_to_type = dict(zip(ecaa_generators["generator"], ecaa_generators["fuel_type"]))
+    generators["fuel_type"] = generators["fuel_type"].str.lower()
 
     # Initialize dict with generator types
     generator_traces = {gen_type: {} for gen_type in generator_types}
 
-    for _, gen_row in generators.iterrows():
-        gen = gen_row["generator"]
-        gen_type = gen_to_type[gen].lower()
+    trace_data = get_data.get_project_multiple_reference_years(
+        reference_year_mapping=reference_year_mapping,
+        project=generators["generator"].unique(),
+        directory=trace_data_path / "project",
+        year_type=year_type,
+        select_columns=["project", "datetime", "value"],
+    )
 
-        trace = query_functions[gen_type](
-            reference_years=reference_year_mapping,
-            project=gen,
-            directory=trace_data_paths[gen_type],
-            year_type=year_type,
-        )
+    trace_data = pd.merge(
+        generators,
+        trace_data,
+        how="left",
+        left_on="generator",
+        right_on="project",
+    )
+
+    for (name, fuel_type), trace in trace_data.groupby(["generator", "fuel_type"]):
         # datetime in nanoseconds required by PyPSA
-        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-        generator_traces[gen_type][gen] = trace
+        trace["datetime"] = trace["datetime"].astype("datetime64[ns]")
+        generator_traces[fuel_type][name] = trace
 
     return generator_traces
 
@@ -1063,10 +1063,6 @@ def create_pypsa_friendly_new_entrant_generator_timeseries(
         # raise error? (prob not necessary to error...)
         return
 
-    trace_data_paths = {
-        gen_type: trace_data_path / Path(gen_type) for gen_type in generator_types
-    }
-
     output_paths = {
         gen_type: Path(pypsa_inputs_path, f"{gen_type}_traces")
         for gen_type in generator_types
@@ -1079,55 +1075,41 @@ def create_pypsa_friendly_new_entrant_generator_timeseries(
     where_gen_type = _where_any_substring_appears(
         new_entrant_generators["fuel_type"], generator_types
     )
-    generators = list(new_entrant_generators.loc[where_gen_type, "generator"])
-    gen_to_type = dict(
-        zip(
-            new_entrant_generators["generator"],
-            new_entrant_generators["fuel_type"],
-        )
-    )
-    gen_to_isp_resource_type = dict(
-        zip(
-            new_entrant_generators["generator"],
-            new_entrant_generators["isp_resource_type"],
-        )
-    )
-    gen_to_rez_id = dict(
-        zip(
-            new_entrant_generators["generator"],
-            new_entrant_generators["rez_id"],
-        )
+    generators = new_entrant_generators.loc[
+        where_gen_type, ["generator", "isp_resource_type", "fuel_type", "rez_id"]
+    ]
+    generators["fuel_type"] = generators["fuel_type"].str.lower()
+    generators = generators.drop_duplicates()
+
+    trace_data = get_data.get_zone_multiple_reference_years(
+        reference_year_mapping=reference_year_mapping,
+        zone=generators["rez_id"].unique(),
+        resource_type=generators["isp_resource_type"].unique(),
+        directory=trace_data_path / Path("zone"),
+        year_type=year_type,
+        select_columns=["zone", "resource_type", "datetime", "value"],
     )
 
-    query_functions = {
-        "solar": get_data.solar_area_multiple_reference_years,
-        "wind": get_data.wind_area_multiple_reference_years,
-    }
+    trace_data = pd.merge(
+        generators,
+        trace_data,
+        how="left",
+        left_on=["rez_id", "isp_resource_type"],
+        right_on=["zone", "resource_type"],
+    )
 
-    for gen in generators:
-        generator_type = gen_to_type[gen].lower()
-        area_abbreviation = gen_to_rez_id[gen]
-        technology_or_resource_quality = gen_to_isp_resource_type[gen]
-        trace = query_functions[generator_type](
-            reference_year_mapping,
-            area_abbreviation,
-            technology_or_resource_quality,
-            directory=trace_data_paths[generator_type],
-            year_type=year_type,
-        )
+    for (name, fuel_type), trace in trace_data.groupby(["generator", "fuel_type"]):
         # datetime in nanoseconds required by PyPSA
-        trace["Datetime"] = trace["Datetime"].astype("datetime64[ns]")
-        trace = trace.rename(columns={"Datetime": "snapshots", "Value": "p_max_pu"})
+        trace["datetime"] = trace["datetime"].astype("datetime64[ns]")
+        trace = trace.rename(columns={"datetime": "snapshots", "value": "p_max_pu"})
 
         trace = _time_series_filter(trace, snapshots)
         _check_time_series(
             trace["snapshots"],
             snapshots["snapshots"],
             "generator trace data",
-            str(gen),
+            str(name),
         )
         trace = pd.merge(trace, snapshots, on="snapshots")
         trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
-        trace.to_parquet(
-            Path(output_paths[generator_type], f"{gen}.parquet"), index=False
-        )
+        trace.to_parquet(Path(output_paths[fuel_type], f"{name}.parquet"), index=False)

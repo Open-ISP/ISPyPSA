@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-from isp_trace_parser.demand_traces import write_new_demand_filepath
 
 from ispypsa.config import ModelConfig
 from ispypsa.model.build import build_pypsa_network
@@ -35,7 +34,7 @@ def test_flow_path_expansion_limit_respected(csv_str_to_df, tmp_path, monkeypatc
     traces_dir.mkdir()
 
     # Create subdirectories for traces
-    for subdir in ["demand", "wind", "solar"]:
+    for subdir in ["demand", "zone", "project"]:
         (traces_dir / subdir).mkdir()
 
     # Mock environment variable for trace parser
@@ -88,33 +87,22 @@ def test_flow_path_expansion_limit_respected(csv_str_to_df, tmp_path, monkeypatc
         "iasr_workbook_version": "6.0",
     }
 
-    demand_data_to_write = [
-        ("2024-08-01 00:00:00", 0.0, "A", "2024-2"),
-        ("2025-05-01 00:00:00", 100.0, "A", "2025-1"),
-        ("2025-08-01 00:00:00", 0.0, "A", "2025-2"),
-        ("2026-05-01 00:00:00", 200.0, "A", "2026-1"),
-        ("2024-08-01 00:00:00", 0.0, "B", "2024-2"),
-        ("2025-05-01 00:00:00", 0.0, "B", "2025-1"),
-        ("2025-08-01 00:00:00", 0.0, "B", "2025-2"),
-        ("2026-05-01 00:00:00", 0.0, "B", "2026-1"),
-    ]
-
-    for date_time, demand, subregion, half_year in demand_data_to_write:
-        demand_data = pd.DataFrame({"Datetime": [date_time], "Value": [demand]})
-        demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-        file_meta_data = {
-            "subregion": subregion,
-            "scenario": "Step Change",
-            "reference_year": 2018,
-            "poe": "POE50",
-            "demand_type": "OPSO_MODELLING",
-            "hy": half_year,
-        }
-        file_path = Path(
-            traces_dir / "demand" / write_new_demand_filepath(file_meta_data)
-        )
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        demand_data.to_parquet(file_path, index=False)
+    # Create demand trace data for regions A and B
+    # Region A has demand of 100 MW in 2025 and 200 MW in 2026, Region B has no demand
+    demand_csv = """
+    datetime,              value,  subregion,  reference_year,  poe,    scenario,     demand_type
+    2024-08-01 00:00:00,   0.0,    A,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2025-05-01 00:00:00,   100.0,  A,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2025-08-01 00:00:00,   0.0,    A,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2026-05-01 00:00:00,   200.0,  A,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2024-08-01 00:00:00,   0.0,    B,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2025-05-01 00:00:00,   0.0,    B,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2025-08-01 00:00:00,   0.0,    B,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    2026-05-01 00:00:00,   0.0,    B,          2018,            POE50,  Step Change,  OPSO_MODELLING
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
+    demand_data.to_parquet(traces_dir / "demand" / "demand_data.parquet", index=False)
 
     # Define ISPyPSA input tables
 

@@ -7,7 +7,7 @@ def _check_time_series(
     process_name: str,
     table_name: str,
 ):
-    """Compares a Datetime series against an expected Datetime series
+    """Compares a datetime series against an expected Datetime series
     and raises errors if the two series don't match.
 
     Args:

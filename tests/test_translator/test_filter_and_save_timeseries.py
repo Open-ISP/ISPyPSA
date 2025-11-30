@@ -28,7 +28,7 @@ def test_filter_and_save_timeseries_demand_traces(tmp_path):
     # Create test demand timeseries data
     demand_trace1 = pd.DataFrame(
         {
-            "Datetime": pd.to_datetime(
+            "datetime": pd.to_datetime(
                 [
                     "2025-01-01 00:00:00",
                     "2025-01-01 01:00:00",
@@ -39,13 +39,13 @@ def test_filter_and_save_timeseries_demand_traces(tmp_path):
                     "2026-01-01 02:00:00",
                 ]
             ),
-            "Value": [100.0, 110.0, 120.0, 130.0, 200.0, 210.0, 220.0],
+            "value": [100.0, 110.0, 120.0, 130.0, 200.0, 210.0, 220.0],
         }
     )
 
     demand_trace2 = pd.DataFrame(
         {
-            "Datetime": pd.to_datetime(
+            "datetime": pd.to_datetime(
                 [
                     "2025-01-01 00:00:00",
                     "2025-01-01 01:00:00",
@@ -55,7 +55,7 @@ def test_filter_and_save_timeseries_demand_traces(tmp_path):
                     "2026-01-01 01:00:00",
                 ]
             ),
-            "Value": [50.0, 55.0, 60.0, 65.0, 150.0, 155.0],
+            "value": [50.0, 55.0, 60.0, 65.0, 150.0, 155.0],
         }
     )
 
@@ -137,7 +137,7 @@ def test_filter_and_save_timeseries_solar_traces(tmp_path):
     # Create test solar timeseries data
     solar_trace = pd.DataFrame(
         {
-            "Datetime": pd.to_datetime(
+            "datetime": pd.to_datetime(
                 [
                     "2025-06-01 11:00:00",
                     "2025-06-01 12:00:00",
@@ -146,7 +146,7 @@ def test_filter_and_save_timeseries_solar_traces(tmp_path):
                     "2025-06-01 15:00:00",
                 ]
             ),
-            "Value": [0.2, 0.8, 0.9, 0.7, 0.4],
+            "value": [0.2, 0.8, 0.9, 0.7, 0.4],
         }
     )
 
@@ -204,14 +204,14 @@ def test_filter_and_save_timeseries_wind_traces(tmp_path):
     # Create test wind timeseries data
     wind_trace = pd.DataFrame(
         {
-            "Datetime": pd.to_datetime(
+            "datetime": pd.to_datetime(
                 [
                     "2025-03-15 00:00:00",
                     "2025-03-15 06:00:00",
                     "2025-03-15 12:00:00",
                 ]
             ),
-            "Value": [0.3, 0.7, 0.5],
+            "value": [0.3, 0.7, 0.5],
         }
     )
 
@@ -256,7 +256,7 @@ def test_filter_and_save_timeseries_creates_directories(tmp_path):
     )
 
     trace = pd.DataFrame(
-        {"Datetime": pd.to_datetime(["2025-01-01 00:00:00"]), "Value": [100.0]}
+        {"datetime": pd.to_datetime(["2025-01-01 00:00:00"]), "value": [100.0]}
     )
 
     timeseries_data = {"test_node": trace}
@@ -326,7 +326,7 @@ def test_filter_and_save_timeseries_misaligned_timestamps(tmp_path):
     # Create trace with some timestamps not in snapshots
     trace = pd.DataFrame(
         {
-            "Datetime": pd.to_datetime(
+            "datetime": pd.to_datetime(
                 [
                     "2025-01-01 00:00:00",  # in snapshots
                     "2025-01-01 03:00:00",  # NOT in snapshots
@@ -335,7 +335,7 @@ def test_filter_and_save_timeseries_misaligned_timestamps(tmp_path):
                     "2025-01-01 12:00:00",  # in snapshots
                 ]
             ),
-            "Value": [100.0, 150.0, 200.0, 250.0, 300.0],
+            "value": [100.0, 150.0, 200.0, 250.0, 300.0],
         }
     )
 
