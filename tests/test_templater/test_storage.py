@@ -526,9 +526,12 @@ def test_calculate_and_merge_tech_specific_lcfs(
     Battery__Storage__(2hrs__storage),  Battery__Storage__(2hrs__storage),
     """
     expected_missing = csv_str_to_df(expected_missing_csv)
-    # match nan types:
-    expected_missing = expected_missing.fillna(pd.NA)
-    result_missing = result_missing.fillna(pd.NA)
+    # try to match nan types:
+    expected_missing = expected_missing.fillna("replace_with_nan")
+    expected_missing = expected_missing.replace("replace_with_nan", pd.NA)
+
+    result_missing = result_missing.fillna("replace_with_nan")
+    result_missing = result_missing.replace("replace_with_nan", pd.NA)
 
     pd.testing.assert_frame_equal(
         result_missing.sort_values("storage_name").reset_index(drop=True),
