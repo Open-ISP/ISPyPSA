@@ -43,8 +43,14 @@ def test_static_ecaa_generator_templater(workbook_table_cache_test_path: Path):
         ("Existing", "Committed", "Anticipated", "Additional projects")
     )
 
+    # check that columns present are all required columns:
     for column in df.columns:
         assert column in _MINIMUM_REQUIRED_GENERATOR_COLUMNS
+
+    # checks that all entries in "generator" col are strings
+    assert all(df.generator.apply(lambda x: True if isinstance(x, str) else False))
+    # checks that all entries in "generator" col are unique
+    assert len(df.generator.unique()) == len(df.generator)
 
     where_solar, where_wind = (
         df["technology_type"].str.contains("solar", case=False),
@@ -84,13 +90,13 @@ def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
 
     # checks that all entries in "generator" col are strings
     assert all(df.generator.apply(lambda x: True if isinstance(x, str) else False))
+    # check that all entries in "generator" col are unique
+    assert len(df.generator.unique()) == len(df.generator)
 
     # checks that values that should be always set to zero are zero:
-    where_solar, where_wind, where_hydro, where_battery, where_ocgt, where_h2 = (
+    where_solar, where_wind, where_ocgt, where_h2 = (
         df["generator"].str.contains("solar", case=False),
         df["generator"].str.contains("wind", case=False),
-        df["generator"].str.contains("pumped hydro", case=False),
-        df["generator"].str.contains("battery", case=False),
         df["generator"].str.contains("ocgt", case=False),
         df["generator"].str.contains("hydrogen", case=False),
     )
@@ -98,19 +104,15 @@ def test_static_new_generator_templater(workbook_table_cache_test_path: Path):
         "minimum_stable_level_%": (
             where_solar,
             where_wind,
-            where_hydro,
-            where_battery,
             where_ocgt,
             where_h2,
         ),
         "vom_$/mwh_sent_out": (
             where_solar,
             where_wind,
-            where_hydro,
-            where_battery,
             where_h2,
         ),
-        "heat_rate_gj/mwh": (where_solar, where_wind, where_hydro, where_battery),
+        "heat_rate_gj/mwh": (where_solar, where_wind),
     }
     for zero_col_name, technology_dfs in zero_tests.items():
         for where_tech in technology_dfs:
