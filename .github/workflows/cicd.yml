@@ -35,7 +35,7 @@ jobs:
         run: uv sync
       # Run tests without updating uv.lock
       - name: Run tests
-        run: uv run --frozen pytest tests/test_translator/test_create_pypsa_friendly_inputs.py::test_create_pypsa_friendly_timeseries_inputs_capacity_expansion
+        run: uv run --frozen pytest
       # Code coverage to codecov.io
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v4
