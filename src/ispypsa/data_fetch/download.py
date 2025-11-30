@@ -46,12 +46,6 @@ def fetch_workbook(
     with open(manifest_path) as f:
         urls = [line.strip() for line in f if line.strip()]
 
-    if not urls:
-        raise ValueError(f"No URLs found in manifest: {manifest_path}")
-
-    if len(urls) > 1:
-        raise ValueError(f"Expected single URL in workbook manifest, found {len(urls)}")
-
     url = urls[0]
     save_path = Path(save_path)
 
