@@ -237,7 +237,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
 
     print(f"Path exists: {parsed_trace_path.exists()}")
     print(f"Absolute path: {parsed_trace_path.resolve()}")
-    print(f"Files found: {list(parsed_trace_path.glob('*.parquet'))}")
+    print(f"Files found: {list(parsed_trace_path.glob('**/*.parquet'))}")
 
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
