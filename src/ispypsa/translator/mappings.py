@@ -67,6 +67,54 @@ _GENERATOR_ATTRIBUTE_ORDER = [
 # that are used in calculating PyPSA input values for generators, but aren't
 # attributes of Generator objects and aren't passed to the network.
 
+_ECAA_BATTERY_ATTRIBUTES = {
+    "storage_name": "name",
+    "maximum_capacity_mw": "p_nom",
+    "storage_duration_hours": "max_hours",
+    "p_nom_extendable": "p_nom_extendable",
+    "fuel_type": "carrier",
+    "commissioning_date": "build_year",
+    "lifetime": "lifetime",
+    "capital_cost": "capital_cost",
+    "charging_efficiency_%": "efficiency_store",
+    "discharging_efficiency_%": "efficiency_dispatch",
+    "rez_id": "isp_rez_id",
+    # isp_resource_type has a clear mapping of technology type and storage duration
+    "isp_resource_type": "isp_resource_type",
+}
+
+_NEW_ENTRANT_BATTERY_ATTRIBUTES = {  # attributes used by the PyPSA network model:
+    "storage_name": "name",
+    "p_nom": "p_nom",
+    "storage_duration_hours": "max_hours",
+    "p_nom_extendable": "p_nom_extendable",
+    "fuel_type": "carrier",
+    "build_year": "build_year",
+    "lifetime": "lifetime",
+    "capital_cost": "capital_cost",
+    "charging_efficiency_%": "efficiency_store",
+    "discharging_efficiency_%": "efficiency_dispatch",
+    # attributes used to filter/apply custom constraints:
+    "isp_resource_type": "isp_resource_type",
+    "rez_id": "isp_rez_id",
+    # keeping technology_type because it's not defined anywhere else for the ECAA generators and could be useful for plotting/labelling?
+    "technology_type": "isp_technology_type",
+}
+
+_BATTERY_ATTRIBUTE_ORDER = [
+    "name",
+    "bus",
+    "p_nom",
+    "max_hours",
+    "p_nom_extendable",
+    "carrier",
+    "build_year",
+    "lifetime",
+    "capital_cost",
+    "isp_resource_type",
+    "isp_rez_id",
+]
+
 _BUS_ATTRIBUTES = {"isp_sub_region_id": "name"}
 
 _LINK_ATTRIBUTES = {

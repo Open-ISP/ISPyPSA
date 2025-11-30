@@ -140,9 +140,6 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     # (AEMO 2024 | Appendix 3. Renewable Energy Zones, p.38)
     df = df.loc[~(df["rez_location"] == "Illawarra"), :]
 
-    # adds extra necessary columns taking appropriate mapping values
-    # NOTE: this could be done more efficiently in future if needed, potentially
-    # adding a `new_mapping` field to relevant table map dicts?
     for (
         new_column,
         existing_column_mapping,
@@ -179,9 +176,7 @@ def _merge_and_set_new_generators_static_properties(
             df, col = _process_and_merge_opex(df, data, col, table_attrs)
         else:
             if type(table_attrs["table"]) is list:
-                data = [
-                    iasr_tables[table_attrs["table"]] for table in table_attrs["table"]
-                ]
+                data = [iasr_tables[table] for table in table_attrs["table"]]
                 data = pd.concat(data, axis=0)
             else:
                 data = iasr_tables[table_attrs["table"]]

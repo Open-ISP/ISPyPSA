@@ -13,6 +13,13 @@ _ALL_GENERATOR_STORAGE_TYPES = _ALL_GENERATOR_TYPES + [
     "existing_committed_and_anticipated_batteries"
 ]
 
+_ALL_GENERATOR_STORAGE_SUMMARIES = _ALL_GENERATOR_TYPES + ["batteries"]
+
+_ECAA_BATTERY_TYPES = [
+    "existing_committed_and_anticipated_batteries",
+    "additional_projects",
+]
+
 _CONDENSED_GENERATOR_TYPES = [
     "existing_committed_anticipated_additional_generators",
     "new_entrants",
@@ -53,4 +60,34 @@ _MINIMUM_REQUIRED_GENERATOR_COLUMNS = [
     # operating limit
     "minimum_stable_level_%",
     "minimum_load_mw",
+]
+
+
+_MINIMUM_REQUIRED_BATTERY_COLUMNS = [
+    "storage_name",
+    "isp_resource_type",
+    "technology_type",
+    "status",
+    # region
+    "region_id",
+    "sub_region_id",
+    "rez_id",
+    # carrier
+    "fuel_type",
+    # capital cost input
+    "fom_$/kw/annum",
+    # connection/build cost & limits
+    "connection_cost_$/mw",
+    "technology_specific_lcf_%",
+    # capacity
+    "maximum_capacity_mw",
+    "storage_duration_hours",
+    # battery timing
+    "commissioning_date",
+    "closure_year",
+    "lifetime",
+    # operational
+    "round_trip_efficiency_%",
+    "charging_efficiency_%",
+    "discharging_efficiency_%",
 ]

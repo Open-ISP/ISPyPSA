@@ -334,6 +334,9 @@ def _rez_name_to_id_mapping(
 ) -> pd.Series:
     """Maps REZ names to REZ IDs."""
 
+    if series.empty or series is None or all(series.isna()):
+        return series
+
     # add non-REZs to the REZ table and set up mapping:
     non_rez_ids = pd.DataFrame(
         {
@@ -351,19 +354,24 @@ def _rez_name_to_id_mapping(
     # ------ clean up the series in case of old/unsupported REZ names
     # update references to "North [East|West] Tasmania Coast" to "North Tasmania Coast"
     # update references to "Portland Coast" to "Southern Ocean"
-    series = series.replace(
+    series_fixed_rez_names = series.replace(
         {
             r".+Tasmania Coast": "North Tasmania Coast",
             r"Portland Coast": "Southern Ocean",
         },
         regex=True,
     )
-    # fuzzy match series to REZ names to make sure they are consistent
-    series = _fuzzy_match_names(
-        series,
-        renewable_energy_zones["Name"],
+    # fuzzy match series to REZ names to make sure they are consistent - but only
+    # for not-exact matches that already exist, to avoid skipping necessary fixes:
+    where_not_existing_match_str = series_fixed_rez_names.apply(
+        lambda x: x not in rez_name_to_id.keys()
+    )
+
+    series_fixed_rez_names.loc[where_not_existing_match_str] = _fuzzy_match_names(
+        series_fixed_rez_names.loc[where_not_existing_match_str],
+        rez_name_to_id.keys(),
         f"mapping REZ names to REZ IDs for property '{series_name}'",
         threshold=90,
     )
 
-    return series.replace(rez_name_to_id)
+    return series_fixed_rez_names.replace(rez_name_to_id)
