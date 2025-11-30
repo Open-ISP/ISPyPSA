@@ -14,20 +14,6 @@ def mock_network(csv_str_to_df):
     network = pypsa.Network()
     network.add("Bus", "test_bus")
 
-    # Create sample trace data
-    snapshots_csv = """
-    investment_periods,     snapshots
-    2024,                   2023-07-01__12:00:00
-    2024,                   2024-04-01__12:00:00
-    2025,                   2024-07-01__12:00:00
-    2025,                   2025-04-01__12:00:00
-    """
-    snapshots = csv_str_to_df(snapshots_csv)
-    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
-
-    # set network snapshots:
-    network.snapshots = snapshots
-
     return network
 
 
