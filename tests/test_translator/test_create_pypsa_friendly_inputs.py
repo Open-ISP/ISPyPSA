@@ -235,6 +235,10 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
+    print(f"Path exists: {parsed_trace_path.exists()}")
+    print(f"Absolute path: {parsed_trace_path.resolve()}")
+    print(f"Files found: {list(parsed_trace_path.glob('*.parquet'))}")
+
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
         start_year=2025,
