@@ -29,6 +29,14 @@ def test_battery_templater(workbook_table_cache_test_path: Path):
 
     for ecaa_property_col in _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP.keys():
         if (
+            "new_col_name"
+            in _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP[ecaa_property_col].keys()
+        ):
+            ecaa_property_col = _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP[
+                ecaa_property_col
+            ]["new_col_name"]
+
+        if (
             ecaa_property_col in _MINIMUM_REQUIRED_BATTERY_COLUMNS
             and "date" not in ecaa_property_col
         ):
@@ -41,6 +49,16 @@ def test_battery_templater(workbook_table_cache_test_path: Path):
     for (
         new_entrant_property_col
     ) in _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP.keys():
+        if (
+            "new_col_name"
+            in _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP[
+                new_entrant_property_col
+            ].keys()
+        ):
+            new_entrant_property_col = _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP[
+                new_entrant_property_col
+            ]["new_col_name"]
+
         if (
             new_entrant_property_col in _MINIMUM_REQUIRED_BATTERY_COLUMNS
             and "date" not in new_entrant_property_col
@@ -60,6 +78,26 @@ def test_battery_templater(workbook_table_cache_test_path: Path):
     )
     for column in all_columns:
         assert column in _MINIMUM_REQUIRED_BATTERY_COLUMNS
+
+
+def test_merge_and_set_battery_static_properties_string_handling(
+    workbook_table_cache_test_path: Path,
+):
+    """Test that string values in numeric columns are properly handled when merging static properties."""
+    iasr_tables = read_csvs(workbook_table_cache_test_path)
+
+    # Get the original data
+    ecaa_batteries, new_entrant_batteries = _template_battery_properties(iasr_tables)
+
+    # Check that string values were properly handled in static property columns
+    for df in [ecaa_batteries, new_entrant_batteries]:
+        numeric_cols = df.select_dtypes(include=["number"]).columns
+        for col in numeric_cols:
+            if col in df.columns and "date" not in col:
+                # Verify no string values remain in numeric columns
+                assert not df[col].apply(lambda x: isinstance(x, str)).any(), (
+                    f"Column {col} contains string values"
+                )
 
 
 def test_add_closure_year_column(csv_str_to_df):
