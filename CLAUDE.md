@@ -335,7 +335,7 @@ uv run pytest tests/ -k "custom_constraint" -v
 uv run example_workflow.py
 
 # Run a module
-uv run python -m ispypsa.model.build
+uv run python -m ispypsa.pypsa_build.build
 
 # Interactive Python shell with project dependencies
 uv run python

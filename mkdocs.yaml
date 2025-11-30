@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
-site_name: ISPyPSA Documentation LIVE FOR TESTING ONLY
+site_name: ISPyPSA Documentation
 site_url: https://ispypsa.github.io
 
 theme:

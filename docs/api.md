@@ -54,11 +54,11 @@ Python script.
 
 ## Model Building & Execution
 
-::: ispypsa.model.build_pypsa_network
+::: ispypsa.pypsa_build.build_pypsa_network
 
-::: ispypsa.model.update_network_timeseries
+::: ispypsa.pypas_build.update_network_timeseries
 
-::: ispypsa.model.save_pypsa_network
+::: ispypsa.pypas_build.save_pypsa_network
 
 ## Tabular Results Extraction
 

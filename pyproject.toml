@@ -87,3 +87,9 @@ select = [
     # isort
     "I",
 ]
+
+[tool.setuptools.package-data]
+ispypsa = [
+    "data_fetch/manifests/**/*.txt",
+    "templater/manually_extracted_template_tables/**/*.txt",
+]

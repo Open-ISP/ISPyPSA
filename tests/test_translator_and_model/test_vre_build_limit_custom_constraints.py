@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.config import ModelConfig
-from ispypsa.model.build import build_pypsa_network
+from ispypsa.pypsa_build.build import build_pypsa_network
 from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,

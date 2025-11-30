@@ -300,7 +300,7 @@ constraints are not preserved when the PyPSA network object is saved to disk.
 
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs
-    from ispypsa.model import build_pypsa_network, save_pypsa_network
+    from ispypsa.pypas_build import build_pypsa_network, save_pypsa_network
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")
@@ -366,7 +366,7 @@ computational complexity.
 
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs
-    from ispypsa.model import update_network_timeseries, save_pypsa_network
+    from ispypsa.pypas_build import update_network_timeseries, save_pypsa_network
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")

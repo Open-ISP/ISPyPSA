@@ -5,7 +5,7 @@ import pypsa
 import pytest
 from pandas.testing import assert_series_equal
 
-from ispypsa.model.generators import (
+from ispypsa.pypsa_build.generators import (
     _add_generator_to_network,
     _get_marginal_cost_timeseries,
     _get_trace_data,

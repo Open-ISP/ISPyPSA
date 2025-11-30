@@ -4,15 +4,15 @@ from ispypsa.config import load_config
 from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.iasr_table_caching import build_local_cache
 from ispypsa.logging import configure_logging
-from ispypsa.model import (
-    build_pypsa_network,
-    save_pypsa_network,
-    update_network_timeseries,
-)
 from ispypsa.plotting import (
     create_plot_suite,
     generate_results_website,
     save_plots,
+)
+from ispypsa.pypsa_build import (
+    build_pypsa_network,
+    save_pypsa_network,
+    update_network_timeseries,
 )
 from ispypsa.results import (
     extract_regions_and_zones_mapping,
