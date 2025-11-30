@@ -6,12 +6,32 @@ from shutil import copy2, rmtree
 
 import pypsa
 from doit import create_after, get_var
+from doit.tools import config_changed
+from isp_trace_parser.remote import fetch_trace_data
 
 from ispypsa.config import load_config
-from ispypsa.data_fetch import read_csvs, write_csvs
+from ispypsa.data_fetch import (
+    fetch_workbook,
+    read_csvs,
+    write_csvs,
+)
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
-from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.plotting import (
+    create_plot_suite,
+    generate_results_website,
+    save_plots,
+)
+from ispypsa.pypsa_build import (
+    build_pypsa_network,
+    save_pypsa_network,
+    update_network_timeseries,
+)
+from ispypsa.results import (
+    extract_regions_and_zones_mapping,
+    extract_tabular_results,
+    list_results_files,
+)
 from ispypsa.templater import (
     create_ispypsa_inputs_template,
     list_templater_output_files,
@@ -29,8 +49,13 @@ config_path = get_var("config", None)
 
 if config_path:
     config = load_config(Path(config_path))
+
+    run_dir = Path(config.paths.run_directory) / config.paths.ispypsa_run_name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    DOIT_CONFIG = {"dep_file": run_dir / "doit.db"}
+
 else:
-    config_path = None
+    config = None
 
 
 def check_config_present():
@@ -47,19 +72,16 @@ def get_run_directory():
     return Path(config.paths.run_directory) / config.paths.ispypsa_run_name
 
 
-def get_workbook_path():
-    """Get parsed workbook cache path."""
-    return Path(config.paths.workbook_path)
-
-
 def get_parsed_workbook_cache():
     """Get parsed workbook cache path."""
     return Path(config.paths.parsed_workbook_cache)
 
 
 def get_parsed_trace_directory():
-    """Get parsed trace directory path."""
-    return Path(config.paths.parsed_traces_directory)
+    """Get parsed trace directory path with isp_{year} appended."""
+    base_path = Path(config.paths.parsed_traces_directory)
+    year_suffix = f"isp_{config.trace_data.dataset_year}"
+    return base_path / year_suffix
 
 
 def get_ispypsa_input_directory():
@@ -92,6 +114,26 @@ def get_pypsa_outputs_directory():
     return get_run_directory() / "outputs"
 
 
+def get_capacity_expansion_tabular_results_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_tables"
+
+
+def get_capacity_expansion_plots_directory():
+    """Get plots directory path."""
+    return get_pypsa_outputs_directory() / "capacity_expansion_plots"
+
+
+def get_operational_tabular_results_directory():
+    """Get operational tabular results directory path."""
+    return get_pypsa_outputs_directory() / "operational_tables"
+
+
+def get_operational_plots_directory():
+    """Get operational plots directory path."""
+    return get_pypsa_outputs_directory() / "operational_plots"
+
+
 def return_empty_list_if_no_config(func):
     def wrapper(*args, **kwargs):
         if not config:
@@ -100,6 +142,36 @@ def return_empty_list_if_no_config(func):
             return func(*args, **kwargs)
 
     return wrapper
+
+
+@return_empty_list_if_no_config
+def get_config_file_dep():
+    """Get config file as a dependency list."""
+    return [Path(config_path)]
+
+
+def get_cache_config_values():
+    """Get config values relevant to workbook caching."""
+    if not config:
+        return {}
+    return {
+        "workbook_path": str(config.paths.workbook_path),
+        "iasr_workbook_version": config.iasr_workbook_version,
+        "parsed_workbook_cache": str(config.paths.parsed_workbook_cache),
+    }
+
+
+def get_ispypsa_inputs_config_values():
+    """Get config values relevant to ISPyPSA inputs creation."""
+    if not config:
+        return {}
+    return {
+        "scenario": config.scenario,
+        "regional_granularity": config.network.nodes.regional_granularity,
+        "iasr_workbook_version": config.iasr_workbook_version,
+        "filter_by_nem_regions": config.filter_by_nem_regions,
+        "filter_by_isp_sub_regions": config.filter_by_isp_sub_regions,
+    }
 
 
 @return_empty_list_if_no_config
@@ -130,6 +202,12 @@ def get_local_cache_files():
 
 
 @return_empty_list_if_no_config
+def get_workbook_path():
+    """Get workbook file path."""
+    return Path(config.paths.workbook_path)
+
+
+@return_empty_list_if_no_config
 def get_ispypsa_input_files():
     """Get list of ISPyPSA input files."""
     check_config_present()
@@ -142,6 +220,12 @@ def get_ispypsa_input_files():
 def get_pypsa_friendly_input_files():
     """Get list of PyPSA friendly input files."""
     return list_translator_output_files(get_pypsa_friendly_directory())
+
+
+@return_empty_list_if_no_config
+def get_operational_snapshots_file():
+    """Get list with operational snapshots file."""
+    return [get_pypsa_friendly_directory() / "operational_snapshots.csv"]
 
 
 @return_empty_list_if_no_config
@@ -162,6 +246,22 @@ def get_operational_timeseries_files():
     return list_timeseries_files(
         config, ispypsa_tables, get_operational_timeseries_location()
     )
+
+
+@return_empty_list_if_no_config
+def get_capacity_expansion_tabular_results_files():
+    """Get list of capacity expansion tabular results files."""
+    check_config_present()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    return list_results_files(results_dir)
+
+
+@return_empty_list_if_no_config
+def get_operational_tabular_results_files():
+    """Get list of operational tabular results files."""
+    check_config_present()
+    results_dir = get_operational_tabular_results_directory()
+    return list_results_files(results_dir)
 
 
 def configure_logging_for_run() -> None:
@@ -192,6 +292,8 @@ def build_parsed_workbook_cache() -> None:
     workbook_path = get_workbook_path()
     version = config.iasr_workbook_version
 
+    create_or_clean_task_output_folder(parsed_workbook_cache)
+
     # Check if we're in test mode and should skip actual workbook parsing
     if os.environ.get("ISPYPSA_TEST_MOCK_CACHE", "").lower() == "true":
         # In test mode, just ensure cache directory exists and copy pre-existing files
@@ -220,6 +322,98 @@ def build_parsed_workbook_cache() -> None:
         )
 
     build_local_cache(parsed_workbook_cache, workbook_path, version)
+
+
+def download_workbook_from_config() -> None:
+    """Download ISP workbook from manifest.
+
+    Can be run with direct parameters or with config file:
+    - Direct: ispypsa workbook_version=6.0 workbook_path=path/to/workbook.xlsx download_workbook
+    - Config: ispypsa config=config.yaml download_workbook
+    """
+    # Check if direct parameters are provided
+    direct_version = get_var("workbook_version", None)
+    direct_path = get_var("workbook_path", None)
+
+    if direct_version and direct_path:
+        # Use direct parameters (no config needed)
+        version = direct_version
+        workbook_path = Path(direct_path)
+        # Simple logging setup for direct mode
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    else:
+        # Use config file
+        check_config_present()
+        configure_logging_for_run()
+        workbook_path = get_workbook_path()
+        version = config.iasr_workbook_version
+
+    # Validate path
+    if not str(workbook_path).endswith(".xlsx"):
+        raise ValueError(f"workbook_path must end with .xlsx, got: {workbook_path}")
+
+    # Log start
+    logging.info(f"Downloading ISP workbook version {version} to {workbook_path}")
+
+    # Download (fetch_workbook handles directory creation and silently overwrites)
+    fetch_workbook(version, workbook_path)
+
+    # Log completion
+    logging.info("Workbook download completed successfully")
+
+
+def download_trace_data_from_config() -> None:
+    """Download trace data from manifest.
+
+    Can be run with direct parameters or with config file:
+    - Direct: ispypsa save_directory=path/to/traces trace_dataset_type=example download_trace_data
+    - Config: ispypsa config=config.yaml download_trace_data
+    """
+    # Check if direct save_directory parameter is provided
+    direct_save_dir = get_var("save_directory", None)
+
+    if direct_save_dir:
+        # Use direct parameters (no config needed)
+        trace_dir = Path(direct_save_dir)
+        # Get parameters from command line with defaults
+        dataset_type = get_var("trace_dataset_type", "example")
+        dataset_year = int(get_var("trace_dataset_year", "2024"))
+        # Simple logging setup for direct mode
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    else:
+        # Use config file
+        check_config_present()
+        configure_logging_for_run()
+        trace_dir = get_parsed_trace_directory()
+        # Get parameters from config, with command line override
+        dataset_type = get_var("trace_dataset_type", config.trace_data.dataset_type)
+        dataset_year = int(
+            get_var("trace_dataset_year", config.trace_data.dataset_year)
+        )
+
+    create_or_clean_task_output_folder(trace_dir)
+
+    # Validate dataset_type
+    if dataset_type not in ["full", "example"]:
+        raise ValueError(
+            f"trace_dataset_type must be 'full' or 'example', got: {dataset_type}"
+        )
+
+    # Log start
+    logging.info(
+        f"Downloading {dataset_type} trace data for {dataset_year} to {trace_dir}"
+    )
+
+    # Download (fetch_trace_data handles directory creation)
+    # Note: Partial downloads from network errors will be left as-is
+    fetch_trace_data(
+        dataset_type=dataset_type,
+        dataset_src=f"isp_{dataset_year}",
+        save_directory=trace_dir.parent,  # parent to remove isp_{year} level
+    )
+
+    # Log completion
+    logging.info("Trace data download completed successfully")
 
 
 def save_config_file() -> None:
@@ -258,7 +452,6 @@ def create_ispypsa_inputs_from_config() -> None:
         filter_to_nem_regions=config.filter_by_nem_regions,
         filter_to_isp_sub_regions=config.filter_by_isp_sub_regions,
     )
-    logging.info(template["gas_prices"]["generator"].unique())
     write_csvs(template, input_tables_dir)
 
 
@@ -276,17 +469,26 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
 
     ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
-    write_csvs(pypsa_tables, pypsa_friendly_dir)
 
-    create_pypsa_friendly_timeseries_inputs(
+    # Create capacity expansion timeseries
+    pypsa_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         ispypsa_tables,
-        pypsa_tables["snapshots"],
         pypsa_tables["generators"],
         parsed_trace_dir,
         capacity_expansion_timeseries_location,
     )
+
+    write_csvs(pypsa_tables, pypsa_friendly_dir)
+
+
+def get_create_plots_arg() -> bool:
+    create_plots = config.create_plots
+    cli_create_plots = get_var("create_plots", None)
+    if cli_create_plots is not None:
+        create_plots = cli_create_plots.lower() == "true"
+    return create_plots
 
 
 def create_and_run_capacity_expansion_model() -> None:
@@ -298,10 +500,12 @@ def create_and_run_capacity_expansion_model() -> None:
         get_capacity_expansion_timeseries_location()
     )
 
+    create_or_clean_task_output_folder(get_pypsa_outputs_directory())
+
     # Get run_optimisation flag from doit variables
     run_optimisation = get_var("run_optimisation", "True") == "True"
 
-    create_or_clean_task_output_folder(capacity_expansion_pypsa_file.parent)
+    ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
 
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
@@ -310,11 +514,36 @@ def create_and_run_capacity_expansion_model() -> None:
         capacity_expansion_timeseries_location,
     )
 
+    # Save before optimising incase solving fails and you want a copy
+    # of the network for debugging.
+    save_pypsa_network(network, get_pypsa_outputs_directory(), "capacity_expansion")
+
     if run_optimisation:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
+        save_pypsa_network(network, get_pypsa_outputs_directory(), "capacity_expansion")
+        results = extract_tabular_results(network, ispypsa_tables)
 
-    network.export_to_netcdf(capacity_expansion_pypsa_file)
+        # Load ispypsa_tables to create regions and zones mapping
+        ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+        results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+            ispypsa_tables
+        )
+        write_csvs(results, get_capacity_expansion_tabular_results_directory())
+
+        if get_create_plots_arg():
+            plots = create_plot_suite(results)
+            plots_dir = get_capacity_expansion_plots_directory()
+            save_plots(plots, plots_dir)
+            generate_results_website(
+                plots,
+                plots_dir,
+                get_pypsa_outputs_directory(),
+                site_name=f"{config.paths.ispypsa_run_name}",
+                output_filename="capacity_expansion_results_viewer.html",
+                subtitle="Capacity Expansion Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+            )
 
 
 def create_operational_timeseries() -> None:
@@ -323,26 +552,27 @@ def create_operational_timeseries() -> None:
     configure_logging_for_run()
     input_tables_dir = get_ispypsa_input_tables_directory()
     pypsa_friendly_dir = get_pypsa_friendly_directory()
+    output_tables_dir = get_pypsa_friendly_directory()
     parsed_trace_dir = get_parsed_trace_directory()
     operational_timeseries_location = get_operational_timeseries_location()
+
+    create_or_clean_task_output_folder(operational_timeseries_location)
 
     # Load tables
     ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
-    # Create operational snapshots
-    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
-
     # Create operational timeseries
-    create_pypsa_friendly_timeseries_inputs(
+    operational_snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,
-        operational_snapshots,
         pypsa_friendly_input_tables["generators"],
         parsed_trace_dir,
         operational_timeseries_location,
     )
+
+    write_csvs({"operational_snapshots": operational_snapshots}, output_tables_dir)
 
 
 def create_and_run_operational_model() -> None:
@@ -354,14 +584,15 @@ def create_and_run_operational_model() -> None:
     operational_timeseries_location = get_operational_timeseries_location()
     operational_pypsa_file = get_operational_pypsa_file()
 
+    operational_pypsa_file.unlink(missing_ok=True)
+    create_or_clean_task_output_folder(get_operational_tabular_results_directory())
+    create_or_clean_task_output_folder(get_operational_plots_directory())
+
     # Get run_optimisation flag from doit variables
     run_optimisation = get_var("run_optimisation", "True") == "True"
 
     # Load tables
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
-
-    # Create operational snapshots (needed for update_network_timeseries)
-    operational_snapshots = create_pypsa_friendly_snapshots(config, "operational")
 
     # Load the capacity expansion network
     network = pypsa.Network(capacity_expansion_pypsa_file)
@@ -370,7 +601,7 @@ def create_and_run_operational_model() -> None:
     update_network_timeseries(
         network,
         pypsa_friendly_input_tables,
-        operational_snapshots,
+        pypsa_friendly_input_tables["operational_snapshots"],
         operational_timeseries_location,
     )
 
@@ -384,8 +615,91 @@ def create_and_run_operational_model() -> None:
             overlap=config.temporal.operational.overlap,
         )
 
-    # Save the network for operational optimization
-    network.export_to_netcdf(operational_pypsa_file)
+        # Save the network for operational optimization
+        save_pypsa_network(network, get_pypsa_outputs_directory(), "operational")
+
+        # Load ispypsa_tables to create regions and zones mapping
+        ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
+        results = extract_tabular_results(network, ispypsa_tables)
+        results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
+            ispypsa_tables
+        )
+
+        write_csvs(results, get_operational_tabular_results_directory())
+
+        if get_create_plots_arg():
+            plots = create_plot_suite(results)
+            plots_dir = get_operational_plots_directory()
+            save_plots(plots, plots_dir)
+            generate_results_website(
+                plots,
+                plots_dir,
+                get_pypsa_outputs_directory(),
+                output_filename="operational_results_viewer.html",
+                site_name=f"{config.paths.ispypsa_run_name}",
+                subtitle="Operational Analysis",
+                regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+            )
+
+
+def create_capacity_expansion_plots_suite() -> None:
+    """Create and save plots from capacity expansion results."""
+    check_config_present()
+    configure_logging_for_run()
+    results_dir = get_capacity_expansion_tabular_results_directory()
+    plots_dir = get_capacity_expansion_plots_directory()
+
+    create_or_clean_task_output_folder(plots_dir)
+
+    # Load results from CSV
+    results = read_csvs(results_dir)
+
+    # Create plots
+    plots = create_plot_suite(results)
+
+    # Save plots
+    save_plots(plots, plots_dir)
+
+    # Generate website
+    generate_results_website(
+        plots,
+        plots_dir,
+        get_pypsa_outputs_directory(),
+        output_filename="capacity_expansion_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
+        subtitle="Capacity Expansion Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+    )
+
+
+def create_operational_plots_suite() -> None:
+    """Create and save plots from operational results."""
+    check_config_present()
+    configure_logging_for_run()
+    results_dir = get_operational_tabular_results_directory()
+    plots_dir = get_operational_plots_directory()
+
+    create_or_clean_task_output_folder(plots_dir)
+
+    # Load results from CSV
+    results = read_csvs(results_dir)
+
+    # Create plots
+    plots = create_plot_suite(results)
+
+    # Save plots
+    save_plots(plots, plots_dir)
+
+    # Generate website
+    generate_results_website(
+        plots,
+        plots_dir,
+        get_pypsa_outputs_directory(),
+        output_filename="operational_results_viewer.html",
+        site_name=f"{config.paths.ispypsa_run_name}",
+        subtitle="Operational Analysis",
+        regions_and_zones_mapping=results.get("regions_and_zones_mapping"),
+    )
 
 
 def remove_deps_and_targets_if_no_config(func):
@@ -410,8 +724,8 @@ def task_save_config():
     """Save configuration file to run directory."""
     return {
         "actions": [save_config_file],
+        "file_dep": get_config_file_dep(),
         "targets": [get_config_save_path()],
-        "uptodate": [False],  # Always run this task
     }
 
 
@@ -419,11 +733,11 @@ def task_save_config():
 def task_cache_required_iasr_workbook_tables():
     return {
         "actions": [build_parsed_workbook_cache],
+        "file_dep": [get_workbook_path()],
         "targets": get_local_cache_files(),
         "task_dep": ["save_config"],
-        # force doit to always mark the task as up-to-date (unless target removed)
-        # N.B. this will NOT run if target exists but has been modified
-        "uptodate": [True],
+        # Only re-run if cache-relevant config values change
+        "uptodate": [config_changed(get_cache_config_values())],
     }
 
 
@@ -433,6 +747,7 @@ def task_create_ispypsa_inputs():
         "actions": [create_ispypsa_inputs_from_config],
         "file_dep": get_local_cache_files(),
         "targets": get_ispypsa_input_files(),
+        "uptodate": [config_changed(get_ispypsa_inputs_config_values())],
     }
 
 
@@ -451,7 +766,7 @@ def task_create_pypsa_friendly_inputs():
 
     return {
         "actions": [create_pypsa_inputs_for_capacity_expansion_model],
-        "file_dep": get_ispypsa_input_files(),
+        "file_dep": get_ispypsa_input_files() + get_config_file_dep(),
         "uptodate": [check_targets],
     }
 
@@ -460,14 +775,20 @@ def task_create_pypsa_friendly_inputs():
 @remove_deps_and_targets_if_no_config
 def task_create_and_run_capacity_expansion_model():
     capacity_expansion_deps = (
-        get_pypsa_friendly_input_files() + get_capacity_expansion_timeseries_files()
+        get_pypsa_friendly_input_files()
+        + get_capacity_expansion_timeseries_files()
+        + get_config_file_dep()
     )
+
+    capacity_expansion_targets = [
+        get_capacity_expansion_pypsa_file()
+    ] + get_capacity_expansion_tabular_results_files()
 
     return {
         "actions": [(create_and_run_capacity_expansion_model,)],
         "task_dep": ["create_pypsa_friendly_inputs"],
         "file_dep": capacity_expansion_deps,
-        "targets": [get_capacity_expansion_pypsa_file()],
+        "targets": capacity_expansion_targets,
     }
 
 
@@ -475,7 +796,7 @@ def task_create_and_run_capacity_expansion_model():
 @remove_deps_and_targets_if_no_config
 def task_create_operational_timeseries():
     def check_targets():
-        targets = get_pypsa_friendly_input_files() + get_operational_timeseries_files()
+        targets = get_operational_timeseries_files() + get_operational_snapshots_file()
 
         for target in targets:
             if not target.exists():
@@ -485,7 +806,7 @@ def task_create_operational_timeseries():
 
     return {
         "actions": [create_operational_timeseries],
-        "file_dep": get_ispypsa_input_files(),
+        "file_dep": get_ispypsa_input_files() + get_config_file_dep(),
         "uptodate": [check_targets],
     }
 
@@ -494,10 +815,73 @@ def task_create_operational_timeseries():
 @remove_deps_and_targets_if_no_config
 def task_create_and_run_operational_model():
     operational_deps = (
-        get_pypsa_friendly_input_files() + get_operational_timeseries_files()
+        get_pypsa_friendly_input_files()
+        + get_operational_timeseries_files()
+        + get_operational_snapshots_file()
+        + get_config_file_dep()
     )
     return {
         "actions": [create_and_run_operational_model],
         "file_dep": operational_deps,
         "targets": [get_operational_pypsa_file()],
+    }
+
+
+def check_results_files_exist():
+    """Check if all dependencies exist"""
+    dependencies = get_capacity_expansion_tabular_results_files()
+    for dep in dependencies:
+        if not os.path.exists(dep):
+            raise FileNotFoundError(
+                f"Results file {dep} not found. Please run the capacity expansion model first."
+            )
+
+
+def check_operational_results_files_exist():
+    """Check if all operational results dependencies exist"""
+    dependencies = get_operational_tabular_results_files()
+    for dep in dependencies:
+        if not os.path.exists(dep):
+            raise FileNotFoundError(
+                f"Results file {dep} not found. Please run the operational model first."
+            )
+
+
+@remove_deps_and_targets_if_no_config
+def task_create_capacity_expansion_plots():
+    """Create and save plots from capacity expansion results."""
+    return {
+        "actions": [check_results_files_exist, create_capacity_expansion_plots_suite],
+        "uptodate": [False],
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_create_operational_plots():
+    """Create and save plots from operational results."""
+    return {
+        "actions": [
+            check_operational_results_files_exist,
+            create_operational_plots_suite,
+        ],
+        "uptodate": [False],
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_download_workbook():
+    """Download ISP workbook file from data repository."""
+    return {
+        "actions": [download_workbook_from_config],
+        "uptodate": [False],  # Always allow re-download
+    }
+
+
+@remove_deps_and_targets_if_no_config
+def task_download_trace_data():
+    """Download trace data from data repository."""
+    return {
+        "actions": [download_trace_data_from_config],
+        "targets": [],  # No targets to track
+        "uptodate": [False],  # Always allow re-download
     }

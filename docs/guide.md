@@ -11,9 +11,9 @@ The [Getting started](getting_started.md) section walks the user through:
 The [Workflow](workflow.md) section explains the ISPyPSA data handling
 workflow, which converts AEMO inputs and data into a PyPSA model.
 
-## Modelling methodology
+## Modelling method
 
-The [Methodology](method.md) explains the conceptual details of the model ISPyPSA
+The [Method](method.md) section explains the conceptual details of the model ISPyPSA
 builds in PyPSA, and how this is controlled through user settings (config). By
 *conceptual*, we mean the descriptions are intended to describe the model in terms any
 modeller or analyst can understand, rather than explaining the Python code or the data
@@ -35,12 +35,14 @@ modelling process.
 
 ## Tables
 
+!!! note "Coming soon"
+
 Most of the inputs in ISPyPSA are specified through CSV files or Pandas
-DataFrames. The Tables section provides detailed descriptions of each table, detailing
+DataFrames. The Tables section will provide detailed descriptions of each table, detailing
 the required columns, their units, and their effect on the model.
 
 - [ISPyPSA input tables](tables/ispypsa.md) describe the set of tables taken as inputs
-  to the [translater](workflow.md#translating), these tables are the recommended inputs
+  to the [translator](workflow.md#translating), these tables are the recommended inputs
   for most users to edit and create custom ISP scenarios.
 - [PyPSA friendly inputs](tables/ispypsa.md) describe the set of tables taken as inputs
   to the [model](workflow.md#capacity-expansion-model), these tables are provided as audit
@@ -55,6 +57,8 @@ their own projects.
 
 ## Examples
 
-The Examples section provides different examples of how ISPyPSA can be used, this
-includes both full scale examples, which show realistic NEM level models and simplified
-examples which are mostly intended to help explain how ISPyPSA works.
+The Examples section provides different examples of how ISPyPSA can be used. Currently,
+this just documents the default API and CLI workflow. In the future we will add a wider
+range of examples with various model configuration including both full scale examples,
+which show realistic NEM level models and simplified examples intended to help explain
+how ISPyPSA works.

@@ -9,6 +9,20 @@ def load_config(config_path: str | Path) -> ModelConfig:
     """
     Load and validate configuration from a YAML file.
 
+    Examples:
+        Perform required imports.
+        >>> from pathlib import Path
+        >>> from ispypsa.config import load_config
+
+        Load the configuration from a YAML file.
+        >>> config = load_config(Path("ispypsa_config.yaml"))
+
+        Access configuration values.
+        >>> config.scenario
+        'Step Change'
+        >>> config.network.nodes.regional_granularity
+        'sub_regions'
+
     Args:
         config_path: Path to the YAML configuration file
 

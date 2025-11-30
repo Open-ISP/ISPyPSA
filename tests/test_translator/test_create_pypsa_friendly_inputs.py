@@ -9,6 +9,7 @@ from ispypsa.translator import (
     create_pypsa_friendly_timeseries_inputs,
     list_translator_output_files,
 )
+from ispypsa.translator.create_pypsa_friendly import _flatten_generator_traces
 from ispypsa.translator.generators import (
     _translate_ecaa_generators,
     _translate_new_entrant_generators,
@@ -145,7 +146,9 @@ def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
         sample_model_config, sample_ispypsa_tables
     )
 
-    for table in list_translator_output_files():
+    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
+    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    for table in expected_tables:
         assert table in pypsa_tables.keys()
 
     assert "CNSW" in pypsa_tables["buses"]["name"].values
@@ -162,7 +165,9 @@ def test_create_pypsa_inputs_template_single_regions(
         sample_model_config, sample_ispypsa_tables
     )
 
-    for table in list_translator_output_files():
+    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
+    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    for table in expected_tables:
         assert table in pypsa_tables.keys()
 
     assert "NEM" in pypsa_tables["buses"]["name"].values
@@ -190,7 +195,9 @@ class DummyConfigTwo:
                         "resolution_min": 60,
                         "investment_periods": [2025],
                         "reference_year_cycle": [2011],
-                        "aggregation": {"representative_weeks": [1]},
+                        "aggregation": type(
+                            "obj", (object,), {"representative_weeks": [1]}
+                        ),
                     },
                 ),
                 "operational": type(
@@ -225,8 +232,12 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
+
+    print(f"Path exists: {parsed_trace_path.exists()}")
+    print(f"Absolute path: {parsed_trace_path.resolve()}")
+    print(f"Files found: {list(parsed_trace_path.glob('**/*.parquet'))}")
 
     # Create snapshots for capacity expansion (hourly)
     snapshots = _create_complete_snapshots_index(
@@ -275,12 +286,11 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     # Create output directory
     output_dir = tmp_path / "timeseries_output"
 
-    # Call the function
-    create_pypsa_friendly_timeseries_inputs(
+    # Call the function - it now returns snapshots instead of taking them as input
+    snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         sample_ispypsa_tables,
-        snapshots,
         generators,
         parsed_trace_path,
         output_dir,
@@ -349,7 +359,7 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     config = DummyConfigTwo()
 
     # Use the trace data that ships with the tests
-    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data")
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
     config.temporal.path_to_parsed_traces = parsed_trace_path
 
     # only keep the generators that we have test traces for from the fixtures:
@@ -386,25 +396,14 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
         ignore_index=True,
     )
 
-    # Create snapshots for operational model (half-hourly)
-    snapshots = _create_complete_snapshots_index(
-        start_year=2025,
-        end_year=2025,  # Just one year for operational
-        temporal_resolution_min=30,
-        year_type="fy",
-    )
-
-    snapshots = _add_investment_periods(snapshots, [2025], "fy")
-
     # Create output directory
     output_dir = tmp_path / "timeseries_output"
 
     # Call the function
-    create_pypsa_friendly_timeseries_inputs(
+    snapshots = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         sample_ispypsa_tables,
-        snapshots,
         generators,
         parsed_trace_path,
         output_dir,
@@ -461,3 +460,9 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
 
     # Verify matching of snapshots to investment periods
     assert set(marginal_cost_trace["investment_periods"].unique()) == {2025}
+
+
+def test_flatten_generator_traces_none_input():
+    """Test _flatten_generator_traces returns None when input is None."""
+    result = _flatten_generator_traces(None)
+    assert result is None

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ispypsa.model import build_pypsa_network, update_network_timeseries
+from ispypsa.pypsa_build import build_pypsa_network, update_network_timeseries
 
 
 def test_expand_then_operate():
@@ -80,8 +80,11 @@ def test_expand_then_operate():
                         "2025-01-15 18:00",  # Peak snapshot
                         "2026-01-01 12:00",  # Normal snapshot
                         "2026-01-15 18:00",  # Peak snapshot
-                    ]
+                    ],
                 ),
+                "generators": 1.0,
+                "objective": 1.0,
+                "stores": 1.0,
             }
         )
 
@@ -221,6 +224,9 @@ def test_expand_then_operate():
                         "2026-01-02 00:00",
                     ]
                 ),
+                "generators": 1.0,
+                "objective": 1.0,
+                "stores": 1.0,
             }
         )
 

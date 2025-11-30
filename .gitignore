@@ -171,13 +171,18 @@ ispypsa_runs/**/*.csv
 ispypsa_runs/**/*.parquet
 ispypsa_runs/**/*.nc
 ispypsa_runs/**/*.yaml
+*.html
+
 
 # ignore doit database
-.doit*
+*.dir
+*.dat
+*.bak
 
 # IDE specific files
 .vscode/
 .DS_Store
+# ignore claude stuff
 .claude/settings.local.json
 
 # ignore all pypsa output files

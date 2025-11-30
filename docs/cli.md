@@ -6,14 +6,15 @@ flexibility is required the [API](api.md) might be a better option.
 
 ## Overview
 
-The `ispypsa` command allows you to:
+The `ispypsa` command and sub-tasks allow you to:
 
+  - Download data
   - Extract data from ISP workbooks
   - Generate model input files
   - Run capacity expansion and operational models
   - Manage workflow outputs
 
-All commands require a configuration file that specifies paths and model parameters.
+Most tasks require a configuration file that specifies paths and model parameters.
 See the [Workflow overview](workflow.md) section for a high-level overview of
 the default ISPyPSA workflow.
 
@@ -39,6 +40,7 @@ The basic command structure is:
 
 The `config=<config_file>` argument is required for task execution and must point to a valid ISPyPSA configuration YAML file.
 
+
 !!! important
 
     For the sake of brevity the commands on the rest of this page are given in plain
@@ -55,7 +57,6 @@ ispypsa config=my_config.yaml create_and_run_capacity_expansion_model
 
 # Run all tasks with config
 ispypsa config=my_config.yaml
-
 ```
 
 ## Tasks
@@ -91,6 +92,93 @@ save_config
     a task is not up to date and will be rerun. This applies to both the primary target
     task and all of its dependencies.
 
+!!! Note
+
+    ISPyPSA provides independent **download and plotting** tasks. These tasks are
+    **not part of the main workflow task dependency** and need be explicity run when needed.
+
+### download_workbook
+
+Downloads the ISP workbook Excel file from the data repository.
+
+**Usage with config file:**
+
+```bash
+ispypsa config=config.yaml download_workbook
+```
+
+**Usage with direct parameters (no config file needed):**
+
+```bash
+ispypsa workbook_version=6.0 workbook_path=data/workbooks/6.0.xlsx download_workbook
+```
+
+**Parameters (if not using config):**
+
+- `workbook_version` (required): Version of workbook to download (e.g., "6.0")
+- `workbook_path` (required): Full path where workbook should be saved (must end with .xlsx)
+
+**Outputs:**
+
+- Excel workbook file at the specified path
+
+**Notes:**
+
+- This task will overwrite any existing workbook file at the target location
+- If download fails partway through, partial files will remain
+- Task always runs when invoked (never considers itself up-to-date)
+
+### download_trace_data
+
+Downloads trace data (demand, wind, solar) from the data repository.
+
+**Usage with config file:**
+
+```bash
+# Download example dataset (default - smaller, for testing)
+ispypsa config=config.yaml download_trace_data
+
+# Download full dataset (override config default)
+ispypsa config=config.yaml trace_dataset_type=full download_trace_data
+```
+
+**Usage with direct parameters (no config file needed):**
+
+```bash
+# Download example dataset to specified directory
+ispypsa save_directory=data/traces download_trace_data
+
+# Download full dataset to specified directory
+ispypsa save_directory=data/traces trace_dataset_type=full download_trace_data
+
+# Specify all parameters
+ispypsa save_directory=data/traces trace_dataset_type=example trace_dataset_year=2024 download_trace_data
+```
+
+**Parameters (if not using config):**
+
+- `save_directory`: Directory where trace data should be saved
+- `trace_dataset_type` (optional): Either "example" or "full"
+    - Defaults to "example"
+    - "example": Smaller dataset suitable for testing and development
+    - "full": Complete dataset for production runs
+- `trace_dataset_year` (optional): Year of dataset
+    - Defaults to 2024
+    - Currently only 2024 is supported
+
+**Outputs:**
+
+- Trace data files in the specified directory
+- Files organized in subdirectories: `isp_{year}/project/`, `isp_{year}/zone/`, `isp_{year}/demand/`
+
+**Notes:**
+
+- This task will re-download all files, overwriting any existing trace data
+- If download fails partway through, partial files will remain
+- Task always runs when invoked (never considers itself up-to-date)
+- The "full" dataset manifest is currently empty and will be populated in future releases
+- Direct mode is useful for downloading data before creating a config file
+
 ### cache_required_iasr_workbook_tables
 
 Extracts data from the ISP Excel workbook and caches it as CSV files.
@@ -123,8 +211,8 @@ ispypsa config=config.yaml create_ispypsa_inputs
 
 **Outputs:**
 
-- ISPyPSA input tables in `{run_directory}/{run_name}/ispypsa_inputs/tables/`
-  (run_directory and run_name specified in config)
+- ISPyPSA input tables in `{run_directory}/{ispypsa_run_name}/ispypsa_inputs/`
+  (run_directory and ispypsa_run_name specified in config)
 
 ### create_pypsa_friendly_inputs
 
@@ -136,17 +224,17 @@ ispypsa config=config.yaml create_pypsa_friendly_inputs
 
 **Inputs:**
 
-- ISPyPSA input tables in `{run_directory}/{run_name}/ispypsa_inputs/tables/`
-  (run_directory and run_name specified in config)
+- ISPyPSA input tables in `{run_directory}/{ispypsa_run_name}/ispypsa_inputs/`
+  (run_directory and ispypsa_run_name specified in config)
 - Trace data (demand, wind, solar) (location specified in config `paths.
   parsed_traces_directory`)
 
 **Outputs:**
 
-- PyPSA-friendly tables in `{run_directory}/{run_name}/pypsa_friendly/` (run_directory
-  and run_name specified in config)
-- Time series data in `{run_directory}/{run_name}/pypsa_friendly/capacity_expansion_timeseries/`
-  (run_directory and run_name specified in config)
+- PyPSA-friendly tables in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/`
+  (run_directory and ispypsa_run_name specified in config)
+- Time series data in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries/`
+  (run_directory and ispypsa_run_name specified in config)
 
 ### create_and_run_capacity_expansion_model
 
@@ -158,14 +246,31 @@ ispypsa config=config.yaml create_and_run_capacity_expansion_model
 
 **Inputs:**
 
-- PyPSA-friendly tables in `{run_directory}/{run_name}/pypsa_friendly/` (run_directory
-  and run_name specified in config)
-- Time series data in `{run_directory}/{run_name}/pypsa_friendly/capacity_expansion_timeseries/`
-  (run_directory and run_name specified in config)
+- PyPSA-friendly tables in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/`
+  (run_directory and ispypsa_run_name specified in config)
+- Time series data in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries/`
+  (run_directory and ispypsa_run_name specified in config)
 
 **Outputs:**
 
-- Optimized capacity expansion results in `{run_directory}/{run_name}/outputs/capacity_expansion.nc`
+- Optimized capacity expansion results in `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion.nc`
+
+**Plotting Option:**
+
+By default, a suite of plots is automatically generated after the capacity expansion model runs.
+This behaviour is controlled by the `create_plots` setting in `config.yaml`, which is set to `True`
+in the default workflow.
+
+When enabled, the task will create and save a suite of plots to the `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_plots/` directory.
+
+This provides a convenient way to visualise model outputs without needing to run the `create_capacity_expansion_plots` task separately.
+
+You can disable plot creation by setting `create_plots: False` in your config or by passing it as a command-line argument:
+
+```bash
+# Disable plot generation for this run
+ispypsa config=config.yaml create_plots=False create_and_run_capacity_expansion_model
+```
 
 **Skip Optimization Option:**
 
@@ -176,15 +281,45 @@ ispypsa config=config.yaml run_optimisation=False create_and_run_capacity_expans
 ```
 
 This is particularly useful for:
+
 - Testing that your model configuration is valid
 - Verifying network construction without waiting for optimization
 - Debugging model setup issues
 - Creating a network file for manual inspection or custom optimization
 
 When this flag is set to `False`, the task will:
+
 1. Build the complete PyPSA network with all components and constraints
 2. Save the unoptimized network to the output file
 3. Skip the potentially time-consuming optimization step
+
+
+### create_capacity_expansion_plots
+
+Generates plots from the capacity expansion model results.
+
+```bash
+ispypsa config=config.yaml create_capacity_expansion_plots
+```
+
+**Inputs:**
+
+- Tabular results from capacity expansion model in `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_tables/` (generated by `create_and_run_capacity_expansion_model`)
+
+**Outputs:**
+
+- Plot files (interactive HTML format) in `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_plots/`
+- Results viewer website: `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion_results_viewer.html`
+
+**Notes:**
+
+- This task is not part of the main workflow dependency chain and must be run explicitly.
+- It will fail if the capacity expansion results are not present.
+- Generated plots include:
+  - Regional and sub-regional dispatch plots
+  - Transmission flow plots for all links
+  - Transmission capacity expansion plots
+  - Regional transmission expansion plots
 
 ### create_operational_timeseries
 
@@ -196,14 +331,14 @@ ispypsa config=config.yaml create_operational_timeseries
 
 **Inputs:**
 
-- ISPyPSA input tables in `{run_directory}/{run_name}/ispypsa_inputs/tables/`
-  (run_directory and run_name specified in config)
+- ISPyPSA input tables in `{run_directory}/{ispypsa_run_name}/ispypsa_inputs/`
+  (run_directory and ispypsa_run_name specified in config)
 - Trace data (demand, wind, solar) (location specified in config `paths.
   parsed_traces_directory`)
 
 **Outputs:**
 
-- Operational time series data in `{run_directory}/{run_name}/pypsa_friendly/operational_timeseries/`
+- Operational time series data in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries/`
 
 ### create_and_run_operational_model
 
@@ -215,13 +350,13 @@ ispypsa config=config.yaml create_and_run_operational_model
 
 **Inputs:**
 
-- Capacity expansion results in `{run_directory}/{run_name}/outputs/capacity_expansion.nc`
-- PyPSA-friendly tables in `{run_directory}/{run_name}/pypsa_friendly/`
-- Operational time series data in `{run_directory}/{run_name}/pypsa_friendly/operational_timeseries/`
+- Capacity expansion results in `{run_directory}/{ispypsa_run_name}/outputs/capacity_expansion.nc`
+- PyPSA-friendly tables in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/`
+- Operational time series data in `{run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries/`
 
 **Outputs:**
 
-- Operational optimization results in `{run_directory}/{run_name}/outputs/operational.h5`
+- Operational optimization results in `{run_directory}/{ispypsa_run_name}/outputs/operational.nc`
 
 !!! note "Running Without Capacity Expansion"
 
@@ -233,8 +368,6 @@ ispypsa config=config.yaml create_and_run_operational_model
     - No new generation or transmission capacity will have been added
     - The operational model may be infeasible if initial capacities are insufficient
     - Results will not reflect least-cost capacity investment decisions
-
-    This can be useful for testing but should not be used for final analysis.
 
 **Skip Optimization Option:**
 
@@ -259,6 +392,45 @@ When this flag is set to `False`, the task will:
 4. Save the prepared network without running the rolling horizon optimization
 5. Skip the potentially very long operational optimization process
 
+**Plotting Option:**
+
+Similar to capacity expansion, plots can be automatically generated after the operational model runs.
+This behaviour is controlled by the `create_plots` setting in `config.yaml`, which defaults to `True`.
+
+When enabled, the task will create and save a suite of plots to the `{run_directory}/{ispypsa_run_name}/outputs/operational_plots/` directory.
+
+You can disable plot creation by setting `create_plots: False` in your config or by passing it as a command-line argument:
+
+```bash
+# Disable plot generation for this run
+ispypsa config=config.yaml create_plots=False create_and_run_operational_model
+```
+
+### create_operational_plots
+
+Generates plots from the operational model results.
+
+```bash
+ispypsa config=config.yaml create_operational_plots
+```
+
+**Inputs:**
+
+- Tabular results from operational model in `{run_directory}/{ispypsa_run_name}/outputs/operational_tables/` (generated by `create_and_run_operational_model`)
+
+**Outputs:**
+
+- Plot files (interactive HTML format) in `{run_directory}/{ispypsa_run_name}/outputs/operational_plots/`
+- Results viewer website: `{run_directory}/{ispypsa_run_name}/outputs/operational_results_viewer.html`
+
+**Notes:**
+
+- This task is not part of the main workflow dependency chain and must be run explicitly.
+- It will fail if the operational results are not present.
+- Generated plots include:
+  - Regional and sub-regional dispatch plots
+  - Transmission flow plots for all links
+
 ### list
 
 Shows all available tasks and their status. No config file required.
@@ -281,14 +453,14 @@ ispypsa config=config.yaml save_config
 
 **Outputs:**
 
-- Copy of the configuration file in `{run_directory}/{run_name}/`
+- Copy of the configuration file in `{run_directory}/{ispypsa_run_name}/`
   (preserves the exact config used for the run)
 
 **Note:** This task always runs (never considers itself up-to-date) to ensure the config file is always current.
 
 ## Configuration
 
-The `config=` argument is required for task execution. It accepts either absolute or relative
+The `config=` argument is required for most tasks. It accepts either absolute or relative
 paths:
 
 ```bash
@@ -317,8 +489,8 @@ ispypsa config=config.yaml cache_required_iasr_workbook_tables
 # Generate ISPyPSA inputs
 ispypsa config=config.yaml create_ispypsa_inputs
 
-# At this stage the ISPyPSA inputs could be edited to adjust build cost or any other
-# inputs set out in {run_directory}/{run_name}/ispypsa_inputs/tables/
+# At this stage the ISPyPSA inputs could be edited to adjust build costs or any other
+# inputs set out in {run_directory}/{ispypsa_run_name}/ispypsa_inputs/
 
 # Convert to PyPSA format and run capacity expansion
 ispypsa config=config.yaml create_and_run_capacity_expansion_model
@@ -328,6 +500,10 @@ ispypsa config=config.yaml create_operational_timeseries
 
 # Run operational optimization
 ispypsa config=config.yaml create_and_run_operational_model
+
+# Generate plots (optional - also runs automatically if create_plots=True)
+ispypsa config=config.yaml create_capacity_expansion_plots
+ispypsa config=config.yaml create_operational_plots
 ```
 
 ### Simplified Complete Workflow
@@ -340,7 +516,7 @@ automatically when their outputs are required.
 ispypsa config=config.yaml create_ispypsa_inputs
 
 # At this stage the ISPyPSA inputs could be edited to adjust build cost or any other
-# inputs set out in {run_directory}/{run_name}/ispypsa_inputs/tables/
+# inputs set out in {run_directory}/{ispypsa_run_name}/ispypsa_inputs/
 
 # Run complete workflow (all remaining tasks)
 ispypsa config=config.yaml create_and_run_operational_model

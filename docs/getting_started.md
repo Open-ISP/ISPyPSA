@@ -8,8 +8,7 @@
 
       We recommend using the `uv` software to install and run Python for ISPyPSA.
 
-1.  Install `uv` by following the instructions [here](https://docs.astral.
-    sh/uv/getting-started/installation/#__tabbed_1_1)
+1.  Install `uv` by following the instructions [here](https://docs.astral.sh/uv/getting-started/installation/)
 
 2. Using the command line install Python 3.12
 
@@ -44,12 +43,6 @@ pip install or a python package manager can install ISPyPSA
 
     pip install ispypsa
 
-## Obtaining input data
-
-We need to setup a very simple and convenient place for users to download the
-traces and workbooks from.
-
-
 ## Running your first model
 
 1. Create a new directory for storing your ispypsa model files, or if you followed
@@ -57,11 +50,13 @@ traces and workbooks from.
 
 2. Download the default example config file and place in the new directory.
 
-    [⬇ Download ispypsa_config.yaml](examples/example_config.md)
+    [⬇ Download ispypsa_config.yaml](downloads/ispypsa_config.yaml)
 
-2. Edit the yaml config file so that the paths section matches your environment:
-      - `parsed_traces_directory`: Location of demand, wind, and solar trace data.
-      - `workbook_path`: Path to the ISP Excel workbook file (.xlsx)
+3. Edit the yaml config file so that the paths section matches your environment:
+      - `parsed_traces_directory`: Base directory where trace data will be downloaded.
+         Choose a directory on a drive with at least 30 GB of free space.
+      - `workbook_path`: Path where the ISP Excel workbook file will be downloaded (must end with `.xlsx`).
+         You need to give a complete file path and name, not just a path to a directory.
       - `parsed_workbook_cache`: Where extracted workbook data should be cached. This
          could be anywhere but a subdirectory in your new directory is a good idea.
       - `run_directory`: Base directory where all model inputs and outputs will be
@@ -78,31 +73,80 @@ traces and workbooks from.
         # This name is used to select the output folder within `ispypsa_runs`
         ispypsa_run_name: example_model_run
 
-        # The path to the folder containing parsed demand, wind and solar traces.
-        # If set to ENV the path will be retrieved from the environment variable "PATH_TO_PARSED_TRACES"
-        parsed_traces_directory: "D:/isp_2024_data/parsed_trace_data"
+        # Base directory where trace data will be downloaded
+        # The download task will create isp_2024 subdirectory automatically
+        parsed_traces_directory: "data/trace_data"
 
-        # The path to the ISP workbook Excel file
-        workbook_path: "2024-isp-inputs-and-assumptions-workbook.xlsx"
+        # Path where the ISP Excel workbook will be downloaded
+        workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
 
         # The path to the workbook table cache directory
-        parsed_workbook_cache: "workbook_table_cache"
+        parsed_workbook_cache: "data/workbook_table_cache"
 
         # The run directory where all inputs and outputs will be stored
-        # Subdirectories will be created automatically:
-        #   - {run_directory}/{ispypsa_run_name}/ispypsa_inputs
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/capacity_expansion_timeseries
-        #   - {run_directory}/{ispypsa_run_name}/pypsa_friendly/operational_timeseries
-        #   - {run_directory}/{ispypsa_run_name}/outputs
         run_directory: "ispypsa_runs"
      ```
 
-     See [Obtaining input data](#obtaining-input-data) for where to get the trace data
-     and MS Excel workbook.
+!!! Important "Relative paths"
 
-3. Using the command line inside the project/environment where `ispypsa` is installed
-   run the complete modelling workflow to test everything works correctly:
+      In this example the paths in the config should be relative to the directory where you will use the command line
+      to run the model. If you are using a new `uv` project then this will be the directory you just created, and
+      `data`, `data/trace_data`, `data/workbook_table_cache`, and `ispypsa_runs` should be new directories you have
+       created.
+
+4. Using the command line inside the project/environment where `ispypsa` is installed download the ISP workbook:
+
+    === "uv"
+
+        ```commandline
+        uv run ispypsa config=ispypsa_config.yaml download_workbook
+        ```
+
+    === "plain python"
+
+        ```commandline
+        ispypsa config=ispypsa_config.yaml download_workbook
+        ```
+
+    This will download the workbook to the path specified in your config file
+    (`paths.workbook_path`). The workbook version is automatically determined from
+    your config (`iasr_workbook_version`).
+
+5. Using the command line inside the project/environment where `ispypsa` is installed download the trace data:
+
+    === "uv"
+
+        ```commandline
+        uv run ispypsa config=ispypsa_config.yaml download_trace_data
+        ```
+
+    === "plain python"
+
+        ```commandline
+        ispypsa config=ispypsa_config.yaml download_trace_data
+        ```
+
+    This will download trace data to your configured directory (`paths.parsed_traces_directory`).
+    By default, the example dataset is downloaded, which is a smaller subset suitable for
+    testing. The dataset type can be configured in your config file (`trace_data.dataset_type`)
+    or overridden on the command line:
+
+    === "uv"
+
+        ```commandline
+        # Download the full dataset instead of example
+        uv run ispypsa config=ispypsa_config.yaml trace_dataset_type=full download_trace_data
+        ```
+
+    === "plain python"
+
+        ```commandline
+        # Download the full dataset instead of example
+        ispypsa config=ispypsa_config.yaml trace_dataset_type=full download_trace_data
+        ```
+
+6. Using the command line inside the project/environment where `ispypsa` is installed
+   run the complete modeling workflow to test everything works correctly:
 
     === "uv"
 
@@ -123,7 +167,7 @@ traces and workbooks from.
        └── <ispypsa_run_name>/
            ├── ispypsa_inputs/
            │   ├── build_costs.csv
-           │   ├── ...
+           │   └── ...
            ├── pypsa_friendly/
            │   ├── buses.csv
            │   ├── ...
@@ -138,13 +182,19 @@ traces and workbooks from.
            │   │       ├── Ararat Wind Farm.parquet
            │   │       └── ...
            │   └── operational_timeseries/
-           │       └── (same structure as capacity_expansion)
+           │       └── (same structure as capacity_expansion_timeseries)
            └── outputs/
-               ├── development_capacity_expansion.h5
-               └── development_operational.h5
+               ├── capacity_expansion.nc
+               ├── capacity_expansion_results_viewer.html
+               ├── capacity_expansion_tables
+               ├── capacity_expansion_plots
+               ├── operational.nc
+               ├── operational_results_viewer.html
+               ├── operational_tables
+               └── operational_plots
        ```
 
-4. The previous model run used the default inputs for the ISP scenario specified in the
+7. The previous model run used the default inputs for the ISP scenario specified in the
    yaml file. To run model with different inputs you can edit the csv files in
    `<run_directory>/<ispypsa_run_name>/ispypsa_inputs/`. To rerun the model
    with the new inputs, use the same commands as before to rerun the
@@ -165,7 +215,7 @@ traces and workbooks from.
         ispypsa config=ispypsa_config.yaml
         ```
 
-5. If you want to create the ispypsa inputs, so you can edit them, but not run the
+8. If you want to create the ispypsa inputs, so you can edit them, but not run the
    complete model, use the following command:
 
     === "uv"
@@ -180,14 +230,14 @@ traces and workbooks from.
         ispypsa config=ispypsa_config.yaml create_ispypsa_inputs
         ```
 
-!!! note "Mastering the ispysa command line tool (CLI)"
+!!! note "Mastering the ispypsa command line tool (CLI)"
 
       This example has shown you how to start using ISPyPSA through its command line
       interface or CLI. To view the complete CLI documentation go to [CLI](cli.md)
 
 !!! note "The API alternative"
 
-      The alternaive to using the CLI is to use the API, which offers more control than
+      The alternative to using the CLI is to use the API, which offers more control than
       the CLI but takes a little extra work.  To view the complete API documentation go
       to [API](api.md)
 

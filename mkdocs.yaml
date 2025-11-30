@@ -7,6 +7,8 @@ theme:
   name: material
   features:
     - content.code.copy
+  logo: assets/Logo White.png
+  favicon: assets/Logo Voltage.png
 
 extra_css:
   - extra.css
@@ -14,7 +16,6 @@ extra_css:
 extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
-
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -28,12 +29,24 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
 
+hooks:
+  - docs/scripts/copy_files.py
+
 plugins:
   - search
   - mkdocstrings:
       handlers:
         python:
           options:
+            docstring_style: google
+            docstring_section_style: list
+            show_root_heading: true
+            show_source: true
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            heading_level: 3
+          options.extra:
             docstring_style: google
             docstring_section_style: list
             show_root_heading: true

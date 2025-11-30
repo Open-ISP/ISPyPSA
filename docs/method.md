@@ -4,13 +4,13 @@ optimisation model in PyPSA.
 
 ## Overview
 
-Mix-integer linear programing is used to represent the National Electricity Market's
+Mixed-integer linear programing is used to represent the National Electricity Market's
 generation and transmission infrastructure, future costs, resource
 availability, demand for electricity, policy objectives, and operational and investment
-decisions. Optimisation can than be used to determine which combination of operational
+decisions. Optimisation can then be used to determine which combination of operational
 and investment decisions would result in the lowest total cost. The methods description
 which follows is a plain english description of how various aspects of the NEM are
-represented within the mix-integer linear model.
+represented within the mixed-integer linear model.
 
 ## Nodal representation
 
@@ -23,7 +23,7 @@ connected to the same node.
 - The sub region nodes are defined by the `isp_sub_region_id` column in the
 ISPyPSA [sub_regions](tables/ispypsa.md#sub_regions) input table.
 - The REZ nodes are defined by the `rez_id` column in the
-ISPyPSA [renewable_energy_zones](tables/ispypsa.md#renewable_energy_zone) input table.
+ISPyPSA [renewable_energy_zones](tables/ispypsa.md#renewable_energy_zones) input table.
 
 ## Demand
 
@@ -138,6 +138,8 @@ falls within the year.
 modelling using the [temporal.capacity_expansion.aggregation.representative_weeks](config.md#temporalcapacity_expansionaggregationrepresentative_weeks)
 and [temporal.operational.aggregation.representative_weeks](config.md#temporaloperationalaggregationrepresentative_weeks)
 config inputs.
+- If both `representative_weeks` and `named_representative_weeks` are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.
 - TODO: Clarify that representative weeks treated sequential by PyPSA.
 
 ### Named representative weeks
@@ -156,11 +158,13 @@ extracted from the yearly data. For example, ["residual-peak-demand", "residual-
     - residual-minimum-demand: Week with lowest demand net of renewables
     - residual-peak-consumption: Week with highest average demand net of renewables
 
-- Only whole weeks which fall entirely within a model year are consider for selection.
+- Only whole weeks which fall entirely within a model year are considered for selection.
 - Separate sets of named representative weeks can be specified for capacity expansion and operational
 modelling using the [temporal.capacity_expansion.aggregation.named_representative_weeks](config.md#temporalcapacity_expansionaggregationnamed_representative_weeks)
 and [temporal.operational.aggregation.named_representative_weeks](config.md#temporaloperationalaggregationnamed_representative_weeks)
 config inputs.
+- If both `representative_weeks` and `named_representative_weeks` are given, then weeks from both aggregations are used.
+  If the same week is selected twice only one instance is kept.
 
 ## Capacity expansion
 

@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.data_fetch import read_csvs
-from ispypsa.model import build_pypsa_network
-from ispypsa.model.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build import build_pypsa_network
+from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
 
 
 def test_custom_constraints():
@@ -20,6 +20,9 @@ def test_custom_constraints():
         {
             "investment_periods": 2025,
             "snapshots": snapshots,
+            "generators": 1.0,
+            "objective": 1.0,
+            "stores": 1.0,
         }
     )
     pypsa_friendly_inputs_location = Path(
@@ -353,3 +356,273 @@ def test_custom_constraints_multiple_types(csv_str_to_df):
     gen1_cap = network.generators.loc["gen1", "p_nom_opt"]
     gen2_cap = network.generators.loc["gen2", "p_nom_opt"]
     assert abs(gen1_cap - 1.2 * gen2_cap) < 0.01  # Small tolerance
+
+
+def test_custom_constraints_generator_with_shorter_lifetime(csv_str_to_df):
+    """Test custom constraint with two generators where one has a lifetime shorter than the modelling period.
+
+    This tests the scenario where:
+    - Two generators (gen1, gen2) are subject to a custom capacity constraint
+    - gen1 has a short lifetime and expires before the second investment period
+    - gen2 has an infinite lifetime and exists in both periods
+    - The constraint should handle gen1 not having a p_nom variable in the later period
+    """
+    import numpy as np
+    import pypsa
+
+    # Create a network with two investment periods (2025 and 2030)
+    snapshots_2025 = pd.date_range("2025-01-01", periods=4, freq="h")
+    snapshots_2030 = pd.date_range("2030-01-01", periods=4, freq="h")
+
+    snapshots = pd.DataFrame(
+        {
+            "investment_periods": [2025] * 4 + [2030] * 4,
+            "snapshots": list(snapshots_2025) + list(snapshots_2030),
+        }
+    )
+
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], pd.to_datetime(snapshots["snapshots"])]
+    )
+
+    network = pypsa.Network(
+        snapshots=snapshots_as_indexes,
+        investment_periods=[2025, 2030],
+    )
+
+    # Set investment period weightings
+    network.investment_period_weightings = pd.DataFrame(
+        {"years": [5, 5], "objective": [1.0, 1.0]},
+        index=pd.Index([2025, 2030], name="period"),
+    )
+
+    # Add a single bus - both generators and load connect to the same bus
+    network.add("Bus", "bus1")
+
+    # Add gen1: short lifetime - built in 2020 with 8-year lifetime (expires in 2028, before 2030)
+    network.add(
+        "Generator",
+        "gen1",
+        bus="bus1",
+        p_nom=200,
+        p_nom_extendable=True,
+        capital_cost=100,
+        marginal_cost=50,
+        build_year=2020,
+        lifetime=8,  # Expires in 2028, so not active in 2030
+    )
+
+    # Add gen2: infinite lifetime - exists in both periods
+    network.add(
+        "Generator",
+        "gen2",
+        bus="bus1",
+        p_nom=150,
+        p_nom_extendable=True,
+        capital_cost=120,
+        marginal_cost=45,
+        build_year=2020,
+        lifetime=np.inf,
+    )
+
+    # Add load - need demand to drive the optimization
+    network.add("Load", "load1", bus="bus1")
+
+    # Set load profiles for both periods
+    network.loads_t.p_set = pd.DataFrame(
+        {"load1": [100] * 8},
+        index=network.snapshots,
+    )
+
+    # Define custom constraint: sum of generator capacities >= 300
+    # In 2025: gen1 + gen2 >= 300 (both exist)
+    # In 2030: only gen2 exists, constraint should still work
+    custom_constraints_rhs_csv = """
+    constraint_name,    rhs,    constraint_type
+    min_gen_capacity,   300,    >=
+    """
+
+    custom_constraints_lhs_csv = """
+    constraint_name,     component,   attribute,   variable_name,   coefficient
+    min_gen_capacity,    Generator,   p_nom,       gen1,            1.0
+    min_gen_capacity,    Generator,   p_nom,       gen2,            1.0
+    """
+
+    custom_constraints_rhs = csv_str_to_df(custom_constraints_rhs_csv)
+    custom_constraints_lhs = csv_str_to_df(custom_constraints_lhs_csv)
+
+    # Apply custom constraints and solve
+    network.optimize.create_model(multi_investment_periods=True)
+    _add_custom_constraints(network, custom_constraints_rhs, custom_constraints_lhs)
+    network.optimize.solve_model()
+
+    # Verify the constraint is satisfied
+    # gen1 exists in 2025 but not 2030 (lifetime expired)
+    # gen2 exists in both periods
+    total_capacity = network.generators.p_nom_opt.sum()
+    assert total_capacity >= 300.0
+
+
+def test_custom_constraints_generator_with_shorter_lifetime_p(csv_str_to_df):
+    """Test custom constraint on p with two generators where one has a lifetime shorter than the modelling period.
+
+    This tests the scenario where:
+    - gen1 is more expensive but is forced on by a minimum power constraint
+    - gen2 is cheaper and not subject to any constraints
+    - gen1 has a short lifetime and expires before the second investment period
+    - The constraint should handle gen1 not having a p variable in the later period
+    """
+    import numpy as np
+    import pypsa
+
+    # Create a network with two investment periods (2025 and 2030)
+    snapshots_2025 = pd.date_range("2025-01-01", periods=4, freq="h")
+    snapshots_2030 = pd.date_range("2030-01-01", periods=4, freq="h")
+
+    snapshots = pd.DataFrame(
+        {
+            "investment_periods": [2025] * 4 + [2030] * 4,
+            "snapshots": list(snapshots_2025) + list(snapshots_2030),
+        }
+    )
+
+    snapshots_as_indexes = pd.MultiIndex.from_arrays(
+        [snapshots["investment_periods"], pd.to_datetime(snapshots["snapshots"])]
+    )
+
+    network = pypsa.Network(
+        snapshots=snapshots_as_indexes,
+        investment_periods=[2025, 2030],
+    )
+
+    # Set investment period weightings
+    network.investment_period_weightings = pd.DataFrame(
+        {"years": [5, 5], "objective": [1.0, 1.0]},
+        index=pd.Index([2025, 2030], name="period"),
+    )
+
+    # Add a single bus - both generators and load connect to the same bus
+    network.add("Bus", "bus1")
+
+    # Add gen1: expensive, short lifetime - built in 2020 with 8-year lifetime (expires in 2028)
+    # This generator is more expensive but will be forced on by the constraint
+    network.add(
+        "Generator",
+        "gen1",
+        bus="bus1",
+        p_nom=200,
+        marginal_cost=100,  # More expensive than gen2
+        build_year=2020,
+        lifetime=8,  # Expires in 2028, so not active in 2030
+    )
+
+    # Add gen2: cheap, infinite lifetime - exists in both periods, not constrained
+    network.add(
+        "Generator",
+        "gen2",
+        bus="bus1",
+        p_nom=300,
+        marginal_cost=10,  # Cheaper than gen1
+        build_year=2020,
+        lifetime=np.inf,
+    )
+
+    # Add load - need demand to drive the optimization
+    network.add("Load", "load1", bus="bus1")
+
+    # Set load profiles for both periods
+    network.loads_t.p_set = pd.DataFrame(
+        {"load1": [100] * 8},
+        index=network.snapshots,
+    )
+
+    # Define custom constraint: gen1 power output >= 50 at each timestep
+    # This forces the expensive gen1 to run even though gen2 is cheaper
+    # In 2025: gen1 >= 50 (gen1 exists, constraint applies)
+    # In 2030: gen1 doesn't exist, constraint should still work (be skipped)
+    custom_constraints_rhs_csv = """
+    constraint_name,     rhs,    constraint_type
+    min_gen1_power,      50,     >=
+    """
+
+    custom_constraints_lhs_csv = """
+    constraint_name,     component,   attribute,   variable_name,   coefficient
+    min_gen1_power,      Generator,   p,           gen1,            1.0
+    """
+
+    custom_constraints_rhs = csv_str_to_df(custom_constraints_rhs_csv)
+    custom_constraints_lhs = csv_str_to_df(custom_constraints_lhs_csv)
+
+    # Apply custom constraints and solve
+    network.optimize.create_model(multi_investment_periods=True)
+    _add_custom_constraints(network, custom_constraints_rhs, custom_constraints_lhs)
+    network.optimize.solve_model()
+
+    # Verify the constraint is satisfied
+    # gen1 exists in 2025 but not 2030 (lifetime expired)
+
+    # Confirm gen1 is closed in 2030 (no power output)
+    gen1_power_2030 = network.generators_t.p.loc[(2030,), "gen1"]
+    assert (gen1_power_2030 == 0).all()
+
+    # In 2025, gen1 should be forced to generate at least 50 MW despite being expensive
+    gen1_power_2025 = network.generators_t.p.loc[(2025,), "gen1"]
+    assert (gen1_power_2025 >= 49.99).all()  # Small tolerance
+
+    # In 2030, gen2 serves all load (gen1 is closed)
+    gen2_power_2030 = network.generators_t.p.loc[(2030,), "gen2"]
+    assert (gen2_power_2030 >= 99.99).all()  # Should serve all 100 MW load
+
+
+def test_custom_constraints_empty_after_translator_filtering(csv_str_to_df):
+    """Test that _add_custom_constraints handles empty RHS and LHS gracefully.
+
+    This tests the scenario where the translator has filtered out all constraints
+    because all LHS terms were filtered out. The model layer receives empty
+    DataFrames for both RHS and LHS.
+    """
+    import pypsa
+
+    # Create a simple network
+    network = pypsa.Network()
+
+    # Add a bus
+    network.add("Bus", "bus1")
+
+    # Add a generator
+    network.add(
+        "Generator",
+        "gen_exists",
+        bus="bus1",
+        p_nom=100,
+        p_nom_extendable=True,
+        capital_cost=50,
+        marginal_cost=10,
+    )
+
+    # Add a load
+    network.add("Load", "load1", bus="bus1", p_set=50)
+
+    # Empty RHS and LHS - translator has filtered out all constraints
+    custom_constraints_rhs_csv = """
+    constraint_name,  rhs,  constraint_type
+    """
+
+    custom_constraints_lhs_csv = """
+    constraint_name,  component,  attribute,  variable_name,  coefficient
+    """
+
+    custom_constraints_rhs = csv_str_to_df(custom_constraints_rhs_csv)
+    custom_constraints_lhs = csv_str_to_df(custom_constraints_lhs_csv)
+
+    # Create the model
+    network.optimize.create_model()
+
+    # Apply custom constraints - should handle empty DataFrames gracefully
+    _add_custom_constraints(network, custom_constraints_rhs, custom_constraints_lhs)
+
+    # Solve the model - should work without errors
+    network.optimize.solve_model()
+
+    # The model should solve successfully with no custom constraints
+    assert network.generators.loc["gen_exists", "p_nom_opt"] >= 50.0

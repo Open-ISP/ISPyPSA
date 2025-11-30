@@ -21,9 +21,9 @@ _NEW_ENTRANT_GENERATOR_ATTRIBUTES = {
     # attributes used by the PyPSA network model:
     "generator": "name",
     "p_nom": "p_nom",
-    "unit_capacity_mw": "p_nom_mod",
+    # "unit_capacity_mw": "p_nom_mod",
     "p_nom_extendable": "p_nom_extendable",
-    "maximum_capacity_mw": "p_nom_max",
+    # "maximum_capacity_mw": "p_nom_max",
     "minimum_stable_level_%": "p_min_pu",
     "fuel_type": "carrier",
     "marginal_cost": "marginal_cost",

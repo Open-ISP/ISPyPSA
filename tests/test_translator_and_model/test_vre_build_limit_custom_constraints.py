@@ -1,14 +1,9 @@
 from pathlib import Path
 
 import pandas as pd
-from isp_trace_parser.demand_traces import write_new_demand_filepath
-from isp_trace_parser.solar_traces import write_output_solar_filepath
-from isp_trace_parser.wind_traces import write_output_wind_area_filepath
-from numpy import diff
 
 from ispypsa.config import ModelConfig
-from ispypsa.model.build import build_pypsa_network
-from ispypsa.templater import renewable_energy_zones
+from ispypsa.pypsa_build.build import build_pypsa_network
 from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,
@@ -42,7 +37,7 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
     traces_dir.mkdir()
 
     # Create subdirectories for traces
-    for subdir in ["demand", "wind", "solar"]:
+    for subdir in ["demand", "zone", "project"]:
         (traces_dir / subdir).mkdir()
 
     # Mock environment variable for trace parser
@@ -95,100 +90,40 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
         "iasr_workbook_version": "6.0",
     }
 
-    # Set up some very simplified sample trace profiles:
-    date_time_2025_2 = pd.date_range(
-        start="2025-07-01 00:00:00", end="2025-12-31 18:00:00", freq="6h"
-    )
-    days_2025 = date_time_2025_2.dayofyear.nunique()
-    date_time_2026_1 = pd.date_range(
-        start="2026-01-01 00:00:00", end="2026-06-30 18:00:00", freq="6h"
-    )
-    days_2026 = date_time_2026_1.dayofyear.nunique()
-    solar_profile = [
-        0.00,  # 12am - no generation at night
-        0.10,  # 6am  - some generation starting
-        0.85,  # 12pm - peak generation at noon
-        0.20,  # 6pm  - some generation tailing off
-    ]
-    wind_high_profile = [
-        0.55,  # 12am - stronger night winds
-        0.48,  # 6am  - moderate morning winds
-        0.25,  # 12pm
-        0.22,  # 6pm - low evening wind
-    ]
-    wind_medium_profile = [
-        0.26,  # 12am - moderate night winds
-        0.26,  # 6am  - low morning winds
-        0.35,  # 12pm
-        0.35,  # 6pm - moderate evening wind
-    ]
-    flat_demand_profile = [500.0, 500.0, 500.0, 500.0]
+    # Create demand trace data - only need the 4 timestamps used in snapshots
+    demand_csv = """
+    datetime,              value,  subregion,  reference_year,  poe,    scenario,     demand_type
+    2026-05-01 00:00:00,   500.0,  CQ,         2018,            POE50,  Step Change,  OPSO_MODELLING
+    2026-05-01 06:00:00,   500.0,  CQ,         2018,            POE50,  Step Change,  OPSO_MODELLING
+    2026-05-01 12:00:00,   500.0,  CQ,         2018,            POE50,  Step Change,  OPSO_MODELLING
+    2026-05-01 18:00:00,   500.0,  CQ,         2018,            POE50,  Step Change,  OPSO_MODELLING
+    """
+    demand_data = csv_str_to_df(demand_csv)
+    demand_data["datetime"] = pd.to_datetime(demand_data["datetime"])
+    demand_data.to_parquet(traces_dir / "demand" / "demand_data.parquet", index=False)
 
-    demand_data_to_write = [
-        (date_time_2025_2, flat_demand_profile * days_2025, "CQ", "2025-2"),
-        (date_time_2026_1, flat_demand_profile * days_2026, "CQ", "2026-1"),
-    ]
-
-    for date_time, demand, subregion, half_year in demand_data_to_write:
-        demand_data = pd.DataFrame(
-            {"Datetime": date_time, "Value": demand}
-        )  # drop the last value to match array length
-        demand_data["Datetime"] = pd.to_datetime(demand_data["Datetime"])
-        file_meta_data = {
-            "subregion": subregion,
-            "scenario": "Step Change",
-            "reference_year": 2018,
-            "poe": "POE50",
-            "demand_type": "OPSO_MODELLING",
-            "hy": half_year,
-        }
-        file_path = Path(
-            traces_dir / "demand" / write_new_demand_filepath(file_meta_data)
-        )
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        demand_data.to_parquet(file_path, index=False)
-
-    solar_data_to_write = [
-        (date_time_2025_2, solar_profile * days_2025, "Q6", "2025-2"),
-        (date_time_2026_1, solar_profile * days_2026, "Q6", "2026-1"),
-    ]
-    for date_time, solar, area, half_year in solar_data_to_write:
-        solar_data = pd.DataFrame({"Datetime": date_time, "Value": solar})
-        solar_data["Datetime"] = pd.to_datetime(solar_data["Datetime"])
-        file_meta_data = {
-            "name": area,
-            "file_type": "area",
-            "technology": "SAT",
-            "reference_year": 2018,
-            "hy": half_year,
-        }
-        file_path = Path(
-            traces_dir / "solar" / write_output_solar_filepath(file_meta_data)
-        )
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        solar_data.to_parquet(file_path, index=False)
-
-    wind_data_to_write = [
-        (date_time_2025_2, wind_medium_profile * days_2025, "Q6", "WM", "2025-2"),
-        (date_time_2026_1, wind_medium_profile * days_2026, "Q6", "WM", "2026-1"),
-        (date_time_2025_2, wind_high_profile * days_2025, "Q6", "WH", "2025-2"),
-        (date_time_2026_1, wind_high_profile * days_2026, "Q6", "WH", "2026-1"),
-    ]
-    for date_time, wind, area, wind_type, half_year in wind_data_to_write:
-        wind_data = pd.DataFrame({"Datetime": date_time, "Value": wind})
-        wind_data["Datetime"] = pd.to_datetime(wind_data["Datetime"])
-        file_meta_data = {
-            "name": area,
-            "file_type": "area",
-            "resource_quality": wind_type,
-            "reference_year": 2018,
-            "hy": half_year,
-        }
-        file_path = Path(
-            traces_dir / "wind" / write_output_wind_area_filepath(file_meta_data)
-        )
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        wind_data.to_parquet(file_path, index=False)
+    # Create zone trace data for solar (SAT) and wind (WM, WH) in Q6 zone
+    # Solar: 0% at midnight, 10% at 6am, 85% at noon, 20% at 6pm
+    # Wind medium: 26% at midnight, 26% at 6am, 35% at noon, 35% at 6pm
+    # Wind high: 55% at midnight, 48% at 6am, 25% at noon, 22% at 6pm
+    zone_csv = """
+    datetime,              value,  zone,  reference_year,  resource_type
+    2026-05-01 00:00:00,   0.00,   Q6,    2018,            SAT
+    2026-05-01 06:00:00,   0.10,   Q6,    2018,            SAT
+    2026-05-01 12:00:00,   0.85,   Q6,    2018,            SAT
+    2026-05-01 18:00:00,   0.20,   Q6,    2018,            SAT
+    2026-05-01 00:00:00,   0.26,   Q6,    2018,            WM
+    2026-05-01 06:00:00,   0.26,   Q6,    2018,            WM
+    2026-05-01 12:00:00,   0.35,   Q6,    2018,            WM
+    2026-05-01 18:00:00,   0.35,   Q6,    2018,            WM
+    2026-05-01 00:00:00,   0.55,   Q6,    2018,            WH
+    2026-05-01 06:00:00,   0.48,   Q6,    2018,            WH
+    2026-05-01 12:00:00,   0.25,   Q6,    2018,            WH
+    2026-05-01 18:00:00,   0.22,   Q6,    2018,            WH
+    """
+    zone_data = csv_str_to_df(zone_csv)
+    zone_data["datetime"] = pd.to_datetime(zone_data["datetime"])
+    zone_data.to_parquet(traces_dir / "zone" / "zone_data.parquet", index=False)
 
     # Define ISPyPSA input tables
 
