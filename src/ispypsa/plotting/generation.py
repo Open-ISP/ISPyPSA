@@ -312,7 +312,7 @@ def _create_generation_trace(
         fillcolor=get_fuel_type_color(carrier),
         line=dict(width=0),
         legendgroup="Generation",
-        showlegend=carrier != "Transmission Exports",
+        showlegend=carrier != "Transmission Exports Hidden",
         legendgrouptitle_text="Generation",
         hovertemplate=f"<b>{carrier}</b><br>%{{y:.2f}} MW<extra></extra>",
     )
