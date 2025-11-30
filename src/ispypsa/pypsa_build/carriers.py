@@ -17,9 +17,14 @@ def _add_carriers_to_network(
 
     Returns: None
     """
-    carriers = (
-        list(generators["carrier"].unique())
-        + list(storage["carrier"].unique())
-        + ["AC", "DC"]
-    )
+    generator_carriers = []
+    storage_carriers = []
+    standard_carriers = ["AC", "DC"]
+
+    if generators is not None and not generators.empty:
+        generator_carriers = list(generators["carrier"].unique())
+    if storage is not None and not storage.empty:
+        storage_carriers = list(storage["carrier"].unique())
+
+    carriers = generator_carriers + storage_carriers + standard_carriers
     network.add("Carrier", carriers)

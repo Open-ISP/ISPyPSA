@@ -1,10 +1,7 @@
-import re
-from pathlib import Path
-from typing import List, Literal
+import logging
 
 import numpy as np
 import pandas as pd
-from isp_trace_parser import get_data
 
 from ispypsa.translator.helpers import (
     _add_investment_periods_as_build_years,
@@ -48,8 +45,9 @@ def _translate_ecaa_batteries(
 
     ecaa_batteries = ispypsa_tables["ecaa_batteries"]
     if ecaa_batteries.empty:
-        # TODO: log
-        # raise error?
+        logging.warning(
+            "Templated table 'ecaa_batteries' is empty - no ECAA batteries will be included in this model."
+        )
         return pd.DataFrame()
 
     # calculate lifetime based on expected closure_year - build_year:
@@ -125,10 +123,11 @@ def _translate_new_entrant_batteries(
         `pd.DataFrame`: `PyPSA` style new entrant battery attributes in tabular format.
     """
 
-    new_entrant_batteries = ispypsa_tables["new_entrant_batteries"]
+    new_entrant_batteries = ispypsa_tables["new_entrant_batteries"].copy()
     if new_entrant_batteries.empty:
-        # TODO: log
-        # raise error?
+        logging.warning(
+            "Templated table 'new_entrant_batteries' is empty - no new entrant batteries will be included in this model."
+        )
         return pd.DataFrame()
 
     battery_attributes = _NEW_ENTRANT_BATTERY_ATTRIBUTES.copy()
@@ -154,6 +153,13 @@ def _translate_new_entrant_batteries(
     new_entrant_batteries_all_build_years = _add_investment_periods_as_build_years(
         new_entrant_batteries, investment_periods
     )
+    # then add build_year to battery name to maintain unique battery ID column
+    new_entrant_batteries_all_build_years["storage_name"] = (
+        new_entrant_batteries_all_build_years["storage_name"].astype(str)
+        + "_"
+        + new_entrant_batteries_all_build_years["build_year"].astype(str)
+    )
+
     battery_df_with_build_costs = _add_new_entrant_battery_build_costs(
         new_entrant_batteries_all_build_years,
         ispypsa_tables["new_entrant_build_costs"],
@@ -168,13 +174,6 @@ def _translate_new_entrant_batteries(
     battery_df_with_capital_costs = battery_df_with_capital_costs[
         ~battery_df_with_capital_costs["capital_cost"].isna()
     ].copy()
-
-    # then add build_year to battery name to maintain unique battery ID column
-    battery_df_with_capital_costs["storage_name"] = (
-        battery_df_with_capital_costs["storage_name"]
-        + "_"
-        + battery_df_with_capital_costs["build_year"].astype(str)
-    )
 
     # add a p_nom column set to 0.0 for all new entrants:
     battery_df_with_capital_costs["p_nom"] = 0.0
@@ -236,6 +235,7 @@ def _add_new_entrant_battery_build_costs(
         _get_financial_year_int_from_string,
         args=("new entrant battery build costs", "fy"),
     )
+
     # make sure new_entrant_batteries has build_year column with ints:
     new_entrant_batteries["build_year"] = new_entrant_batteries["build_year"].astype(
         "int64"
@@ -247,7 +247,8 @@ def _add_new_entrant_battery_build_costs(
     undefined_build_cost_batteries = (
         new_entrants_with_build_costs[
             new_entrants_with_build_costs["build_cost_$/mw"].isna()
-        ]["technology_type"]
+        ][["storage_name", "build_year"]]
+        .apply(tuple, axis=1)
         .unique()
         .tolist()
     )

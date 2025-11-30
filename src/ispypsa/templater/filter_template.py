@@ -72,6 +72,12 @@ def _filter_template(
     )
     filtered.update(generator_dependent)
 
+    # Filter storage (battery) tables by same logic as generators:
+    battery_tables, all_selected_batteries = _filter_batteries(
+        template, selected_sub_regions
+    )
+    filtered.update(battery_tables)
+
     # Infer link names
     selected_link_names = _infer_link_names(
         filtered.get("flow_paths", pd.DataFrame()),
@@ -271,6 +277,37 @@ def _filter_generator_dependent_tables(
             ].copy()
 
     return filtered
+
+
+def _filter_batteries(
+    template: dict[str, pd.DataFrame],
+    selected_sub_regions: list[str],
+) -> Tuple[dict[str, pd.DataFrame], Set[str]]:
+    """Filter battery tables and return filtered tables and battery names."""
+    filtered = {}
+    all_selected_batteries = set()
+
+    # Filter ecaa_batteries
+    if "ecaa_batteries" in template:
+        filtered["ecaa_batteries"] = template["ecaa_batteries"][
+            template["ecaa_batteries"]["sub_region_id"].isin(selected_sub_regions)
+        ].copy()
+        all_selected_batteries.update(
+            filtered["ecaa_batteries"]["storage_name"].unique()
+        )
+
+    # Filter new_entrant_batteries
+    if "new_entrant_batteries" in template:
+        filtered["new_entrant_batteries"] = template["new_entrant_batteries"][
+            template["new_entrant_batteries"]["sub_region_id"].isin(
+                selected_sub_regions
+            )
+        ].copy()
+        all_selected_batteries.update(
+            filtered["new_entrant_batteries"]["storage_name"].unique()
+        )
+
+    return filtered, all_selected_batteries
 
 
 def _get_selected_rezs(filtered_tables: dict[str, pd.DataFrame]) -> Set[str]:

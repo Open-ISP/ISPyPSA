@@ -184,6 +184,8 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
         "renewable_energy_zones": renewable_energy_zones,
         "new_entrant_build_costs": new_entrant_build_costs,
         "new_entrant_wind_and_solar_connection_costs": new_entrant_wind_and_solar_connection_costs,
+        "ecaa_batteries": pd.DataFrame(),
+        "new_entrant_batteries": pd.DataFrame(),
     }
 
     # Create a ModelConfig instance

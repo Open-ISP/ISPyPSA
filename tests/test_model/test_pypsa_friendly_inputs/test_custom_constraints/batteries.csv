@@ -1,0 +1,3 @@
+name,bus,p_nom,p_nom_extendable,carrier,max_hours,capital_cost,build_year,lifetime,efficiency_store,efficiency_dispatch,isp_resource_type,isp_rez_id
+Wandoan South BESS,Q8,100.0,False,Battery,1.5,0.0,2025,26.0,91.6515138991168,91.6515138991168,Battery Storage 2h,Q8
+battery_storage_1h_gg_2025,GG,0.0,True,Battery,1.0,91564.95598203539,2025,20.0,91.6515138991168,91.6515138991168,Battery Storage 1h,

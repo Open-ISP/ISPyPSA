@@ -1,21 +1,3 @@
-# load in all the necessary summary tables:
-# - batteries_summary
-# - new_entrants_summary
-# - additional_projects_summary
-
-# concat them together, filter for just battery only rows (simple)
-# cut out the columns we don't need
-# add necesary new columns
-# merge in the info
-
-# key data to merge in:
-# - efficiencies
-# - cost related data?
-# - lifetime
-# - rez_id
-# - max_hours (storage duration)
-
-
 import logging
 import re
 
@@ -36,6 +18,8 @@ from .mappings import (
     _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP,
     _NEW_STORAGE_NEW_COLUMN_MAPPING,
 )
+
+pd.set_option("display.max_columns", None)
 
 
 def _template_battery_properties(
@@ -86,7 +70,7 @@ def _template_battery_properties(
     ]
 
     new_entrant_battery_summary = cleaned_battery_summaries[
-        cleaned_battery_summaries["status"].isin(["New Entrant"])
+        cleaned_battery_summaries["status"] == "New Entrant"
     ].copy()
     merged_cleaned_new_entrant_battery_summaries = (
         _merge_and_set_new_battery_static_properties(
@@ -143,6 +127,39 @@ def _clean_storage_summary(df: pd.DataFrame) -> pd.DataFrame:
     # standardise storage names
     df["storage_name"] = _standardise_storage_capitalisation(df["storage_name"])
     return df
+
+
+def _restructure_battery_property_table(
+    battery_property_table: pd.DataFrame,
+) -> pd.DataFrame:
+    """Restructures the IASR battery property table into a more usable format.
+
+    The output table will have columns "storage_name" and the battery property names as
+    columns, with the values of those properties as the values in the table (converted to
+    numeric values where possible). Rows match storage names/mappings in the summary tables.
+
+    Args:
+        battery_property_table: pd.DataFrame, `battery_properties` table from the IASR workbook.
+
+    Returns:
+        pd.DataFrame, restructured battery property table.
+    """
+    battery_properties = battery_property_table.set_index("Property").drop(
+        columns="Units"
+    )
+    battery_properties = battery_properties.T.reset_index(names="storage_name")
+
+    battery_properties.columns.name = None
+
+    columns_to_make_numeric = [
+        col for col in battery_properties.columns if col != "storage_name"
+    ]
+    for col in columns_to_make_numeric:
+        battery_properties[col] = pd.to_numeric(
+            battery_properties[col], errors="coerce"
+        )
+
+    return battery_properties
 
 
 def _merge_and_set_ecaa_battery_static_properties(
@@ -298,6 +315,16 @@ def _process_and_merge_opex(
     the column "NSW Low" or the relevant table, all other values are calculated
     from this base value multiplied by the O&M locational cost factor. This function
     merges in the post-LCF calculated values provided in the IASR workbook.
+
+    Args:
+        df: New entrant storage template with opex column(s) filled in
+        table_data: OPEX table data to merge in
+        col_name: Name of the column to merge in, one of `'fom_$/kw/annum'` or `'vom_$/mwh_sent_out'`
+        table_attrs: Dictionary of attributes for the table to merge in
+
+    Returns:
+        tuple[pd.DataFrame, str]: Updated dataframe with merged in values and `col_name`
+            returned for use in `_merge_table_data`.
     """
     # update the mapping in this column to include storage name and the cost region initially given
     df[col_name] = df["storage_name"] + " " + df[col_name]
@@ -306,6 +333,10 @@ def _process_and_merge_opex(
             col: col.replace(f"{table_attrs['table_col_prefix']}_", "")
             for col in table_data.columns
         }
+    )
+    # standardise capitalisation of "storage" first:
+    table_data[table_attrs["table_lookup"]] = _standardise_storage_capitalisation(
+        table_data[table_attrs["table_lookup"]]
     )
     opex_table = table_data.melt(
         id_vars=[table_attrs["table_lookup"]],
@@ -318,15 +349,6 @@ def _process_and_merge_opex(
     )
     opex_replacement_dict = (
         opex_table[["mapping", "opex_value"]].set_index("mapping").squeeze().to_dict()
-    )
-    # use fuzzy matching in case of slight differences in storage names:
-    where_str = df[col_name].apply(lambda x: isinstance(x, str))
-    df.loc[where_str, col_name] = _fuzzy_match_names(
-        df.loc[where_str, col_name],
-        opex_replacement_dict.keys(),
-        f"merging in the new entrant storage static property {col_name}",
-        not_match="existing",
-        threshold=90,
     )
     df[col_name] = df[col_name].replace(opex_replacement_dict)
     return df, col_name
@@ -434,7 +456,7 @@ def _process_and_merge_connection_cost(
     battery_connection_costs_mapping = (
         battery_connection_costs[["region_technology_mapping", "connection_cost_$/mw"]]
         .set_index("region_technology_mapping")
-        .squeeze()
+        .loc[:, "connection_cost_$/mw"]
         .to_dict()
     )
 
@@ -469,10 +491,16 @@ def _calculate_and_merge_tech_specific_lcfs(
     for each new entrant storage unit and merges into summary mapping table.
     """
     # loads in the three tables needed
-    breakdown_ratios = iasr_tables["technology_cost_breakdown_ratios"].reset_index()
+
+    # pre-process technology_cost_breakdown_ratios a little - there's something going on
+    # different between test and 'real' version of the index of this table so handle cases explicitly for now:
+    breakdown_ratios = iasr_tables["technology_cost_breakdown_ratios"]
+    drop_index = not (breakdown_ratios.index.name == "Technology")
+    breakdown_ratios = breakdown_ratios.reset_index(drop=drop_index)
     breakdown_ratios = breakdown_ratios.loc[
         _where_any_substring_appears(breakdown_ratios["Technology"], ["battery"])
     ].copy()
+
     technology_specific_lcfs = iasr_tables["technology_specific_lcfs"]
     # loads all cols unless the str "O&M" is in col name
     locational_cost_factors = iasr_tables["locational_cost_factors"]
@@ -499,15 +527,15 @@ def _calculate_and_merge_tech_specific_lcfs(
         columns={"Cost zones / Sub-region": "Location"}, inplace=True
     )
     # ensures storage names in LCF tables match those in the summary table
-    for df_to_match_gen_names in [technology_specific_lcfs, breakdown_ratios]:
-        df_to_match_gen_names["Technology"] = _fuzzy_match_names(
-            df_to_match_gen_names["Technology"],
+    for df_to_match_batt_names in [technology_specific_lcfs, breakdown_ratios]:
+        df_to_match_batt_names["Technology"] = _fuzzy_match_names(
+            df_to_match_batt_names["Technology"],
             df["storage_name"].unique(),
             "calculating and merging in LCFs to static new entrant storage summary",
             not_match="existing",
             threshold=90,
         )
-        df_to_match_gen_names.set_index("Technology", inplace=True)
+        df_to_match_batt_names.set_index("Technology", inplace=True)
     # use fuzzy matching to ensure that col names in tables to combine match up:
     fuzzy_column_renaming = _one_to_one_priority_based_fuzzy_matching(
         set(locational_cost_factors.columns.to_list()),
@@ -558,6 +586,8 @@ def _calculate_storage_duration_hours(df: pd.DataFrame) -> pd.DataFrame:
             )
             return pd.NA
         elif row["maximum_capacity_mw"] == 0:
+            # we could also drop rows with maximum_capacity_mw == 0 altogether, but
+            # for the sake of keeping information around setting to 0.0 for now?
             return 0
         else:
             return row["energy_capacity_mwh"] / row["maximum_capacity_mw"]
@@ -576,37 +606,6 @@ def _calculate_storage_duration_hours(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["storage_duration_hours"], ignore_index=True)
 
     return df
-
-
-def _restructure_battery_property_table(
-    battery_property_table: pd.DataFrame,
-) -> pd.DataFrame:
-    """Restructures the IASR battery property table into a more usable format.
-
-    The output table will have columns "storage_name" and the battery property names as
-    columns, with the values of those properties as the values in the table (converted to
-    numeric values where possible). Rows match storage names/mappings in the summary tables.
-
-    Args:
-        battery_property_table: pd.DataFrame, `battery_properties` table from the IASR workbook.
-
-    Returns:
-        pd.DataFrame, restructured battery property table.
-    """
-    battery_properties = battery_property_table.set_index("Property")
-    battery_properties = battery_properties.T.reset_index(names="storage_name")
-
-    battery_properties.columns.name = None
-
-    columns_to_make_numeric = [
-        col for col in battery_properties.columns if col != "storage_name"
-    ]
-    for col in columns_to_make_numeric:
-        battery_properties[col] = pd.to_numeric(
-            battery_properties[col], errors="coerce"
-        )
-
-    return battery_properties
 
 
 def _add_and_clean_rez_ids(

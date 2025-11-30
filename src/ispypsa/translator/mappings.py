@@ -95,22 +95,22 @@ _NEW_ENTRANT_BATTERY_ATTRIBUTES = {  # attributes used by the PyPSA network mode
     "charging_efficiency_%": "efficiency_store",
     "discharging_efficiency_%": "efficiency_dispatch",
     # attributes used to filter/apply custom constraints:
-    "isp_resource_type": "isp_resource_type",
     "rez_id": "isp_rez_id",
-    # keeping technology_type because it's not defined anywhere else for the ECAA generators and could be useful for plotting/labelling?
-    "technology_type": "isp_technology_type",
+    "isp_resource_type": "isp_resource_type",
 }
 
 _BATTERY_ATTRIBUTE_ORDER = [
     "name",
     "bus",
     "p_nom",
-    "max_hours",
     "p_nom_extendable",
     "carrier",
+    "max_hours",
+    "capital_cost",
     "build_year",
     "lifetime",
-    "capital_cost",
+    "efficiency_store",
+    "efficiency_dispatch",
     "isp_resource_type",
     "isp_rez_id",
 ]

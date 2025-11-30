@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Literal
 
@@ -152,8 +153,10 @@ def create_pypsa_friendly_inputs(
             ignore_index=True,
         )
     else:
-        # TODO: Log, improve error message
-        raise ValueError("No battery data returned from translator.")
+        logging.warning(
+            "No battery data returned from translator - no batteries added to model."
+        )
+        # raise an error? Improve the message for sure
 
     buses = []
     links = []

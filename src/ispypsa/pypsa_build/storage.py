@@ -3,17 +3,15 @@ import pypsa
 
 
 def _add_battery_to_network(
-    battery_definition: dict,
     network: pypsa.Network,
+    battery_definition: dict,
 ) -> None:
-    """Adds a battery to a pypsa.Network based on a dict containing PyPSA StorageUnit
+    """Adds a battery to a pypsa.Network based on a dict containing `PyPSA` `StorageUnit`
     attributes.
 
-    PyPSA StorageUnits have set power to energy capacity ratio,
-
     Args:
-        battery_definition: dict containing pypsa StorageUnit parameters
         network: The `pypsa.Network` object
+        battery_definition: dict containing pypsa `StorageUnit` parameters
 
     Returns: None
     """
@@ -29,20 +27,20 @@ def _add_battery_to_network(
 
 def _add_batteries_to_network(
     network: pypsa.Network,
-    batterys: pd.DataFrame,
+    batteries: pd.DataFrame,
 ) -> None:
-    """Adds the batterys in a pypsa-friendly `pd.DataFrame` to the `pypsa.Network`.
+    """Adds the batteries in a pypsa-friendly `pd.DataFrame` to the `pypsa.Network` as `PyPSA` `StorageUnit`s.
 
     Args:
         network: The `pypsa.Network` object
-        batterys:  `pd.DataFrame` with `PyPSA` style `StorageUnit` attributes.
+        batteries:  `pd.DataFrame` with `PyPSA` style `StorageUnit` attributes.
     Returns: None
     """
 
-    batterys.apply(
+    batteries.apply(
         lambda row: _add_battery_to_network(
-            row.to_dict(),
             network,
+            row.to_dict(),
         ),
         axis=1,
     )

@@ -60,7 +60,9 @@ def build_pypsa_network(
     )
 
     _add_carriers_to_network(
-        network, pypsa_friendly_tables["generators"], pypsa_friendly_tables["batteries"]
+        network,
+        pypsa_friendly_tables.get("generators"),
+        pypsa_friendly_tables.get("batteries"),
     )
 
     _add_buses_to_network(
@@ -75,7 +77,9 @@ def build_pypsa_network(
         pypsa_friendly_tables["generators"],
         path_to_pypsa_friendly_timeseries_data,
     )
-    _add_batteries_to_network(network, pypsa_friendly_tables["batteries"])
+
+    if "batteries" in pypsa_friendly_tables.keys():
+        _add_batteries_to_network(network, pypsa_friendly_tables["batteries"])
 
     if "custom_constraints_generators" in pypsa_friendly_tables.keys():
         _add_bus_for_custom_constraints(network)

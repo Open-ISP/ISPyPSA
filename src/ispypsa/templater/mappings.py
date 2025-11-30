@@ -330,11 +330,6 @@ _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
         table_lookup="Generator",
         table_value="Fixed OPEX ($/kW/year)",
     ),
-    "vom_$/mwh_sent_out": dict(
-        table="variable_opex_existing_committed_anticipated_additional_generators",
-        table_lookup="Generator",
-        table_value="Variable OPEX ($/MWh sent out)",
-    ),
     "round_trip_efficiency_%": dict(
         table="battery_properties",
         table_lookup="storage_name",
@@ -362,11 +357,6 @@ _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
         table="fixed_opex_new_entrants",
         table_lookup="Generator",
         table_col_prefix="Fixed OPEX ($/kW sent out/year)",
-    ),
-    "vom_$/mwh_sent_out": dict(
-        table="variable_opex_new_entrants",
-        table_lookup="Generator",
-        table_col_prefix="Variable OPEX ($/MWh sent out)",
     ),
     "lifetime": dict(
         table="lead_time_and_project_life",
