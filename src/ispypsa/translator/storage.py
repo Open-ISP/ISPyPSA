@@ -89,6 +89,17 @@ def _translate_ecaa_batteries(
         :, battery_attributes.keys()
     ].rename(columns=battery_attributes)
 
+    # Now make sure that if charge/discharge efficiency are present (they should be)
+    # that they're floats between 0-1:
+    efficiency_cols = [
+        col for col in ecaa_batteries_pypsa_format.columns if "efficiency" in col
+    ]
+    for col in efficiency_cols:
+        ecaa_batteries_pypsa_format[col] /= 100
+
+    # For all batteries set cyclic_state_of_charge to True
+    ecaa_batteries_pypsa_format["cyclic_state_of_charge"] = True
+
     columns_in_order = [
         col
         for col in _BATTERY_ATTRIBUTE_ORDER
@@ -185,6 +196,16 @@ def _translate_new_entrant_batteries(
     new_entrant_batteries_pypsa_format = battery_df_with_capital_costs.loc[
         :, battery_attributes.keys()
     ].rename(columns=battery_attributes)
+
+    # enforce efficiency values are floats between 0-1
+    efficiency_cols = [
+        col for col in new_entrant_batteries_pypsa_format.columns if "efficiency" in col
+    ]
+    for col in efficiency_cols:
+        new_entrant_batteries_pypsa_format[col] /= 100
+
+    # For all batteries set cyclic_state_of_charge to True
+    new_entrant_batteries_pypsa_format["cyclic_state_of_charge"] = True
 
     columns_in_order = [
         col

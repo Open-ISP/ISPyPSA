@@ -19,8 +19,6 @@ from .mappings import (
     _NEW_STORAGE_NEW_COLUMN_MAPPING,
 )
 
-pd.set_option("display.max_columns", None)
-
 
 def _template_battery_properties(
     iasr_tables: dict[str, pd.DataFrame],
