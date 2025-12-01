@@ -38,10 +38,12 @@ def test_extract_generator_dispatch(csv_str_to_df):
     # Set multi-index to match PyPSA structure
     dispatch_t = dispatch_df.set_index(["period", "timestep"])
 
-    # 3. Mock Network
+    # 3. Mock Network with empty storage units
     network = Mock()
     network.generators = generators
     network.generators_t.p = dispatch_t
+    network.storage_units = pd.DataFrame()  # Empty storage units
+    network.storage_units_t.p = pd.DataFrame()  # Empty storage dispatch
 
     # 4. Expected Output
     # - custom_gen should be removed
@@ -58,6 +60,69 @@ def test_extract_generator_dispatch(csv_str_to_df):
     expected_df = csv_str_to_df(expected_csv)
 
     # 5. Run Function
+    result = extract_generator_dispatch(network)
+
+    # Sort both for consistent comparison
+    sort_cols = ["generator", "investment_period", "timestep"]
+    result = result.sort_values(sort_cols).reset_index(drop=True)
+    expected_df = expected_df.sort_values(sort_cols).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected_df)
+
+
+def test_extract_generator_dispatch_with_storage(csv_str_to_df):
+    """Test extraction of generator and storage dispatch results combined."""
+
+    # 1. Setup Generator Data
+    generators_csv = """
+    name,   bus,   carrier,  isp_technology_type
+    gen1,   NSW1,  Gas,      Gas - CCGT
+    """
+    generators = csv_str_to_df(generators_csv).set_index("name")
+
+    # 2. Setup Generator Dispatch Data
+    gen_dispatch_csv = """
+    period,  timestep,            gen1
+    2030,    2030-01-01 00:00:00, 100
+    2030,    2030-01-01 01:00:00, 110
+    """
+    gen_dispatch_t = csv_str_to_df(gen_dispatch_csv).set_index(["period", "timestep"])
+
+    # 3. Setup Storage Unit Data
+    storage_csv = """
+    name,      bus,   carrier
+    battery1,  NSW1,  Battery
+    """
+    storage_units = csv_str_to_df(storage_csv).set_index("name")
+
+    # 4. Setup Storage Dispatch Data (positive = discharging, negative = charging)
+    storage_dispatch_csv = """
+    period,  timestep,            battery1
+    2030,    2030-01-01 00:00:00, 50
+    2030,    2030-01-01 01:00:00, -30
+    """
+    storage_dispatch_t = csv_str_to_df(storage_dispatch_csv).set_index(
+        ["period", "timestep"]
+    )
+
+    # 5. Mock Network
+    network = Mock()
+    network.generators = generators
+    network.generators_t.p = gen_dispatch_t
+    network.storage_units = storage_units
+    network.storage_units_t.p = storage_dispatch_t
+
+    # 6. Expected Output - generators and storage combined
+    expected_csv = """
+    generator,  node,  fuel_type,  technology_type,   investment_period,  timestep,             dispatch_mw
+    gen1,       NSW1,  Gas,        Gas - CCGT,        2030,               2030-01-01 00:00:00,  100
+    gen1,       NSW1,  Gas,        Gas - CCGT,        2030,               2030-01-01 01:00:00,  110
+    battery1,   NSW1,  Battery,    Battery Storage,   2030,               2030-01-01 00:00:00,  50
+    battery1,   NSW1,  Battery,    Battery Storage,   2030,               2030-01-01 01:00:00,  -30
+    """
+    expected_df = csv_str_to_df(expected_csv)
+
+    # 7. Run Function
     result = extract_generator_dispatch(network)
 
     # Sort both for consistent comparison
@@ -138,9 +203,10 @@ def test_extract_generation_expansion_results(csv_str_to_df):
     """
     generators = csv_str_to_df(generators_csv).set_index("Generator")
 
-    # 2. Mock Network
+    # 2. Mock Network with empty storage units
     network = Mock()
     network.generators = generators
+    network.storage_units = pd.DataFrame()  # Empty storage units
 
     # 3. Expected Output
     # - custom_gen should be removed
@@ -155,6 +221,49 @@ def test_extract_generation_expansion_results(csv_str_to_df):
     expected_df = csv_str_to_df(expected_csv)
 
     # 4. Run Function
+    result = extract_generation_expansion_results(network)
+
+    # Sort both for consistent comparison
+    sort_cols = ["generator"]
+    result = result.sort_values(sort_cols).reset_index(drop=True)
+    expected_df = expected_df.sort_values(sort_cols).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(result, expected_df)
+
+
+def test_extract_generation_expansion_results_with_storage(csv_str_to_df):
+    """Test extraction of generation expansion results including storage units."""
+
+    # 1. Setup Generator Data
+    generators_csv = """
+    Generator,    bus,   carrier,  isp_technology_type,  build_year,  lifetime,  p_nom_opt
+    gen1,         NSW1,  Gas,      Gas - CCGT,           2025,        10,        500.0
+    """
+    generators = csv_str_to_df(generators_csv).set_index("Generator")
+
+    # 2. Setup Storage Unit Data
+    storage_csv = """
+    StorageUnit,  bus,   carrier,  build_year,  lifetime,  p_nom_opt
+    battery1,     NSW1,  Battery,  2030,        20,        100.0
+    battery2,     VIC1,  Battery,  2035,        15,        200.0
+    """
+    storage_units = csv_str_to_df(storage_csv).set_index("StorageUnit")
+
+    # 3. Mock Network
+    network = Mock()
+    network.generators = generators
+    network.storage_units = storage_units
+
+    # 4. Expected Output - generators and storage combined
+    expected_csv = """
+    generator,  fuel_type,  technology_type,   node,  capacity_mw,  investment_period,  closure_year
+    gen1,       Gas,        Gas - CCGT,        NSW1,  500.0,        2025,               2035
+    battery1,   Battery,    Battery Storage,   NSW1,  100.0,        2030,               2050
+    battery2,   Battery,    Battery Storage,   VIC1,  200.0,        2035,               2050
+    """
+    expected_df = csv_str_to_df(expected_csv)
+
+    # 5. Run Function
     result = extract_generation_expansion_results(network)
 
     # Sort both for consistent comparison

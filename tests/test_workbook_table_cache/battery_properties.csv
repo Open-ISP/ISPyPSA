@@ -1,0 +1,7 @@
+Property,Battery storage (1hr storage),Battery storage (2hrs storage),Battery storage (4hrs storage),Battery storage (8hrs storage),Units
+Maximum power,1,1,1,1,MW
+Energy capacity,1,2,4,8,MWh
+Charge efficiency (utility),91.7,91.7,92.2,91.1,%
+Discharge efficiency (utility),91.7,91.7,92.2,91.1,%
+Round trip efficiency (utility),84,84,85,83,%
+Annual degradation (utility),1.8,1.8,1.8,1.8,%

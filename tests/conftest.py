@@ -157,11 +157,13 @@ def sample_ispypsa_tables(csv_str_to_df):
 
     # Additional tables needed for new entrant generators:
     new_entrant_build_costs_csv = """
-    technology,                 2023_24_$/mw,   2024_25_$/mw,   2025_26_$/mw,   2026_27_$/mw,   2027_28_$/mw,   2028_29_$/mw
-    CCGT,                       1900000,        1850000,        1800000,        1750000,        1700000,        1650000
-    OCGT__(small__GT),          1600000,        1700000,        1650000,        1700000,        1750000,        1800000
-    Large__scale__Solar__PV,    1700000,        1600000,        1500000,        1400000,        1300000,        1200000
-    Wind,                       2900000,        2800000,        2700000,        2600000,        2500000,        2400000
+    technology,                         2023_24_$/mw,   2024_25_$/mw,   2025_26_$/mw,   2026_27_$/mw,   2027_28_$/mw,   2028_29_$/mw
+    CCGT,                               1900000,        1850000,        1800000,        1750000,        1700000,        1650000
+    OCGT__(small__GT),                  1600000,        1700000,        1650000,        1700000,        1750000,        1800000
+    Large__scale__Solar__PV,            1700000,        1600000,        1500000,        1400000,        1300000,        1200000
+    Wind,                               2900000,        2800000,        2700000,        2600000,        2500000,        2400000
+    Battery__Storage__(2hrs__storage),  3000000,        2900000,        2800000,        2700000,        2600000,        2500000
+    Battery__Storage__(4hrs__storage),  4000000,        3900000,        3800000,        3700000,        3600000,        3500000
     """
     tables["new_entrant_build_costs"] = csv_str_to_df(new_entrant_build_costs_csv)
 
@@ -249,6 +251,22 @@ def sample_ispypsa_tables(csv_str_to_df):
     tables["gpg_emissions_reduction_biomethane"] = csv_str_to_df(
         gpg_emissions_reduction_biomethane_csv
     )
+
+    # ECAA battery table:
+    ecaa_batteries_csv = """
+    storage_name, sub_region_id, region_id, rez_id, commissioning_date, closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
+    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  95.0,                   95.0,                       4,                      Battery,    Battery__Storage__4h
+    Battery2,     NNSW,          NSW,       ,       2022-07-1,          2042,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
+    """
+    tables["ecaa_batteries"] = csv_str_to_df(ecaa_batteries_csv)
+
+    # New entrant battery table:
+    new_entrant_batteries_csv = """
+    storage_name,          sub_region_id, region_id,       rez_id,     technology_type,                     lifetime,    charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  technology_specific_lcf_%,     connection_cost_$/mw,   fom_$/kw/annum,     isp_resource_type
+    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          90.0,                   90.0,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
+    NewBattery2,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          95.0,                   95.0,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
+    """
+    tables["new_entrant_batteries"] = csv_str_to_df(new_entrant_batteries_csv)
 
     return tables
 

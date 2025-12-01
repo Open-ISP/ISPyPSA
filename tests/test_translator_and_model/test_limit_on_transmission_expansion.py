@@ -148,6 +148,8 @@ def test_flow_path_expansion_limit_respected(csv_str_to_df, tmp_path, monkeypatc
         "ecaa_generators": ecaa_generators,
         "new_entrant_generators": pd.DataFrame(),
         "renewable_energy_zones": pd.DataFrame(),
+        "ecaa_batteries": pd.DataFrame(),
+        "new_entrant_batteries": pd.DataFrame(),
     }
 
     # Create a ModelConfig instance

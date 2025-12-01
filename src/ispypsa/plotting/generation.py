@@ -349,16 +349,59 @@ def _create_export_trace(timesteps: pd.DatetimeIndex, values: list) -> go.Scatte
     )
 
 
+def _create_battery_charging_trace(
+    timesteps: pd.DatetimeIndex, values: list
+) -> go.Scatter:
+    """Create a Plotly scatter trace for battery charging (shown as negative)."""
+    return go.Scatter(
+        x=timesteps,
+        y=values,  # Negative to show charging consumes power
+        name="Battery Charging",
+        mode="lines",
+        stackgroup="two",
+        fillcolor=get_fuel_type_color("Battery Charging"),
+        line=dict(width=0),
+        legendgroup="Load",  # Appears in Load legend group
+        legendgrouptitle_text="Load",
+        visible="legendonly",
+        hovertemplate="<b>Battery Charging</b><br>%{y:.2f} MW<extra></extra>",
+    )
+
+
 def _create_plotly_figure(
     dispatch: pd.DataFrame,
     demand: pd.Series,
     title: str,
     transmission: pd.DataFrame | None = None,
 ) -> go.Figure:
-    """Create a Plotly figure with generation, demand, and optionally transmission."""
+    """Create a Plotly figure with generation, demand, storage, and optionally transmission.
+
+    Battery storage is split into discharging (positive, stacks with generation)
+    and charging (negative, stacks with load/exports).
+    """
     fig = go.Figure()
 
-    # Add transmission traces if provided
+    # Separate battery dispatch from other generation
+    battery_dispatch = dispatch[dispatch["fuel_type"] == "Battery"].copy()
+    non_battery_dispatch = dispatch[dispatch["fuel_type"] != "Battery"].copy()
+
+    # Prepare battery charging/discharging data
+    has_battery_data = not battery_dispatch.empty
+    if has_battery_data:
+        # Aggregate battery dispatch by timestep
+        battery_by_timestep = (
+            battery_dispatch.groupby("timestep")["dispatch_mw"].sum().reset_index()
+        )
+        # Discharging = positive values
+        battery_discharging = battery_by_timestep.copy()
+        battery_discharging["dispatch_mw"] = battery_discharging["dispatch_mw"].clip(
+            lower=0
+        )
+        # Charging = negative values (keep as negative for display)
+        battery_charging = battery_by_timestep.copy()
+        battery_charging["dispatch_mw"] = battery_charging["dispatch_mw"].clip(upper=0)
+
+    # Add transmission traces if provided (hidden offset trace first)
     if transmission is not None and not transmission.empty:
         fig.add_trace(
             _create_generation_trace(
@@ -375,14 +418,26 @@ def _create_plotly_figure(
             )
         )
 
-    # Add generation traces (sorted alphabetically)
-    fuel_types = sorted(dispatch["fuel_type"].unique())
+    # Add battery discharging trace (stacks with generation)
+    if has_battery_data and battery_discharging["dispatch_mw"].sum() > 0:
+        fig.add_trace(
+            _create_generation_trace(
+                "Battery Discharging",
+                battery_discharging["timestep"],
+                battery_discharging["dispatch_mw"],
+            )
+        )
+
+    # Add generation traces (sorted alphabetically, excluding Battery)
+    fuel_types = sorted(non_battery_dispatch["fuel_type"].unique())
     for fuel_type in fuel_types:
         fig.add_trace(
             _create_generation_trace(
                 fuel_type,
-                dispatch["timestep"],
-                dispatch[dispatch["fuel_type"] == fuel_type]["dispatch_mw"],
+                non_battery_dispatch["timestep"],
+                non_battery_dispatch[non_battery_dispatch["fuel_type"] == fuel_type][
+                    "dispatch_mw"
+                ],
             )
         )
 
@@ -394,10 +449,19 @@ def _create_plotly_figure(
             )
         )
 
+    # Add battery charging trace (stacks with load/exports, shown as negative)
+    if has_battery_data and battery_charging["dispatch_mw"].sum() < 0:
+        fig.add_trace(
+            _create_battery_charging_trace(
+                battery_charging["timestep"],
+                battery_charging["dispatch_mw"],  # Already negative
+            )
+        )
+
     fig.add_trace(_create_demand_trace(demand["timestep"], demand["demand_mw"]))
 
-    # Apply professional styling
-    layout = create_plotly_professional_layout(title=title)
+    # Apply professional styling with timeseries formatting
+    layout = create_plotly_professional_layout(title=title, timeseries=True)
     fig.update_layout(**layout)
     return fig
 

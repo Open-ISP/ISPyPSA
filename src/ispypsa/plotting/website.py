@@ -197,10 +197,11 @@ def _generate_html_template(
         .plot-container {{
             flex: 1;
             display: flex;
-            align-items: center;
+            align-items: stretch;
             justify-content: center;
-            padding: 2rem;
-            overflow: auto;
+            padding: 1rem;
+            overflow: hidden;
+            min-height: 0;
         }}
 
         .plot-frame {{

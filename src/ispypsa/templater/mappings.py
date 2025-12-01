@@ -4,9 +4,9 @@ from .helpers import _snakecase_string
 from .lists import (
     _ALL_GENERATOR_STORAGE_TYPES,
     _CONDENSED_GENERATOR_TYPES,
+    _ECAA_BATTERY_TYPES,
     _ECAA_GENERATOR_TYPES,
     _ISP_SCENARIOS,
-    _NEW_GENERATOR_TYPES,
 )
 
 _NEM_REGION_IDS = pd.Series(
@@ -80,6 +80,31 @@ _NEW_ENTRANT_GENERATOR_NEW_COLUMN_MAPPING = {
     "summer_peak_rating_%": "summer_rating_mw",
     "technology_specific_lcf_%": "regional_build_cost_zone",
 }
+
+_ECAA_STORAGE_NEW_COLUMN_MAPPING = {
+    "maximum_capacity_mw": "storage_name",
+    "energy_capacity_mwh": "storage_name",
+    "storage_duration_hours": "storage_name",
+    "round_trip_efficiency_%": "fom_$/kw/annum",
+    "charging_efficiency_%": "fom_$/kw/annum",
+    "discharging_efficiency_%": "fom_$/kw/annum",
+    "lifetime": "storage_name",
+    "commissioning_date": "storage_name",
+    "closure_year": "storage_name",
+    "isp_resource_type": "fom_$/kw/annum",
+}
+
+_NEW_STORAGE_NEW_COLUMN_MAPPING = {
+    "maximum_capacity_mw": "storage_name",
+    "storage_duration_hours": "storage_name",
+    "round_trip_efficiency_%": "storage_name",
+    "charging_efficiency_%": "storage_name",
+    "discharging_efficiency_%": "storage_name",
+    "lifetime": "storage_name",
+    "technology_specific_lcf_%": "regional_build_cost_zone",
+    "isp_resource_type": "storage_name",
+}
+
 """
 _NEW_COLUMN_MAPPING dicts define new/additional columns to be added to the corresponding
 ECAA or new entrant generator summary tables. Keys are the name of the column to be added
@@ -280,6 +305,80 @@ lookup information that can be used to retrieve values.
         in the table as a result of row merging in isp-workbook-parser, to be used
         for opex mapping to rename columns in the table.
 """
+
+_ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
+    "maximum_capacity_mw": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_BATTERY_TYPES],
+        table_lookup="Storage",
+        alternative_lookups=["Project"],
+        table_value="Installed capacity (MW)",
+    ),
+    "energy_capacity_mwh": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_BATTERY_TYPES],
+        table_lookup="Storage",
+        alternative_lookups=["Project"],
+        table_value="Energy (MWh)",
+    ),
+    "commissioning_date": dict(
+        table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_BATTERY_TYPES],
+        table_lookup="Storage",
+        alternative_lookups=["Project"],
+        table_value="Indicative commissioning date",
+    ),
+    "fom_$/kw/annum": dict(
+        table="fixed_opex_existing_committed_anticipated_additional_generators",
+        table_lookup="Generator",
+        table_value="Fixed OPEX ($/kW/year)",
+    ),
+    "round_trip_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Round trip efficiency (utility)",
+    ),
+    "charging_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Charge efficiency (utility)",
+    ),
+    "discharging_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Discharge efficiency (utility)",
+    ),
+}
+
+_NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
+    "fom_$/kw/annum": dict(
+        table="fixed_opex_new_entrants",
+        table_lookup="Generator",
+        table_col_prefix="Fixed OPEX ($/kW sent out/year)",
+    ),
+    "lifetime": dict(
+        table="lead_time_and_project_life",
+        table_lookup="Technology",
+        table_value="Technical life (years) 6",
+    ),
+    "storage_duration_hours": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Energy capacity",
+    ),
+    "round_trip_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Round trip efficiency (utility)",
+    ),
+    "charging_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Charge efficiency (utility)",
+    ),
+    "discharging_efficiency_%": dict(
+        table="battery_properties",
+        table_lookup="storage_name",
+        table_value="Discharge efficiency (utility)",
+    ),
+}
 
 """
  _TEMPLATE_RENEWABLE_ENERGY_TARGET_MAP is a dictionary that maps template functions to

@@ -1,6 +1,6 @@
 [project]
 name = "ISPyPSA"
-version = "0.1.0"
+version = "0.1.0beta1"
 description = "An open-source capacity expansion model based on the methodology and datasets used by the Australian Energy Market Operator (AEMO) in their Integrated System Plan (ISP)."
 authors = [
     { name = "prakaa", email = "abiprakash007@gmail.com" },
@@ -14,10 +14,9 @@ dependencies = [
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
     "thefuzz>=0.22.1",
-    "isp-trace-parser>=1.0.3",
     "pyarrow>=18.0.0",
     "tables>=3.10.1",
-    "isp-trace-parser>=2.0.2",
+    "isp-trace-parser>=2.0.3",
     "isp-workbook-parser>=2.6.0",
     "requests>=2.32.3",
     "tqdm>=4.67.1",

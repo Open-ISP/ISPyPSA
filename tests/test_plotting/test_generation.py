@@ -178,17 +178,29 @@ def test_plot_dispatch_with_geography(csv_str_to_df):
 
 
 def test_plot_dispatch_system_level(csv_str_to_df):
-    """Test plot_dispatch without geography_level returns system-level structure."""
+    """Test plot_dispatch without geography_level returns system-level structure.
+
+    Includes battery data with both charging (negative) and discharging (positive)
+    to verify battery traces are correctly split in the plot. Battery charging
+    and discharging are on separate timesteps to ensure both traces are created
+    (since values are aggregated by timestep before splitting).
+    """
     dispatch_csv = """
     generator, node, fuel_type, investment_period, timestep,             dispatch_mw
     Gen1,      SubA, Coal,      2024,              2024-01-01 12:00:00,  100
     Gen2,      SubB, Wind,      2024,              2024-01-01 12:00:00,  50
+    Bat1,      SubA, Battery,   2024,              2024-01-01 12:00:00,  30
+    Gen1,      SubA, Coal,      2024,              2024-01-01 13:00:00,  100
+    Gen2,      SubB, Wind,      2024,              2024-01-01 13:00:00,  50
+    Bat1,      SubA, Battery,   2024,              2024-01-01 13:00:00,  -20
     """
 
     demand_csv = """
     node, load,  investment_period, timestep,             demand_mw
     SubA, Load1, 2024,              2024-01-01 12:00:00,  80
     SubB, Load2, 2024,              2024-01-01 12:00:00,  70
+    SubA, Load1, 2024,              2024-01-01 13:00:00,  80
+    SubB, Load2, 2024,              2024-01-01 13:00:00,  70
     """
 
     dispatch = csv_str_to_df(dispatch_csv)
@@ -204,9 +216,16 @@ def test_plot_dispatch_system_level(csv_str_to_df):
     entry = result["2024"]["2024-01-01"]
     assert isinstance(entry["plot"], go.Figure)
     assert isinstance(entry["data"], pd.DataFrame)
-    # Total dispatch should be 150 (100 + 50)
-    assert entry["data"]["dispatch_mw"].sum() == 150
-    assert set(entry["data"]["fuel_type"].unique()) == {"Coal", "Wind"}
+    # Total dispatch should be 310 (100+50+30 + 100+50-20)
+    assert entry["data"]["dispatch_mw"].sum() == 310
+    assert set(entry["data"]["fuel_type"].unique()) == {"Coal", "Wind", "Battery"}
+
+    # Check that plot has separate battery charging and discharging traces
+    trace_names = [trace.name for trace in entry["plot"].data]
+    assert "Battery Discharging" in trace_names
+    assert "Battery Charging" in trace_names
+    # Raw "Battery" should not appear as a trace (it's split)
+    assert "Battery" not in trace_names
 
 
 def test_prepare_generation_capacity(csv_str_to_df):

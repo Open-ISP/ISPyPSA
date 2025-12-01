@@ -15,6 +15,7 @@ from ispypsa.pypsa_build.generators import (
 from ispypsa.pypsa_build.initialise import _initialise_network
 from ispypsa.pypsa_build.investment_period_weights import _add_investment_period_weights
 from ispypsa.pypsa_build.links import _add_links_to_network
+from ispypsa.pypsa_build.storage import _add_batteries_to_network
 
 
 def build_pypsa_network(
@@ -58,7 +59,11 @@ def build_pypsa_network(
         network, pypsa_friendly_tables["investment_period_weights"]
     )
 
-    _add_carriers_to_network(network, pypsa_friendly_tables["generators"])
+    _add_carriers_to_network(
+        network,
+        pypsa_friendly_tables.get("generators"),
+        pypsa_friendly_tables.get("batteries"),
+    )
 
     _add_buses_to_network(
         network, pypsa_friendly_tables["buses"], path_to_pypsa_friendly_timeseries_data
@@ -72,6 +77,9 @@ def build_pypsa_network(
         pypsa_friendly_tables["generators"],
         path_to_pypsa_friendly_timeseries_data,
     )
+
+    if "batteries" in pypsa_friendly_tables.keys():
+        _add_batteries_to_network(network, pypsa_friendly_tables["batteries"])
 
     if "custom_constraints_generators" in pypsa_friendly_tables.keys():
         _add_bus_for_custom_constraints(network)

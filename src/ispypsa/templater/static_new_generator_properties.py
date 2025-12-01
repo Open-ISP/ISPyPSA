@@ -140,9 +140,6 @@ def _clean_generator_summary(df: pd.DataFrame) -> pd.DataFrame:
     # (AEMO 2024 | Appendix 3. Renewable Energy Zones, p.38)
     df = df.loc[~(df["rez_location"] == "Illawarra"), :]
 
-    # adds extra necessary columns taking appropriate mapping values
-    # NOTE: this could be done more efficiently in future if needed, potentially
-    # adding a `new_mapping` field to relevant table map dicts?
     for (
         new_column,
         existing_column_mapping,
@@ -179,9 +176,7 @@ def _merge_and_set_new_generators_static_properties(
             df, col = _process_and_merge_opex(df, data, col, table_attrs)
         else:
             if type(table_attrs["table"]) is list:
-                data = [
-                    iasr_tables[table_attrs["table"]] for table in table_attrs["table"]
-                ]
+                data = [iasr_tables[table] for table in table_attrs["table"]]
                 data = pd.concat(data, axis=0)
             else:
                 data = iasr_tables[table_attrs["table"]]
@@ -478,26 +473,6 @@ def _add_isp_resource_type_column(
     return df_with_isp_resource_type
 
 
-def _add_storage_duration_column(
-    df: pd.DataFrame, storage_duration_col_name: str
-) -> pd.DataFrame:
-    """Adds a new column to the new entrant generator table to hold storage duration in hours."""
-
-    # if 'storage' is present in the name -> grab the hours from the name string:
-    def _get_storage_duration(name: str) -> str | None:
-        duration_pattern = r"(?P<duration>\d+h)rs* storage"
-        duration_string = re.search(duration_pattern, name, re.IGNORECASE)
-
-        if duration_string:
-            return duration_string.group("duration")
-        else:
-            return None
-
-    df[storage_duration_col_name] = df["generator_name"].map(_get_storage_duration)
-
-    return df
-
-
 def _add_unique_generator_string_column(
     df: pd.DataFrame, generator_string_col_name: str = "generator"
 ) -> pd.DataFrame:
@@ -568,11 +543,8 @@ def _add_identifier_columns(df: pd.DataFrame, iasr_tables: dict[str, pd.DataFram
     df_with_rez_ids = _add_and_clean_rez_ids(
         df, "rez_id", iasr_tables["renewable_energy_zones"]
     )
-    df_with_storage_duration = _add_storage_duration_column(
-        df_with_rez_ids, "storage_duration"
-    )
     df_with_isp_resource_type = _add_isp_resource_type_column(
-        df_with_storage_duration, "isp_resource_type"
+        df_with_rez_ids, "isp_resource_type"
     )
 
     df_with_unique_generator_str = _add_unique_generator_string_column(

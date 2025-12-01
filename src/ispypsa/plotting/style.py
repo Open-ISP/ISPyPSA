@@ -21,6 +21,10 @@ FUEL_TYPE_COLORS = {
     # Hydrogen
     "Hydrogen": "#DDA0DD",
     "Hyblend": "#DDA0DD",
+    # Battery Storage
+    "Battery": "#3245c9",
+    "Battery Charging": "#577CFF",
+    "Battery Discharging": "#3245c9",
     # Transmission (for plotting)
     "Transmission Exports": "#927BAD",
     "Transmission Imports": "#521986",
@@ -50,6 +54,7 @@ def create_plotly_professional_layout(
     title: str,
     height: int = 600,
     width: int = 1200,
+    timeseries: bool = False,
 ) -> dict:
     """Create professional/academic style layout for Plotly charts.
 
@@ -57,12 +62,29 @@ def create_plotly_professional_layout(
         title: Chart title
         y_max: Maximum y-axis value
         y_min: Minimum y-axis value
-        height: Chart height in pixels
-        width: Chart width in pixels
+        height: Chart height in pixels (used as minimum height)
+        width: Chart width in pixels (ignored when autosize is True)
+        timeseries: If True, applies timeseries-specific formatting (rotated x-axis labels)
 
     Returns:
         Plotly layout dictionary
     """
+    xaxis_config = {
+        "gridcolor": "#E0E0E0",
+        "gridwidth": 0.5,
+        "showgrid": True,
+        "showline": True,
+        "linewidth": 1,
+        "linecolor": "#CCCCCC",
+        "mirror": True,
+        "ticks": "outside",
+        "tickfont": {"size": 11},
+    }
+
+    if timeseries:
+        xaxis_config["tickformat"] = "%Y-%m-%d %H:%M"
+        xaxis_config["tickangle"] = 45
+
     return {
         "title": {
             "text": title,
@@ -93,18 +115,7 @@ def create_plotly_professional_layout(
             "borderwidth": 1,
             "font": {"size": 11},
         },
-        "xaxis": {
-            "gridcolor": "#E0E0E0",
-            "gridwidth": 0.5,
-            "showgrid": True,
-            "showline": True,
-            "linewidth": 1,
-            "linecolor": "#CCCCCC",
-            "mirror": True,
-            "ticks": "outside",
-            "tickfont": {"size": 11},
-            "tickformat": "%Y-%m-%d %H:%M",
-        },
+        "xaxis": xaxis_config,
         "yaxis": {
             "gridcolor": "#E0E0E0",
             "gridwidth": 0.5,
@@ -118,7 +129,6 @@ def create_plotly_professional_layout(
             "rangemode": "tozero",
             "tickformat": ",",  # Comma separator
         },
-        "height": height,
-        "width": width,
+        "autosize": True,
         "margin": {"l": 80, "r": 200, "t": 80, "b": 60},
     }

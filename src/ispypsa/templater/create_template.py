@@ -29,6 +29,7 @@ from ispypsa.templater.static_ecaa_generator_properties import (
 from ispypsa.templater.static_new_generator_properties import (
     _template_new_generators_static_properties,
 )
+from ispypsa.templater.storage import _template_battery_properties
 
 _BASE_TEMPLATE_OUTPUTS = [
     "sub_regions",
@@ -36,7 +37,9 @@ _BASE_TEMPLATE_OUTPUTS = [
     "renewable_energy_zones",
     "flow_paths",
     "ecaa_generators",
+    "ecaa_batteries",
     "new_entrant_generators",
+    "new_entrant_batteries",
     "coal_prices",
     "gas_prices",
     "liquid_fuel_prices",
@@ -181,6 +184,10 @@ def create_ispypsa_inputs_template(
     template["new_entrant_generators"] = _template_new_generators_static_properties(
         iasr_tables
     )
+
+    ecaa_batteries, new_entrant_batteries = _template_battery_properties(iasr_tables)
+    template["ecaa_batteries"] = ecaa_batteries
+    template["new_entrant_batteries"] = new_entrant_batteries
 
     dynamic_generator_property_templates = _template_generator_dynamic_properties(
         iasr_tables, scenario

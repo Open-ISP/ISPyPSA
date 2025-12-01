@@ -11,7 +11,7 @@ def save_pypsa_network(
     Examples:
         Perform required imports.
         >>> from pathlib import Path
-        >>> from ispypsa.model import save_pypsa_network
+        >>> from ispypsa.pypsa_build import save_pypsa_network
 
         After running the model optimisation, save the network.
         >>> network.optimize.solve_model(solver_name="highs")

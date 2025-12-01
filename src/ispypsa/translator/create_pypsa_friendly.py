@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Literal
 
@@ -36,6 +37,10 @@ from ispypsa.translator.snapshots import (
     _create_investment_period_weightings,
     create_pypsa_friendly_snapshots,
 )
+from ispypsa.translator.storage import (
+    _translate_ecaa_batteries,
+    _translate_new_entrant_batteries,
+)
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
 
@@ -45,6 +50,7 @@ _BASE_TRANSLATOR_OUTPUTS = [
     "buses",
     "links",
     "generators",
+    "batteries",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "custom_constraints_generators",
@@ -120,6 +126,37 @@ def create_pypsa_friendly_inputs(
     else:
         # TODO: Log, improve error message (/ is this the right place for the error?)
         raise ValueError("No generator data returned from translator.")
+
+    batteries = []
+    translated_ecaa_batteries = _translate_ecaa_batteries(
+        ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.network.nodes.regional_granularity,
+        config.network.nodes.rezs,
+        config.temporal.year_type,
+    )
+    _append_if_not_empty(batteries, translated_ecaa_batteries)
+
+    translated_new_entrant_batteries = _translate_new_entrant_batteries(
+        ispypsa_tables,
+        config.temporal.capacity_expansion.investment_periods,
+        config.discount_rate,
+        config.network.nodes.regional_granularity,
+        config.network.nodes.rezs,
+    )
+    _append_if_not_empty(batteries, translated_new_entrant_batteries)
+
+    if len(batteries) > 0:
+        pypsa_inputs["batteries"] = pd.concat(
+            batteries,
+            axis=0,
+            ignore_index=True,
+        )
+    else:
+        logging.warning(
+            "No battery data returned from translator - no batteries added to model."
+        )
+        # raise an error? Improve the message for sure
 
     buses = []
     links = []

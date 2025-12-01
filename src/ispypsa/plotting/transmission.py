@@ -317,9 +317,10 @@ def plot_flows(
                 )
             )
 
-        # Apply professional styling
+        # Apply professional styling with timeseries formatting
         layout = create_plotly_professional_layout(
-            title=f"{isp_name} - Week {week_starting} (Investment Period {investment_period})"
+            title=f"{isp_name} - Week {week_starting} (Investment Period {investment_period})",
+            timeseries=True,
         )
         layout["yaxis_title"] = {"text": "Flow (MW)", "font": {"size": 14}}
         layout["xaxis_title"] = {"text": "Timestep", "font": {"size": 14}}

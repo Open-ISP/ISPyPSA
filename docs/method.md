@@ -95,7 +95,35 @@ further information on custom constraint implementation.
 
 ## Generation
 
+Generation is represented as a time-varying quantity for each generator:
+
+- Variable renewable energy (VRE) generation data traces are the generation data published by AEMO
+for each project or REZ and resource type. These traces set the upper limit on VRE generator output in
+each modelled snapshot.
+- The historical weather years, or reference years, used as a basis for deriving the time varying
+generation data are defined using the `reference_year_cycle` options in the config. [More detail on
+reference years](#reference-years).
+- The time varying quantity of generation at each node is also dependent on the model year.
+AEMO publishes generation data for every year in modelling horizon for each reference year.
+- Other non-VRE generation is currently modelled under static output limits set by each generator's
+maximum capacity `maximum_capacity_mw` and minimum stable generation `minimum_load_mw` or `minimum_stable_level_%` (where defined).
+- Generator dispatch is optimised at each snapshot to meet demand at the lowest cost while meeting
+the output constraints described above.
+
 ## Storage
+
+Storage charging and discharging behaviour is also represented as a time-varying quantity for
+each storage unit in the model:
+
+- Charging and discharging efficiencies are defined for each battery and applied to charge/discharge
+in each snapshot accordingly.
+- The state of charge of each battery in each snapshot is determined by the previous state of charge
+plus energy charged minus energy discharged (with efficiencies applied).
+- Charge and discharge power and energy in each snapshot are limited by the `maximum_capacity_mw`
+and `maximum_capacity_mw` $\times$ `storage_duration_hours` properties of each battery, as well
+as the available state of charge.
+- Battery charging and discharging behaviour is optimised for each snapshot to meet demand at lowest cost,
+while subject to energy balance constraints.
 
 ## Reference years
 
@@ -236,6 +264,27 @@ expansion allowed for each flow path and REZ connection.
 modelled as relaxing the custom constraint limit.
 
 ### Generation
+
+Generator capacities are decided by the model at the start of each [investment period](#investment-periodisation-and-discounting)
+and for each [node](#nodal-representation):
+
+- The model currently considers all ECAA generators that are active (not retired) during the
+model investment periods. These projects have set capacities and are not extendable during the capacity expansion modelling,
+and have fixed retirement dates.
+- New entrant generator are extendable in the model, and the optimisation determines the capacity of new generation to be built at each node in each investment period.
+- Capital costs in $/MW for new entrant generators are annuitised according to the following formula:
+
+  $$
+  c_{a} =\frac{c_{o} \times r }{1 - (1 + r)^{-t}}
+  $$
+
+  Where $c_{a}$ is the annuitised cost and, $r$ is the [WACC](config.md#wacc), and $t$ is the generator lifetime.
+  $c_{o}$ includes the overnight build cost (adjusted by locational cost factors), any applicable connection costs
+  and/or additional system strength connection costs, and fixed operational costs.
+- Marginal costs in $/MWh are calculated for all generators for each model snapshot based on
+dynamic fuel prices, generator heat rates and variable operational costs defined in the input tables. Alternatively
+a static value can be set for a subset or all generators to simplify the model.
+- Where build or resource limit constraints are defined for VRE generation in specific REZs, these are set by custom constraints. Some resource limits can be relaxed up to the corresponding build limit for the specified resource type and REZ.
 
 ## Operational
 

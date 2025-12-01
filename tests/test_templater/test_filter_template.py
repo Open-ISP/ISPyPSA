@@ -5,6 +5,7 @@ import pytest
 
 from ispypsa.templater.filter_template import (
     _determine_selected_regions,
+    _filter_batteries,
     _filter_custom_constraints,
     _filter_expansion_costs,
     _filter_generator_dependent_tables,
@@ -245,6 +246,50 @@ def test_filter_generator_dependent_tables(csv_str_to_df):
         filtered["seasonal_ratings"].sort_values("generator").reset_index(drop=True),
         expected_ratings.sort_values("generator").reset_index(drop=True),
     )
+
+
+def test_filter_batteries(csv_str_to_df):
+    # Input data
+    template = {
+        "ecaa_batteries": csv_str_to_df("""
+            storage_name,       sub_region_id,    region_id,    capacity_mw
+            Limondale__BESS,    SNSW,             NSW,          50
+            Chinchilla__BESS,   SQ,               QLD,          100
+            Dalrymple__BESS,    CSA,              SA,           30
+        """),
+        "new_entrant_batteries": csv_str_to_df("""
+            storage_name,       sub_region_id,    region_id,    technology_type
+            Battery_1h_CNSW,    CNSW,             NSW,          Battery__Storage__1h
+            Battery_2h_VIC,     VIC,              VIC,          Battery__Storage__2h
+        """),
+    }
+
+    # Filter to NSW sub-regions only
+    filtered, selected_batteries = _filter_batteries(template, ["CNSW", "SNSW"])
+
+    # Expected results
+    expected_ecaa = csv_str_to_df("""
+            storage_name,       sub_region_id,    region_id,    capacity_mw
+            Limondale__BESS,    SNSW,             NSW,          50
+    """)
+
+    expected_new_entrant = csv_str_to_df("""
+            storage_name,       sub_region_id,    region_id,    technology_type
+            Battery_1h_CNSW,    CNSW,             NSW,          Battery__Storage__1h
+    """)
+
+    # Compare results
+    pd.testing.assert_frame_equal(
+        filtered["ecaa_batteries"].sort_values("storage_name").reset_index(drop=True),
+        expected_ecaa.sort_values("storage_name").reset_index(drop=True),
+    )
+    pd.testing.assert_frame_equal(
+        filtered["new_entrant_batteries"], expected_new_entrant
+    )
+    assert selected_batteries == {
+        "Limondale BESS",
+        "Battery_1h_CNSW",
+    }
 
 
 def test_get_selected_rezs_and_flow_paths(csv_str_to_df):
