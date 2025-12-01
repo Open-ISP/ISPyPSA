@@ -2,50 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://ispypsa.github.io/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/api/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/cli/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/config/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/getting_started/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/guide/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/method/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/workflow/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/examples/example_api_workflow/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/examples/example_config/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/tables/ispypsa/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://ispypsa.github.io/tables/pypsa_friendly/</loc>
-         <lastmod>2025-11-29</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
 </urlset>
