@@ -2,7 +2,7 @@ import pandas as pd
 import pypsa
 import pytest
 
-from ispypsa.model.carriers import _add_carriers_to_network
+from ispypsa.pypsa_build.carriers import _add_carriers_to_network
 
 
 @pytest.fixture

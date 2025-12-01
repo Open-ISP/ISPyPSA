@@ -2,7 +2,7 @@ import pandas as pd
 import pypsa
 import pytest
 
-from ispypsa.model.storage import (
+from ispypsa.pypsa_build.storage import (
     _add_batteries_to_network,
     _add_battery_to_network,
 )

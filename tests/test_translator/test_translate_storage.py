@@ -128,12 +128,14 @@ def test_translate_ecaa_batteries_lifetime_calculation(csv_str_to_df):
     investment_periods = [2025]
 
     result = _translate_ecaa_batteries(ispypsa_tables, investment_periods)
+    print(result)
 
     # Battery3 should be filtered out (closure_year < investment_period)
+    # build_year now clipped so earliest possible build year is investment_period[0], i.e. 2025 here
     expected_result_csv = """
     name,       bus,    p_nom,      p_nom_extendable,   carrier,    max_hours,  capital_cost,   build_year, lifetime,   efficiency_store,   efficiency_dispatch,    isp_resource_type,      isp_rez_id
-    Battery1,   CNSW,   100.0,      False,              Battery,    4,          0.0,            2020,       15,         0.95,               0.95,                   Battery__Storage__4h,
-    Battery2,   CNSW,   200.0,      False,              Battery,    2,          0.0,            2023,       20,         0.90,               0.90,                   Battery__Storage__2h,
+    Battery1,   CNSW,   100.0,      False,              Battery,    4,          0.0,            2025,       15,         0.95,               0.95,                   Battery__Storage__4h,
+    Battery2,   CNSW,   200.0,      False,              Battery,    2,          0.0,            2025,       20,         0.90,               0.90,                   Battery__Storage__2h,
     """
     expected_result = csv_str_to_df(expected_result_csv)
 

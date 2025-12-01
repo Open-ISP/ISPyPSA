@@ -25,7 +25,7 @@ def update_network_timeseries(
         >>> import pandas as pd
         >>> from pathlib import Path
         >>> from ispypsa.data_fetch import read_csvs
-        >>> from ispypsa.model import update_network_timeseries
+        >>> from ispypsa.pypsa_build import update_network_timeseries
 
         Get PyPSA friendly inputs (inparticular these need to contain the generators and
         buses tables).
