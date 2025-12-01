@@ -36,8 +36,8 @@ def test_translate_ecaa_batteries_basic(csv_str_to_df):
     # Create test input data
     ecaa_batteries_csv = """
     storage_name, sub_region_id, region_id, rez_id, commissioning_date, closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
-    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  0.95,                   0.95,                       4,                      Battery,    Battery__Storage__4h
-    Battery2,     NNSW,          NSW,       ,       2022-07-1,          2042,         200,                  0.90,                   0.90,                       2,                      Battery,    Battery__Storage__2h
+    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  95.0,                   95.0,                       4,                      Battery,    Battery__Storage__4h
+    Battery2,     NNSW,          NSW,       ,       2022-07-1,          2042,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
     """
 
     ispypsa_tables = {"ecaa_batteries": csv_str_to_df(ecaa_batteries_csv)}
@@ -49,9 +49,15 @@ def test_translate_ecaa_batteries_basic(csv_str_to_df):
     for templater_name, translated_name in _ECAA_BATTERY_ATTRIBUTES.items():
         assert translated_name in result.columns
 
+    # check that efficiency values are all between 0-1:
+    efficiency_cols = [col for col in result.columns if "efficiency" in col]
+    for col in efficiency_cols:
+        assert result[col].between(0, 1).all()
+
     assert "bus" in result.columns  # check this separately (not in mapping)
     assert not result["p_nom_extendable"].any()  # All should be False
     assert (result["capital_cost"] == 0.0).all()  # All should be 0.0
+    assert all(result["cyclic_state_of_charge"])  # All should be True
 
     # Check that no extra columns were added:
     extra_cols = set(result.columns) - set(_BATTERY_ATTRIBUTE_ORDER)
@@ -63,7 +69,7 @@ def test_translate_ecaa_batteries_regional_granularity(csv_str_to_df):
     # Create test input data
     ecaa_batteries_csv = """
     storage_name, sub_region_id, region_id, rez_id, commissioning_date,      closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
-    Battery2,     NNSW,          NSW,       ,       2022-07-1,               2042,         200,                  0.90,                   0.90,                       2,                      Battery,    Battery__Storage__2h
+    Battery2,     NNSW,          NSW,       ,       2022-07-1,               2042,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
     """
 
     ispypsa_tables = {"ecaa_batteries": csv_str_to_df(ecaa_batteries_csv)}
@@ -93,8 +99,8 @@ def test_translate_ecaa_batteries_rez_handling(csv_str_to_df):
     # Create test input with REZ
     ecaa_batteries_csv = """
     storage_name, sub_region_id, region_id, rez_id, commissioning_date, closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
-    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  0.95,                   0.95,                       4,                      Battery,    Battery__Storage__4h
-    Battery2,     CNSW,          NSW,       N3,     2022-07-01,         2042,         200,                  0.90,                   0.90,                       2,                      Battery,    Battery__Storage__2h
+    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  95.0,                   95.0,                       4,                      Battery,    Battery__Storage__4h
+    Battery2,     CNSW,          NSW,       N3,     2022-07-01,         2042,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
     """
 
     ispypsa_tables = {"ecaa_batteries": csv_str_to_df(ecaa_batteries_csv)}
@@ -119,23 +125,22 @@ def test_translate_ecaa_batteries_lifetime_calculation(csv_str_to_df):
     # Create test input
     ecaa_batteries_csv = """
     storage_name, sub_region_id, region_id, rez_id, commissioning_date, closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
-    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  0.95,                   0.95,                       4,                      Battery,    Battery__Storage__4h
-    Battery2,     CNSW,          NSW,       ,       2022-07-01,         2045,         200,                  0.90,                   0.90,                       2,                      Battery,    Battery__Storage__2h
-    Battery3,     CNSW,          NSW,       ,       2010-04-01,         2020,         300,                  0.92,                   0.92,                       8,                      Battery,    Battery__Storage__8h
+    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  95.0,                   95.0,                       4,                      Battery,    Battery__Storage__4h
+    Battery2,     CNSW,          NSW,       ,       2022-07-01,         2045,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
+    Battery3,     CNSW,          NSW,       ,       2010-04-01,         2020,         300,                  92.0,                   92.0,                       8,                      Battery,    Battery__Storage__8h
     """
 
     ispypsa_tables = {"ecaa_batteries": csv_str_to_df(ecaa_batteries_csv)}
     investment_periods = [2025]
 
     result = _translate_ecaa_batteries(ispypsa_tables, investment_periods)
-    print(result)
 
     # Battery3 should be filtered out (closure_year < investment_period)
     # build_year now clipped so earliest possible build year is investment_period[0], i.e. 2025 here
     expected_result_csv = """
-    name,       bus,    p_nom,      p_nom_extendable,   carrier,    max_hours,  capital_cost,   build_year, lifetime,   efficiency_store,   efficiency_dispatch,    isp_resource_type,      isp_rez_id
-    Battery1,   CNSW,   100.0,      False,              Battery,    4,          0.0,            2025,       15,         0.95,               0.95,                   Battery__Storage__4h,
-    Battery2,   CNSW,   200.0,      False,              Battery,    2,          0.0,            2025,       20,         0.90,               0.90,                   Battery__Storage__2h,
+    name,       bus,    p_nom,      p_nom_extendable,   carrier,    max_hours,  capital_cost,   build_year, lifetime,   cyclic_state_of_charge, efficiency_store,   efficiency_dispatch,    isp_resource_type,      isp_rez_id
+    Battery1,   CNSW,   100.0,      False,              Battery,    4,          0.0,            2025,       15,         True,                   0.95,               0.95,                   Battery__Storage__4h,
+    Battery2,   CNSW,   200.0,      False,              Battery,    2,          0.0,            2025,       20,         True,                   0.90,               0.90,                   Battery__Storage__2h,
     """
     expected_result = csv_str_to_df(expected_result_csv)
 
@@ -169,7 +174,7 @@ def test_translate_new_entrant_batteries_basic(csv_str_to_df, sample_ispypsa_tab
     # Create test input data
     new_entrant_batteries_csv = """
     storage_name,          sub_region_id, region_id,       rez_id,     technology_type,                     lifetime,    charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  technology_specific_lcf_%,     connection_cost_$/mw,   fom_$/kw/annum,     isp_resource_type
-    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.90,                   0.90,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
+    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          90.0,                   90.0,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
     """
 
     ispypsa_tables = {
@@ -185,9 +190,15 @@ def test_translate_new_entrant_batteries_basic(csv_str_to_df, sample_ispypsa_tab
     for templater_name, translated_name in _NEW_ENTRANT_BATTERY_ATTRIBUTES.items():
         assert translated_name in result.columns
 
+    # check that efficiency values are all between 0-1:
+    efficiency_cols = [col for col in result.columns if "efficiency" in col]
+    for col in efficiency_cols:
+        assert result[col].between(0, 1).all()
+
     assert "bus" in result.columns  # check this separately (it's not in mapping)
     assert result["p_nom_extendable"].all()  # All should be True
     assert len(result) == 2
+    assert all(result["cyclic_state_of_charge"])  # All should be True
 
 
 def test_translate_new_entrant_batteries_regional_granularity(
@@ -196,8 +207,8 @@ def test_translate_new_entrant_batteries_regional_granularity(
     """Test different regional granularity settings for new entrant batteries."""
     new_entrant_batteries_csv = """
     storage_name,          sub_region_id, region_id,       rez_id,     technology_type,                     lifetime,    charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  technology_specific_lcf_%,     connection_cost_$/mw,   fom_$/kw/annum,     isp_resource_type
-    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.90,                   0.90,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
-    NewBattery2,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.95,                   0.95,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
+    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          90.0,                   90.0,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
+    NewBattery2,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          95.0,                   95.0,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
     """
 
     ispypsa_tables = {
@@ -232,8 +243,8 @@ def test_translate_new_entrant_batteries_rez_handling(
     """Test REZ handling options for new entrant batteries."""
     new_entrant_batteries_csv = """
     storage_name,          sub_region_id, region_id,       rez_id,     technology_type,                     lifetime,    charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  technology_specific_lcf_%,     connection_cost_$/mw,   fom_$/kw/annum,     isp_resource_type
-    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.90,                   0.90,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
-    NewBattery2,           CNSW,          NSW,             N3,         Battery__Storage__(2hrs__storage),   20,          0.95,                   0.95,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
+    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          90.0,                   90.0,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
+    NewBattery2,           CNSW,          NSW,             N3,         Battery__Storage__(2hrs__storage),   20,          95.0,                   95.0,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
     """
 
     ispypsa_tables = {

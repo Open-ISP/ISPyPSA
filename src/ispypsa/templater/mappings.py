@@ -348,11 +348,6 @@ _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
 }
 
 _NEW_ENTRANT_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
-    "maximum_capacity_mw": dict(
-        table="maximum_capacity_new_entrants",
-        table_lookup="Generator type",
-        table_value="Total plant size (MW)",
-    ),
     "fom_$/kw/annum": dict(
         table="fixed_opex_new_entrants",
         table_lookup="Generator",

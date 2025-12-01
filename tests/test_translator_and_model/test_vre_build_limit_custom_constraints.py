@@ -9,8 +9,6 @@ from ispypsa.translator.create_pypsa_friendly import (
     create_pypsa_friendly_timeseries_inputs,
 )
 
-pd.set_option("display.max_columns", None)
-
 
 def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
     """Test that capacity expansion of VRE is limited by custom constraints in a REZ.

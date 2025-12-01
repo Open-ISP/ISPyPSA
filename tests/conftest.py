@@ -255,16 +255,16 @@ def sample_ispypsa_tables(csv_str_to_df):
     # ECAA battery table:
     ecaa_batteries_csv = """
     storage_name, sub_region_id, region_id, rez_id, commissioning_date, closure_year, maximum_capacity_mw,  charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  isp_resource_type
-    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  0.95,                   0.95,                       4,                      Battery,    Battery__Storage__4h
-    Battery2,     NNSW,          NSW,       ,       2022-07-1,          2042,         200,                  0.90,                   0.90,                       2,                      Battery,    Battery__Storage__2h
+    Battery1,     CNSW,          NSW,       ,       2020-01-01,         2040,         100,                  95.0,                   95.0,                       4,                      Battery,    Battery__Storage__4h
+    Battery2,     NNSW,          NSW,       ,       2022-07-1,          2042,         200,                  90.0,                   90.0,                       2,                      Battery,    Battery__Storage__2h
     """
     tables["ecaa_batteries"] = csv_str_to_df(ecaa_batteries_csv)
 
     # New entrant battery table:
     new_entrant_batteries_csv = """
     storage_name,          sub_region_id, region_id,       rez_id,     technology_type,                     lifetime,    charging_efficiency_%,  discharging_efficiency_%,   storage_duration_hours, fuel_type,  technology_specific_lcf_%,     connection_cost_$/mw,   fom_$/kw/annum,     isp_resource_type
-    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.90,                   0.90,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
-    NewBattery2,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          0.95,                   0.95,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
+    NewBattery1,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          90.0,                   90.0,                       2,                      Battery,    100.0,                         55000.0,                10.0,               Battery__Storage__2h
+    NewBattery2,           CNSW,          NSW,             ,           Battery__Storage__(2hrs__storage),   20,          95.0,                   95.0,                       2,                      Battery,    100.0,                         55000.0,                7.0,                Battery__Storage__2h
     """
     tables["new_entrant_batteries"] = csv_str_to_df(new_entrant_batteries_csv)
 
