@@ -122,7 +122,7 @@ temporal:
       #   ~ (None): Full yearly temporal representation is used or another aggregation.
       #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
       #     residual-minimum-demand, peak-consumption, residual-peak-consumption
-      named_representative_weeks: [residual-peak-demand, peak-consumption, residual-minimum-demand]
+      named_representative_weeks: [residual-peak-demand]
 
   operational:
     resolution_min: 30

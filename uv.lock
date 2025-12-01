@@ -1463,21 +1463,22 @@ wheels = [
 
 [[package]]
 name = "isp-trace-parser"
-version = "2.0.2"
+version = "2.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "duckdb" },
     { name = "joblib" },
     { name = "pandas" },
     { name = "polars" },
+    { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e0/9c/db0183e3d3f0da359f49e177c424784d6067d56c029d10aa01655cf737db/isp_trace_parser-2.0.2.tar.gz", hash = "sha256:7b4c863b66d87ea658e31fbb3474f81dd28edb39adb8d4b7fe3ab7882097918e", size = 57856 }
+sdist = { url = "https://files.pythonhosted.org/packages/96/6a/7ceffb77448a7115bfdffe34fc4e70630dab2f09eda88d0c2c370048eb1c/isp_trace_parser-2.0.3.tar.gz", hash = "sha256:cfe3b6b2243c2302a5393a7797c75d91b74b5655b8b947af782860a4e48a9e96", size = 57882 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/e5/478358761c77a2ead9a3b362c751d933f199a49a6534e852ed729bcda718/isp_trace_parser-2.0.2-py3-none-any.whl", hash = "sha256:ea095c843e08bdb1c2aa68c08a3189854598da96befcca75028cc6a0bcdee56d", size = 53312 },
+    { url = "https://files.pythonhosted.org/packages/c0/63/598df55262660963716dfb131feb7925ebb89525e5355738c6739d51892a/isp_trace_parser-2.0.3-py3-none-any.whl", hash = "sha256:79b01f72370ee4408f0f0155a538047f6c76e4be373af2a32ad8fa260a844098", size = 53325 },
 ]
 
 [[package]]
@@ -1498,7 +1499,7 @@ wheels = [
 
 [[package]]
 name = "ispypsa"
-version = "0.1.0"
+version = "0.1.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "doit" },
@@ -1552,8 +1553,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
-    { name = "isp-trace-parser", specifier = ">=1.0.3" },
-    { name = "isp-trace-parser", specifier = ">=2.0.2" },
+    { name = "isp-trace-parser", specifier = ">=2.0.3" },
     { name = "isp-workbook-parser", specifier = ">=2.6.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "mkdocs", specifier = ">=1.6.1" },

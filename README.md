@@ -6,13 +6,13 @@
 
 An open-source capacity expansion modelling tool based on the methodology and assumptions used by the Australian Energy Market Operator (AEMO) to produce their Integrated System Plan (ISP). Built on [PyPSA](https://github.com/pypsa/pypsa).
 
-**This README is a quick reference.** For detailed instructions, tutorials, and API documentation, see the [full documentation](docs/) (hosted docs coming soon):
+**This README is a quick reference.** For detailed instructions, tutorials, and API documentation, see the [full documentation](https://open-isp.github.io/ISPyPSA/):
 
-- [Getting Started](docs/getting_started.md) - Installation and first model run
-- [Configuration Reference](docs/config.md) - All configuration options
-- [CLI Guide](docs/cli.md) - Command line interface details
-- [API Reference](docs/api.md) - Python API for custom workflows
-- [Workflow Overview](docs/workflow.md) - How the modelling pipeline works
+- [Getting Started](https://open-isp.github.io/ISPyPSA/getting_started/) - Installation and first model run
+- [Configuration Reference](https://open-isp.github.io/ISPyPSA/config/) - All configuration options
+- [CLI Guide](https://open-isp.github.io/ISPyPSA/cli/) - Command line interface details
+- [API Reference](https://open-isp.github.io/ISPyPSA/api/) - Python API for custom workflows
+- [Workflow Overview](https://open-isp.github.io/ISPyPSA/workflow/) - How the modelling pipeline works
 
 ## Installation
 
