@@ -1,6 +1,6 @@
 [project]
 name = "ISPyPSA"
-version = "0.1.0beta1"
+version = "0.1.1beta1"
 description = "An open-source capacity expansion model based on the methodology and datasets used by the Australian Energy Market Operator (AEMO) in their Integrated System Plan (ISP)."
 authors = [
     { name = "prakaa", email = "abiprakash007@gmail.com" },
