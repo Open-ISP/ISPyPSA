@@ -180,5 +180,10 @@ def save_plots(charts: dict[Path, dict], base_path: Path) -> None:
         csv_path = html_path.with_suffix(".csv")
         content["data"].to_csv(csv_path, index=False)
 
-        # Save the plot (HTML)
-        plot.write_html(html_path)
+        # Save the plot (HTML) with responsive sizing
+        plot.write_html(
+            html_path,
+            full_html=True,
+            include_plotlyjs=True,
+            config={"responsive": True},
+        )

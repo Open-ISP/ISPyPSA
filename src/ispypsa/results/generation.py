@@ -5,20 +5,24 @@ import pypsa
 
 
 def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
-    """Extract generator dispatch data from PyPSA network.
+    """Extract generator and storage dispatch data from PyPSA network.
+
+    Combines generator and storage unit dispatch into a single DataFrame.
+    For storage units, positive dispatch_mw means discharging (generating power),
+    negative means charging (consuming power).
 
     Args:
         network: PyPSA network with solved optimization results
 
     Returns:
         DataFrame with columns:
-            - generator: Name of the generator
-            - node: Bus/sub-region where generator is located
-            - fuel_type: Technology type (Solar, Wind, Gas, etc.)
+            - generator: Name of the generator or storage unit
+            - node: Bus/sub-region where generator/storage is located
+            - fuel_type: Technology type (Solar, Wind, Gas, Battery, etc.)
             - technology_type: ISP technology classification
             - investment_period: Investment period/year
             - timestep: Datetime of dispatch
-            - dispatch_mw: Power output in MW
+            - dispatch_mw: Power output in MW (negative for storage charging)
     """
     # Get generator static data
     generators = network.generators[["bus", "carrier", "isp_technology_type"]].copy()
@@ -46,48 +50,117 @@ def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
         }
     )
 
+    # Extract storage dispatch and combine
+    storage_dispatch = _extract_storage_dispatch(network)
+
     # Reorder columns
-    dispatch_long = dispatch_long[
-        [
-            "generator",
-            "node",
-            "fuel_type",
-            "technology_type",
-            "investment_period",
-            "timestep",
-            "dispatch_mw",
-        ]
+    cols = [
+        "generator",
+        "node",
+        "fuel_type",
+        "technology_type",
+        "investment_period",
+        "timestep",
+        "dispatch_mw",
+    ]
+    dispatch_long = dispatch_long[cols]
+
+    if not storage_dispatch.empty:
+        results = pd.concat([dispatch_long, storage_dispatch[cols]], ignore_index=True)
+    else:
+        results = dispatch_long
+
+    return results
+
+
+def _extract_storage_dispatch(network: pypsa.Network) -> pd.DataFrame:
+    """Extract storage unit dispatch data from PyPSA network.
+
+    Args:
+        network: PyPSA network with solved optimization results
+
+    Returns:
+        DataFrame with columns matching generator dispatch:
+            - generator: Name of the storage unit
+            - node: Bus/sub-region where storage is located
+            - fuel_type: Carrier (typically "Battery")
+            - technology_type: Set to "Battery Storage"
+            - investment_period: Investment period/year
+            - timestep: Datetime of dispatch
+            - dispatch_mw: Power in MW (positive = discharging, negative = charging)
+    """
+    if network.storage_units.empty or network.storage_units_t.p.empty:
+        return pd.DataFrame()
+
+    # Get storage static data
+    storage_units = network.storage_units[["bus", "carrier"]].copy()
+
+    # Get dispatch time series
+    storage_dispatch_t = network.storage_units_t.p.copy()
+
+    # Reshape dispatch data from wide to long format
+    storage_dispatch_long = storage_dispatch_t.stack().reset_index()
+    storage_dispatch_long.columns = [
+        "period",
+        "timestep",
+        "storage_unit_name",
+        "dispatch_mw",
     ]
 
-    return dispatch_long
+    # Merge with storage static data
+    storage_dispatch_long = storage_dispatch_long.merge(
+        storage_units, left_on="storage_unit_name", right_index=True, how="inner"
+    )
+
+    # Rename columns to match generator format
+    storage_dispatch_long = storage_dispatch_long.rename(
+        columns={
+            "storage_unit_name": "generator",
+            "bus": "node",
+            "carrier": "fuel_type",
+            "period": "investment_period",
+        }
+    )
+
+    # Set technology_type to "Battery Storage"
+    storage_dispatch_long["technology_type"] = "Battery Storage"
+
+    return storage_dispatch_long
 
 
 def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame:
-    """Extract generation expansion results from PyPSA network.
+    """Extract generation and storage expansion results from PyPSA network.
+
+    Combines generator and storage unit capacity data into a single DataFrame.
 
     Args:
         network: PyPSA network with solved optimization results
 
     Returns:
         DataFrame with columns:
-            - generator: Name of the generator
+            - generator: Name of the generator or storage unit
             - fuel_type: Fuel type (carrier)
             - technology_type: ISP technology classification
-            - node: Bus/sub-region where generator is located
+            - node: Bus/sub-region where generator/storage is located
             - capacity_mw: Optimized capacity in MW
             - investment_period: Build year
-            - closure_year: Year when generator closes (build_year + lifetime)
+            - closure_year: Year when generator/storage closes (build_year + lifetime)
     """
-    results = network.generators.copy()
+    # Extract generator results
+    generator_results = network.generators.copy()
 
     # Filter out constraint dummy generators
-    results = results[results["bus"] != "bus_for_custom_constraint_gens"]
+    generator_results = generator_results[
+        generator_results["bus"] != "bus_for_custom_constraint_gens"
+    ]
 
     # Calculate closure_year
-    results["closure_year"] = results["build_year"] + results["lifetime"]
+    generator_results["closure_year"] = (
+        generator_results["build_year"] + generator_results["lifetime"]
+    )
 
     # Rename columns
-    results = results.rename(
+    generator_results = generator_results.rename(
         columns={
             "carrier": "fuel_type",
             "isp_technology_type": "technology_type",
@@ -98,9 +171,14 @@ def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame
     )
 
     # Reset index to get generator name as column
-    results = results.reset_index().rename(columns={"Generator": "generator"})
+    generator_results = generator_results.reset_index().rename(
+        columns={"Generator": "generator"}
+    )
 
-    # Select and order columns
+    # Extract storage unit results
+    storage_results = _extract_storage_expansion_results(network)
+
+    # Combine generator and storage results
     cols = [
         "generator",
         "fuel_type",
@@ -110,9 +188,64 @@ def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame
         "investment_period",
         "closure_year",
     ]
-    results = results[cols]
+
+    generator_results = generator_results[cols]
+
+    if not storage_results.empty:
+        results = pd.concat(
+            [generator_results, storage_results[cols]], ignore_index=True
+        )
+    else:
+        results = generator_results
 
     return results
+
+
+def _extract_storage_expansion_results(network: pypsa.Network) -> pd.DataFrame:
+    """Extract storage unit expansion results from PyPSA network.
+
+    Args:
+        network: PyPSA network with solved optimization results
+
+    Returns:
+        DataFrame with columns matching generator expansion results:
+            - generator: Name of the storage unit
+            - fuel_type: Fuel type (carrier - typically "Battery")
+            - technology_type: Set to "Battery Storage"
+            - node: Bus/sub-region where storage is located
+            - capacity_mw: Optimized capacity in MW (p_nom_opt)
+            - investment_period: Build year
+            - closure_year: Year when storage closes (build_year + lifetime)
+    """
+    if network.storage_units.empty:
+        return pd.DataFrame()
+
+    storage_results = network.storage_units.copy()
+
+    # Calculate closure_year
+    storage_results["closure_year"] = (
+        storage_results["build_year"] + storage_results["lifetime"]
+    )
+
+    # Rename columns to match generator format
+    storage_results = storage_results.rename(
+        columns={
+            "carrier": "fuel_type",
+            "bus": "node",
+            "p_nom_opt": "capacity_mw",
+            "build_year": "investment_period",
+        }
+    )
+
+    # Set technology_type to "Battery Storage" since storage units don't have isp_technology_type
+    storage_results["technology_type"] = "Battery Storage"
+
+    # Reset index to get storage unit name as column (named "generator" for consistency)
+    storage_results = storage_results.reset_index().rename(
+        columns={"StorageUnit": "generator"}
+    )
+
+    return storage_results
 
 
 def extract_demand(network: pypsa.Network) -> pd.DataFrame:
