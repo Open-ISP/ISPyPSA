@@ -65,9 +65,6 @@ dev-dependencies = [
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/ispypsa"]
-
 [tool.pytest.ini_options]
 # path to tests for pytest
 testpaths = ["src", "tests"]
@@ -87,8 +84,27 @@ select = [
     "I",
 ]
 
-[tool.setuptools.package-data]
-ispypsa = [
-    "data_fetch/manifests/**/*.txt",
-    "templater/manually_extracted_template_tables/**/*.txt",
+[tool.hatch.build]
+include = [
+    "src/ispypsa/**/*.py",
+    "src/ispypsa/data_fetch/manifests/**/*.txt",
+    "src/ispypsa/templater/manually_extracted_template_tables/**/*.csv",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ispypsa"]
+exclude = [
+    "tests/",
+    "docs/",
+    "**/__pycache__",
+    "*.pyc",
+]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "tests/",
+    "docs/",
+    ".github/",
+    "**/__pycache__",
+    "*.pyc",
 ]
