@@ -47,12 +47,22 @@ from ispypsa.translator import (
 
 config_path = get_var("config", None)
 
+DOIT_CONFIG = {
+    "default_tasks": [
+        "cache_required_iasr_workbook_tables",
+        "create_ispypsa_inputs",
+        "create_pypsa_friendly_inputs",
+        "create_and_run_capacity_expansion_model",
+        "create_and_run_operational_model",
+    ]
+}
+
 if config_path:
     config = load_config(Path(config_path))
 
     run_dir = Path(config.paths.run_directory) / config.paths.ispypsa_run_name
     run_dir.mkdir(parents=True, exist_ok=True)
-    DOIT_CONFIG = {"dep_file": run_dir / "doit.db"}
+    DOIT_CONFIG.update({"dep_file": run_dir / "doit.db"})
 
 else:
     config = None

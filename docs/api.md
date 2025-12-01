@@ -56,9 +56,9 @@ Python script.
 
 ::: ispypsa.pypsa_build.build_pypsa_network
 
-::: ispypsa.pypas_build.update_network_timeseries
+::: ispypsa.pypsa_build.update_network_timeseries
 
-::: ispypsa.pypas_build.save_pypsa_network
+::: ispypsa.pypsa_build.save_pypsa_network
 
 ## Tabular Results Extraction
 

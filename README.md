@@ -28,7 +28,7 @@ uv add ispypsa
 
 ## Quick Start
 
-1. Download the [example config](docs/downloads/ispypsa_config.yaml) and edit paths for your environment
+1. Download the [example config](ispypsa_config.yaml) and edit paths for your environment
 2. Run:
 
 ```bash
