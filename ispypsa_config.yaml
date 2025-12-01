@@ -1,23 +1,21 @@
 # ===== Paths ==========================================================================
 
 paths:
-  # The path to the folder containing parsed demand, wind and solar traces.
-  # If set to ENV the path will be retrieved from the environment variable
-  # "PATH_TO_PARSED_TRACES"
-  parsed_traces_directory: ENV
-
-  # The path to the ISP workbook Excel file
-  workbook_path: "../isp-workbook-parser/workbooks/6.0/2024-isp-inputs-and-assumptions-workbook.xlsx"
-
-  # The path to the workbook table cache directory
-  parsed_workbook_cache: "ispypsa_runs/workbook_table_cache"
-
   # The run directory where all inputs and outputs will be stored
   run_directory: "ispypsa_runs"
 
   # The name of the ISPyPSA model run
   # This name is used to select the output folder within `ispypsa_runs`
-  ispypsa_run_name: overnight_build_nsw_2050
+  ispypsa_run_name: example_model_run
+
+  # The path to the folder containing parsed demand, wind and solar traces.
+  parsed_traces_directory: "data/trace_data"
+
+  # The path to the ISP workbook Excel file
+  workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
+
+  # The path to the workbook table cache directory
+  parsed_workbook_cache: "data/workbook_table_cache"
 
 
 # ===== Trace Data =====================================================================

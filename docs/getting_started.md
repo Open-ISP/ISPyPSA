@@ -69,22 +69,21 @@ pip install or a python package manager can install ISPyPSA
       # ===== Path configuration =============================================================
 
       paths:
+        # The run directory where all inputs and outputs will be stored
+        run_directory: "ispypsa_runs"
+
         # The name of the ISPyPSA model run
         # This name is used to select the output folder within `ispypsa_runs`
         ispypsa_run_name: example_model_run
 
-        # Base directory where trace data will be downloaded
-        # The download task will create isp_2024 subdirectory automatically
+        # The path to the folder containing parsed demand, wind and solar traces.
         parsed_traces_directory: "data/trace_data"
 
-        # Path where the ISP Excel workbook will be downloaded
+        # The path to the ISP workbook Excel file
         workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
 
         # The path to the workbook table cache directory
         parsed_workbook_cache: "data/workbook_table_cache"
-
-        # The run directory where all inputs and outputs will be stored
-        run_directory: "ispypsa_runs"
      ```
 
 !!! Important "Relative paths"
