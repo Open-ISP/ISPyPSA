@@ -1,10 +1,4 @@
-import logging
-from pathlib import Path
-
 import pandas as pd
-import requests
-import xmltodict
-from thefuzz import process
 
 from ispypsa.templater.mappings import _NEM_REGION_IDS, _NEM_SUB_REGION_IDS
 
@@ -12,37 +6,6 @@ from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
 )
-
-
-def _get_reference_node_locations(reference_nodes):
-    # request and merge in substation coordinates for reference nodes
-    substation_coordinates = _request_transmission_substation_coordinates()
-    if not substation_coordinates.empty:
-        reference_node_col = process.extractOne(
-            "reference_node", reference_nodes.columns
-        )[0]
-        matched_subs = _fuzzy_match_names(
-            reference_nodes[reference_node_col],
-            substation_coordinates.index,
-            "merging in substation coordinate data",
-            threshold=85,
-        )
-        reference_node_coordinates = pd.merge(
-            matched_subs,
-            substation_coordinates,
-            how="left",
-            left_on=reference_node_col,
-            right_index=True,
-        )
-        reference_nodes = pd.concat(
-            [
-                reference_nodes,
-                reference_node_coordinates["substation_latitude"],
-                reference_node_coordinates["substation_longitude"],
-            ],
-            axis=1,
-        )
-    return reference_nodes
 
 
 def _template_sub_regions(
@@ -54,8 +17,8 @@ def _template_sub_regions(
         sub_regional_reference_nodes: pd.DataFrame specifying the NEM subregional
             reference nodes.
         mapping_only: boolean, when doing single region or region modelling this input
-            is set to True so unnecessary information such sub_region_reference_node
-            are latitude and longitude are not returned.
+            is set to True so unnecessary information such as sub_region_reference_node
+            is not returned.
     Returns:
         `pd.DataFrame`: ISPyPSA sub-regional node template
 
@@ -85,7 +48,6 @@ def _template_sub_regions(
                 "sub_region_reference_node_voltage_kv",
             ]
         ]
-        sub_regions = _get_reference_node_locations(sub_regions)
     return sub_regions
 
 
@@ -122,7 +84,6 @@ def _template_regions(regional_reference_nodes: pd.DataFrame) -> pd.DataFrame:
             "regional_reference_node_voltage_kv",
         ]
     ]
-    regions = _get_reference_node_locations(regions)
     return regions
 
 
@@ -163,70 +124,6 @@ def _extract_voltage(data: pd.DataFrame, column: str):
         split_node_voltage[_snakecase_string(column + " Voltage (kV)")].astype(int)
     )
     return split_node_voltage
-
-
-def _request_transmission_substation_coordinates() -> pd.DataFrame:
-    """
-    Obtains transmission substation coordinates from a Web Feature Service (WFS)
-    source hosted as a dataset within the Australian Government's National Map:
-
-    https://www.nationalmap.gov.au/#share=s-403jqUldEkbj6CwWcPZHefSgYeA
-
-    The requested data is in Geography Markup Language (GML) format, which can be parsed
-    using the same tools that are used to parse XML.
-
-    Returns:
-        Substation names, latitude and longitude within a :class:`pandas.DataFrame`.
-        If request error is encountered or the HTTP status of the request is not OK,
-        then an empty DataFrame will be returned with a warning that network node data
-        will be templated without coordinate data
-
-    """
-    params = dict(
-        service="WFS",
-        version="2.0.0",
-        request="GetFeature",
-        typeNames="National_Electricity_Infrastructure:Electricity_Transmission_Substations",
-        maxFeatures=10000,
-    )
-    url = "https://services.ga.gov.au/gis/services/National_Electricity_Infrastructure/MapServer/WFSServer"
-    substation_coordinates = {}
-    try:
-        r = requests.get(url, params=params, timeout=60)
-        if r.status_code == 200:
-            data = xmltodict.parse(r.content)
-            features = data["wfs:FeatureCollection"]["wfs:member"]
-            for feature in features:
-                substation = feature["esri:Electricity_Transmission_Substations"]
-                name = substation.get("esri:SUBSTATION_NAME")
-                # The new format stores coordinates in X_COORDINATE and Y_COORDINATE fields
-                # These are in GDA2020 / MGA coordinates, but we also have SHAPE with gml:pos
-                if (
-                    "esri:SHAPE" in substation
-                    and "gml:Point" in substation["esri:SHAPE"]
-                ):
-                    coordinates = substation["esri:SHAPE"]["gml:Point"]["gml:pos"]
-                    lat, long = coordinates.split(" ")
-                    substation_coordinates[name] = {
-                        "substation_latitude": lat,
-                        "substation_longitude": long,
-                    }
-        else:
-            logging.warning(
-                f"Failed to fetch substation coordinates. HTTP Status code: {r.status_code}."
-            )
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error requesting substation coordinate data:\n{e}.")
-    if not substation_coordinates:
-        logging.warning(
-            "Could not get substation coordinate data. "
-            + "Network node data will be templated without coordinate data."
-        )
-    substation_coordinates = pd.DataFrame(substation_coordinates).T
-    substation_coordinates = substation_coordinates[
-        substation_coordinates.index.notna()
-    ]
-    return substation_coordinates
 
 
 def _capture_just_name(series: pd.Series) -> pd.DataFrame:
