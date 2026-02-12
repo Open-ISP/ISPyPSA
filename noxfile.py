@@ -2,7 +2,7 @@ import nox
 
 nox.options.default_venv_backend = "uv"
 
-PYTHON_VERSIONS = ["3.11", "3.12", "3.13", "3.14"]
+PYTHON_VERSIONS = ["3.11", "3.12", "3.13"]
 
 
 @nox.session(python=PYTHON_VERSIONS)
