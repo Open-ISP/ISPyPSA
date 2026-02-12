@@ -15,7 +15,6 @@ dependencies = [
     "xmltodict>=0.13.0",
     "thefuzz>=0.22.1",
     "pyarrow>=18.0.0",
-    "tables>=3.10.1",
     "isp-trace-parser>=2.0.3",
     "isp-workbook-parser>=2.6.0",
     "requests>=2.32.3",
@@ -26,7 +25,7 @@ dependencies = [
     "mkdocs-material>=9.6.18",
 ]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 
 [project.scripts]
 ispypsa = "ispypsa.cli.cli:main"
