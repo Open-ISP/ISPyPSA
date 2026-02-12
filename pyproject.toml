@@ -8,7 +8,7 @@ authors = [
     { name = "dylanjmcconnell", email = "dylan.mcconnell@unsw.edu.au" }
 ]
 dependencies = [
-    "pandas>=2.2.2",
+    "pandas>=2.2.2,<3.0.0",
     "pypsa==0.34.1",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",

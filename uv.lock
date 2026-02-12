@@ -1430,7 +1430,7 @@ requires-dist = [
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mkdocs-material", specifier = ">=9.6.18" },
-    { name = "pandas", specifier = ">=2.2.2" },
+    { name = "pandas", specifier = ">=2.2.2,<3.0.0" },
     { name = "plotly", specifier = ">=6.5.0" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pygal", specifier = ">=3.0.5" },
