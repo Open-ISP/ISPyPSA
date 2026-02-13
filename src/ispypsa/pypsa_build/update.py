@@ -70,6 +70,13 @@ def update_network_timeseries(
         [snapshots["investment_periods"], snapshots["snapshots"]]
     )
     network.snapshots = snapshots_as_indexes
+    # Workaround for pandas behavior where DataFrame.reindex() on a MultiIndex
+    # loses the MultiIndex.name attribute when old and new index values are
+    # identical (e.g. when capacity expansion and operational snapshots match).
+    # pypsa 1.0 requires snapshots.name == "snapshot" for its xarray-based
+    # optimization model builder.
+    if isinstance(network.snapshots, pd.MultiIndex) and network.snapshots.name is None:
+        network._snapshots_data.index.name = "snapshot"
     network.set_investment_periods(snapshots["investment_periods"].unique())
     _update_generators_availability_timeseries(
         network,
@@ -84,7 +91,7 @@ def update_network_timeseries(
 
     # The underlying linopy model needs to get built again here so that the new time
     # series data is used in the linopy model rather than the old data.
-    network.optimize.create_model()
+    network.optimize.create_model(multi_investment_periods=True)
 
     # As we rebuilt the linopy model now we need to re add custom constrains.
     _add_custom_constraints(
