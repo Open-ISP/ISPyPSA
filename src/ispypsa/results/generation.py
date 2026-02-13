@@ -172,7 +172,7 @@ def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame
 
     # Reset index to get generator name as column
     generator_results = generator_results.reset_index().rename(
-        columns={"Generator": "generator"}
+        columns={"name": "generator"}
     )
 
     # Extract storage unit results
@@ -242,7 +242,7 @@ def _extract_storage_expansion_results(network: pypsa.Network) -> pd.DataFrame:
 
     # Reset index to get storage unit name as column (named "generator" for consistency)
     storage_results = storage_results.reset_index().rename(
-        columns={"StorageUnit": "generator"}
+        columns={"name": "generator"}
     )
 
     return storage_results

@@ -9,7 +9,7 @@ authors = [
 ]
 dependencies = [
     "pandas>=2.2.2,<3.0.0",
-    "pypsa==0.34.1",
+    "pypsa>=1.0.0,<2.0.0",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
