@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   -   id: trailing-whitespace
   -   id: end-of-file-fixer
@@ -11,7 +11,7 @@ repos:
       exclude: ^uv.lock$|tests/trace_data/
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.9.4
+  rev: v0.15.0
   hooks:
     # Run the linter.
     - id: ruff
