@@ -172,6 +172,7 @@ ispypsa_runs/**/*.parquet
 ispypsa_runs/**/*.nc
 ispypsa_runs/**/*.yaml
 *.html
+data/*
 
 
 # ignore doit database
