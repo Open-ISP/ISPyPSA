@@ -38,8 +38,7 @@ def update_network_timeseries(
 
         Get the pypsa.Network we want to update the time series data in.
 
-        >>> network = pypsa.Network()
-        >>> network.import_from_netcdf("existing_network.nc")
+        >>> network = pypsa.Network("existing_network.nc")
 
         Create pd.Dataframe defining the set of snapshot (time intervals) to be used.
 
