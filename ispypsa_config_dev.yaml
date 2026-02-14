@@ -1,0 +1,153 @@
+# ===== Paths ==========================================================================
+
+paths:
+  # The run directory where all inputs and outputs will be stored
+  run_directory: "ispypsa_runs"
+
+  # The name of the ISPyPSA model run
+  # This name is used to select the output folder within `ispypsa_runs`
+  ispypsa_run_name: example_model_run
+
+  # The path to the folder containing parsed demand, wind and solar traces.
+  parsed_traces_directory: ENV
+
+  # The path to the ISP workbook Excel file
+  workbook_path: "data/2024-isp-inputs-and-assumptions-workbook.xlsx"
+
+  # The path to the workbook table cache directory
+  parsed_workbook_cache: "data/workbook_table_cache"
+
+
+# ===== Trace Data =====================================================================
+
+trace_data:
+  # The type of trace dataset to download when using CLI download tasks
+  # Options: "example" (smaller, for testing) or "full" (complete dataset)
+  # Default: "example"
+  dataset_type: example
+
+  # The year of trace dataset to download when using CLI download tasks
+  # Currently only 2024 is supported
+  # Default: 2024
+  dataset_year: 2024
+
+
+# ===== ISPyPSA templating =============================================================
+
+# The version of IASR workbook that the template inputs are generated from.
+iasr_workbook_version: "6.0"
+
+# The ISP scenario for which to generate ISPyPSA inputs
+scenario: Step Change
+
+
+# ===== Financial/Economic =============================================================
+
+# Weighted average cost of capital for annuitisation of generation and transmission
+# costs, as a fraction, i.e. 0.07 is 7%.
+wacc: 0.07
+# Discount rate applied to model objective function, as a fraction, i.e. 0.07 is 7%.
+discount_rate: 0.05
+
+
+# ===== Unserved energy ================================================================
+
+unserved_energy:
+  # Cost of unserved energy in $/MWh. Set to 'None' to disable unserved energy generators.
+  cost: 10000.0
+  # Maximum capacity of each unserved energy generator in MW. Defaults to 1e5 (100,000 MW).
+  max_per_node: 100000.0
+
+
+# ===== Regional scope =================================================================
+
+# Filter the model by NEM regions or ISP sub regions.
+filter_by_nem_regions: [NSW]
+# filter_by_isp_sub_regions: [NNSW, CNSW]
+
+
+# ===== Network ========================================================================
+
+network:
+  # Does the model consider the expansion of sub-region to sub-region transmission
+  # capacity
+  transmission_expansion: True
+  # Does the model consider the expansion of renewable energy zone transmission
+  # capacity
+  rez_transmission_expansion: True
+  # Years to annuitise transmission project capital costs over.
+  annuitisation_lifetime: 30
+  nodes:
+    # The regional granularity of the nodes in the modelled network (only sub_regions is implemented)
+    regional_granularity: sub_regions
+    # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
+    # Only discrete_nodes implemented
+    rezs: discrete_nodes
+  # Line capacity limit for rez to node connections that have their limit's modelled
+  # through custom constraint (MW).
+  rez_to_sub_region_transmission_default_limit: 1e5
+
+
+# ===== Temporal =======================================================================
+
+temporal:
+  year_type: fy
+  range:
+    # Model begin at the start of the start year. E.g. the first time interval for a
+    # financial year model starting in 2025 would be 2024-07-01 00:30:00.
+    start_year: 2050
+    # Model ends at the end of the start year. E.g. the last time interval for a
+    # financial year model ending in 2028 would be 2028-06-01 23:30:00.
+    end_year: 2050
+  capacity_expansion:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    # List of investment period start years. An investment period runs from the beginning
+    # of the year (financial or calendar depending on the config) until the next the
+    # period begins.
+    investment_periods: [2050]
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+
+      representative_weeks: ~
+
+      # Named representative weeks based on demand characteristics
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
+      #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
+      #     residual-minimum-demand, peak-consumption, residual-peak-consumption
+      named_representative_weeks: [residual-peak-demand]
+
+  operational:
+    resolution_min: 30
+    reference_year_cycle: [2018]
+    horizon: 336
+    overlap: 48
+    aggregation:
+      # Representative weeks to use instead of full yearly temporal representation.
+      # Options:
+      #    ~ (None): Full yearly temporal representation is used or another aggregation.
+      #   list[int]: a list of integers specifying weeks of year to use as representative. Weeks of year are defined as
+      #   full weeks (Monday-Sunday) falling within the year. For example, if the list is "[1]" the model will only use the
+      #   first full week of each modelled year.
+      representative_weeks: ~
+
+      # Named representative weeks based on demand characteristics
+      #   ~ (None): Full yearly temporal representation is used or another aggregation.
+      #   list[str]: peak-demand, residual-peak-demand, minimum-demand,
+      #     residual-minimum-demand, peak-consumption, residual-peak-consumption
+      named_representative_weeks: [residual-peak-demand, peak-consumption, residual-minimum-demand]
+
+
+# ===== Solver =======================================================================
+
+# External solver to use
+solver: highs
+
+
+# ===== Plotting =====================================================================
+create_plots: True
