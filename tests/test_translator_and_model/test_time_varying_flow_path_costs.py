@@ -209,9 +209,9 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
     )
 
     # Check that nominal link capacities are as expected.
-    links = network.links.reset_index().loc[:, ["Link", "p_nom_opt"]]
+    links = network.links.reset_index().loc[:, ["name", "p_nom_opt"]]
     expected_links = """
-    Link,          p_nom_opt
+    name,          p_nom_opt
     A-B_existing,       50.0
     A-B_exp_2025,        0.0
     A-B_exp_2026,      150.0
