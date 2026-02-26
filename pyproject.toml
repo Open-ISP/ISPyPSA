@@ -9,7 +9,7 @@ authors = [
 ]
 dependencies = [
     "pandas>=2.2.2,<3.0.0",
-    "pypsa==0.34.1",
+    "pypsa>=1.0.0,<2.0.0",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
@@ -24,9 +24,10 @@ dependencies = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.18",
     "numpy>=2.0.0",
+    "shapely>=2.1.0",
 ]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 
 [project.scripts]
 ispypsa = "ispypsa.cli.cli:main"
