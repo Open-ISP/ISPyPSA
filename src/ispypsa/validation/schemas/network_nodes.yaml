@@ -1,0 +1,31 @@
+table: network_nodes
+required: true
+unique:
+  - [node_id]
+description: >
+  Unified node table representing all spatial entities in the network model:
+  NEM subregions, NEM regions, and renewable energy zones (REZs).
+  All table mappings use node_id as the primary key.
+  Subregion and region nodes are for spatial rollups and results formatting only.
+  Required — the model cannot run without nodes defined.
+columns:
+  node_id:
+    type: string
+    required: true
+    description: Unique identifier for the node.
+  node_type:
+    type: string
+    required: true
+    allowed_values: [subregion, region, rez]
+    description: Type of spatial entity.
+  region_id:
+    type: string
+    required: true
+    allowed_values: [QLD, NSW, VIC, SA, TAS]
+    description: NEM region the node belongs to.
+  subregion_id:
+    type: string
+    required: true
+    description: >
+      ISP sub-region the node belongs to.
+      For subregion nodes, equals node_id.

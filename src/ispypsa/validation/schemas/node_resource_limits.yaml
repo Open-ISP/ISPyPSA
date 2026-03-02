@@ -1,0 +1,47 @@
+table: node_resource_limits
+required: false
+unique:
+  - [node_id, resource_type, limit_type]
+description: >
+  Resource and land use limits for nodes in the network model.
+  Each row represents a limit on a specific resource type within a node.
+  Nodes with no rows in this table have no resource limits applied.
+  If resource_limit_penalty is NaN, no violation is allowed (hard cap).
+  If resource_limit_penalty is 0.0, there is effectively no limit — generation
+  can exceed the limit at zero cost.
+  If resource_limit_penalty is a positive value, the translator creates dummy
+  penalty generators to allow relaxation at that annualised cost in $/MW.
+  If this table is absent, the model is constructed without resource limits.
+columns:
+  node_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_nodes
+      column: node_id
+    description: Node identifier.
+  resource_type:
+    type: string
+    required: true
+    allowed_values: [wind_high, wind_medium, wind_offshore_fixed, wind_offshore_floating, solar, wind]
+    description: Resource type the limit applies to.
+  limit_type:
+    type: string
+    required: true
+    allowed_values: [generation, land_use]
+    description: >
+      Necessary to disambiguate resource_type values that appear in both
+      generation and land_use contexts (e.g. solar).
+  limit:
+    type: float
+    required: true
+    description: Limit value in MW.
+  resource_limit_penalty:
+    type: float
+    required: false
+    description: >
+      Annualised penalty in $/MW applied if a limit is exceeded.
+      NaN means no violation is allowed (hard cap).
+      0.0 means there is effectively no limit — generation can exceed the
+      limit at zero cost.
+      If this column is absent, all limits are treated as hard caps.

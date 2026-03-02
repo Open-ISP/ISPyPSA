@@ -1,0 +1,46 @@
+table: network_transmission_path_limits
+required: false
+custom_validation:
+  - name: no_duplicate_path_direction_timeslice
+    description: >
+      No two rows may have the same path_id, direction, and timeslice value.
+      For NaN timeslice rows, at most one row is permitted per path_id and
+      direction combination.
+description: >
+  Static transmission capacity limits for each path by direction and timeslice.
+  Sourced from flow_path_transfer_capability and interconnector_transfer_capability
+  in the IASR workbook.
+  For REZ connections that are constraint-modelled rather than physically limited,
+  capacity is NaN — the translator assigns a sufficiently large default capacity
+  for these rows.
+  If timeslice is absent, capacity is treated as a static limit applying to all
+  conditions.
+  If this table is absent, no transmission capacity limits are enforced.
+columns:
+  path_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_transmission_paths
+      column: path_id
+    description: Transmission path identifier.
+  direction:
+    type: string
+    required: true
+    allowed_values: [forward, reverse]
+    description: Power flow direction relative to node_from and node_to.
+  timeslice:
+    type: string
+    required: false
+    allowed_values_from:
+      table: timeslices
+      column: timeslice_id
+    description: >
+      Demand condition the limit applies to.
+      If absent, capacity is treated as a static limit applying to all conditions.
+  capacity:
+    type: float
+    required: false
+    description: >
+      Transfer capability approximation in MW.
+      NaN indicates a constraint-modelled path with no explicit physical limit.
