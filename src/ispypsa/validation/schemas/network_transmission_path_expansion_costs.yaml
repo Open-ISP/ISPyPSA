@@ -1,0 +1,26 @@
+table: network_transmission_path_expansion_costs
+required: false
+unique:
+  - [expansion_id, year]
+description: >
+  Time-varying annualised expansion costs for network elements, covering both
+  physical transmission paths and group constraints.
+  Merges flow path and REZ transmission expansion costs into a single long-format
+  table.
+  If this table is absent, network expansion is treated as free.
+columns:
+  expansion_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_expansion_options
+      column: expansion_id
+    description: Identifier for the expandable network element.
+  year:
+    type: integer
+    required: true
+    description: Financial year the cost applies to.
+  cost:
+    type: float
+    required: true
+    description: Annualised expansion cost in $/MW.
