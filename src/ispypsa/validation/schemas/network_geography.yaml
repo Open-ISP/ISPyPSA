@@ -5,10 +5,8 @@ unique:
 description: >
   Unified table of all spatial entities in the network model:
   NEM subregions, NEM regions, and renewable energy zones (REZs).
-  All table mappings use geo_id as the primary key.
   Subregion and region entries are for spatial rollups and results formatting
   only.
-  Required — the model cannot run without geographies defined.
 columns:
   geo_id:
     type: string

@@ -6,11 +6,6 @@ description: >
   Resource and land use limits for geographies in the network model.
   Each row represents a limit on a specific resource type within a geography.
   Geographies with no rows in this table have no resource limits applied.
-  If resource_limit_penalty is NaN, no violation is allowed (hard cap).
-  If resource_limit_penalty is 0.0, there is effectively no limit — generation
-  can exceed the limit at zero cost.
-  If resource_limit_penalty is a positive value, the translator creates dummy
-  penalty generators to allow relaxation at that annualised cost in $/MW.
   If this table is absent, the model is constructed without resource limits.
 columns:
   geo_id:
@@ -35,12 +30,14 @@ columns:
   limit:
     type: float
     required: true
-    description: Limit value in MW.
+    units: MW
+    description: Limit value.
   resource_limit_penalty:
     type: float
     required: false
+    units: $/MW
     description: >
-      Annualised penalty in $/MW applied if a limit is exceeded.
+      Annualised penalty applied if a limit is exceeded.
       NaN means no violation is allowed (hard cap).
       0.0 means there is effectively no limit — generation can exceed the
       limit at zero cost.

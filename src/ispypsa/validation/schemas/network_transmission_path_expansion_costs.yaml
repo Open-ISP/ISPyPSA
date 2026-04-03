@@ -23,4 +23,5 @@ columns:
   cost:
     type: float
     required: true
-    description: Annualised expansion cost in $/MW.
+    units: $/MW
+    description: Annualised expansion cost.

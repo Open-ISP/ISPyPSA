@@ -6,9 +6,6 @@ description: >
   Defines the selected expansion option and allowed capacity increase for
   expandable network elements. Covers both physical transmission paths and
   group constraints that can be relaxed through expansion.
-  expansion_id maps to either a path_id in network_transmission_paths or a
-  constraint_id in constraints_rhs.
-  If this table is absent, no network expansion is modelled.
 columns:
   expansion_id:
     type: string
@@ -25,7 +22,8 @@ columns:
   allowed_expansion:
     type: float
     required: true
-    description: Capacity increase in MW provided by the selected expansion option.
+    units: MW
+    description: Capacity increase provided by the selected expansion option.
   expansion_option:
     type: string
     required: false
