@@ -1,11 +1,11 @@
-table: node_resource_limits
+table: resource_limits
 required: false
 unique:
-  - [node_id, resource_type, limit_type]
+  - [geo_id, resource_type, limit_type]
 description: >
-  Resource and land use limits for nodes in the network model.
-  Each row represents a limit on a specific resource type within a node.
-  Nodes with no rows in this table have no resource limits applied.
+  Resource and land use limits for geographies in the network model.
+  Each row represents a limit on a specific resource type within a geography.
+  Geographies with no rows in this table have no resource limits applied.
   If resource_limit_penalty is NaN, no violation is allowed (hard cap).
   If resource_limit_penalty is 0.0, there is effectively no limit — generation
   can exceed the limit at zero cost.
@@ -13,13 +13,13 @@ description: >
   penalty generators to allow relaxation at that annualised cost in $/MW.
   If this table is absent, the model is constructed without resource limits.
 columns:
-  node_id:
+  geo_id:
     type: string
     required: true
     allowed_values_from:
-      table: network_nodes
-      column: node_id
-    description: Node identifier.
+      table: network_geography
+      column: geo_id
+    description: Geography identifier.
   resource_type:
     type: string
     required: true

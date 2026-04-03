@@ -3,29 +3,29 @@ required: false
 unique:
   - [path_id]
 description: >
-  Transmission paths connecting nodes in the network model, including
+  Transmission paths connecting geographies in the network model, including
   inter-subregional flow paths, regional interconnectors, and REZ-to-subregion
   connections. If absent, the model is constructed with no transmission paths.
-  Nodes with no connecting paths are electrically isolated.
+  Geographies with no connecting paths are electrically isolated.
 columns:
   path_id:
     type: string
     required: true
-    description: Unique identifier for the path, formatted as node_from-node_to.
-  node_from:
+    description: Unique identifier for the path, formatted as geo_from-geo_to.
+  geo_from:
     type: string
     required: true
     allowed_values_from:
-      table: network_nodes
-      column: node_id
-    description: Origin node. Defines the forward flow direction.
-  node_to:
+      table: network_geography
+      column: geo_id
+    description: Origin geography. Defines the forward flow direction.
+  geo_to:
     type: string
     required: true
     allowed_values_from:
-      table: network_nodes
-      column: node_id
-    description: Destination node. Defines the forward flow direction.
+      table: network_geography
+      column: geo_id
+    description: Destination geography. Defines the forward flow direction.
   carrier:
     type: string
     required: true
