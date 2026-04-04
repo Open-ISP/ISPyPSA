@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.templater.dynamic_generator_properties import (
     _template_generator_dynamic_properties,
 )
@@ -16,6 +17,7 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
+from ispypsa.templater.geography import _template_network_geography
 from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
@@ -123,6 +125,14 @@ def create_ispypsa_inputs_template(
         raise ValueError(
             "Cannot specify both filter_to_nem_regions and filter_to_isp_sub_regions"
         )
+
+    if FEATURE_FLAGS["use_new_table_format"]:
+        template = {}
+        template["network_geography"] = _template_network_geography(
+            iasr_tables["sub_regional_reference_nodes"],
+            iasr_tables["renewable_energy_zones"],
+        )
+        return template
 
     template = {}
 
