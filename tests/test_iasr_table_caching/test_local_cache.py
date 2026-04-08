@@ -24,3 +24,5 @@ def test_build_required_tables_old_format():
     assert "battery_properties" in result
     assert "vic_renewable_target_trajectory" in result
     assert "build_costs_current_policies" in result
+    assert "expected_closure_years" in result
+    assert "maximum_capacity_existing_generators" in result
