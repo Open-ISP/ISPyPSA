@@ -87,12 +87,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         Q1,   Far North QLD,      QLD,         NQ
         N3,   Central-West Orana, NSW,         CNSW
     """)
-    expected = csv_str_to_df("""
-        geo_id,  geo_type,   region_id,  subregion_id
-        NQ,      subregion,  QLD,        NQ
-        CNSW,    subregion,  NSW,        CNSW
-        Q1,      rez,        QLD,        NQ
-        N3,      rez,        NSW,        CNSW
+    flow_path_transfer_capability = csv_str_to_df("""
+        Flow Paths
+        CQ-NQ
     """)
 
     with patch(
@@ -105,14 +102,34 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             iasr_tables={
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
+                "flow_path_transfer_capability": flow_path_transfer_capability,
             },
             manually_extracted_tables={},
         )
 
-    assert list(result.keys()) == ["network_geography"]
+    expected_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        NQ,      subregion,  QLD,        NQ
+        CNSW,    subregion,  NSW,        CNSW
+        Q1,      rez,        QLD,        NQ
+        N3,      rez,        NSW,        CNSW
+    """)
     pd.testing.assert_frame_equal(
         result["network_geography"].reset_index(drop=True),
-        expected.reset_index(drop=True),
+        expected_geography.reset_index(drop=True),
+    )
+
+    expected_paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+        CQ-NQ,    CQ,        NQ,      AC
+        Q1-NQ,    Q1,        NQ,      AC
+        N3-CNSW,  N3,        CNSW,    AC
+    """)
+    pd.testing.assert_frame_equal(
+        result["network_transmission_paths"]
+        .sort_values("path_id")
+        .reset_index(drop=True),
+        expected_paths.sort_values("path_id").reset_index(drop=True),
     )
 
 
