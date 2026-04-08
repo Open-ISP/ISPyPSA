@@ -127,6 +127,11 @@ def create_ispypsa_inputs_template(
         )
 
     if FEATURE_FLAGS["use_new_table_format"]:
+        if regional_granularity != "sub_regions":
+            raise NotImplementedError(
+                f"regional_granularity='{regional_granularity}' is not yet supported "
+                "in the new table format."
+            )
         template = {}
         template["network_geography"] = _template_network_geography(
             iasr_tables["sub_regional_reference_nodes"],
