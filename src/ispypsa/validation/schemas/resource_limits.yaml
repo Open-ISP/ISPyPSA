@@ -1,0 +1,44 @@
+table: resource_limits
+required: false
+unique:
+  - [geo_id, resource_type, limit_type]
+description: >
+  Resource and land use limits for geographies in the network model.
+  Each row represents a limit on a specific resource type within a geography.
+  Geographies with no rows in this table have no resource limits applied.
+  If this table is absent, the model is constructed without resource limits.
+columns:
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_geography
+      column: geo_id
+    description: Geography identifier.
+  resource_type:
+    type: string
+    required: true
+    allowed_values: [wind_high, wind_medium, wind_offshore_fixed, wind_offshore_floating, solar, wind]
+    description: Resource type the limit applies to.
+  limit_type:
+    type: string
+    required: true
+    allowed_values: [generation, land_use]
+    description: >
+      Necessary to disambiguate resource_type values that appear in both
+      generation and land_use contexts (e.g. solar).
+  limit:
+    type: float
+    required: true
+    units: MW
+    description: Limit value.
+  resource_limit_penalty:
+    type: float
+    required: false
+    units: $/MW
+    description: >
+      Annualised penalty applied if a limit is exceeded.
+      NaN means no violation is allowed (hard cap).
+      0.0 means there is effectively no limit — generation can exceed the
+      limit at zero cost.
+      If this column is absent, all limits are treated as hard caps.
