@@ -1,8 +1,5 @@
 import pandas as pd
 
-# NOTE: There is existing string cleanup functionality in helpers.py (e.g. _snakecase_string)
-# that may be reusable here. Revisit when stabilising path_id naming conventions.
-
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}
 
 
@@ -37,9 +34,9 @@ def _extract_flow_path_rows(
 def _parse_flow_path_topology(name_series: pd.Series) -> pd.DataFrame:
     parsed = name_series.str.strip().str.extract(
         # e.g. "NNSW-SQ (Terranora)" or "CNSW-SNW-NTH"
-        r"^(?P<geo_from>[A-Z]{2,4})"  # 2-4 letter code, e.g. "NNSW"
+        r"^(?P<geo_from>[A-Z]+)"  # uppercase code, e.g. "NNSW"
         r"\s*[-\u2013\u2014\u00ad]+\s*"  # dash/en-dash/em-dash separator
-        r"(?P<geo_to>[A-Z]{2,4})"  # 2-4 letter code, e.g. "SQ"
+        r"(?P<geo_to>[A-Z]+)"  # uppercase code, e.g. "SQ"
         r"\s*(?P<suffix>.*)"  # optional suffix, e.g. "(Terranora)" or "-NTH"
     )
     parsed["suffix"] = parsed["suffix"].apply(_clean_suffix)
