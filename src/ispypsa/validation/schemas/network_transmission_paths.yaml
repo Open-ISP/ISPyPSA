@@ -11,7 +11,10 @@ columns:
   path_id:
     type: string
     required: true
-    description: Unique identifier for the path, formatted as geo_from-geo_to.
+    description: >
+      Unique identifier for the path. Base format is geo_from-geo_to (e.g.
+      CQ-NQ). Parallel paths append a suffix after an underscore (e.g.
+      NNSW-SQ_Terranora, CNSW-SNW_NTH).
   geo_from:
     type: string
     required: true
