@@ -9,7 +9,11 @@ def test_build_required_tables_new_format():
         {"use_new_table_format": True},
     ):
         result = _build_required_tables()
-    assert result == ["sub_regional_reference_nodes", "renewable_energy_zones"]
+    assert result == [
+        "sub_regional_reference_nodes",
+        "renewable_energy_zones",
+        "flow_path_transfer_capability",
+    ]
 
 
 def test_build_required_tables_old_format():
