@@ -92,6 +92,7 @@ def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:
     """
     # Get link static data
     links = network.links.loc[:, ["bus0", "bus1", "isp_name"]].reset_index()
+    links = links.rename(columns={"name": "Link"})
 
     # Get flow time series (p0 = flow from bus0 to bus1)
     flow_t = network.links_t.p0.reset_index().rename(

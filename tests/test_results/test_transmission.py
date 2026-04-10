@@ -75,11 +75,11 @@ def test_extract_raw_link_flows(csv_str_to_df):
     # 1. Prepare Input Data
     # Link static data
     links_csv = """
-    Link,   bus0, bus1, isp_name
+    name,   bus0, bus1, isp_name
     Link_1, A,    B,    Link-AB
     Link_2, C,    D,    Link-CD
     """
-    links_df = csv_str_to_df(links_csv).set_index("Link")
+    links_df = csv_str_to_df(links_csv).set_index("name")
 
     # Flow data (p0) in time series format
     # Mocking PyPSA multi-period structure where index is MultiIndex (period, timestep)
@@ -131,11 +131,11 @@ def test_extract_transmission_flows(csv_str_to_df):
     # Two parallel links belonging to the same ISP path "Link-AB"
     # This tests the aggregation logic in extract_transmission_flows
     links_csv = """
-    Link,   bus0, bus1, isp_name
+    name,   bus0, bus1, isp_name
     Link_1, A,    B,    Link-AB
     Link_2, A,    B,    Link-AB
     """
-    links_df = csv_str_to_df(links_csv).set_index("Link")
+    links_df = csv_str_to_df(links_csv).set_index("name")
 
     iterables = [[2025], [0, 1]]
     index = pd.MultiIndex.from_product(iterables, names=["period", "timestep"])
