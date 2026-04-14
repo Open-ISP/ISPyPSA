@@ -1,0 +1,44 @@
+table: costs_new_entrant_build
+required: false
+custom_validation:
+  - name: conditional_required_build_costs
+    description: >
+      If new entrant generation or storage asset tables are present and non-empty,
+      build costs must also be provided for all technologies in those tables.
+unique:
+  - [technology, year]
+description: >
+  New entrant generation and storage unit build costs.
+
+  Contains upfront capital costs for new entrant technologies. For offshore wind,
+  build costs include connection costs if sourced from the IASR workbook.
+
+  Source tables:
+    - `build_costs`
+
+  Conditionally required: if new entrant generation or storage asset tables are
+  present and non-empty, build costs must be provided.
+columns:
+  technology:
+    type: string
+    required: true
+    description: >
+      Standardised technology name for the new entrant technology.
+
+      Should match technology values in `generators_new_entrant` or
+      `storage_new_entrant` tables.
+  year:
+    type: int
+    required: true
+    description: Financial year in which the build cost applies.
+  cost:
+    type: float
+    required: true
+    units: $/MW
+    description: >
+      Upfront capital cost to build the new entrant technology (AUD). Should be >= $0.0.
+
+      Does not include connection costs (except for offshore wind) or additional
+      costs for required REZ expansion, which are applied as penalties based on
+      build limits. Does not include locational cost factor scaling or first-of-a-kind
+      premium.

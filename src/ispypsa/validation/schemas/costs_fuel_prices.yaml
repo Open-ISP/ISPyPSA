@@ -1,0 +1,47 @@
+table: costs_fuel_prices
+required: false
+unique:
+  - [fuel_type, fuel_price_node, year]
+description: >
+  Fuel prices by year for generation and storage units.
+
+  Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
+
+  Source tables:
+    - `coal_fuel_price`
+    - `biomass_fuel_price`
+    - `gas_and_liquid_fuel_prices_consultant_scenario_mapping`
+    - `gas_prices_existing_generators`
+    - `gas_prices_new_entrants`
+    - `liquid_fuel_prices`
+    - `gpg_secondary_fuel_prices` # maybe
+    - `hydrogen_prices`
+    - `biomethane_prices`
+  The consultant scenario mapping table is needed to map between specified ISP
+  scenario names and the gas, liquid fuel, hydrogen and biomenthane price scenario
+  names. This is new in the 2026 ISP (IASR v7.5).
+
+  If absent: no dynamic marginal costs calculated. Requires later user input of
+  fixed or dynamic marginal cost.
+columns:
+  fuel_type:
+    type: string
+    required: true
+    description: Fuel type used by the generator or storage unit.
+  fuel_price_node:
+    type: string
+    required: true
+    description: >
+      Identifier mapping to specific assets or sets of new entrant assets.
+
+      For existing and planned generation/storage, maps to specific power stations.
+      For new entrants, maps to technology/location groups.
+  year:
+    type: int
+    required: true
+    description: Financial year for which the price applies.
+  price:
+    type: float
+    required: true
+    units: $/GJ
+    description: Fuel price in AUD per gigajoule.

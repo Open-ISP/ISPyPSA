@@ -1,0 +1,146 @@
+table: generators_existing_planned
+required: false
+unique:
+  - [name]
+optional_sets:
+  - [fuel_price_node, vom, heat_rate] # All required if dynamic marginal costs are to be calculated
+description: >
+  Existing and planned-build generator characteristic data by generating unit.
+
+  Summary data for all existing and planned-build (in ISP terminology, this includes
+  committed, anticipated and additional policy-supported) generators, with each row
+  containing information to represent a single generating unit.
+
+  Source IASR tables:
+    - `existing_committed_anticipated_additional_generator_summary`
+    - `renewable_energy_zones`
+    - `fixed_opex_existing_committed_anticipated_additional_generators`
+    - `variable_opex_existing_committed_anticipated_additional_generators`
+    - `heat_rates_existing_committed_anticipated_additional_generators`
+    - `maximum_capacity_existing_committed_anticipated_additional_generators`
+    - `expected_closure_years`
+    - `gpg_min_stable_level_existing_generators`
+    - `coal_minimum_stable_level`
+
+  If absent: a greenfield model will be run - no existing generators will be considered
+  and built in the model.
+columns:
+  name:
+    type: string
+    required: true
+    description: The name of the generating unit, e.g. DUID or full name. Must be unique.
+  power_station:
+    type: string
+    required: true
+    description: >
+      The name of the power station to which the generating unit belongs.
+
+      This should be the full proper name of the power station. In cases where only
+      one generating unit falls into a power station, this may have the same value
+      as the `name` column. This value is used to group units of generators in results
+      and charts, and map to station-level data, e.g. fuel costs.
+  technology:
+    type: string
+    required: true
+    description: >
+      The full proper name of the technology type as given in the IASR workbook.
+
+      Values in this column are used as 'canon' technology types across the model -
+      i.e. used to correct typos or map different spellings to a single canonical value.
+      This column is also used to group results by technology type, and maps directly to
+      the 'Retirement Costs' table in the IASR workbook (not currently implemented).
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_geography
+      column: geo_id
+    description: The geography identifier to which the generating unit is connected.
+  fuel_type:
+    type: string
+    required: true
+    description: >
+      The name of the type of fuel used by the generating unit.
+
+      This column is used to define the `carrier` for the generating unit in the
+      PyPSA model, and to map to fuel prices.
+  fuel_price_node:
+    type: string
+    required: false
+    description: >
+      The power station name or other identifier used to map fuel prices to the generator.
+
+      Note: for all power stations except for Kogan Gas, this should exactly match
+      the `power_station` column.
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  fom:
+    type: float
+    required: false
+    units: $/MW/year
+    description: >
+      Fixed operation and maintenance cost per unit of capacity per year.
+
+      All values should be in AUD and >= $0.0 if present. In the 2026 ISP for
+      existing and planned generating units, this value would be used to determine
+      retirement schedules based on a revenue sufficiency criterion; this is not
+      yet implemented here.
+
+      If absent: no change.
+  vom:
+    type: float
+    required: false
+    units: $/MWh
+    description: >
+      Variable operation and maintenance cost per unit of energy produced, not including fuel cost.
+
+      All values should be in AUD and >= $0.0 if present. These values are used to
+      calculate the short-run marginal cost of generation for a given unit.
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  heat_rate:
+    type: float
+    required: false
+    units: GJ/MWh
+    description: >
+      The heat rate of the generating unit, used to calculate the fuel cost per unit
+      of energy produced.
+
+      All values should be >= 0.0 if present. These values are used to
+      calculate the short-run marginal cost of generation for a given unit.
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  capacity:
+    type: float
+    required: true
+    units: MW
+    description: >
+      The nameplate capacity of the generating unit in MW.
+
+      All values should be > 0.0.
+  commissioning_date:
+    type: date
+    required: false
+    description: >
+      The full date on which the generating unit is expected to begin operation.
+
+      Date format: %d/%m/%Y
+
+      If absent: set to first date of the modelling horizon (assume operational from start).
+  closure_year:
+    type: int
+    required: false
+    description: >
+      The integer year in which the generating unit is expected to be retired.
+
+      If absent: assume the unit is not retired during the modelling horizon.
+  minimum_load:
+    type: float
+    required: false
+    units: MW
+    description: >
+      The minimum stable operational level of the generating unit in MW.
+
+      All values should be >= 0.0 if present.
+
+      If absent: assume no minimum operational load for the generating unit.
