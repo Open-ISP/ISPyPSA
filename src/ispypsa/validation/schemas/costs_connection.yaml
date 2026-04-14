@@ -1,0 +1,62 @@
+table: costs_connection
+required: false
+unique:
+  - [geo_id, technology, year]
+description: >
+  Connection costs and system security costs for new entrant generators and storage.
+
+  Contains additional costs for grid connection and, where applicable, system
+  strength requirements for inverter-based resources.
+
+  Source tables:
+    - `connection_cost_forecast_wind_and_solar`
+    - `connection_cost_forecast_other`
+
+  If absent: no additional connection or system security costs apply to new entrant
+  build costs.
+columns:
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_geography
+      column: geo_id
+    description: >
+      Network geography identifier where the connection cost applies.
+
+      If costs are given by region in source data, create separate rows for each
+      geo_id in the region with the same cost.
+  technology:
+    type: string
+    required: true
+    description: >
+      Standardised technology name mapping to new entrant technologies in
+      `generators_new_entrant` and/or `storage_new_entrant` tables.
+
+      If blank: treat as geo_id-level VRE connection cost.
+  year:
+    type: int
+    required: true
+    description: >
+      Financial year in which this cost applies.
+
+      Used to map to new entrant storage/generation by build year.
+  connection_cost:
+    type: float
+    required: true
+    units: $/MW
+    description: >
+      Additional cost for new build reflecting transmission infrastructure required
+      for grid connection (AUD). Must be >= $0.0.
+  system_strength_cost:
+    type: float
+    required: false
+    units: $/MW
+    description: >
+      Additional cost for inverter-based resources to meet efficient levels of
+      system strength (AUD). Must be >= $0.0 or blank (assumed $0.0).
+
+      Per IASR: "This cost is a blend of remediation with synchronous condenser
+      and grid forming batteries".
+
+      If absent: only `connection_cost` is added to new entrant build cost.

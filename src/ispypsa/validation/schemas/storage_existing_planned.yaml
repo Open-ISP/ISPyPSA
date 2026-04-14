@@ -1,0 +1,141 @@
+table: storage_existing_planned
+required: false
+unique:
+  - [name]
+description: >
+  Existing and planned-build storage unit characteristics, including battery storage
+  and pumped hydro.
+
+  Each row represents a single storage unit. In ISP terminology, this includes
+  committed, anticipated and additional policy-supported storage.
+
+  Source tables:
+    - `existing_committed_anticipated_additional_generator_summary`
+    - `renewable_energy_zones`
+    - `maximum_capacity_existing_committed_anticipated_additional_generators`
+    - `fixed_opex_existing_committed_anticipated_additional_generators`
+    - `battery_properties`
+    - `pumped_hydro_existing_committed_anticipated_additional_properties`
+    - `expected_closure_years`
+
+  If absent: only new entrant storage will be modelled (greenfield model).
+columns:
+  name:
+    type: string
+    required: true
+    description: Unique identifier for the storage unit (e.g. DUID or full name).
+  power_station:
+    type: string
+    required: true
+    description: >
+      Power station name grouping storage units together.
+
+      Used to group units in results and charts. For PHES, this name maps to
+      PHES properties. May match `name` for single-unit power stations.
+  technology:
+    type: string
+    required: true
+    description: >
+      Technology type as given in the IASR workbook.
+
+      Used as the canonical technology type across the model to standardise
+      spellings and group results by technology.
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_geography
+      column: geo_id
+    description: Network geography identifier where the storage unit is connected.
+  fuel_type:
+    type: string
+    required: true
+    description: >
+      Fuel type used by the storage unit.
+
+      Defines the `carrier` in PyPSA. Maintained for consistency and grouping results,
+      though less relevant for storage than generators.
+  capacity:
+    type: float
+    required: true
+    units: MW
+    description: >
+      Nameplate capacity (maximum power rating) in MW. Must be > 0.0.
+  storage_capacity:
+    type: float
+    required: true
+    units: MWh
+    description: >
+      Energy capacity in MWh. Must be > 0.0.
+  fom:
+    type: float
+    required: false
+    units: $/MW/year
+    description: >
+      Fixed operation and maintenance cost per MW per year (AUD). Must be >= $0.0
+      or blank (assumed $0.0).
+
+      In the 2026 ISP, this determines retirement schedules via revenue sufficiency;
+      not yet implemented here.
+
+      If absent: no change.
+  efficiency_charge:
+    type: float
+    required: true
+    units: '%'
+    description: >
+      Charging efficiency (%). Must be between 0.0 and 100.0.
+
+      For PHES with only round-trip efficiency, calculated as round_trip**(1/2)
+      assuming symmetric charge/discharge.
+  efficiency_discharge:
+    type: float
+    required: true
+    units: '%'
+    description: >
+      Discharging efficiency (%). Must be between 0.0 and 100.0.
+
+      For PHES with only round-trip efficiency, calculated as round_trip**(1/2)
+      assuming symmetric charge/discharge.
+  soc_max:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Maximum allowed state of charge (%). Must be between 0.0 and 100.0,
+      and >= soc_min if both present.
+
+      If absent: defaults to 100.
+  soc_min:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Minimum allowed state of charge (%). Must be between 0.0 and 100.0,
+      and <= soc_max if both present.
+
+      If absent: defaults to 0.
+  degradation_annual:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Annual capacity degradation rate (%). Must be between 0.0 and 100.0.
+
+      Not currently applied in the model.
+
+      If absent: no degradation modelled.
+  commissioning_date:
+    type: date
+    required: false
+    description: >
+      Date when the storage unit begins operation. Format: %d/%m/%Y
+
+      If absent: operational from start of modelling horizon.
+  closure_year:
+    type: int
+    required: false
+    description: >
+      Financial year when the storage unit retires.
+
+      If absent: no retirement during modelling horizon.

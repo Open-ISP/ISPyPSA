@@ -1,0 +1,154 @@
+table: generators_new_entrant
+required: false
+unique:
+  - [name]
+optional_sets:
+  - [fuel_price_node, vom, heat_rate] # All required if dynamic marginal costs are to be calculated
+description: >
+  New entrant generator characteristic data by technology type, resource type and location.
+
+  Summary data for all new entrant generation units, with each row containing
+  information about a single generating unit. This table does not include
+  storage technologies.
+
+  Source IASR tables:
+    - `new_entrants_summary`
+    - `renewable_energy_zones`
+    - `fixed_opex_new_entrants`
+    - `variable_opex_new_entrants`
+    - `heat_rates_new_entrants`
+    - `lead_time_and_project_life`
+    - `gpg_min_stable_level_new_entrants`
+    - `locational_cost_factors`
+    - `technology_cost_breakdown_ratios`
+
+  If absent: only existing (and planned) generation will be modelled.
+columns:
+  name:
+    type: string
+    required: true
+    description: >
+      Unique name for each generating unit to be modelled.
+  technology:
+    type: string
+    required: true
+    description: >
+      The full proper name of the technology type as given in the IASR workbook.
+
+      Values in this column are used as 'canon' technology types across the model -
+      i.e. used to correct typos or map different spellings to a single canonical value.
+  resource_type:
+    type: string
+    required: true
+    description: >
+      Standard string value specifying the ISP-defined resource type (e.g. offshore wind - floating).
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      table: network_geography
+      column: geo_id
+    description: >
+      Locational identifier - either subregion or REZ, depending on where the generator
+      connection is defined.
+  fuel_type:
+    type: string
+    required: true
+    description: >
+      The name of the type of fuel used by the generating unit.
+
+      This column is used to define the `carrier` for the generating unit in the
+      PyPSA model, and to map to fuel prices.
+  fuel_price_node:
+    type: string
+    required: false
+    description: >
+      The string that maps to fuel costs for this generator.
+
+      For new entrant generators, fuel prices (e.g. for OCGT) are given at the regional
+      node level such as "QLD new OCGT".
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  fom:
+    type: float
+    required: false
+    units: $/MW/year
+    description: >
+      Fixed operation and maintenance cost per unit of capacity per year.
+
+      All values should be in AUD and >= $0.0 if present. Used to help determine
+      early retirement schedules in the ISP modelling (not currently implemented).
+
+      If absent: no change.
+  vom:
+    type: float
+    required: false
+    units: $/MWh
+    description: >
+      Variable operation and maintenance cost per unit of energy produced, not including fuel cost.
+
+      All values should be in AUD and >= $0.0 if present. These values are used to
+      calculate the short-run marginal cost of generation for a given unit.
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  lcf_build:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Locational cost factor - applies to build and connection costs to
+      scale costs according to location.
+
+      All values should be >= 0.0 if present.
+
+      If absent (or empty): assume costs are as given with no locational scaling applied (100%).
+  lcf_om:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Locational cost factor - applies to fixed and variable operation and maintenance
+      costs to scale costs according to location.
+
+      All values should be >= 0.0 if present.
+
+      If absent (or empty): assume costs are as given with no locational scaling applied (100%).
+  lifetime_technical:
+    type: float
+    required: true
+    units: years
+    description: >
+      Technical lifetime of a generator in years. Should be > 0.0.
+
+      Used to specify whether the unit is operational during a given investment period;
+      starts from the PyPSA attribute build_year (added in translator).
+  lifetime_economic:
+    type: float
+    required: false
+    units: years
+    description: >
+      Economic lifetime of a generator in years. Should be > 0.0.
+
+      Used to calculate annuitised capital cost over the economic lifetime of the unit.
+
+      If absent: `lifetime_technical` is used.
+  heat_rate:
+    type: float
+    required: false
+    units: GJ/MWh
+    description: >
+      The heat rate of the generating unit, describing the efficiency of thermal generators.
+
+      All values should be >= 0.0 if present. These values are used to
+      calculate the short-run marginal cost of generation for a given unit.
+
+      If absent: assume no dynamic marginal price is calculated for this model run.
+  minimum_stable_level:
+    type: float
+    required: false
+    units: '%'
+    description: >
+      Minimum stable operating level as a percentage of maximum capacity.
+      Should be between 0.0 and 100.0.
+
+      If absent: no minimum operating level constraint.

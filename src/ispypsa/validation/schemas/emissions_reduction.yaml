@@ -1,0 +1,50 @@
+table: emissions_reduction
+required: false
+unique:
+  - [fuel_type, name, year]
+description: >
+  Emissions intensity factors from fuel blending for gas-fired generators.
+
+  Contains estimated emissions factors reached through blending biomethane or
+  alternative fuels into the gas network, applied to individual gas-fired generators.
+
+  Source tables:
+    - `gpg_emissions_reduction_biomethane`
+
+  If absent: no fuel blending assumed, so no adjustments to fuel price or emissions
+  intensity for gas generators.
+columns:
+  fuel_type:
+    type: string
+    required: true
+    description: >
+      Fuel type blended into the gas network.
+
+      Should match fuel_type values in `generators_existing_planned` or
+      `generators_new_entrant` tables.
+  name:
+    type: string
+    required: false
+    description: >
+      Power station name to which this fuel blending applies.
+
+      Should match power_station values in `generators_existing_planned` or
+      `generators_new_entrant` tables.
+
+      If absent: blend rate applies to all generating units that use "Gas" fuel_type.
+  year:
+    type: int
+    required: true
+    description: Financial year in which this blend rate applies.
+  gpg_emissions_factor:
+    type: float
+    required: true
+    units: '%'
+    description: >
+      Emissions factor of gas-powered generation reached through fuel blending (%).
+      Must be between 0.0 and 100.0.
+
+      Used to calculate blended fuel prices and emissions intensity for GPG. Note:
+      simplified calculation assumes this factor applies directly to fuel price,
+      though biomethane has a small emissions contribution (0.13 kgCO2e/GJ). The
+      difference is negligible (<0.01%).
