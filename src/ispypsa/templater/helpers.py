@@ -399,3 +399,13 @@ def _rez_name_to_id_mapping(
     )
 
     return series_fixed_rez_names.replace(rez_name_to_id)
+
+
+def _get_financial_year_int_from_string(year_string: str) -> int:
+    """Extract the financial year defined in a string in the format "YYYY_YY" and return as an integer."""
+    pattern = r"(?P<start_year>\d{4})_(?P<end_year>\d{2})"
+    match = re.match(pattern, year_string)
+    if match:
+        return int(match.group("start_year")) + 1
+    else:
+        raise ValueError(f"Invalid financial year string: {year_string}")

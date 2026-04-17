@@ -46,7 +46,12 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "renewable_energy_zones",
             "flow_path_transfer_capability",
             "initial_transmission_limits",
+            "connection_cost_forecast_wind_and_solar",
+            "connection_cost_forecast_other",
+            "connection_costs_for_wind_and_solar",
+            "connection_costs_other",
         ] + augmentation
+
     else:
         _GENERATOR_PROPERTY_TABLES = [
             table_name
