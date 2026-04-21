@@ -32,7 +32,7 @@ from ispypsa.templater.static_new_generator_properties import (
     _template_new_generators_static_properties,
 )
 from ispypsa.templater.storage import _template_battery_properties
-from ispypsa.templater.transmission_paths import _template_network_transmission_paths
+from ispypsa.templater.transmission import _template_network_transmission
 
 _BASE_TEMPLATE_OUTPUTS = [
     "sub_regions",
@@ -138,10 +138,13 @@ def create_ispypsa_inputs_template(
             iasr_tables["sub_regional_reference_nodes"],
             iasr_tables["renewable_energy_zones"],
         )
-        template["network_transmission_paths"] = _template_network_transmission_paths(
+        paths, limits = _template_network_transmission(
             iasr_tables["flow_path_transfer_capability"],
+            iasr_tables["initial_transmission_limits"],
             iasr_tables["renewable_energy_zones"],
         )
+        template["network_transmission_paths"] = paths
+        template["network_transmission_path_limits"] = limits
         return template
 
     template = {}

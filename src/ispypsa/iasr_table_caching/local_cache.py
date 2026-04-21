@@ -21,6 +21,7 @@ def _build_required_tables() -> list[str]:
             "sub_regional_reference_nodes",
             "renewable_energy_zones",
             "flow_path_transfer_capability",
+            "initial_transmission_limits",
         ]
         return _NETWORK_REQUIRED_TABLES
     else:
