@@ -18,6 +18,14 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_paths,
 )
 from ispypsa.templater.geography import _template_network_geography
+from ispypsa.templater.network_expansion import (
+    _append_new_parallel_paths,
+    _extract_flow_path_costs_from_iasr,
+    _extract_flow_path_options_from_iasr,
+    _extract_rez_costs_from_iasr,
+    _extract_rez_options_from_iasr,
+    _template_network_expansion,
+)
 from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
@@ -65,11 +73,11 @@ _BASE_TEMPLATE_OUTPUTS = [
 def create_ispypsa_inputs_template(
     scenario: str,
     regional_granularity: str,
-    iasr_tables: dict[str : pd.DataFrame],
-    manually_extracted_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
+    manually_extracted_tables: dict[str, pd.DataFrame],
     filter_to_nem_regions: list[str] = None,
     filter_to_isp_sub_regions: list[str] = None,
-) -> dict[str : pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """Creates a template set of [`ISPyPSA` input tables](tables/ispypsa.md).
 
     Examples:
@@ -149,8 +157,19 @@ def create_ispypsa_inputs_template(
             sub_regional_geography,
             regional_granularity,
         )
+        flow_path_options = _extract_flow_path_options_from_iasr(iasr_tables)
+        paths, limits = _append_new_parallel_paths(paths, limits, flow_path_options)
         template["network_transmission_paths"] = paths
         template["network_transmission_path_limits"] = limits
+        expansion_options, expansion_costs = _template_network_expansion(
+            flow_path_options=flow_path_options,
+            flow_path_costs=_extract_flow_path_costs_from_iasr(iasr_tables, scenario),
+            rez_options=_extract_rez_options_from_iasr(iasr_tables),
+            rez_costs=_extract_rez_costs_from_iasr(iasr_tables, scenario),
+            network_transmission_paths=paths,
+        )
+        template["network_expansion_options"] = expansion_options
+        template["network_transmission_path_expansion_costs"] = expansion_costs
         return template
 
     template = {}

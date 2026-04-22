@@ -208,7 +208,7 @@ def get_operational_pypsa_file():
 @return_empty_list_if_no_config
 def get_local_cache_files():
     """Get list of local cache files."""
-    return list_cache_files(get_parsed_workbook_cache())
+    return list_cache_files(get_parsed_workbook_cache(), config.iasr_workbook_version)
 
 
 @return_empty_list_if_no_config

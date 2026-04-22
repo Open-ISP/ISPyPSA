@@ -31,6 +31,10 @@ def template_network_transmission_paths(iasr_tables, scenario):
   `_map_*`, `_merge_*`.
 - **Single responsibility** — each helper does one thing. If a helper needs an internal
   comment explaining a second step, it should probably be two helpers.
+- **No hidden preconditions** — if a helper's correctness depends on a column
+  value or invariant set by the caller, set it explicitly inside the helper
+  instead. Preconditions that don't appear in the signature or name are easy
+  to break during refactoring.
 
 ### Clarity over cleverness
 
@@ -57,6 +61,38 @@ Write non-defensive code by default. Trust design decisions and caller contracts
 through testing. Let the code fail clearly when preconditions aren't met.
 
 No backwards compatibility unless explicitly requested — update all call sites directly.
+
+### Docstrings: I/O Example
+
+Every non-trivial function should include an `I/O Example:` section in its docstring
+showing a concrete input → output mapping. The goal is that a reviewer can understand
+the function's behaviour from the docstring alone, without reading the body.
+
+Conventions:
+
+- Use a plain CSV-like table format for DataFrame inputs and outputs — no need to
+  wrap in runnable `csv_str_to_df` calls, since this is illustrative, not a doctest.
+- Abbreviate long column names when they would otherwise overflow the line; point at
+  the relevant constants for the real names.
+- Cover representative edge cases in the same example, with trailing `# comment`
+  notes on the rows that demonstrate each case.
+- For trivial utility functions, one-line input → output cases are enough.
+
+```python
+def _duplicate_for_both_directions(limits: pd.DataFrame) -> pd.DataFrame:
+    """Mirrors each row into a forward and a reverse entry.
+
+    I/O Example:
+        limits:
+            path_id  timeslice    capacity
+            Q1-NQ    peak_demand  750
+
+        returns:
+            path_id  direction  timeslice    capacity
+            Q1-NQ    forward    peak_demand  750
+            Q1-NQ    reverse    peak_demand  750
+    """
+```
 
 ## Logging
 
@@ -183,6 +219,19 @@ def test_both_empty():
 - Use `check_exact=False` or `rtol=1e-5` for floating point comparisons
 - Use `check_dtype=False` when type precision isn't critical (e.g. NaN columns)
 
+### Integration tests
+
+When a public orchestrator calls into per-module helpers that have their own
+thorough tests, the orchestrator's integration test should verify wiring only —
+not duplicate content checks. Assert:
+
+- the expected output keys are present
+- each output has the expected column set
+- each output has the expected row count
+
+Skip `assert_frame_equal`. Add a one-line comment stating that the detailed
+content is covered by the per-module tests.
+
 ## Development Environment
 
 Use `uv` for package management. Key commands:
@@ -198,3 +247,6 @@ uv run pre-commit run --all-files             # Run linters
 
 - Only commit when explicitly requested
 - Commit messages should focus on the "why" rather than the "what"
+- Before staging, list the files you intend to commit and confirm with the user.
+  Local-only edits (dev configs, feature flag flips, experiment artefacts) often
+  sit alongside the real change and should not be swept into the commit.
