@@ -220,6 +220,20 @@ def _add_units_to_financial_year_columns(
     return cols
 
 
+def _financial_year_string_to_end_year_int(fy_string: str) -> int:
+    """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
+
+    Adds 1 to the start year (rather than parsing the two-digit end) to avoid
+    century-crossover ambiguity, mirroring
+    :func:`ispypsa.translator.helpers._get_financial_year_int_from_string`.
+
+    I/O Example:
+        "2024-25" -> 2025
+        "2099-00" -> 2100
+    """
+    return int(fy_string.split("-")[0]) + 1
+
+
 def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:
     """Forcefully converts FY columns to float columns"""
     cols = [

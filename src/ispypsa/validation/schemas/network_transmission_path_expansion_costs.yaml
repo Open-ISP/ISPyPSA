@@ -24,4 +24,9 @@ columns:
     type: float
     required: true
     units: $/MW
-    description: Annualised expansion cost.
+    description: >
+      Annualised expansion cost, expressed per MW of the maximum directional
+      capacity: total option cost divided by max(forward, reverse) of the
+      selected option's allowed_expansion. For symmetric options (forward ==
+      reverse) this is unambiguous; for asymmetric options the divisor is
+      whichever direction has the larger capacity increase.

@@ -96,6 +96,34 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
         Q1,      750,  750,  750
     """)
+    # Minimal expansion inputs covering one flow path and one REZ state. The extractors
+    # tolerate missing path/state tables, so we only supply CQ-NQ and NSW here.
+    flow_path_aug_options_cq_nq = pd.DataFrame(
+        [("CQ-NQ", "CQ-NQ Option 1", 1000, 1000)],
+        columns=[
+            "Flow path",
+            "Option name",
+            "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Forward direction",
+            "Notional transfer level increase (MW) Note: Same increase applies to all transfer limit conditions (Peak demand, Summer typical and Winter reference)_Reverse direction",
+        ],
+    )
+    flow_path_aug_costs_cq_nq = pd.DataFrame(
+        [("CQ-NQ", "CQ-NQ Option 1", 1_000_000, 1_010_000)],
+        columns=["Flow path", "Option", "2024-25", "2025-26"],
+    )
+    rez_aug_options_nsw = pd.DataFrame(
+        [("N3", "Option 1", 1500, 1500)],
+        columns=[
+            "REZ / constraint ID",
+            "Option",
+            "Additional network capacity (MW)",
+            "Additional import capacity (MW)",
+        ],
+    )
+    rez_aug_costs_nsw = pd.DataFrame(
+        [("N3", "Option 1", 750_000, 760_000)],
+        columns=["REZ / Constraint ID", "Option", "2024-25", "2025-26"],
+    )
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -109,6 +137,10 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
                 "initial_transmission_limits": initial_transmission_limits,
+                "flow_path_augmentation_options_CQ-NQ": flow_path_aug_options_cq_nq,
+                "flow_path_augmentation_costs_step_change_CQ-NQ": flow_path_aug_costs_cq_nq,
+                "rez_augmentation_options_NSW": rez_aug_options_nsw,
+                "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
             },
             manually_extracted_tables={},
         )
@@ -129,6 +161,23 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # CQ-NQ: 6 (2 directions x 3 timeslices). Q1-NQ: 6 (REZ mirrored to both directions).
     # N3-CNSW: 1 (absent from initial_transmission_limits, collapsed).
     assert len(limits) == 13
+
+    assert "network_expansion_options" in result
+    expansion_options = result["network_expansion_options"]
+    assert set(expansion_options.columns) == {
+        "expansion_id",
+        "expansion_type",
+        "allowed_expansion",
+        "expansion_option",
+    }
+    # CQ-NQ + N3-CNSW, each emitted as forward + reverse (both are physical paths).
+    assert len(expansion_options) == 4
+
+    assert "network_transmission_path_expansion_costs" in result
+    expansion_costs = result["network_transmission_path_expansion_costs"]
+    assert set(expansion_costs.columns) == {"expansion_id", "year", "cost"}
+    # 2 expansion_ids x 2 years
+    assert len(expansion_costs) == 4
 
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
