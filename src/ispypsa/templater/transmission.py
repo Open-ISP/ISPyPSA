@@ -98,7 +98,7 @@ def _template_network_transmission(
                 NSW-QLD   NSW       QLD     AC                  # was NNSW-SQ (cross-region)
                 Q1-QLD    Q1        QLD     AC                  # REZ geo_to retargeted
                 N1-NSW    N1        NSW     AC                  # REZ geo_to retargeted
-                # CQ-NQ dropped (intra-QLD); MN-SA dropped if MN/SA aren't in known regions
+                # CQ-NQ dropped (intra-QLD)
 
             returns limits:
                 path_id   direction  timeslice    capacity
@@ -561,9 +561,13 @@ def _aggregate_to_nem_regions(
             path_id  direction  timeslice    capacity
             NSW-QLD  forward    peak_demand  950             # CQ-NQ row dropped
             Q1-QLD   forward    peak_demand  750
+
+        Raises ValueError if any flow-path or REZ-path geo is missing from
+        ``region_lookup`` (every geo must map to a real region).
     """
     flow_paths = paths[~paths["geo_from"].isin(rez_ids)]
     rez_paths = paths[paths["geo_from"].isin(rez_ids)]
+    _validate_geos_have_regions(flow_paths, rez_paths, region_lookup)
     flow_paths = _filter_to_cross_region_flow_paths(flow_paths, region_lookup)
     new_flow_paths, flow_renames = _remap_flow_paths_to_regions(
         flow_paths, region_lookup
@@ -615,6 +619,41 @@ def _aggregate_to_single_region(
     new_rez_paths, rename_map = _remap_rez_paths(rez_paths, _SINGLE_REGION_ID)
     new_limits = _remap_limit_path_ids(limits, rename_map)
     return new_rez_paths, new_limits
+
+
+def _validate_geos_have_regions(
+    flow_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
+    region_lookup: dict[str, str],
+) -> None:
+    """Raises ValueError if any path geo is absent from ``region_lookup``.
+
+    Every flow-path endpoint and every REZ ``geo_to`` (the parent sub-region)
+    must map to a NEM region. If a geo is missing, downstream mapping would
+    silently produce NaN and corrupt the output path IDs.
+
+    I/O Example:
+        flow_paths:
+            path_id  geo_from  geo_to
+            CQ-NQ    CQ        NQ
+            MN-SA    MN        SA            # MN, SA missing from region_lookup
+
+        rez_paths:
+            path_id  geo_from  geo_to
+            Q1-NQ    Q1        NQ
+
+        region_lookup:
+            {"CQ": "QLD", "NQ": "QLD", "Q1": "QLD"}
+
+        raises:
+            ValueError: Path geos missing from sub_regional_geography: ['MN', 'SA']
+    """
+    geos = pd.concat(
+        [flow_paths["geo_from"], flow_paths["geo_to"], rez_paths["geo_to"]]
+    ).unique()
+    missing = sorted(set(geos) - set(region_lookup.keys()))
+    if missing:
+        raise ValueError(f"Path geos missing from sub_regional_geography: {missing}")
 
 
 def _filter_to_cross_region_flow_paths(

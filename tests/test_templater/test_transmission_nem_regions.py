@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from ispypsa.templater.transmission import _template_network_transmission
 
@@ -172,3 +173,59 @@ def test_nem_regions_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_df
     assert len(limits) == 1
     assert limits.iloc[0]["path_id"] == "N1-NSW"
     assert pd.isna(limits.iloc[0]["direction"])
+
+
+def test_nem_regions_raises_when_flow_path_geo_missing_from_geography(csv_str_to_df):
+    """A flow-path endpoint absent from sub_regional_geography raises ValueError."""
+    flow_paths = csv_str_to_df("""
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        MN-SA,       100,  100,  100,  100,  100,  100
+    """)
+    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
+    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
+
+    # MN and SA are not in the sub_regional_geography below.
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        NQ,      subregion,  QLD,        NQ
+    """)
+
+    with pytest.raises(
+        ValueError, match="Path geos missing from sub_regional_geography"
+    ):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            sub_regional_geography,
+            "nem_regions",
+        )
+
+
+def test_nem_regions_raises_when_rez_parent_subregion_missing_from_geography(
+    csv_str_to_df,
+):
+    """A REZ whose parent sub-region is absent from sub_regional_geography raises ValueError."""
+    flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
+    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
+
+    # REZ N1 sits in sub-region NNSW, but NNSW is not in the geography below.
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,           NEM region,  ISP sub-region
+        N1,  North West NSW, NSW,         NNSW
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        NQ,      subregion,  QLD,        NQ
+    """)
+
+    with pytest.raises(
+        ValueError, match="Path geos missing from sub_regional_geography"
+    ):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            sub_regional_geography,
+            "nem_regions",
+        )
