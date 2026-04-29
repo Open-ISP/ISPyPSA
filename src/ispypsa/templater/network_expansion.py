@@ -190,6 +190,99 @@ def _iasr_tables_with_prefix(
     return result
 
 
+# --- Granularity-aware filtering of flow-path augmentations ---
+
+
+def _filter_flow_path_augmentations_to_granularity(
+    augmentations: dict[str, pd.DataFrame],
+    regional_granularity: str,
+    region_lookup: dict[str, str],
+) -> dict[str, pd.DataFrame]:
+    """Filters/re-keys flow-path augmentation tables to match the aggregated network paths.
+
+    Flow-path augmentation tables come from IASR keyed by sub-region path IDs. When
+    `network_transmission_paths` is aggregated to a coarser granularity, augmentation
+    entries for paths that no longer exist would point at non-existent expansion_ids.
+
+    sub_regions: returned unchanged.
+    nem_regions: intra-region keys dropped; cross-region keys re-keyed
+        (NNSW-SQ → NSW-QLD), preserving any '_suffix'. The "Flow path" column
+        inside each DataFrame is also rewritten so it stays aligned with the dict key.
+    single_region: returns an empty dict — flow paths don't exist at this granularity.
+
+    I/O Example:
+        augmentations:
+            "CQ-NQ":   <DataFrame with "Flow path" column = "CQ-NQ">           # intra-QLD
+            "NNSW-SQ": <DataFrame with "Flow path" column = "NNSW-SQ">         # NSW <-> QLD
+
+        region_lookup: {"CQ": "QLD", "NQ": "QLD", "NNSW": "NSW", "SQ": "QLD"}
+
+        regional_granularity = "nem_regions" returns:
+            "NSW-QLD": <DataFrame with "Flow path" column = "NSW-QLD">
+
+        regional_granularity = "single_region" returns: {}
+    """
+    if regional_granularity == "sub_regions":
+        return augmentations
+    if regional_granularity == "single_region":
+        return {}
+    if regional_granularity == "nem_regions":
+        return _aggregate_flow_path_augmentations_to_nem_regions(
+            augmentations, region_lookup
+        )
+    raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
+
+
+def _aggregate_flow_path_augmentations_to_nem_regions(
+    augmentations: dict[str, pd.DataFrame],
+    region_lookup: dict[str, str],
+) -> dict[str, pd.DataFrame]:
+    """Drops intra-region augmentation entries and re-keys cross-region ones.
+
+    I/O Example:
+        augmentations keys: {"CQ-NQ", "NNSW-SQ", "NNSW-SQ_Terranora"}
+        region_lookup: {"CQ": "QLD", "NQ": "QLD", "NNSW": "NSW", "SQ": "QLD"}
+
+        returns keys: {"NSW-QLD", "NSW-QLD_Terranora"}        # CQ-NQ dropped (intra-QLD)
+    """
+    result = {}
+    for old_key, df in augmentations.items():
+        new_key = _rekey_augmentation_path_to_region(old_key, region_lookup)
+        if new_key is None:
+            continue
+        new_df = df.copy()
+        new_df["Flow path"] = new_key
+        result[new_key] = new_df
+    return result
+
+
+def _rekey_augmentation_path_to_region(
+    path_key: str, region_lookup: dict[str, str]
+) -> str | None:
+    """Aggregates a sub-region augmentation key to its NEM-region key, or None if intra-region.
+
+    Splits the key into base and optional suffix, maps each base endpoint to its
+    region via ``region_lookup``, and rebuilds. Returns ``None`` when both endpoints
+    sit in the same region (intra-region augmentations don't survive aggregation).
+
+    I/O Example:
+        region_lookup: {"NNSW": "NSW", "SQ": "QLD", "CQ": "QLD", "NQ": "QLD",
+                        "CNSW": "NSW", "SNW": "NSW"}
+
+        "NNSW-SQ"             -> "NSW-QLD"             # cross-region
+        "NNSW-SQ_Terranora"   -> "NSW-QLD_Terranora"  # suffix preserved
+        "CQ-NQ"               -> None                  # intra-QLD
+        "CNSW-SNW"            -> None                  # intra-NSW
+    """
+    base, sep, suffix = path_key.partition("_")
+    geo_from, geo_to = base.split("-", 1)
+    region_from = region_lookup[geo_from]
+    region_to = region_lookup[geo_to]
+    if region_from == region_to:
+        return None
+    return f"{region_from}-{region_to}{sep}{suffix}"
+
+
 # --- Orchestrator ---
 
 

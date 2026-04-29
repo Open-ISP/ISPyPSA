@@ -6,8 +6,10 @@ from ispypsa.templater.network_expansion import (
     _FLOW_PATH_FORWARD_MW_COL,
     _FLOW_PATH_REVERSE_MW_COL,
     _align_option_names_to_options,
+    _filter_flow_path_augmentations_to_granularity,
     _first_year_with_complete_costs_per_expansion,
     _new_parallel_path_rows,
+    _rekey_augmentation_path_to_region,
     _template_network_expansion,
 )
 
@@ -562,3 +564,104 @@ def test_template_network_expansion_rez_only_flow_paths_empty(csv_str_to_df):
         check_dtype=False,
         rtol=1e-5,
     )
+
+
+# --- Granularity-aware filtering ---
+
+
+_REGION_LOOKUP = {
+    "CQ": "QLD",
+    "NQ": "QLD",
+    "SQ": "QLD",
+    "NNSW": "NSW",
+    "CNSW": "NSW",
+    "SNW": "NSW",
+}
+
+
+def test_rekey_augmentation_path_drops_intra_region():
+    assert _rekey_augmentation_path_to_region("CQ-NQ", _REGION_LOOKUP) is None
+    assert _rekey_augmentation_path_to_region("CNSW-SNW", _REGION_LOOKUP) is None
+
+
+def test_rekey_augmentation_path_remaps_cross_region():
+    assert _rekey_augmentation_path_to_region("NNSW-SQ", _REGION_LOOKUP) == "NSW-QLD"
+
+
+def test_rekey_augmentation_path_preserves_suffix():
+    assert (
+        _rekey_augmentation_path_to_region("NNSW-SQ_Terranora", _REGION_LOOKUP)
+        == "NSW-QLD_Terranora"
+    )
+
+
+def test_filter_flow_path_augmentations_sub_regions_returns_input_unchanged():
+    augmentations = {
+        "CQ-NQ": _fp_options([("CQ-NQ", "Option 1", 1000, 1000)]),
+        "NNSW-SQ": _fp_options([("NNSW-SQ", "Option 1", 950, 1450)]),
+    }
+
+    result = _filter_flow_path_augmentations_to_granularity(
+        augmentations, "sub_regions", _REGION_LOOKUP
+    )
+
+    assert result is augmentations
+
+
+def test_filter_flow_path_augmentations_single_region_returns_empty():
+    augmentations = {
+        "CQ-NQ": _fp_options([("CQ-NQ", "Option 1", 1000, 1000)]),
+        "NNSW-SQ": _fp_options([("NNSW-SQ", "Option 1", 950, 1450)]),
+    }
+
+    result = _filter_flow_path_augmentations_to_granularity(
+        augmentations, "single_region", _REGION_LOOKUP
+    )
+
+    assert result == {}
+
+
+def test_filter_flow_path_augmentations_nem_regions_drops_intra_and_rekeys_cross():
+    augmentations = {
+        "CQ-NQ": _fp_options([("CQ-NQ", "Option 1", 1000, 1000)]),
+        "NNSW-SQ": _fp_options([("NNSW-SQ", "Option 1", 950, 1450)]),
+        "NNSW-SQ_Terranora": _fp_options([("NNSW-SQ_Terranora", "Option 1", 200, 250)]),
+    }
+
+    result = _filter_flow_path_augmentations_to_granularity(
+        augmentations, "nem_regions", _REGION_LOOKUP
+    )
+
+    assert set(result.keys()) == {"NSW-QLD", "NSW-QLD_Terranora"}
+    assert (result["NSW-QLD"]["Flow path"] == "NSW-QLD").all()
+    assert (result["NSW-QLD_Terranora"]["Flow path"] == "NSW-QLD_Terranora").all()
+
+
+def test_filter_flow_path_augmentations_nem_regions_handles_costs_frames():
+    augmentations = {
+        "NNSW-SQ": _fp_costs(
+            [("NNSW-SQ", "Option 1", 1_000_000, 1_010_000)],
+            years=["2024-25", "2025-26"],
+        ),
+    }
+
+    result = _filter_flow_path_augmentations_to_granularity(
+        augmentations, "nem_regions", _REGION_LOOKUP
+    )
+
+    assert set(result.keys()) == {"NSW-QLD"}
+    assert (result["NSW-QLD"]["Flow path"] == "NSW-QLD").all()
+    # Cost columns survive the rewrite untouched.
+    assert result["NSW-QLD"].loc[0, "2024-25"] == 1_000_000
+
+
+def test_filter_flow_path_augmentations_does_not_mutate_input_frames():
+    augmentations = {
+        "NNSW-SQ": _fp_options([("NNSW-SQ", "Option 1", 950, 1450)]),
+    }
+
+    _filter_flow_path_augmentations_to_granularity(
+        augmentations, "nem_regions", _REGION_LOOKUP
+    )
+
+    assert (augmentations["NNSW-SQ"]["Flow path"] == "NNSW-SQ").all()
