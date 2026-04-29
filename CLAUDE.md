@@ -58,6 +58,66 @@ through testing. Let the code fail clearly when preconditions aren't met.
 
 No backwards compatibility unless explicitly requested — update all call sites directly.
 
+## Logging
+
+Logging surfaces things a user or operator wants to know during a template/translation
+run that aren't visible from the returned DataFrames. Errors that should halt the run
+are `raise`d, not logged.
+
+### Levels
+
+- **INFO** — used for:
+  - The top of a public template/translator orchestrator
+    (`logging.info("Creating a template for X")`). Gives a progress trace for long runs.
+  - Start and completion of long-running CLI operations (downloads, deletions, file
+    generation).
+  - Silently dropped or filtered data — rows that appear in the input but not in the
+    output (e.g. unmatched options dropped by an inner merge).
+
+- **WARNING** — for data integrity issues the run will tolerate but the caller likely
+  wants to act on:
+  - Per-row computations that fail and produce NaN in the output, including paths/REZs
+    that were missing from the IASR tables and will receive a default downstream.
+  - Empty templated tables that mean a class of components won't appear in the model.
+  - User-supplied filter inputs that match nothing in the data.
+  - Missing entire input IASR tables.
+    *(Note: this category will be deprecated once table-schema-based validation lands —
+    that layer should surface missing tables instead.)*
+
+- **DEBUG and ERROR are not used.** Errors are raised as exceptions.
+
+### What not to log
+
+- The successful happy path inside a helper.
+- Individual row contents — aggregate into a `sorted(...)` list and log once. The
+  fuzzy-match log in `helpers.py` is an exception: it logs each non-exact match
+  individually so the user can audit name-matching decisions one by one.
+- Anything readily inspected from the returned DataFrame.
+- The same condition at multiple call sites — log once at the source where the cause
+  is visible.
+
+### Style
+
+- Use f-strings. Wrap collections with `sorted(...)` so messages are stable across runs
+  and tests can rely on them.
+- Name the specific input/table/region:
+  `f"Missing augmentation tables: {missing}"` beats `"some tables are missing"`.
+- One summary line over many per-row lines (except the fuzzy-match exception above).
+
+### Tests
+
+Log lines that surface non-obvious data behaviour should be covered with `caplog`:
+
+```python
+def test_logs_paths_with_no_capacity(caplog):
+    with caplog.at_level("WARNING"):
+        my_function(inputs_with_missing_data)
+    assert "Flow paths with no capacity data" in caplog.text
+    assert "MN-SA" in caplog.text
+```
+
+Cover both the firing case and a negative case (no log when data is complete).
+
 ## Testing
 
 ### Test structure

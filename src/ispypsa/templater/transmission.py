@@ -1,4 +1,8 @@
+import logging
+
 import pandas as pd
+
+from ispypsa.templater.mappings import _SINGLE_REGION_ID
 
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}
 
@@ -26,28 +30,39 @@ def _template_network_transmission(
     flow_path_transfer_capability: pd.DataFrame,
     initial_transmission_limits: pd.DataFrame,
     renewable_energy_zones: pd.DataFrame,
+    sub_regional_geography: pd.DataFrame,
+    regional_granularity: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Creates the network_transmission_paths and network_transmission_path_limits tables.
+
+    Sub-regional paths and limits are built first; then if a coarser granularity
+    is requested, the result is aggregated to that level.
 
     Args:
         flow_path_transfer_capability: IASR flow path transfer capability table.
         initial_transmission_limits: IASR initial transmission limits table
             for REZ transmission network limits.
         renewable_energy_zones: IASR renewable energy zones table.
+        sub_regional_geography: the sub_regional ``network_geography`` table —
+            its geo_id -> region_id mapping is used to identify cross-region
+            flow paths when aggregating to a coarser granularity.
+        regional_granularity: one of "sub_regions", "nem_regions", or
+            "single_region".
 
     Returns:
         Tuple of (network_transmission_paths, network_transmission_path_limits).
 
     I/O Example:
-        Column names are abbreviated below; real IASR names are in
-        ``_FLOW_PATH_COLUMN_RENAMES`` and ``_REZ_COLUMN_RENAMES``.
+        Real IASR column names are in ``_FLOW_PATH_COLUMN_RENAMES`` and
+        ``_REZ_COLUMN_RENAMES``; abbreviated names are used here.
 
         Inputs:
 
             flow_path_transfer_capability:
                 Flow Paths,  Fwd_Peak,  Fwd_Sum,  Fwd_Win,  Rev_Peak,  Rev_Sum,  Rev_Win
                 CQ-NQ,       1200,      1200,     1400,     1440,      1440,     1910
-                MN-SA,       ,          ,         ,         ,          ,
+                NNSW-SQ,     950,       950,      950,      1450,      1450,     1450
+                MN-SA,       (NaN),     (NaN),    (NaN),    (NaN),     (NaN),    (NaN)
 
             initial_transmission_limits:
                 REZ ID,  Peak,  Sum,  Win
@@ -58,26 +73,54 @@ def _template_network_transmission(
                 Q1,  Far North,      QLD,         NQ
                 N1,  Hunter Valley,  NSW,         CNSW
 
-        Outputs:
+        regional_granularity = "sub_regions":
 
-            paths:
+            returns paths:
                 path_id   geo_from  geo_to  carrier
                 CQ-NQ     CQ        NQ      AC
+                NNSW-SQ   NNSW      SQ      AC
                 MN-SA     MN        SA      AC
                 Q1-NQ     Q1        NQ      AC
                 N1-CNSW   N1        CNSW    AC
 
-            limits:
-                path_id   direction  timeslice         capacity
-                CQ-NQ     forward    peak_demand       1200       # flow path with values: 6 rows
-                ...
-                Q1-NQ     forward    peak_demand       750        # REZ with values: 6 rows, symmetric
-                ...
-                MN-SA     (NaN)      (NaN)             (NaN)      # flow path all blank -> collapsed
-                N1-CNSW   (NaN)      (NaN)             (NaN)      # REZ absent from initial_transmission_limits -> collapsed
+            returns limits:
+                path_id   direction  timeslice    capacity
+                CQ-NQ     forward    peak_demand  1200          # flow path with values: 6 rows
+                NNSW-SQ   forward    peak_demand  950           # flow path with values: 6 rows
+                Q1-NQ     forward    peak_demand  750           # REZ with values: 6 rows, symmetric
+                MN-SA     (NaN)      (NaN)        (NaN)         # all-blank flow path -> collapsed
+                N1-CNSW   (NaN)      (NaN)        (NaN)         # REZ absent from limits -> collapsed
+
+        regional_granularity = "nem_regions":
+
+            returns paths:
+                path_id   geo_from  geo_to  carrier
+                NSW-QLD   NSW       QLD     AC                  # was NNSW-SQ (cross-region)
+                Q1-QLD    Q1        QLD     AC                  # REZ geo_to retargeted
+                N1-NSW    N1        NSW     AC                  # REZ geo_to retargeted
+                # CQ-NQ dropped (intra-QLD); MN-SA dropped if MN/SA aren't in known regions
+
+            returns limits:
+                path_id   direction  timeslice    capacity
+                NSW-QLD   forward    peak_demand  950
+                Q1-QLD    forward    peak_demand  750
+                N1-NSW    (NaN)      (NaN)        (NaN)         # collapsed row preserved
+
+        regional_granularity = "single_region":
+
+            returns paths:
+                path_id  geo_from  geo_to  carrier
+                Q1-NEM   Q1        NEM     AC
+                N1-NEM   N1        NEM     AC
+                # All inter-subregional flow paths dropped; only REZ paths remain.
+
+            returns limits:
+                path_id  direction  timeslice    capacity
+                Q1-NEM   forward    peak_demand  750
+                N1-NEM   (NaN)      (NaN)        (NaN)
     """
     topology = _parse_flow_path_topology(flow_path_transfer_capability["Flow Paths"])
-    flow_paths = _build_flow_paths(topology)
+    flow_paths = _add_flow_path_carrier(topology)
     flow_limits = _extract_flow_path_limits(
         flow_path_transfer_capability, topology["path_id"]
     )
@@ -87,13 +130,23 @@ def _template_network_transmission(
     paths = pd.concat([flow_paths, rez_paths], ignore_index=True)
     limits = pd.concat([flow_limits, rez_limits], ignore_index=True)
     limits = _collapse_paths_with_no_limits(limits)
-    return paths, limits
+    if regional_granularity == "sub_regions":
+        return paths, limits
+    rez_ids = set(renewable_energy_zones["ID"])
+    region_lookup = dict(
+        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+    )
+    if regional_granularity == "nem_regions":
+        return _aggregate_to_nem_regions(paths, limits, region_lookup, rez_ids)
+    if regional_granularity == "single_region":
+        return _aggregate_to_single_region(paths, limits, rez_ids)
+    raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
 
 
 # --- Flow path extraction ---
 
 
-def _build_flow_paths(topology: pd.DataFrame) -> pd.DataFrame:
+def _add_flow_path_carrier(topology: pd.DataFrame) -> pd.DataFrame:
     """Adds the carrier column (AC/DC) to parsed flow path topology.
 
     I/O Example:
@@ -124,14 +177,14 @@ def _extract_flow_path_limits(
     """Attaches precomputed path_ids to the IASR flow path table and melts to long format.
 
     I/O Example:
-        Column names abbreviated.
+        Inputs:
 
-        flow_path_transfer_capability:
-            Flow Paths,  Fwd_Peak,  Fwd_Sum,  Fwd_Win,  Rev_Peak,  Rev_Sum,  Rev_Win
-            CQ-NQ,       1200,      1200,     1400,     1440,      1440,     1910
+            flow_path_transfer_capability:
+                Flow Paths,  Fwd_Peak,  Fwd_Sum,  Fwd_Win,  Rev_Peak,  Rev_Sum,  Rev_Win
+                CQ-NQ,       1200,      1200,     1400,     1440,      1440,     1910
 
-        path_ids:
-            0  CQ-NQ
+            path_ids:
+                CQ-NQ
 
         returns:
             path_id  direction  timeslice         capacity
@@ -145,7 +198,9 @@ def _extract_flow_path_limits(
     df = flow_path_transfer_capability.copy()
     df.columns = _fix_column_typos(df.columns)
     df["path_id"] = path_ids.values
-    return _melt_flow_path_capacity(df, _FLOW_PATH_COLUMN_RENAMES)
+    melted = _melt_flow_path_capacity(df, _FLOW_PATH_COLUMN_RENAMES)
+    _log_flow_paths_with_no_capacity_data(melted)
+    return melted
 
 
 def _parse_flow_path_topology(name_series: pd.Series) -> pd.DataFrame:
@@ -153,9 +208,9 @@ def _parse_flow_path_topology(name_series: pd.Series) -> pd.DataFrame:
 
     I/O Example:
         name_series:
-            0  CQ-NQ
-            1  NNSW-SQ (Terranora)
-            2  CNSW-SNW-NTH
+            CQ-NQ
+            NNSW-SQ (Terranora)
+            CNSW-SNW-NTH
 
         returns:
             geo_from  geo_to  path_id
@@ -246,16 +301,16 @@ def _extract_rez_limits(
     rows (filled with NaN) — collapsed later by _collapse_paths_with_no_limits.
 
     I/O Example:
-        Column names abbreviated.
+        Inputs:
 
-        initial_transmission_limits:
-            REZ ID,  Peak,  Sum,  Win
-            Q1,      750,   750,  750
+            initial_transmission_limits:
+                REZ ID,  Peak,  Sum,  Win
+                Q1,      750,   750,  750
 
-        rez_connection_rows:
-            path_id   geo_from  geo_to  carrier
-            Q1-NQ     Q1        NQ      AC
-            N1-CNSW   N1        CNSW    AC             # N1 absent from initial_transmission_limits
+            rez_connection_rows:
+                path_id   geo_from  geo_to  carrier
+                Q1-NQ     Q1        NQ      AC
+                N1-CNSW   N1        CNSW    AC          # N1 absent from limits
 
         returns:
             path_id   direction  timeslice         capacity
@@ -265,9 +320,14 @@ def _extract_rez_limits(
             Q1-NQ     reverse    peak_demand       750
             Q1-NQ     reverse    summer_typical    750
             Q1-NQ     reverse    winter_reference  750
-            N1-CNSW   forward    peak_demand       (NaN)   # absent -> NaN rows
-            ... (6 NaN rows total for N1-CNSW)
+            N1-CNSW   forward    peak_demand       (NaN)    # 6 NaN rows for N1-CNSW
+            N1-CNSW   forward    summer_typical    (NaN)
+            N1-CNSW   forward    winter_reference  (NaN)
+            N1-CNSW   reverse    peak_demand       (NaN)
+            N1-CNSW   reverse    summer_typical    (NaN)
+            N1-CNSW   reverse    winter_reference  (NaN)
     """
+    _log_rez_paths_absent_from_limits(rez_connection_rows, initial_transmission_limits)
     joined = rez_connection_rows[["path_id", "geo_from"]].merge(
         initial_transmission_limits,
         left_on="geo_from",
@@ -298,14 +358,16 @@ def _melt_flow_path_capacity(
     """Melts wide 'direction__timeslice' capacity columns into long format.
 
     I/O Example:
-        Column names abbreviated (real names in _FLOW_PATH_COLUMN_RENAMES keys).
+        Real column names are in ``_FLOW_PATH_COLUMN_RENAMES``; abbreviated here.
 
-        df:
-            path_id  Fwd_Peak  Fwd_Sum  Fwd_Win  Rev_Peak  Rev_Sum  Rev_Win
-            CQ-NQ    1200      1200     1400     1440      1440     1910
+        Inputs:
 
-        column_renames:
-            {"Fwd_Peak": "forward__peak_demand", ..., "Rev_Win": "reverse__winter_reference"}
+            df:
+                path_id  Fwd_Peak  Fwd_Sum  Fwd_Win  Rev_Peak  Rev_Sum  Rev_Win
+                CQ-NQ    1200      1200     1400     1440      1440     1910
+
+            column_renames:
+                {"Fwd_Peak": "forward__peak_demand", ..., "Rev_Win": "reverse__winter_reference"}
 
         returns:
             path_id  direction  timeslice         capacity
@@ -335,14 +397,16 @@ def _melt_rez_capacity(
     """Melts wide timeslice capacity columns into long format (no direction).
 
     I/O Example:
-        Column names abbreviated (real names in _REZ_COLUMN_RENAMES keys).
+        Real column names are in ``_REZ_COLUMN_RENAMES``; abbreviated here.
 
-        df:
-            path_id  Peak  Sum  Win
-            Q1-NQ    750   750  750
+        Inputs:
 
-        column_renames:
-            {"Peak": "peak_demand", "Sum": "summer_typical", "Win": "winter_reference"}
+            df:
+                path_id  Peak  Sum  Win
+                Q1-NQ    750   750  750
+
+            column_renames:
+                {"Peak": "peak_demand", "Sum": "summer_typical", "Win": "winter_reference"}
 
         returns:
             path_id  timeslice         capacity
@@ -408,3 +472,301 @@ def _collapse_paths_with_no_limits(limits: pd.DataFrame) -> pd.DataFrame:
         {"path_id": limits.loc[~has_data, "path_id"].unique()}
     ).reindex(columns=limits.columns)
     return pd.concat([limits[has_data], collapsed], ignore_index=True)
+
+
+# --- Logging of missing data ---
+
+
+def _log_flow_paths_with_no_capacity_data(limits: pd.DataFrame) -> None:
+    """Logs flow paths whose IASR capacity row was entirely blank/non-numeric.
+
+    These paths will be collapsed to a single path_id-only row downstream and
+    receive a default capacity from the translator.
+    """
+    paths_with_data = limits.dropna(subset=["capacity"])["path_id"].unique()
+    missing = sorted(set(limits["path_id"]) - set(paths_with_data))
+    if missing:
+        logging.warning(
+            f"Flow paths with no capacity data in IASR table "
+            f"(default will be applied downstream): {missing}"
+        )
+
+
+def _log_rez_paths_absent_from_limits(
+    rez_connection_rows: pd.DataFrame,
+    initial_transmission_limits: pd.DataFrame,
+) -> None:
+    """Logs REZ paths whose REZ ID has no row in initial_transmission_limits.
+
+    These paths get NaN capacity rows from the left-merge, are collapsed by
+    ``_collapse_paths_with_no_limits``, and receive a default downstream.
+    """
+    rez_with_limits = set(initial_transmission_limits["REZ ID"])
+    missing = sorted(set(rez_connection_rows["geo_from"]) - rez_with_limits)
+    if missing:
+        logging.warning(
+            f"REZs absent from initial_transmission_limits "
+            f"(default will be applied downstream): {missing}"
+        )
+
+
+# --- Granularity aggregation ---
+
+
+def _aggregate_to_nem_regions(
+    paths: pd.DataFrame,
+    limits: pd.DataFrame,
+    region_lookup: dict[str, str],
+    rez_ids: set[str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Filters/re-keys paths and limits to NEM-region geos.
+
+    Sub-region flow paths that don't cross a NEM region boundary are dropped.
+    REZ paths are kept; their geo_to switches from sub-region to NEM region.
+    Path IDs are rebuilt from the new geo_from/geo_to (suffixes preserved).
+
+    I/O Example:
+        Inputs:
+
+            paths:
+                path_id            geo_from  geo_to  carrier
+                CQ-NQ              CQ        NQ      AC        # both QLD -> dropped
+                NNSW-SQ            NNSW      SQ      AC        # NSW -> QLD -> kept
+                NNSW-SQ_Terranora  NNSW      SQ      DC        # parallel, kept
+                Q1-NQ              Q1        NQ      AC        # REZ, geo_to retargeted
+                N1-CNSW            N1        CNSW    AC        # REZ, geo_to retargeted
+
+            limits:
+                path_id   direction  timeslice    capacity
+                CQ-NQ     forward    peak_demand  1200
+                NNSW-SQ   forward    peak_demand  950
+                Q1-NQ     forward    peak_demand  750
+                N1-CNSW   (NaN)      (NaN)        (NaN)
+
+            region_lookup:
+                {"NQ": "QLD", "CQ": "QLD", "NNSW": "NSW", "SQ": "QLD",
+                 "Q1": "QLD", "N1": "NSW"}
+
+            rez_ids:
+                {"Q1", "N1"}
+
+        returns paths:
+            path_id            geo_from  geo_to  carrier
+            NSW-QLD            NSW       QLD     AC
+            NSW-QLD_Terranora  NSW       QLD     DC
+            Q1-QLD             Q1        QLD     AC
+            N1-NSW             N1        NSW     AC
+
+        returns limits:
+            path_id  direction  timeslice    capacity
+            NSW-QLD  forward    peak_demand  950             # CQ-NQ row dropped
+            Q1-QLD   forward    peak_demand  750
+    """
+    flow_paths = paths[~paths["geo_from"].isin(rez_ids)]
+    rez_paths = paths[paths["geo_from"].isin(rez_ids)]
+    flow_paths = _filter_to_cross_region_flow_paths(flow_paths, region_lookup)
+    new_flow_paths, flow_renames = _remap_flow_paths_to_regions(
+        flow_paths, region_lookup
+    )
+    new_rez_paths, rez_renames = _remap_rez_paths(
+        rez_paths, rez_paths["geo_to"].map(region_lookup)
+    )
+    new_paths = pd.concat([new_flow_paths, new_rez_paths], ignore_index=True)
+    rename_map = {**flow_renames, **rez_renames}
+    new_limits = _remap_limit_path_ids(limits, rename_map)
+    return new_paths, new_limits
+
+
+def _aggregate_to_single_region(
+    paths: pd.DataFrame,
+    limits: pd.DataFrame,
+    rez_ids: set[str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Drops inter-subregional flow paths; re-keys REZ paths to a single NEM geo.
+
+    I/O Example:
+        Inputs:
+
+            paths:
+                path_id   geo_from  geo_to  carrier
+                CQ-NQ     CQ        NQ      AC          # flow path -> dropped
+                NNSW-SQ   NNSW      SQ      AC          # flow path -> dropped
+                Q1-NQ     Q1        NQ      AC          # REZ -> retargeted
+                N1-CNSW   N1        CNSW    AC          # REZ -> retargeted
+
+            limits:
+                path_id  direction  timeslice    capacity
+                CQ-NQ    forward    peak_demand  1200
+                Q1-NQ    forward    peak_demand  750
+
+            rez_ids:
+                {"Q1", "N1"}
+
+        returns paths:
+            path_id  geo_from  geo_to  carrier
+            Q1-NEM   Q1        NEM     AC
+            N1-NEM   N1        NEM     AC
+
+        returns limits:
+            path_id  direction  timeslice    capacity
+            Q1-NEM   forward    peak_demand  750            # CQ-NQ row dropped
+    """
+    rez_paths = paths[paths["geo_from"].isin(rez_ids)]
+    new_rez_paths, rename_map = _remap_rez_paths(rez_paths, _SINGLE_REGION_ID)
+    new_limits = _remap_limit_path_ids(limits, rename_map)
+    return new_rez_paths, new_limits
+
+
+def _filter_to_cross_region_flow_paths(
+    flow_paths: pd.DataFrame, region_lookup: dict[str, str]
+) -> pd.DataFrame:
+    """Keeps only flow paths whose endpoints sit in different NEM regions.
+
+    I/O Example:
+        Inputs:
+
+            flow_paths:
+                path_id   geo_from  geo_to  carrier
+                CQ-NQ     CQ        NQ      AC          # both QLD -> dropped
+                NNSW-SQ   NNSW      SQ      AC          # NSW -> QLD -> kept
+
+            region_lookup:
+                {"CQ": "QLD", "NQ": "QLD", "NNSW": "NSW", "SQ": "QLD"}
+
+        returns:
+            path_id  geo_from  geo_to  carrier
+            NNSW-SQ  NNSW      SQ      AC
+    """
+    region_from = flow_paths["geo_from"].map(region_lookup)
+    region_to = flow_paths["geo_to"].map(region_lookup)
+    return flow_paths[region_from != region_to]
+
+
+def _remap_flow_paths_to_regions(
+    flow_paths: pd.DataFrame, region_lookup: dict[str, str]
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Re-keys cross-region flow paths to NEM-region geos and returns the rename map.
+
+    I/O Example:
+        Inputs:
+
+            flow_paths:
+                path_id            geo_from  geo_to  carrier
+                NNSW-SQ            NNSW      SQ      AC
+                NNSW-SQ_Terranora  NNSW      SQ      DC
+
+            region_lookup:
+                {"NNSW": "NSW", "SQ": "QLD"}
+
+        returns paths:
+            path_id            geo_from  geo_to  carrier
+            NSW-QLD            NSW       QLD     AC
+            NSW-QLD_Terranora  NSW       QLD     DC
+
+        returns rename_map:
+            {"NNSW-SQ": "NSW-QLD", "NNSW-SQ_Terranora": "NSW-QLD_Terranora"}
+    """
+    new = flow_paths.copy()
+    new["geo_from"] = new["geo_from"].map(region_lookup)
+    new["geo_to"] = new["geo_to"].map(region_lookup)
+    new_path_ids = _rebuild_path_ids(
+        flow_paths["path_id"], new["geo_from"], new["geo_to"]
+    )
+    rename_map = dict(zip(flow_paths["path_id"], new_path_ids))
+    new["path_id"] = new_path_ids.values
+    return new[["path_id", "geo_from", "geo_to", "carrier"]], rename_map
+
+
+def _rebuild_path_ids(
+    old_path_ids: pd.Series, new_from: pd.Series, new_to: pd.Series
+) -> pd.Series:
+    """Rebuilds path IDs as new_from-new_to, preserving any '_suffix' from the old ID.
+
+    I/O Example:
+        The three input Series are aligned by row; each row below shows one
+        triple of (old_path_ids, new_from, new_to) and the corresponding output.
+
+        Inputs (per-row):
+
+            old_path_ids       new_from  new_to
+            NNSW-SQ            NSW       QLD
+            NNSW-SQ_Terranora  NSW       QLD
+            CNSW-SNW_NTH       NSW       NSW
+
+        returns:
+            NSW-QLD
+            NSW-QLD_Terranora
+            NSW-NSW_NTH
+    """
+    suffix = old_path_ids.str.split("_", n=1).str[1].fillna("")
+    base = new_from.astype(str) + "-" + new_to.astype(str)
+    return (base + "_" + suffix).where(suffix != "", base)
+
+
+def _remap_rez_paths(
+    rez_paths: pd.DataFrame, new_geo_to
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Switches each REZ path's geo_to and rebuilds path_id accordingly.
+
+    ``new_geo_to`` may be a Series (per-row replacement, used for nem_regions)
+    or a scalar string (broadcast, used for single_region).
+
+    I/O Example:
+        rez_paths:
+            path_id   geo_from  geo_to  carrier
+            Q1-NQ     Q1        NQ      AC
+            N1-CNSW   N1        CNSW    AC
+
+        new_geo_to = pd.Series(["QLD", "NSW"]):
+
+            returns paths:
+                path_id  geo_from  geo_to  carrier
+                Q1-QLD   Q1        QLD     AC
+                N1-NSW   N1        NSW     AC
+
+            returns rename_map:
+                {"Q1-NQ": "Q1-QLD", "N1-CNSW": "N1-NSW"}
+
+        new_geo_to = "NEM":
+
+            returns paths:
+                path_id  geo_from  geo_to  carrier
+                Q1-NEM   Q1        NEM     AC
+                N1-NEM   N1        NEM     AC
+
+            returns rename_map:
+                {"Q1-NQ": "Q1-NEM", "N1-CNSW": "N1-NEM"}
+    """
+    new = rez_paths.copy()
+    new["geo_to"] = new_geo_to
+    new_path_ids = new["geo_from"] + "-" + new["geo_to"].astype(str)
+    rename_map = dict(zip(rez_paths["path_id"], new_path_ids))
+    new["path_id"] = new_path_ids.values
+    return new[["path_id", "geo_from", "geo_to", "carrier"]], rename_map
+
+
+def _remap_limit_path_ids(
+    limits: pd.DataFrame, rename_map: dict[str, str]
+) -> pd.DataFrame:
+    """Drops limit rows whose path_id isn't in rename_map; re-keys the rest.
+
+    I/O Example:
+        Inputs:
+
+            limits:
+                path_id  direction  timeslice    capacity
+                CQ-NQ    forward    peak_demand  1200          # not in rename_map -> dropped
+                NNSW-SQ  forward    peak_demand  950
+                Q1-NQ    forward    peak_demand  750
+
+            rename_map:
+                {"NNSW-SQ": "NSW-QLD", "Q1-NQ": "Q1-QLD"}
+
+        returns:
+            path_id  direction  timeslice    capacity
+            NSW-QLD  forward    peak_demand  950
+            Q1-QLD   forward    peak_demand  750
+    """
+    kept = limits[limits["path_id"].isin(rename_map.keys())].copy()
+    kept["path_id"] = kept["path_id"].map(rename_map)
+    return kept.reset_index(drop=True)

@@ -20,6 +20,8 @@ _NEM_REGION_IDS = pd.Series(
     name="nem_region_id_mapping",
 )
 
+_SINGLE_REGION_ID = "NEM"
+
 _NEM_SUB_REGION_IDS = pd.Series(
     {
         "Northern Queensland": "NQ",

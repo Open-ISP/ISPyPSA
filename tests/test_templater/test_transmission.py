@@ -24,8 +24,14 @@ _REZ_LIMIT_COLUMNS = [
 
 _REZ_COLUMNS = ["ID", "Name", "NEM region", "ISP sub-region"]
 
+_GEOGRAPHY_COLUMNS = ["geo_id", "geo_type", "region_id", "subregion_id"]
+
 _PATHS_COLUMNS = ["path_id", "geo_from", "geo_to", "carrier"]
 _LIMITS_COLUMNS = ["path_id", "direction", "timeslice", "capacity"]
+
+
+def _empty_sub_regional_geography():
+    return pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
 
 
 def test_template_network_transmission(csv_str_to_df):
@@ -54,7 +60,11 @@ def test_template_network_transmission(csv_str_to_df):
     """)
 
     paths, limits = _template_network_transmission(
-        flow_paths, initial_limits, renewable_energy_zones
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        _empty_sub_regional_geography(),
+        "sub_regions",
     )
 
     expected_paths = csv_str_to_df("""
@@ -146,7 +156,11 @@ def test_typo_in_column_names(csv_str_to_df):
     renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
 
     _, limits = _template_network_transmission(
-        flow_paths, initial_limits, renewable_energy_zones
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        _empty_sub_regional_geography(),
+        "sub_regions",
     )
 
     expected_limits = csv_str_to_df("""
@@ -184,7 +198,11 @@ def test_empty_flow_paths(csv_str_to_df):
     """)
 
     paths, limits = _template_network_transmission(
-        flow_paths, initial_limits, renewable_energy_zones
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        _empty_sub_regional_geography(),
+        "sub_regions",
     )
 
     expected_paths = csv_str_to_df("""
@@ -227,7 +245,11 @@ def test_empty_rez(csv_str_to_df):
     renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
 
     paths, limits = _template_network_transmission(
-        flow_paths, initial_limits, renewable_energy_zones
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        _empty_sub_regional_geography(),
+        "sub_regions",
     )
 
     expected_paths = csv_str_to_df("""
@@ -266,7 +288,11 @@ def test_both_empty():
     renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
 
     paths, limits = _template_network_transmission(
-        flow_paths, initial_limits, renewable_energy_zones
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        _empty_sub_regional_geography(),
+        "sub_regions",
     )
 
     expected_paths = pd.DataFrame(columns=_PATHS_COLUMNS)
@@ -274,6 +300,103 @@ def test_both_empty():
 
     expected_limits = pd.DataFrame(columns=_LIMITS_COLUMNS)
     pd.testing.assert_frame_equal(limits, expected_limits, check_dtype=False)
+
+
+# --- Logging of paths/REZs with missing data ---
+
+
+def test_logs_flow_paths_with_no_capacity_data(csv_str_to_df, caplog):
+    """A flow path with all-blank capacities is logged at INFO level."""
+    flow_paths = csv_str_to_df("""
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+        MN-SA,       ,      ,      ,      ,      ,
+    """)
+    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
+    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
+
+    with caplog.at_level("WARNING"):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            _empty_sub_regional_geography(),
+            "sub_regions",
+        )
+
+    assert "Flow paths with no capacity data" in caplog.text
+    assert "MN-SA" in caplog.text
+    assert "CQ-NQ" not in caplog.text
+
+
+def test_no_log_when_all_flow_paths_have_capacity_data(csv_str_to_df, caplog):
+    flow_paths = csv_str_to_df("""
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+    """)
+    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
+    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
+
+    with caplog.at_level("WARNING"):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            _empty_sub_regional_geography(),
+            "sub_regions",
+        )
+
+    assert "Flow paths with no capacity data" not in caplog.text
+
+
+def test_logs_rez_paths_absent_from_initial_limits(csv_str_to_df, caplog):
+    """A REZ that has a connection path but no entry in initial_transmission_limits is logged."""
+    flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
+    initial_limits = csv_str_to_df("""
+        REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
+        Q1,      750,   750,   750
+    """)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,             NEM region,  ISP sub-region
+        Q1,  Far North QLD,    QLD,         NQ
+        N3,  Central-West,     NSW,         CNSW
+    """)
+
+    with caplog.at_level("WARNING"):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            _empty_sub_regional_geography(),
+            "sub_regions",
+        )
+
+    assert "REZs absent from initial_transmission_limits" in caplog.text
+    assert "N3" in caplog.text
+    assert "Q1" not in caplog.text.split("REZs absent")[1]
+
+
+def test_no_log_when_all_rez_paths_present_in_initial_limits(csv_str_to_df, caplog):
+    flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
+    initial_limits = csv_str_to_df("""
+        REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
+        Q1,      750,   750,   750
+    """)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,            NEM region,  ISP sub-region
+        Q1,  Far North QLD,   QLD,         NQ
+    """)
+
+    with caplog.at_level("WARNING"):
+        _template_network_transmission(
+            flow_paths,
+            initial_limits,
+            renewable_energy_zones,
+            _empty_sub_regional_geography(),
+            "sub_regions",
+        )
+
+    assert "REZs absent from initial_transmission_limits" not in caplog.text
 
 
 # --- _collapse_paths_with_no_limits edge cases ---
