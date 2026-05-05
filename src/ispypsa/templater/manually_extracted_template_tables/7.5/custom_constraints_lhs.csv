@@ -1,0 +1,325 @@
+constraint_id,term_type,term_id,coefficient
+NQ1,rez_output,Q1,1
+NQ1,rez_output,Q2,1
+NQ1,rez_output,Q3,1
+NQ1,generator_output,EMERASF1,1
+CQ1,link_flow,CQ-NQ,-1
+CQ1,rez_output,Q4,1
+CQ1,generator_output,CSPVPS1,1
+CQ1,generator_output,DAYDSF1,1
+SQ1,link_flow,SQ-CQ,-0.5
+SQ1,rez_output,Q7,1
+SEVIC1,rez_output,V8,1
+SEVIC1,generator_output,LYA1,1
+SEVIC1,generator_output,LYA2,1
+SEVIC1,generator_output,LYA3,1
+SEVIC1,generator_output,LYA4,1
+SEVIC1,generator_output,LOYYB1,1
+SEVIC1,generator_output,LOYYB2,1
+SEVIC1,generator_output,VPGS1,1
+SEVIC1,generator_output,VPGS2,1
+SEVIC1,generator_output,VPGS3,1
+SEVIC1,generator_output,VPGS4,1
+SEVIC1,generator_output,VPGS5,1
+SEVIC1,generator_output,VPGS6,1
+SEVIC1,link_flow,TAS-SEV,1
+SEVIC1,storage_output,SEV Battery - 2h,1
+SEVIC1,storage_output,SEV Battery - 4h,1
+SEVIC1,storage_output,SEV Battery - 8h,1
+SWV1,link_flow,WNV-SESA,-1
+SWV1,rez_output,V5,1
+SWV1,rez_output,V9,1
+SWV1,storage_output,WNV Battery - 2h,1
+SWV1,storage_output,WNV Battery - 4h,1
+SWV1,storage_output,WNV Battery - 8h,1
+MN1,rez_output,S3,1
+MN1,rez_output,S4,1
+MN1,link_flow,CSA-NSA,-1
+MN1,link_flow,SNSW-CSA,0.2
+MN1,storage_output,CSA Battery - 2h,1
+MN1,storage_output,CSA Battery - 4h,1
+MN1,storage_output,CSA Battery - 8h,1
+NSA1,rez_output,S5,0.75
+NSA1,generator_output,MTMILLAR,1
+NSA1,generator_output,CATHROCK,1
+NSA1,generator_output,LGAPWF1,1
+NSA1,generator_output,LGAPWF2,1
+NSA1,storage_output,LGAPBS1,1
+NSA1,generator_output,Cultana Solar Farm,1
+NSA1,generator_output,POR01-1,1
+NSA1,generator_output,POR01-2,1
+NSA1,generator_output,POR01-3,1
+NSA1,generator_output,SA Hydrogen Turbine,1
+NSA1,generator_output,WPWF,1
+NSA1,rez_output,S7,1
+NSA1,rez_output,S8,1
+NSA1,load,NSA,-0.1
+NSA1,storage_output,NSA Battery - 2h,1
+NSA1,storage_output,NSA Battery - 4h,1
+NSA1,storage_output,NSA Battery - 8h,1
+NET1,rez_output,T1,1
+NET1,rez_output,T4,1
+NET1,storage_output,TAS Battery - 2h,1
+NET1,storage_output,TAS Battery - 4h,1
+NET1,storage_output,TAS Battery - 8h,1
+SWNSW2,rez_output,N4,1
+SWNSW2,rez_output,N5,1
+SWNSW2,rez_output,N13,1
+SWNSW2,link_flow,SNSW-CSA,-1
+SWNSW2,link_flow,WNV-SNSW,0.8
+SWNSW2,generator_output,LIMOSF11,1
+SWNSW2,generator_output,LIMOSF21,1
+SWNSW2,generator_output,SUNRSF1,1
+SWNSW2,generator_output,COLEASF1,1
+SWNSW2,generator_output,FINLYSF1,1
+SWNSW2,generator_output,DARLSF1,1
+SWNSW2,generator_output,HILLSTN1,1
+SWNSW2,storage_output,DPNTB1,1
+SWNSW2,storage_output,RESS1G,1
+SWNSW2,storage_output,RIVNB2,1
+SWNSW2,generator_output,BROKENH1,1
+SWNSW2,storage_output,BHBG1,1
+SWNSW2,generator_output,STWF1,1
+SWNSW2,storage_output,Silver City Energy Storage,1
+WV1,rez_output,V3,1
+WV1,rez_output,V4,1
+CNSW1,rez_output,DN1,1
+CNSW1,generator_output,BERYLSF1,1
+CNSW1,generator_output,BODWF1,1
+CNSW1,generator_output,CRURWF1,1
+CNSW1,generator_output,FLYCRKWF,1
+CNSW1,generator_output,GOONSF1,1
+CNSW1,generator_output,JEMALNG1,1
+CNSW1,generator_output,MANSLR1,1
+CNSW1,generator_output,MOLNGSF1,1
+CNSW1,generator_output,NEVERSF1,1
+CNSW1,generator_output,NYNGAN1,1
+CNSW1,generator_output,PARSF1,1
+CNSW1,generator_output,SUNTPSF1,1
+CNSW1,generator_output,WELLSF1,1
+CNSW1,generator_output,WOLARSF1,1
+CNSW1,storage_output,ORANA,1
+CNSW1,generator_output,Uungula Wind Farm,1
+CNSW1,generator_output,WELNSF1,1
+SWQLD1,generator_output,TARONG#1,0.14
+SWQLD1,generator_output,TARONG#2,0.14
+SWQLD1,generator_output,TARONG#3,0.14
+SWQLD1,generator_output,TARONG#4,0.14
+SWQLD1,generator_output,TNPS1,0.14
+SWQLD1,storage_output,Tarong BESS,0.14
+SWQLD1,storage_output,QEJP - Borumba,0.14
+SWQLD1,generator_output,COOPGWF1,0.14
+SWQLD1,generator_output,KINGASF1,0.14
+SWQLD1,generator_output,Wambo Wind Farm,0.14
+SWQLD1,generator_output,Q8c_SAT_Western Downs,0.14
+SWQLD1,generator_output,Q8c_CST_Western Downs,0.14
+SWQLD1,generator_output,Q8c_WH_Western Downs,0.14
+SWQLD1,generator_output,Q8c_WM_Western Downs,0.14
+SWQLD1,storage_output,CHBESSG1,0.43
+SWQLD1,storage_output,ULBESS,0.43
+SWQLD1,generator_output,WANDSF1,0.43
+SWQLD1,storage_output,WANDB1,0.43
+SWQLD1,generator_output,WDGPH1,0.43
+SWQLD1,storage_output,WDBESS1,0.43
+SWQLD1,generator_output,KPP_1,0.43
+SWQLD1,generator_output,Kogan Gas,0.43
+SWQLD1,generator_output,CPSA_GT1,0.43
+SWQLD1,generator_output,CPSA_GT2,0.43
+SWQLD1,generator_output,CPSA_ST,0.43
+SWQLD1,generator_output,DDPS1_GT1,0.43
+SWQLD1,generator_output,DDPS1_GT2,0.43
+SWQLD1,generator_output,DDPS1_GT3,0.43
+SWQLD1,generator_output,DDPS1_ST,0.43
+SWQLD1,generator_output,DDSF1,0.43
+SWQLD1,generator_output,BRAEMAR1,0.43
+SWQLD1,generator_output,BRAEMAR2,0.43
+SWQLD1,generator_output,BRAEMAR3,0.43
+SWQLD1,generator_output,BRAEMAR5,0.43
+SWQLD1,generator_output,BRAEMAR6,0.43
+SWQLD1,generator_output,BRAEMAR7,0.43
+SWQLD1,generator_output,ROMA_7,0.43
+SWQLD1,generator_output,ROMA_8,0.43
+SWQLD1,generator_output,BLUEGSF1,0.43
+SWQLD1,generator_output,COLUMSF1,0.43
+SWQLD1,generator_output,EDENVSF1,0.43
+SWQLD1,generator_output,GANGARR1,0.43
+SWQLD1,generator_output,DULAWF1,0.43
+SWQLD1,generator_output,Hopeland Solar Farm,0.43
+SWQLD1,storage_output,Q8 Battery - 2h,0.43
+SWQLD1,storage_output,Q8 Battery - 4h,0.43
+SWQLD1,storage_output,Q8 Battery - 8h,0.43
+SWQLD1,generator_output,Q8a_SAT_Darling Downs,0.43
+SWQLD1,generator_output,Q8a_CST_Darling Downs,0.43
+SWQLD1,generator_output,Q8a_WH_Darling Downs,0.43
+SWQLD1,generator_output,Q8a_WM_Darling Downs,0.43
+SWQLD1,generator_output,MPP_1,1
+SWQLD1,generator_output,MPP_2,1
+SWQLD1,generator_output,Q8b_SAT_Southern Downs,1
+SWQLD1,generator_output,Q8b_CST_Southern Downs,1
+SWQLD1,generator_output,Q8b_WH_Southern Downs,1
+SWQLD1,generator_output,Q8b_WM_Southern Downs,1
+SWQLD1,generator_output,Punch's Creek Renewable Energy Solar Farm,1
+SWQLD1,link_flow,NSW-QLD,0.84
+SWQLD1,link_flow,SQ-CQ,-0.11
+SWQLD1,storage_output,SQ Battery - 2h,1
+SWQLD1,storage_output,SQ Battery - 4h,1
+SWQLD1,storage_output,SQ Battery - 8h,1
+SNW1,load,CNSW,-0.33
+SNW1,link_flow,CNSW-NNSW,-0.2
+SNW1,load,SNW,-0.03213
+SNW1,generator_output,BW01,0.2
+SNW1,generator_output,BW02,0.2
+SNW1,generator_output,BW03,0.2
+SNW1,generator_output,BW04,0.2
+SNW1,generator_output,BERYLSF1,0.33
+SNW1,generator_output,BODWF1,0.33
+SNW1,generator_output,CNSW Biomass,0.33
+SNW1,generator_output,CNSW SAT - Distributed Resources Area1,0.33
+SNW1,generator_output,CRURWF1,0.33
+SNW1,generator_output,DN1_SAT_Dubbo,0.33
+SNW1,generator_output,DN1_WH_Dubbo,0.33
+SNW1,generator_output,DN3_SAT_Marulan,0.33
+SNW1,generator_output,DN3_WH_Marulan,0.33
+SNW1,generator_output,FLYCRKWF,0.33
+SNW1,generator_output,GOONSF1,0.33
+SNW1,generator_output,Glanmire Solar Farm,0.33
+SNW1,generator_output,Goulburn River Solar Farm,0.33
+SNW1,generator_output,JEMALNG1,0.33
+SNW1,generator_output,MANSLR1,0.33
+SNW1,generator_output,MOLNGSF1,0.33
+SNW1,generator_output,MP1,0.33
+SNW1,generator_output,MP2,0.33
+SNW1,generator_output,Maryvale Solar Farm,0.33
+SNW1,generator_output,N0_CST_NSW,0.33
+SNW1,generator_output,N0_SAT_NSW,0.33
+SNW1,generator_output,N0_WH_NSW,0.33
+SNW1,generator_output,N0_WM_NSW,0.33
+SNW1,generator_output,N3_CST_Central-West Orana,0.33
+SNW1,generator_output,N3_SAT_Central-West Orana,0.33
+SNW1,generator_output,N3_WH_Central-West Orana,0.33
+SNW1,generator_output,N3_WM_Central-West Orana,0.33
+SNW1,generator_output,N9_CST_Hunter-Central Coast,0.33
+SNW1,generator_output,N9_SAT_Hunter-Central Coast,0.33
+SNW1,generator_output,N9_WH_Hunter-Central Coast,0.33
+SNW1,generator_output,N9_WM_Hunter-Central Coast,0.33
+SNW1,generator_output,NEVERSF1,0.33
+SNW1,generator_output,NYNGAN1,0.33
+SNW1,generator_output,PARSF1,0.33
+SNW1,generator_output,PV CNSW Area1,0.33
+SNW1,generator_output,QPSF,0.33
+SNW1,generator_output,SHGEN01,0.33
+SNW1,generator_output,SHGEN02,0.33
+SNW1,generator_output,SHGEN03,0.33
+SNW1,generator_output,SHGEN04,0.33
+SNW1,generator_output,SUNTPSF1,0.33
+SNW1,generator_output,Sandy Creek Solar Farm,0.33
+SNW1,generator_output,Spicers Creek Wind Farm,0.33
+SNW1,generator_output,Stubbo Solar Farm,0.33
+SNW1,generator_output,TARALGA1,0.33
+SNW1,generator_output,Uungula Wind Farm,0.33
+SNW1,generator_output,Valley of the Winds Wind Farm,0.33
+SNW1,generator_output,WELLSF1,0.33
+SNW1,generator_output,WELNSF1,0.33
+SNW1,generator_output,WOLARSF1,0.33
+SNW1,storage_output,CNSW Battery - 1h,0.33
+SNW1,storage_output,CNSW Battery - 2h,0.33
+SNW1,storage_output,CNSW Battery - 4h,0.33
+SNW1,storage_output,CNSW Battery - 8h,0.33
+SNW1,storage_output,CNSW Battery - Coordinated CER Storages Area1,0.33
+SNW1,storage_output,CNSW Battery - Distributed Resources Area1,0.33
+SNW1,storage_output,CNSW Pumped Hydro - 10h,0.33
+SNW1,storage_output,CNSW Pumped Hydro - 24h,0.33
+SNW1,storage_output,CNSW Pumped Hydro - 48h,0.33
+SNW1,storage_output,CNSW V2G Area1,0.33
+SNW1,storage_output,DN1 Dubbo Battery - 2h,0.33
+SNW1,storage_output,DN1 Dubbo Battery - 4h,0.33
+SNW1,storage_output,DN1 Dubbo Battery - 8h,0.33
+SNW1,storage_output,DN3 Marulan Battery - 2h,0.33
+SNW1,storage_output,DN3 Marulan Battery - 4h,0.33
+SNW1,storage_output,DN3 Marulan Battery - 8h,0.33
+SNW1,storage_output,Glanmire Solar Farm BESS,0.33
+SNW1,storage_output,Goulburn River BESS,0.33
+SNW1,storage_output,Liddell BESS,0.33
+SNW1,storage_output,Maryvale Solar Farm BESS,0.33
+SNW1,storage_output,N3 Battery - 2h,0.33
+SNW1,storage_output,N3 Battery - 8h,0.33
+SNW1,storage_output,N9 Battery - 2h,0.33
+SNW1,storage_output,N9 Battery - 8h,0.33
+SNW1,storage_output,ORANA,0.33
+SNW1,storage_output,Phoenix Pumped Hydro Project,0.33
+SNW1,storage_output,QPBESS,0.33
+SNW1,generator_output,TALWA1,0.51
+SNW1,generator_output,Tallawarra B,0.51
+SNW1,generator_output,WOO CCGT,0.51
+SNW1,generator_output,WOO CCGT with CCS,0.51
+SNW1,generator_output,WOO OCGT Large,0.51
+SNW1,generator_output,WOO OCGT Small,0.51
+SNW1,generator_output,CNSW CCGT,0.66
+SNW1,generator_output,CNSW CCGT with CCS,0.66
+SNW1,generator_output,CNSW OCGT Large,0.66
+SNW1,generator_output,CNSW OCGT Small,0.66
+SNW1,link_flow,SNSW-CNSW,0.7
+WNV1,link_flow,WNV-SNSW,-0.81
+WNV1,generator_output,MURRAY01,0.73
+WNV1,generator_output,MURRAY02,0.73
+WNV1,generator_output,MURRAY03,0.73
+WNV1,generator_output,MURRAY04,0.73
+WNV1,generator_output,MURRAY05,0.73
+WNV1,generator_output,MURRAY06,0.73
+WNV1,generator_output,MURRAY07,0.73
+WNV1,generator_output,MURRAY08,0.73
+WNV1,generator_output,MURRAY09,0.73
+WNV1,generator_output,MURRAY10,0.73
+WNV1,generator_output,MURRAY11,0.73
+WNV1,generator_output,MURRAY12,0.73
+WNV1,generator_output,MURRAY13,0.73
+WNV1,generator_output,MURRAY14,0.73
+WNV1,generator_output,Barnawartha Solar Farm,0.78
+WNV1,generator_output,GIRGSF,0.78
+WNV1,generator_output,GLENSF1,0.78
+WNV1,generator_output,GLRWNSF1,0.78
+WNV1,generator_output,Goorambat East Solar Farm,0.78
+WNV1,generator_output,Lancaster Solar Farm,0.78
+WNV1,generator_output,MOKOSF1,0.78
+WNV1,generator_output,NUMURSF1,0.78
+WNV1,generator_output,V7_CST_Central North VIC,0.78
+WNV1,generator_output,V7_SAT_Central North VIC,0.78
+WNV1,generator_output,V7_WH_Central North VIC,0.78
+WNV1,generator_output,V7_WM_Central North VIC,0.78
+WNV1,generator_output,WINTSF1,0.78
+WNV1,generator_output,WUNUSF1,0.78
+WNV1,generator_output,West Mokoan Solar Farm,0.78
+WNV1,storage_output,Barnawartha Solar Farm BESS,0.78
+WNV1,storage_output,Pine Lodge BESS,0.78
+WNV1,storage_output,V7 Battery - 2h,0.78
+WNV1,storage_output,V7 Battery - 8h,0.78
+WNV1,storage_output,West Mokoan Solar Farm BESS,0.78
+WNV1,generator_output,BOGONG1,0.81
+WNV1,generator_output,BOGONG2,0.81
+WNV1,generator_output,DARTM1,0.81
+WNV1,generator_output,MCKAY11,0.81
+WNV1,generator_output,MCKAY12,0.81
+WNV1,generator_output,MCKAY13,0.81
+WNV1,generator_output,MCKAY14,0.81
+WNV1,generator_output,MCKAY15,0.81
+WNV1,generator_output,MCKAY16,0.81
+WNV1,generator_output,WKIEWA1_1,0.81
+WNV1,generator_output,WKIEWA1_2,0.81
+WNV1,generator_output,WKIEWA2_1,0.81
+WNV1,generator_output,WKIEWA2_2,0.81
+WNV1,generator_output,EILDON1,0.95
+WNV1,generator_output,EILDON2,0.95
+SWNSW1,generator_output,BROKENH1,1.0
+SWNSW1,generator_output,COLEASF1,1.0
+SWNSW1,generator_output,DARLSF1,1.0
+SWNSW1,generator_output,FINLYSF1,1.0
+SWNSW1,generator_output,HILLSTN1,1.0
+SWNSW1,generator_output,LIMOSF11,1.0
+SWNSW1,generator_output,LIMOSF21,1.0
+SWNSW1,generator_output,STWF1,1.0
+SWNSW1,generator_output,SUNRSF1,1.0
+SWNSW1,storage_output,BHBG1,1.0
+SWNSW1,storage_output,DPNTB1,1.0
+SWNSW1,storage_output,RESS1G,1.0
+SWNSW1,storage_output,RIVNB2,1.0
+SWNSW1,storage_output,Silver City Energy Storage,1.0
