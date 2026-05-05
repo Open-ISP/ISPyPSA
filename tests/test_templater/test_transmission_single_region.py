@@ -19,10 +19,6 @@ _REZ_LIMIT_COLUMNS = [
     "REZ transmission network limit_Winter reference",
 ]
 
-_REZ_COLUMNS = ["ID", "Name", "NEM region", "ISP sub-region"]
-
-_GEOGRAPHY_COLUMNS = ["geo_id", "geo_type", "region_id", "subregion_id"]
-
 
 def test_single_region_drops_flow_paths_and_rekeys_rez(csv_str_to_df):
     """Flow paths are dropped entirely; REZ paths point at the single 'NEM' geo."""
@@ -43,7 +39,9 @@ def test_single_region_drops_flow_paths_and_rekeys_rez(csv_str_to_df):
         N1,  North West NSW,  NSW,         NNSW
     """)
 
-    sub_regional_geography = pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,  region_id,  subregion_id
+    """)
 
     paths, limits = _template_network_transmission(
         flow_paths,
@@ -64,20 +62,37 @@ def test_single_region_drops_flow_paths_and_rekeys_rez(csv_str_to_df):
     )
 
     # CQ-NQ and NNSW-SQ flow path limits are dropped; only REZ limits remain.
-    assert "CQ-NQ" not in set(limits["path_id"])
-    assert "NNSW-SQ" not in set(limits["path_id"])
-    assert set(limits["path_id"]) == {"Q1-NEM", "N1-NEM"}
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,         capacity
+        Q1-NEM,   forward,    peak_demand,       750
+        Q1-NEM,   forward,    summer_typical,    750
+        Q1-NEM,   forward,    winter_reference,  750
+        Q1-NEM,   reverse,    peak_demand,       750
+        Q1-NEM,   reverse,    summer_typical,    750
+        Q1-NEM,   reverse,    winter_reference,  750
+        N1-NEM,   ,           ,
+    """)
+    pd.testing.assert_frame_equal(
+        limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        expected_limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        check_exact=False,
+        check_dtype=False,
+    )
 
-    q1_rows = limits[limits["path_id"] == "Q1-NEM"]
-    assert len(q1_rows) == 6
-    assert (q1_rows["capacity"] == 750).all()
 
-
-def test_single_region_empty_inputs():
+def test_single_region_empty_inputs(csv_str_to_df):
     flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
     initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
-    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
-    sub_regional_geography = pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,  NEM region,  ISP sub-region
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,  region_id,  subregion_id
+    """)
 
     paths, limits = _template_network_transmission(
         flow_paths,
@@ -87,10 +102,23 @@ def test_single_region_empty_inputs():
         "single_region",
     )
 
-    assert list(paths.columns) == ["path_id", "geo_from", "geo_to", "carrier"]
-    assert paths.empty
-    assert list(limits.columns) == ["path_id", "direction", "timeslice", "capacity"]
-    assert limits.empty
+    expected_paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+    """)
+    pd.testing.assert_frame_equal(
+        paths.reset_index(drop=True),
+        expected_paths.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+    """)
+    pd.testing.assert_frame_equal(
+        limits.reset_index(drop=True),
+        expected_limits.reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_single_region_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_df):
@@ -102,7 +130,9 @@ def test_single_region_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_
         N1,  North West NSW, NSW,         NNSW
     """)
 
-    sub_regional_geography = pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,  region_id,  subregion_id
+    """)
 
     paths, limits = _template_network_transmission(
         flow_paths,
@@ -120,6 +150,13 @@ def test_single_region_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_
         paths.reset_index(drop=True), expected_paths.reset_index(drop=True)
     )
 
-    assert len(limits) == 1
-    assert limits.iloc[0]["path_id"] == "N1-NEM"
-    assert pd.isna(limits.iloc[0]["direction"])
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        N1-NEM,   ,           ,
+    """)
+    pd.testing.assert_frame_equal(
+        limits.reset_index(drop=True),
+        expected_limits.reset_index(drop=True),
+        check_exact=False,
+        check_dtype=False,
+    )

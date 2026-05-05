@@ -20,10 +20,6 @@ _REZ_LIMIT_COLUMNS = [
     "REZ transmission network limit_Winter reference",
 ]
 
-_REZ_COLUMNS = ["ID", "Name", "NEM region", "ISP sub-region"]
-
-_GEOGRAPHY_COLUMNS = ["geo_id", "geo_type", "region_id", "subregion_id"]
-
 
 def test_nem_regions_filters_intra_region_paths_and_rekeys(csv_str_to_df):
     """Intra-region flow paths drop, cross-region ones re-key to NEM regions."""
@@ -77,51 +73,62 @@ def test_nem_regions_filters_intra_region_paths_and_rekeys(csv_str_to_df):
     )
 
     # CQ-NQ is dropped (intra-QLD); NNSW-SQ becomes NSW-QLD; etc.
-    nsw_qld_rows = limits[limits["path_id"] == "NSW-QLD"]
-    assert len(nsw_qld_rows) == 6
-    assert set(nsw_qld_rows["direction"]) == {"forward", "reverse"}
-    assert "CQ-NQ" not in set(limits["path_id"])
-    assert set(limits["path_id"]) == {
-        "NSW-QLD",
-        "NSW-QLD_Terranora",
-        "TAS-VIC",
-        "Q1-QLD",
-    }
+    expected_limits = csv_str_to_df("""
+        path_id,            direction,  timeslice,         capacity
+        NSW-QLD,            forward,    peak_demand,       950
+        NSW-QLD,            forward,    summer_typical,    950
+        NSW-QLD,            forward,    winter_reference,  950
+        NSW-QLD,            reverse,    peak_demand,       1450
+        NSW-QLD,            reverse,    summer_typical,    1450
+        NSW-QLD,            reverse,    winter_reference,  1450
+        NSW-QLD_Terranora,  forward,    peak_demand,       0
+        NSW-QLD_Terranora,  forward,    summer_typical,    50
+        NSW-QLD_Terranora,  forward,    winter_reference,  50
+        NSW-QLD_Terranora,  reverse,    peak_demand,       130
+        NSW-QLD_Terranora,  reverse,    summer_typical,    150
+        NSW-QLD_Terranora,  reverse,    winter_reference,  200
+        TAS-VIC,            forward,    peak_demand,       594
+        TAS-VIC,            forward,    summer_typical,    594
+        TAS-VIC,            forward,    winter_reference,  594
+        TAS-VIC,            reverse,    peak_demand,       478
+        TAS-VIC,            reverse,    summer_typical,    478
+        TAS-VIC,            reverse,    winter_reference,  478
+        Q1-QLD,             forward,    peak_demand,       750
+        Q1-QLD,             forward,    summer_typical,    750
+        Q1-QLD,             forward,    winter_reference,  750
+        Q1-QLD,             reverse,    peak_demand,       750
+        Q1-QLD,             reverse,    summer_typical,    750
+        Q1-QLD,             reverse,    winter_reference,  750
+    """)
+    pd.testing.assert_frame_equal(
+        limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        expected_limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        check_exact=False,
+        check_dtype=False,
+    )
 
 
-def test_nem_regions_preserves_dash_suffix(csv_str_to_df):
-    """Dash-separated parallel-path suffixes (CNSW-SNW-NTH) collapse intra-region paths."""
+def test_nem_regions_all_flow_paths_filtered_out_returns_empty(csv_str_to_df):
+    """All flow paths are intra-region and there are no REZs -> empty outputs."""
     flow_paths = csv_str_to_df("""
         Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
         CNSW-NNSW-NTH,  4490,  4490,  4730,  4490,  4490,  4730
     """)
 
     initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
-    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,  NEM region,  ISP sub-region
+    """)
 
     sub_regional_geography = csv_str_to_df("""
         geo_id,  geo_type,   region_id,  subregion_id
         CNSW,    subregion,  NSW,        CNSW
         NNSW,    subregion,  NSW,        NNSW
     """)
-
-    paths, _ = _template_network_transmission(
-        flow_paths,
-        initial_limits,
-        renewable_energy_zones,
-        sub_regional_geography,
-        "nem_regions",
-    )
-
-    # Both endpoints in NSW -> intra-region -> dropped from output paths.
-    assert paths.empty
-
-
-def test_nem_regions_empty_inputs():
-    flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
-    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
-    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
-    sub_regional_geography = pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
 
     paths, limits = _template_network_transmission(
         flow_paths,
@@ -131,10 +138,61 @@ def test_nem_regions_empty_inputs():
         "nem_regions",
     )
 
-    assert list(paths.columns) == ["path_id", "geo_from", "geo_to", "carrier"]
-    assert paths.empty
-    assert list(limits.columns) == ["path_id", "direction", "timeslice", "capacity"]
-    assert limits.empty
+    # Both endpoints in NSW -> intra-region -> dropped from output paths.
+    expected_paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+    """)
+    pd.testing.assert_frame_equal(
+        paths.reset_index(drop=True),
+        expected_paths.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+    """)
+    pd.testing.assert_frame_equal(
+        limits.reset_index(drop=True),
+        expected_limits.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_nem_regions_empty_inputs(csv_str_to_df):
+    flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
+    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,  NEM region,  ISP sub-region
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,  region_id,  subregion_id
+    """)
+
+    paths, limits = _template_network_transmission(
+        flow_paths,
+        initial_limits,
+        renewable_energy_zones,
+        sub_regional_geography,
+        "nem_regions",
+    )
+
+    expected_paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+    """)
+    pd.testing.assert_frame_equal(
+        paths.reset_index(drop=True),
+        expected_paths.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+    """)
+    pd.testing.assert_frame_equal(
+        limits.reset_index(drop=True),
+        expected_limits.reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_nem_regions_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_df):
@@ -170,9 +228,16 @@ def test_nem_regions_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_df
     )
 
     # Collapsed row: path_id only, no direction/timeslice/capacity.
-    assert len(limits) == 1
-    assert limits.iloc[0]["path_id"] == "N1-NSW"
-    assert pd.isna(limits.iloc[0]["direction"])
+    expected_limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        N1-NSW,   ,           ,
+    """)
+    pd.testing.assert_frame_equal(
+        limits.reset_index(drop=True),
+        expected_limits.reset_index(drop=True),
+        check_exact=False,
+        check_dtype=False,
+    )
 
 
 def test_nem_regions_raises_when_flow_path_geo_missing_from_geography(csv_str_to_df):
@@ -182,7 +247,9 @@ def test_nem_regions_raises_when_flow_path_geo_missing_from_geography(csv_str_to
         MN-SA,       100,  100,  100,  100,  100,  100
     """)
     initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
-    renewable_energy_zones = pd.DataFrame(columns=_REZ_COLUMNS)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,  Name,  NEM region,  ISP sub-region
+    """)
 
     # MN and SA are not in the sub_regional_geography below.
     sub_regional_geography = csv_str_to_df("""
