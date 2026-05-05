@@ -89,19 +89,28 @@ def test_create_ispypsa_inputs_template_single_regions(
 # presence, column schema, and row count: full DataFrame content is exercised by the
 # per-module templater tests.
 def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
+    # SNW is included alongside NQ and CNSW so the parallel-path scenario below
+    # (CNSW-SNW corridor) has valid endpoints in the geography.
     sub_regional_reference_nodes = csv_str_to_df("""
-        NEM region,  ISP sub-region,                        Sub-regional reference node
-        Queensland,  Northern Queensland (NQ),              Ross 275 kV
-        New South Wales,  Central New South Wales (CNSW),   Wellington 330 kV
+        NEM region,       ISP sub-region,                        Sub-regional reference node
+        Queensland,       Northern Queensland (NQ),              Ross 275 kV
+        New South Wales,  Central New South Wales (CNSW),        Wellington 330 kV
+        New South Wales,  Southern New South Wales (SNW),        Lower Tumut 330 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
         Q1,   Far North QLD,      QLD,         NQ
         N3,   Central-West Orana, NSW,         CNSW
     """)
+    # CNSW-SNW (NTH) and CNSW-SNW (STH) are the two existing siblings of the
+    # CNSW-SNW corridor. The augmentation key CNSW-SNW (un-suffixed) below has
+    # no exact match here, which triggers _new_parallel_path_rows to inject a
+    # new path row.
     flow_path_transfer_capability = csv_str_to_df("""
-        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
-        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+        Flow Paths,      Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,           1200,  1200,  1400,  1440,  1440,  1910
+        CNSW-SNW (NTH),  900,   900,   900,   900,   900,   900
+        CNSW-SNW (STH),  800,   800,   800,   800,   800,   800
     """)
     initial_transmission_limits = csv_str_to_df("""
         REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
@@ -116,6 +125,16 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     flow_path_aug_costs_cq_nq = csv_str_to_df("""
         Flow path,  Option,          2024-25,  2025-26
         CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+    """)
+    # Augmentation key CNSW-SNW has no exact match in flow_path_transfer_capability
+    # — exercises _new_parallel_path_rows end-to-end.
+    flow_path_aug_options_cnsw_snw = pd.DataFrame(
+        [("CNSW-SNW", "CNSW-SNW Option 1", 1500, 1500)],
+        columns=_FP_AUG_OPTION_COLS,
+    )
+    flow_path_aug_costs_cnsw_snw = csv_str_to_df("""
+        Flow path,  Option,             2024-25,  2025-26
+        CNSW-SNW,   CNSW-SNW Option 1,  800000,   810000
     """)
     rez_aug_options_nsw = csv_str_to_df("""
         REZ / constraint ID,  Option,    Additional network capacity (MW),  Additional import capacity (MW)
@@ -140,6 +159,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "initial_transmission_limits": initial_transmission_limits,
                 "flow_path_augmentation_options_CQ-NQ": flow_path_aug_options_cq_nq,
                 "flow_path_augmentation_costs_step_change_CQ-NQ": flow_path_aug_costs_cq_nq,
+                "flow_path_augmentation_options_CNSW-SNW": flow_path_aug_options_cnsw_snw,
+                "flow_path_augmentation_costs_step_change_CNSW-SNW": flow_path_aug_costs_cnsw_snw,
                 "rez_augmentation_options_NSW": rez_aug_options_nsw,
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
             },
@@ -148,17 +169,24 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
-    assert len(geography) == 4  # 2 subregions + 2 REZs
+    # 3 subregions (NQ + CNSW + SNW) + 2 REZs.
+    assert len(geography) == 5
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
-    assert len(paths) == 3  # 1 flow path + 2 REZ connections
+    # CQ-NQ + 2 REZ connections (Q1-NQ, N3-CNSW) + CNSW-SNW_NTH + CNSW-SNW_STH
+    # + CNSW-SNW (injected by _new_parallel_path_rows).
+    assert len(paths) == 6
+    # Specifically pin the new parallel-path row — a regression in the
+    # _append_new_parallel_paths wiring would fail this assertion.
+    assert "CNSW-SNW" in set(paths["path_id"])
 
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
-    # CQ-NQ: 6 (2 directions x 3 timeslices). Q1-NQ: 6 (REZ mirrored to both directions).
-    # N3-CNSW: 1 (absent from initial_transmission_limits, collapsed).
-    assert len(limits) == 13
+    # 3 flow paths × 6 (CQ-NQ + 2 CNSW-SNW siblings) + Q1-NQ × 6 (REZ mirrored)
+    # + N3-CNSW × 1 (collapsed, absent from initial_transmission_limits)
+    # + CNSW-SNW × 6 zero-capacity rows from _new_parallel_path_rows.
+    assert len(limits) == 31
 
     expansion_options = result["network_expansion_options"]
     assert set(expansion_options.columns) == {
@@ -167,13 +195,13 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "allowed_expansion",
         "expansion_option",
     }
-    # CQ-NQ + N3-CNSW, each emitted as forward + reverse (both are physical paths).
-    assert len(expansion_options) == 4
+    # CQ-NQ + N3-CNSW + CNSW-SNW, each emitted as forward + reverse.
+    assert len(expansion_options) == 6
 
     expansion_costs = result["network_transmission_path_expansion_costs"]
     assert set(expansion_costs.columns) == {"expansion_id", "year", "cost"}
-    # 2 expansion_ids x 2 years
-    assert len(expansion_costs) == 4
+    # 3 expansion_ids x 2 years
+    assert len(expansion_costs) == 6
 
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
