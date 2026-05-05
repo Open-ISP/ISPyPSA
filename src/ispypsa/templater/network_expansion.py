@@ -805,7 +805,8 @@ def _first_year_with_complete_costs_per_expansion(costs: pd.DataFrame) -> pd.Dat
         year = _earliest_complete_year(group)
         if year is None:
             logging.warning(
-                f"No year with complete costs for '{expansion_id}'; skipping."
+                f"No year has costs for all options of expansion '{expansion_id}'; "
+                "dropping the expansion. Likely indicates gaps in the upstream cost table."
             )
             continue
         selected.append(group.loc[group["year"] == year])
