@@ -21,14 +21,6 @@ _FP_AUG_OPTION_COLS = [
     _FLOW_PATH_FORWARD_MW_COL,
     _FLOW_PATH_REVERSE_MW_COL,
 ]
-_FP_AUG_COST_COLS = ["Flow path", "Option", "2024-25", "2025-26"]
-_REZ_AUG_OPTION_COLS = [
-    "REZ / constraint ID",
-    "Option",
-    "Additional network capacity (MW)",
-    "Additional import capacity (MW)",
-]
-_REZ_AUG_COST_COLS = ["REZ / Constraint ID", "Option", "2024-25", "2025-26"]
 
 
 def test_create_ispypsa_inputs_template_sub_regions(
@@ -121,18 +113,18 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         [("CQ-NQ", "CQ-NQ Option 1", 1000, 1000)],
         columns=_FP_AUG_OPTION_COLS,
     )
-    flow_path_aug_costs_cq_nq = pd.DataFrame(
-        [("CQ-NQ", "CQ-NQ Option 1", 1_000_000, 1_010_000)],
-        columns=_FP_AUG_COST_COLS,
-    )
-    rez_aug_options_nsw = pd.DataFrame(
-        [("N3", "Option 1", 1500, 1500)],
-        columns=_REZ_AUG_OPTION_COLS,
-    )
-    rez_aug_costs_nsw = pd.DataFrame(
-        [("N3", "Option 1", 750_000, 760_000)],
-        columns=_REZ_AUG_COST_COLS,
-    )
+    flow_path_aug_costs_cq_nq = csv_str_to_df("""
+        Flow path,  Option,          2024-25,  2025-26
+        CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+    """)
+    rez_aug_options_nsw = csv_str_to_df("""
+        REZ / constraint ID,  Option,    Additional network capacity (MW),  Additional import capacity (MW)
+        N3,                   Option 1,  1500,                              1500
+    """)
+    rez_aug_costs_nsw = csv_str_to_df("""
+        REZ / Constraint ID,  Option,    2024-25,  2025-26
+        N3,                   Option 1,  750000,   760000
+    """)
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -154,24 +146,20 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             manually_extracted_tables={},
         )
 
-    assert "network_geography" in result
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
     assert len(geography) == 4  # 2 subregions + 2 REZs
 
-    assert "network_transmission_paths" in result
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
     assert len(paths) == 3  # 1 flow path + 2 REZ connections
 
-    assert "network_transmission_path_limits" in result
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
     # CQ-NQ: 6 (2 directions x 3 timeslices). Q1-NQ: 6 (REZ mirrored to both directions).
     # N3-CNSW: 1 (absent from initial_transmission_limits, collapsed).
     assert len(limits) == 13
 
-    assert "network_expansion_options" in result
     expansion_options = result["network_expansion_options"]
     assert set(expansion_options.columns) == {
         "expansion_id",
@@ -182,7 +170,6 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # CQ-NQ + N3-CNSW, each emitted as forward + reverse (both are physical paths).
     assert len(expansion_options) == 4
 
-    assert "network_transmission_path_expansion_costs" in result
     expansion_costs = result["network_transmission_path_expansion_costs"]
     assert set(expansion_costs.columns) == {"expansion_id", "year", "cost"}
     # 2 expansion_ids x 2 years
@@ -223,22 +210,22 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         [("NNSW-SQ", "NNSW-SQ Option 1", 500, 600)],
         columns=_FP_AUG_OPTION_COLS,
     )
-    flow_path_aug_costs_cq_nq = pd.DataFrame(
-        [("CQ-NQ", "CQ-NQ Option 1", 1_000_000, 1_010_000)],
-        columns=_FP_AUG_COST_COLS,
-    )
-    flow_path_aug_costs_nnsw_sq = pd.DataFrame(
-        [("NNSW-SQ", "NNSW-SQ Option 1", 600_000, 610_000)],
-        columns=_FP_AUG_COST_COLS,
-    )
-    rez_aug_options_nsw = pd.DataFrame(
-        [("N3", "Option 1", 1500, 1500)],
-        columns=_REZ_AUG_OPTION_COLS,
-    )
-    rez_aug_costs_nsw = pd.DataFrame(
-        [("N3", "Option 1", 750_000, 760_000)],
-        columns=_REZ_AUG_COST_COLS,
-    )
+    flow_path_aug_costs_cq_nq = csv_str_to_df("""
+        Flow path,  Option,          2024-25,  2025-26
+        CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+    """)
+    flow_path_aug_costs_nnsw_sq = csv_str_to_df("""
+        Flow path,  Option,            2024-25,  2025-26
+        NNSW-SQ,    NNSW-SQ Option 1,  600000,   610000
+    """)
+    rez_aug_options_nsw = csv_str_to_df("""
+        REZ / constraint ID,  Option,    Additional network capacity (MW),  Additional import capacity (MW)
+        N3,                   Option 1,  1500,                              1500
+    """)
+    rez_aug_costs_nsw = csv_str_to_df("""
+        REZ / Constraint ID,  Option,    2024-25,  2025-26
+        N3,                   Option 1,  750000,   760000
+    """)
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -315,18 +302,18 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         [("CQ-NQ", "CQ-NQ Option 1", 1000, 1000)],
         columns=_FP_AUG_OPTION_COLS,
     )
-    flow_path_aug_costs_cq_nq = pd.DataFrame(
-        [("CQ-NQ", "CQ-NQ Option 1", 1_000_000, 1_010_000)],
-        columns=_FP_AUG_COST_COLS,
-    )
-    rez_aug_options_nsw = pd.DataFrame(
-        [("N3", "Option 1", 1500, 1500)],
-        columns=_REZ_AUG_OPTION_COLS,
-    )
-    rez_aug_costs_nsw = pd.DataFrame(
-        [("N3", "Option 1", 750_000, 760_000)],
-        columns=_REZ_AUG_COST_COLS,
-    )
+    flow_path_aug_costs_cq_nq = csv_str_to_df("""
+        Flow path,  Option,          2024-25,  2025-26
+        CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+    """)
+    rez_aug_options_nsw = csv_str_to_df("""
+        REZ / constraint ID,  Option,    Additional network capacity (MW),  Additional import capacity (MW)
+        N3,                   Option 1,  1500,                              1500
+    """)
+    rez_aug_costs_nsw = csv_str_to_df("""
+        REZ / Constraint ID,  Option,    2024-25,  2025-26
+        N3,                   Option 1,  750000,   760000
+    """)
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
