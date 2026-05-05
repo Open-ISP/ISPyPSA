@@ -14,7 +14,9 @@ columns:
     description: >
       Unique identifier for the path. Base format is geo_from-geo_to (e.g.
       CQ-NQ). Parallel paths append a suffix after an underscore (e.g.
-      NNSW-SQ_Terranora, CNSW-SNW_NTH).
+      NNSW-SQ_Terranora, CNSW-SNW_NTH). The geo codes used vary with
+      regional_granularity: ISP sub-region codes for "sub_regions", NEM region
+      codes for "nem_regions", and "NEM" for "single_region" (REZ paths only).
   geo_from:
     type: string
     required: true

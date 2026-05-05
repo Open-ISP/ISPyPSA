@@ -72,10 +72,11 @@ def test_create_ispypsa_inputs_template_single_regions(
     )
 
 
-# NOTE: The tests above use a disk-based fixture (workbook_table_cache_test_path) and check
-# general properties rather than comparing full DataFrames. The test below uses inline
-# csv_str_to_df data and a full DataFrame comparison. The inconsistency in approach needs
-# to be considered and resolved before the feature flag is removed.
+# NOTE: This is an integration test — its job is to verify that create_ispypsa_inputs_template
+# routes iasr_tables into the right templater functions and returns each output under the
+# right key. We intentionally depart from the assert_frame_equal convention and only check
+# presence, column schema, and row count: full DataFrame content is exercised by the
+# per-module templater tests.
 def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,  ISP sub-region,                        Sub-regional reference node
@@ -88,8 +89,12 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         N3,   Central-West Orana, NSW,         CNSW
     """)
     flow_path_transfer_capability = csv_str_to_df("""
-        Flow Paths
-        CQ-NQ
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+    """)
+    initial_transmission_limits = csv_str_to_df("""
+        REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
+        Q1,      750,  750,  750
     """)
 
     with patch(
@@ -103,45 +108,130 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
+                "initial_transmission_limits": initial_transmission_limits,
             },
             manually_extracted_tables={},
         )
 
-    expected_geography = csv_str_to_df("""
-        geo_id,  geo_type,   region_id,  subregion_id
-        NQ,      subregion,  QLD,        NQ
-        CNSW,    subregion,  NSW,        CNSW
-        Q1,      rez,        QLD,        NQ
-        N3,      rez,        NSW,        CNSW
+    assert "network_geography" in result
+    geography = result["network_geography"]
+    assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
+    assert len(geography) == 4  # 2 subregions + 2 REZs
+
+    assert "network_transmission_paths" in result
+    paths = result["network_transmission_paths"]
+    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    assert len(paths) == 3  # 1 flow path + 2 REZ connections
+
+    assert "network_transmission_path_limits" in result
+    limits = result["network_transmission_path_limits"]
+    assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
+    # CQ-NQ: 6 (2 directions x 3 timeslices). Q1-NQ: 6 (REZ mirrored to both directions).
+    # N3-CNSW: 1 (absent from initial_transmission_limits, collapsed).
+    assert len(limits) == 13
+
+
+def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
+    sub_regional_reference_nodes = csv_str_to_df("""
+        NEM region,       ISP sub-region,                  Sub-regional reference node
+        Queensland,       Northern Queensland (NQ),        Ross 275 kV
+        Queensland,       Central Queensland (CQ),         Stanwell 275 kV
+        Queensland,       Southern Queensland (SQ),        South Pine 275 kV
+        New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
+        New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
     """)
-    pd.testing.assert_frame_equal(
-        result["network_geography"].reset_index(drop=True),
-        expected_geography.reset_index(drop=True),
-    )
-
-    expected_paths = csv_str_to_df("""
-        path_id,  geo_from,  geo_to,  carrier
-        CQ-NQ,    CQ,        NQ,      AC
-        Q1-NQ,    Q1,        NQ,      AC
-        N3-CNSW,  N3,        CNSW,    AC
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,               NEM region,  ISP sub-region
+        Q1,   Far North QLD,      QLD,         NQ
+        N3,   Central-West Orana, NSW,         CNSW
     """)
-    pd.testing.assert_frame_equal(
-        result["network_transmission_paths"]
-        .sort_values("path_id")
-        .reset_index(drop=True),
-        expected_paths.sort_values("path_id").reset_index(drop=True),
-    )
+    flow_path_transfer_capability = csv_str_to_df("""
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+        NNSW-SQ,     950,   950,   950,   1450,  1450,  1450
+    """)
+    initial_transmission_limits = csv_str_to_df("""
+        REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
+        Q1,      750,  750,  750
+    """)
 
-
-def test_create_ispypsa_inputs_template_new_format_unsupported_granularity():
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
         {"use_new_table_format": True},
     ):
-        with pytest.raises(NotImplementedError):
-            create_ispypsa_inputs_template(
-                scenario="Step Change",
-                regional_granularity="nem_regions",
-                iasr_tables={},
-                manually_extracted_tables={},
-            )
+        result = create_ispypsa_inputs_template(
+            scenario="Step Change",
+            regional_granularity="nem_regions",
+            iasr_tables={
+                "sub_regional_reference_nodes": sub_regional_reference_nodes,
+                "renewable_energy_zones": renewable_energy_zones,
+                "flow_path_transfer_capability": flow_path_transfer_capability,
+                "initial_transmission_limits": initial_transmission_limits,
+            },
+            manually_extracted_tables={},
+        )
+
+    geography = result["network_geography"]
+    assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
+    assert len(geography) == 4  # 2 unique NEM regions (QLD, NSW) + 2 REZs
+
+    paths = result["network_transmission_paths"]
+    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept; 2 REZ paths kept.
+    assert len(paths) == 3
+
+    limits = result["network_transmission_path_limits"]
+    assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
+    # NNSW-SQ -> NSW-QLD: 6 rows. Q1-QLD: 6 rows. N3-NSW: 1 collapsed row.
+    assert len(limits) == 13
+
+
+def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
+    sub_regional_reference_nodes = csv_str_to_df("""
+        NEM region,       ISP sub-region,                  Sub-regional reference node
+        Queensland,       Northern Queensland (NQ),        Ross 275 kV
+        New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
+    """)
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,               NEM region,  ISP sub-region
+        Q1,   Far North QLD,      QLD,         NQ
+        N3,   Central-West Orana, NSW,         CNSW
+    """)
+    flow_path_transfer_capability = csv_str_to_df("""
+        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter reference,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter reference
+        CQ-NQ,       1200,  1200,  1400,  1440,  1440,  1910
+    """)
+    initial_transmission_limits = csv_str_to_df("""
+        REZ ID,  REZ transmission network limit_Peak demand,  REZ transmission network limit_Summer typical,  REZ transmission network limit_Winter reference
+        Q1,      750,  750,  750
+    """)
+
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        result = create_ispypsa_inputs_template(
+            scenario="Step Change",
+            regional_granularity="single_region",
+            iasr_tables={
+                "sub_regional_reference_nodes": sub_regional_reference_nodes,
+                "renewable_energy_zones": renewable_energy_zones,
+                "flow_path_transfer_capability": flow_path_transfer_capability,
+                "initial_transmission_limits": initial_transmission_limits,
+            },
+            manually_extracted_tables={},
+        )
+
+    geography = result["network_geography"]
+    assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
+    assert len(geography) == 3  # 1 NEM row + 2 REZs
+
+    paths = result["network_transmission_paths"]
+    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    # CQ-NQ flow path dropped; only the two REZ-to-NEM paths remain.
+    assert len(paths) == 2
+
+    limits = result["network_transmission_path_limits"]
+    assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
+    # Q1-NEM: 6 rows. N3-NEM: 1 collapsed row.
+    assert len(limits) == 7

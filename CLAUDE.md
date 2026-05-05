@@ -58,6 +58,73 @@ through testing. Let the code fail clearly when preconditions aren't met.
 
 No backwards compatibility unless explicitly requested — update all call sites directly.
 
+## Logging
+
+Logging surfaces things a user or operator wants to know during a template/translation
+run that aren't visible from the returned DataFrames. Errors that should halt the run
+are `raise`d, not logged.
+
+### Levels
+
+- **INFO** — used for:
+  - The top of a public template/translator orchestrator
+    (`logging.info("Creating a template for X")`). Gives a progress trace for long runs.
+  - Start and completion of long-running CLI operations (downloads, deletions, file
+    generation).
+  - Silently dropped or filtered data — rows that appear in the input but not in the
+    output (e.g. unmatched options dropped by an inner merge).
+
+- **WARNING** — for data integrity issues the run will tolerate but the caller might
+  want to act on:
+  - Per-row computations that fail and produce NaN in the output, including paths/REZs
+    that were missing from the IASR tables and will receive a default downstream.
+  - Empty templated tables that mean a class of components won't appear in the model.
+  - User-supplied filter inputs that match nothing in the data.
+  - Missing entire input IASR tables.
+    *(Note: this category will be deprecated once table-schema-based validation lands —
+    that layer should surface missing tables instead.)*
+
+- **DEBUG and ERROR are not used.** Errors are raised as exceptions.
+
+### What not to log
+
+- The successful happy path inside a helper.
+- Individual row contents — aggregate into a `sorted(...)` list and log once. The
+  fuzzy-match log in `helpers.py` is an exception: it logs each non-exact match
+  individually so the user can audit name-matching decisions one by one.
+- Anything readily inspected from the returned DataFrame.
+- The same condition at multiple call sites — log once at the source where the cause
+  is visible.
+
+### Style
+
+- Use f-strings. Wrap collections with `sorted(...)` so messages are stable across runs
+  and tests can rely on them.
+- Name the specific input/table/region:
+  `f"Missing augmentation tables: {missing}"` beats `"some tables are missing"`.
+- One summary line over many per-row lines (except the fuzzy-match exception above).
+
+### Tests
+
+Log lines that surface non-obvious data behaviour should be covered with `caplog`. Assert the
+**full emitted log message** in one substring check, not a marker plus per-name positive/negative
+checks. Because logging style wraps collections in `sorted(...)`, the message is deterministic, so
+asserting it whole pins the marker, the listed names, and the absence of any others all at once —
+and it doesn't break when an unrelated log line later mentions one of the names you were
+negatively checking for.
+
+```python
+def test_logs_paths_with_no_capacity(caplog):
+    with caplog.at_level("WARNING"):
+        my_function(inputs_with_missing_data)
+    assert (
+        "Flow paths with no capacity data in IASR table "
+        "(default will be applied downstream): ['MN-SA']"
+    ) in caplog.text
+```
+
+Cover both the firing case and a negative case (no log when data is complete).
+
 ## Testing
 
 ### Test structure
@@ -67,6 +134,13 @@ Tests follow a strict ordering: **inputs → function call → expected → asse
 Use the `csv_str_to_df` fixture to create readable DataFrame inputs and expected outputs. Place
 each `assert_frame_equal` immediately after its expected DataFrame definition. Only include
 columns in test inputs that the code actually accesses.
+
+**Always assert with `pd.testing.assert_frame_equal` against a full expected DataFrame.** Don't
+substitute row-count checks, set membership on a column, per-cell `iloc[...]` lookups, or
+`pd.isna(...)` probes — they hide off-by-one, ordering, and stray-column bugs and read worse than
+a single side-by-side comparison. The same applies to empty results: build an empty expected
+DataFrame with a header-only `csv_str_to_df("path_id,  geo_from, ...")` call and compare, rather
+than asserting `result.empty` plus `list(result.columns) == [...]` separately.
 
 ```python
 def test_my_function(csv_str_to_df):
@@ -107,20 +181,30 @@ Functions with multiple input DataFrames must be tested with:
 - Both tables empty
 
 ```python
-def test_both_empty():
+def test_both_empty(csv_str_to_df):
     table_a = pd.DataFrame(columns=["id", "value"])
     table_b = pd.DataFrame(columns=["id", "name"])
 
     result = my_function(table_a, table_b)
 
-    expected = pd.DataFrame(columns=["id", "value", "name"])
-    pd.testing.assert_frame_equal(result, expected)
+    expected = csv_str_to_df("""
+        id,  value,  name
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 ```
+
+Use `pd.DataFrame(columns=[...])` for empty *inputs* (where shared module-level column
+constants like `_FLOW_PATH_COLUMNS` make the construction tighter), and header-only
+`csv_str_to_df` for empty *expected outputs* (so the assertion's expected shape lives in the
+same readable form as every other expected DataFrame in the test).
 
 ### Comparing DataFrames
 
 - Sort both sides before comparison when row order doesn't matter
 - Use `check_exact=False` or `rtol=1e-5` for floating point comparisons
+- Represent NaN cells in `csv_str_to_df` as a blank field after the comma — e.g.
+  `A-B,    ,   ,` produces a row with `path_id="A-B"` and NaN for the remaining columns.
+  Use this for collapsed/missing-data rows instead of `iloc` + `pd.isna` probes.
 - Use `check_dtype=False` when type precision isn't critical (e.g. NaN columns)
 
 ## Development Environment

@@ -32,7 +32,7 @@ from ispypsa.templater.static_new_generator_properties import (
     _template_new_generators_static_properties,
 )
 from ispypsa.templater.storage import _template_battery_properties
-from ispypsa.templater.transmission_paths import _template_network_transmission_paths
+from ispypsa.templater.transmission import _template_network_transmission
 
 _BASE_TEMPLATE_OUTPUTS = [
     "sub_regions",
@@ -128,20 +128,29 @@ def create_ispypsa_inputs_template(
         )
 
     if FEATURE_FLAGS["use_new_table_format"]:
-        if regional_granularity != "sub_regions":
-            raise NotImplementedError(
-                f"regional_granularity='{regional_granularity}' is not yet supported "
-                "in the new table format."
-            )
         template = {}
-        template["network_geography"] = _template_network_geography(
+        sub_regional_geography = _template_network_geography(
             iasr_tables["sub_regional_reference_nodes"],
             iasr_tables["renewable_energy_zones"],
+            "sub_regions",
         )
-        template["network_transmission_paths"] = _template_network_transmission_paths(
+        if regional_granularity == "sub_regions":
+            template["network_geography"] = sub_regional_geography
+        else:
+            template["network_geography"] = _template_network_geography(
+                iasr_tables["sub_regional_reference_nodes"],
+                iasr_tables["renewable_energy_zones"],
+                regional_granularity,
+            )
+        paths, limits = _template_network_transmission(
             iasr_tables["flow_path_transfer_capability"],
+            iasr_tables["initial_transmission_limits"],
             iasr_tables["renewable_energy_zones"],
+            sub_regional_geography,
+            regional_granularity,
         )
+        template["network_transmission_paths"] = paths
+        template["network_transmission_path_limits"] = limits
         return template
 
     template = {}

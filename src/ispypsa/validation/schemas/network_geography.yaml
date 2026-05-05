@@ -20,11 +20,15 @@ columns:
   region_id:
     type: string
     required: true
-    allowed_values: [QLD, NSW, VIC, SA, TAS]
-    description: NEM region the geography belongs to.
+    allowed_values: [QLD, NSW, VIC, SA, TAS, NEM]
+    description: >
+      NEM region the geography belongs to. The "NEM" value is used only when
+      regional_granularity is "single_region", where the whole network is
+      represented as a single geography.
   subregion_id:
     type: string
-    required: true
+    required: false
     description: >
-      ISP sub-region the geography belongs to.
-      For subregion entries, equals geo_id.
+      ISP sub-region the geography belongs to. Only present when
+      regional_granularity is "sub_regions"; the column is omitted entirely for
+      "nem_regions" and "single_region". For subregion entries, equals geo_id.

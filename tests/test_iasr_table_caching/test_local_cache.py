@@ -13,6 +13,7 @@ def test_build_required_tables_new_format():
         "sub_regional_reference_nodes",
         "renewable_energy_zones",
         "flow_path_transfer_capability",
+        "initial_transmission_limits",
     ]
 
 

@@ -1214,7 +1214,7 @@ wheels = [
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openpyxl" },
@@ -1223,9 +1223,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/83/f15e6433aed93700eae97cdff4fc19bc083a88d3ef90f9665dd16a047c92/isp_workbook_parser-2.7.0.tar.gz", hash = "sha256:a895509163c32b5e3dd7f565d01a5cd3155e126fa8dee0ad9c48119ea46d64c2", size = 63551, upload-time = "2025-08-20T05:49:17.219Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/33/c63d898caf5447a276408222a5c4ca8b9bb2f8fb8170f6352e74bf5a938d/isp_workbook_parser-2.8.0.tar.gz", hash = "sha256:fc3dbbbf51107f081e5b8c09ba148e6be74a768a09572581b781c9c18272d521", size = 72972, upload-time = "2026-01-28T23:32:20.825Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/22/98a38c324b46a3cf538515711e46f4047757d0be4923fa3438e51d5f337a/isp_workbook_parser-2.7.0-py3-none-any.whl", hash = "sha256:d222f0e6b3ff04644282c01a7296bd6298878f2eaada0d29813b634181956dfd", size = 116155, upload-time = "2025-08-20T05:49:15.695Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/18/47a4be6d9e40a328027d55330125337996975138d23a41f2bc94ebd77370/isp_workbook_parser-2.8.0-py3-none-any.whl", hash = "sha256:7b718e86a11890556f91743418df12d142217565a5ab618be5b012693e87a48e", size = 144581, upload-time = "2026-01-28T23:32:19.188Z" },
 ]
 
 [[package]]
@@ -1282,7 +1282,7 @@ dev = [
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
     { name = "isp-trace-parser", specifier = ">=2.0.3" },
-    { name = "isp-workbook-parser", specifier = ">=2.6.0" },
+    { name = "isp-workbook-parser", specifier = ">=2.8.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mkdocs-material", specifier = ">=9.6.18" },
