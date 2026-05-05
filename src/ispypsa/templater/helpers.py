@@ -123,11 +123,16 @@ def _one_to_one_priority_based_fuzzy_matching(
 def _log_fuzzy_match(
     original_series: pd.Series, matched_series: pd.Series, task_desc: str
 ) -> None:
-    """Log any fuzzy matches at the INFO level"""
+    """Log any fuzzy matches at the INFO level — one line per distinct mapping.
+
+    Callers may pass series with the same (original, match) pair repeated across
+    rows (e.g. one cost row per year for the same option name). Dedup so each
+    name-matching decision appears exactly once in the log, regardless of how many
+    rows shared it. Sorted for stable order across runs.
+    """
     if any(diff := matched_series != original_series):
-        originals = original_series[diff]
-        matches = matched_series[diff]
-        for original, match in zip(originals, matches):
+        pairs = sorted(set(zip(original_series[diff], matched_series[diff])))
+        for original, match in pairs:
             logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
 
 
