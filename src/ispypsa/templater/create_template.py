@@ -19,7 +19,6 @@ from ispypsa.templater.flow_paths import (
 )
 from ispypsa.templater.geography import _template_network_geography
 from ispypsa.templater.network_expansion import (
-    _append_new_parallel_paths,
     _extract_flow_path_costs_from_iasr,
     _extract_flow_path_options_from_iasr,
     _extract_rez_costs_from_iasr,
@@ -151,13 +150,6 @@ def create_ispypsa_inputs_template(
                 iasr_tables["renewable_energy_zones"],
                 regional_granularity,
             )
-        paths, limits = _template_network_transmission(
-            iasr_tables["flow_path_transfer_capability"],
-            iasr_tables["initial_transmission_limits"],
-            iasr_tables["renewable_energy_zones"],
-            sub_regional_geography,
-            regional_granularity,
-        )
         region_lookup = dict(
             zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
         )
@@ -171,7 +163,14 @@ def create_ispypsa_inputs_template(
             regional_granularity,
             region_lookup,
         )
-        paths, limits = _append_new_parallel_paths(paths, limits, flow_path_options)
+        paths, limits = _template_network_transmission(
+            iasr_tables["flow_path_transfer_capability"],
+            iasr_tables["initial_transmission_limits"],
+            iasr_tables["renewable_energy_zones"],
+            sub_regional_geography,
+            regional_granularity,
+            flow_path_options,
+        )
         template["network_transmission_paths"] = paths
         template["network_transmission_path_limits"] = limits
         expansion_options, expansion_costs = _template_network_expansion(
@@ -180,6 +179,7 @@ def create_ispypsa_inputs_template(
             rez_options=_extract_rez_options_from_iasr(iasr_tables),
             rez_costs=_extract_rez_costs_from_iasr(iasr_tables, scenario),
             network_transmission_paths=paths,
+            rez_ids=set(iasr_tables["renewable_energy_zones"]["ID"]),
         )
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs

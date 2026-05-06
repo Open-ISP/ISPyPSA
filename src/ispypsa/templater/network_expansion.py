@@ -18,104 +18,6 @@ _FLOW_PATH_REVERSE_MW_COL = _FLOW_PATH_FORWARD_MW_COL.replace(
 )
 
 
-# --- New parallel paths inferred from augmentation source ---
-#
-# Some flow-path augmentation keys (e.g. CNSW-SNW) describe corridors whose
-# existing topology is split into parallel suffixed paths (CNSW-SNW_NTH,
-# CNSW-SNW_STH) — the un-suffixed key has no matching path_id. Per the decision
-# logged in Open-ISP/ISPyPSA#96, we treat those keys as new parallel paths:
-# the augmentation builds a third Link alongside the existing ones, with no
-# pre-existing capacity. This loses any directional preference encoded in the
-# IASR ``Development path`` column (NTH vs STH vs new corridor) — fine until
-# a custom constraint actually differentiates them.
-
-
-_NEW_PATH_DIRECTIONS = ("forward", "reverse")
-_NEW_PATH_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
-
-
-def _new_parallel_path_rows(
-    flow_path_options: dict[str, pd.DataFrame],
-    existing_path_ids: set[str],
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Builds topology + zero-capacity limit rows for augmentation keys without an existing path.
-
-    Limits are explicit zeros (not NaN) because these paths physically don't exist
-    yet — NaN in this schema means "translator applies default capacity", which
-    would let the model dispatch flow on a Link that hasn't been built.
-
-    I/O Example:
-        flow_path_options keys: {"CQ-NQ", "CNSW-SNW"}
-        existing_path_ids: {"CQ-NQ", "CNSW-SNW_NTH", "CNSW-SNW_STH"}
-
-        returns:
-            paths:
-                path_id    geo_from  geo_to  carrier
-                CNSW-SNW   CNSW      SNW     AC
-            limits (6 rows: 2 directions x 3 timeslices, all 0 MW):
-                path_id    direction  timeslice         capacity
-                CNSW-SNW   forward    peak_demand       0
-                CNSW-SNW   forward    summer_typical    0
-                ... etc
-    """
-    new_keys = sorted(set(flow_path_options.keys()) - existing_path_ids)
-    paths = pd.DataFrame(
-        [_parse_path_key(k) for k in new_keys],
-        columns=["path_id", "geo_from", "geo_to", "carrier"],
-    )
-    limits = pd.DataFrame(
-        [
-            {"path_id": k, "direction": d, "timeslice": t, "capacity": 0.0}
-            for k in new_keys
-            for d in _NEW_PATH_DIRECTIONS
-            for t in _NEW_PATH_TIMESLICES
-        ],
-        columns=["path_id", "direction", "timeslice", "capacity"],
-    )
-    return paths, limits
-
-
-def _parse_path_key(key: str) -> dict:
-    """Parses a flow-path key like 'CNSW-SNW' into topology fields. Splits on the first hyphen."""
-    geo_from, geo_to = key.split("-", 1)
-    return {"path_id": key, "geo_from": geo_from, "geo_to": geo_to, "carrier": "AC"}
-
-
-def _append_new_parallel_paths(
-    paths: pd.DataFrame,
-    limits: pd.DataFrame,
-    flow_path_options: dict[str, pd.DataFrame],
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Appends topology + limit rows for any augmentation corridors not already in the path table.
-
-    Thin wrapper that calls :func:`_new_parallel_path_rows` and concatenates the result
-    into the upstream ``paths`` and ``limits`` tables. See ISPyPSA#96 for the modelling
-    decision.
-
-    I/O Example:
-        paths:
-            path_id         geo_from  geo_to  carrier
-            CNSW-SNW_NTH    CNSW      SNW     AC
-            CNSW-SNW_STH    CNSW      SNW     AC
-
-        flow_path_options keys: {"CNSW-SNW"}   # un-suffixed corridor
-
-        returns paths (new row appended):
-            path_id         geo_from  geo_to  carrier
-            CNSW-SNW_NTH    CNSW      SNW     AC
-            CNSW-SNW_STH    CNSW      SNW     AC
-            CNSW-SNW        CNSW      SNW     AC
-    """
-    new_paths, new_limits = _new_parallel_path_rows(
-        flow_path_options, set(paths["path_id"])
-    )
-    if new_paths.empty:
-        return paths, limits
-    paths = pd.concat([paths, new_paths], ignore_index=True)
-    limits = pd.concat([limits, new_limits], ignore_index=True)
-    return paths, limits
-
-
 # --- Extraction from iasr_tables dict ---
 
 
@@ -292,6 +194,7 @@ def _template_network_expansion(
     rez_options: dict[str, pd.DataFrame],
     rez_costs: dict[str, pd.DataFrame],
     network_transmission_paths: pd.DataFrame,
+    rez_ids: set[str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Process flow path and REZ augmentation options and cost forecasts to find the least
@@ -314,9 +217,12 @@ def _template_network_expansion(
             for the selected scenario. DataFrames include columns 'REZ / Constraint
             ID', 'Option', and one column per financial year.
         network_transmission_paths: pd.DataFrame templated network paths table with
-            columns 'path_id', 'geo_from', etc. Used to map REZ IDs to their
-            pre-built path_id. Constraint-group IDs (absent from this table) pass
-            through unchanged as the expansion_id.
+            columns 'path_id', 'geo_from', etc. Used to discriminate physical paths
+            from constraint groups in the output (constraint-group IDs are absent
+            from this table and emit a single ``constraint_relaxation`` row).
+        rez_ids: set of REZ IDs (from ``renewable_energy_zones["ID"]``). Used to
+            filter ``network_transmission_paths`` down to REZ rows when building
+            the REZ-ID -> path_id lookup.
 
     Returns:
         Tuple of (options, costs) pd.DataFrames.
@@ -377,12 +283,11 @@ def _template_network_expansion(
                 N1-CNSW       2025  3539566.27             # 5.88B / 1660
                 N1-CNSW       2026  3593401.81
     """
-    options = _load_all_options(
-        flow_path_options, rez_options, network_transmission_paths
-    )
-    costs = _load_all_costs(
-        flow_path_costs, rez_costs, network_transmission_paths, options
-    )
+    rez_paths = network_transmission_paths[
+        network_transmission_paths["geo_from"].isin(rez_ids)
+    ]
+    options = _load_all_options(flow_path_options, rez_options, rez_paths)
+    costs = _load_all_costs(flow_path_costs, rez_costs, rez_paths, options)
     selected = _select_least_cost_option_per_expansion(options, costs)
     options_table = _build_options_table(options, selected, network_transmission_paths)
     costs_table = _build_costs_table(costs, options, selected)
@@ -395,11 +300,11 @@ def _template_network_expansion(
 def _load_all_options(
     flow_path_options: dict[str, pd.DataFrame],
     rez_options: dict[str, pd.DataFrame],
-    network_transmission_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
 ) -> pd.DataFrame:
     """Concats flow-path and REZ augmentation options into one normalised frame."""
     flow = _extract_flow_path_options(flow_path_options)
-    rez = _extract_rez_options(rez_options, network_transmission_paths)
+    rez = _extract_rez_options(rez_options, rez_paths)
     return pd.concat([flow, rez], ignore_index=True)
 
 
@@ -452,7 +357,7 @@ def _normalise_flow_path_option_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 def _extract_rez_options(
     rez_options: dict[str, pd.DataFrame],
-    network_transmission_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
 ) -> pd.DataFrame:
     """Normalises REZ augmentation options and maps REZ IDs to their path_id.
 
@@ -462,7 +367,7 @@ def _extract_rez_options(
             N1                   Option 1  1660               1660
             SWNSW1               Option 1  "Removes limit"    ""  # dropped
 
-        network_transmission_paths:
+        rez_paths:
             path_id   geo_from
             N1-CNSW   N1
 
@@ -472,7 +377,7 @@ def _extract_rez_options(
     """
     if not rez_options:
         return _empty_options_frame()
-    geo_from_to_path_id = _build_geo_from_to_path_id_map(network_transmission_paths)
+    geo_from_to_path_id = _build_geo_from_to_path_id_map(rez_paths)
     frames = [
         _normalise_rez_option_frame(df, geo_from_to_path_id)
         for df in rez_options.values()
@@ -543,29 +448,21 @@ def _map_rez_id_to_expansion_id(
 
 
 def _build_geo_from_to_path_id_map(
-    network_transmission_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
 ) -> dict[str, str]:
-    """Maps each geo_from value to its path_id. REZ IDs appear once (one parent
-    subregion per REZ); subregion IDs may appear multiple times and collapse to
-    whichever path_id appears last — harmless because REZ options tables never
-    contain subregion IDs.
+    """Maps each REZ ID (geo_from) to its path_id. Expects REZ-only rows so that
+    each geo_from appears once.
 
     I/O Example:
-        network_transmission_paths:
+        rez_paths:
             path_id   geo_from  geo_to  carrier
-            CQ-NQ     CQ        NQ      AC
-            CQ-GG     CQ        GG      AC     # CQ collapses, but we never look it up
+            Q1-NQ     Q1        NQ      AC
             N1-NNSW   N1        NNSW    AC
 
         returns:
-            {"CQ": "CQ-GG", "N1": "N1-NNSW"}
+            {"Q1": "Q1-NQ", "N1": "N1-NNSW"}
     """
-    return dict(
-        zip(
-            network_transmission_paths["geo_from"],
-            network_transmission_paths["path_id"],
-        )
-    )
+    return dict(zip(rez_paths["geo_from"], rez_paths["path_id"]))
 
 
 def _drop_options_with_no_capacity(options: pd.DataFrame) -> pd.DataFrame:
@@ -600,12 +497,12 @@ def _drop_options_with_no_capacity(options: pd.DataFrame) -> pd.DataFrame:
 def _load_all_costs(
     flow_path_costs: dict[str, pd.DataFrame],
     rez_costs: dict[str, pd.DataFrame],
-    network_transmission_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
     options: pd.DataFrame,
 ) -> pd.DataFrame:
     """Concats flow-path and REZ cost tables and aligns option_names to ``options``."""
     flow = _extract_flow_path_costs(flow_path_costs)
-    rez = _extract_rez_costs(rez_costs, network_transmission_paths)
+    rez = _extract_rez_costs(rez_costs, rez_paths)
     costs = pd.concat([flow, rez], ignore_index=True)
     return _align_option_names_to_options(costs, options)
 
@@ -636,7 +533,7 @@ def _extract_flow_path_costs(
 
 def _extract_rez_costs(
     rez_costs: dict[str, pd.DataFrame],
-    network_transmission_paths: pd.DataFrame,
+    rez_paths: pd.DataFrame,
 ) -> pd.DataFrame:
     """Melts REZ cost tables and maps REZ ID (or constraint group ID) to expansion_id.
 
@@ -646,7 +543,7 @@ def _extract_rez_costs(
             N1                   Option 1  5875000000  5964000000
             SWQLD1               Option 1  500000      505000
 
-        network_transmission_paths:
+        rez_paths:
             path_id   geo_from
             N1-NNSW   N1
 
@@ -659,7 +556,7 @@ def _extract_rez_costs(
     """
     if not rez_costs:
         return _empty_costs_frame()
-    geo_from_to_path_id = _build_geo_from_to_path_id_map(network_transmission_paths)
+    geo_from_to_path_id = _build_geo_from_to_path_id_map(rez_paths)
     # IASR uses "REZ / Constraint ID" (capital C) in cost tables but "REZ / constraint ID"
     # (lowercase c) in the options tables — preserved verbatim from the source workbook.
     frames = [

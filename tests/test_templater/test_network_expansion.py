@@ -17,7 +17,6 @@ from ispypsa.templater.network_expansion import (
     _align_option_names_to_options,
     _filter_flow_path_augmentations_to_granularity,
     _first_year_with_complete_costs_per_expansion,
-    _new_parallel_path_rows,
     _rekey_augmentation_path_to_region,
     _template_network_expansion,
 )
@@ -78,6 +77,7 @@ def test_template_network_expansion_picks_least_cost_and_splits_directions(
         rez_options=rez_options,
         rez_costs=rez_costs,
         network_transmission_paths=network_transmission_paths,
+        rez_ids={"N1"},
     )
 
     # CQ-NQ Option 2 wins ($200k / 500MW = $400/MW vs Option 1 $1M/1000MW = $1000/MW)
@@ -148,6 +148,7 @@ def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df):
         rez_options=rez_options,
         rez_costs=rez_costs,
         network_transmission_paths=network_transmission_paths,
+        rez_ids=set(),
     )
 
     # Only Option 1 survives (Option 2 has non-numeric capacity, skipped).
@@ -193,6 +194,7 @@ def test_template_network_expansion_fuzzy_matches_em_dash_option_names(csv_str_t
         rez_options=rez_options,
         rez_costs=rez_costs,
         network_transmission_paths=network_transmission_paths,
+        rez_ids=set(),
     )
 
     # Em-dash cost option_name is aligned to the hyphen form, so the join finds it
@@ -220,49 +222,6 @@ def test_template_network_expansion_fuzzy_matches_em_dash_option_names(csv_str_t
         expected_costs.sort_values(["expansion_id", "year"]).reset_index(drop=True),
         check_dtype=False,
         rtol=1e-5,
-    )
-
-
-def test_new_parallel_path_rows_picks_up_keys_without_existing_path(csv_str_to_df):
-    # Augmentation source has a key (CNSW-SNW) that has no exact match in the existing
-    # topology — only suffixed parallel paths (CNSW-SNW_NTH, CNSW-SNW_STH) exist. The
-    # key should produce a new parallel-path topology row plus six zero-capacity limit
-    # rows (2 directions x 3 timeslices) — zero, not NaN, because the path doesn't
-    # physically exist yet.
-    flow_path_options = {
-        "CQ-NQ": pd.DataFrame(),  # already in topology, no new row
-        "CNSW-SNW": pd.DataFrame(),  # new parallel path
-    }
-    existing_path_ids = {"CQ-NQ", "CNSW-SNW_NTH", "CNSW-SNW_STH"}
-
-    new_paths, new_limits = _new_parallel_path_rows(
-        flow_path_options, existing_path_ids
-    )
-
-    expected_paths = csv_str_to_df("""
-        path_id,    geo_from,  geo_to,  carrier
-        CNSW-SNW,   CNSW,      SNW,     AC
-    """)
-    pd.testing.assert_frame_equal(
-        new_paths.reset_index(drop=True),
-        expected_paths.reset_index(drop=True),
-        check_dtype=False,
-    )
-    # 6 zero-capacity rows: 2 directions x 3 timeslices.
-    expected_limits = csv_str_to_df("""
-        path_id,   direction,  timeslice,         capacity
-        CNSW-SNW,  forward,    peak_demand,       0
-        CNSW-SNW,  forward,    summer_typical,    0
-        CNSW-SNW,  forward,    winter_reference,  0
-        CNSW-SNW,  reverse,    peak_demand,       0
-        CNSW-SNW,  reverse,    summer_typical,    0
-        CNSW-SNW,  reverse,    winter_reference,  0
-    """)
-    pd.testing.assert_frame_equal(
-        new_limits.sort_values(["direction", "timeslice"]).reset_index(drop=True),
-        expected_limits.sort_values(["direction", "timeslice"]).reset_index(drop=True),
-        check_exact=False,
-        check_dtype=False,
     )
 
 
@@ -295,6 +254,7 @@ def test_template_network_expansion_treats_blank_path_direction_as_zero(csv_str_
         rez_options=rez_options,
         rez_costs=rez_costs,
         network_transmission_paths=network_transmission_paths,
+        rez_ids={"DN1"},
     )
 
     expected_options = csv_str_to_df("""
@@ -343,6 +303,7 @@ def test_template_network_expansion_passes_constraint_group_ids_through(csv_str_
         rez_options=rez_options,
         rez_costs=rez_costs,
         network_transmission_paths=network_transmission_paths,
+        rez_ids={"Q1"},
     )
 
     # Constraint group: emits a single constraint_relaxation row, not a forward/reverse pair.
@@ -380,6 +341,7 @@ def test_template_network_expansion_empty_inputs_produce_empty_outputs(csv_str_t
         network_transmission_paths=csv_str_to_df("""
             path_id,  geo_from
         """),
+        rez_ids=set(),
     )
 
     expected_options = csv_str_to_df("""
@@ -422,6 +384,7 @@ def test_template_network_expansion_flow_paths_only_rez_empty(csv_str_to_df):
             path_id,  geo_from
             CQ-NQ,    CQ
         """),
+        rez_ids=set(),
     )
 
     expected_options = csv_str_to_df("""
@@ -548,6 +511,7 @@ def test_template_network_expansion_drops_expansion_with_no_complete_year(
                 path_id,  geo_from
                 CQ-NQ,    CQ
             """),
+            rez_ids=set(),
         )
 
     expected_options = csv_str_to_df("""
@@ -598,6 +562,7 @@ def test_template_network_expansion_rez_only_flow_paths_empty(csv_str_to_df):
             path_id,  geo_from
             N1-NNSW,  N1
         """),
+        rez_ids={"N1"},
     )
 
     expected_options = csv_str_to_df("""
