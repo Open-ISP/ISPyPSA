@@ -591,6 +591,7 @@ def _aggregate_to_nem_regions(
             path_id  direction  timeslice    capacity
             NSW-QLD  forward    peak_demand  950             # CQ-NQ row dropped
             Q1-QLD   forward    peak_demand  750
+            N1-NSW   (NaN)      (NaN)        (NaN)           # collapsed row preserved through rename
 
         Raises ValueError if any flow-path or REZ-path geo is missing from
         ``region_lookup`` (every geo must map to a real region).
@@ -889,6 +890,11 @@ def _append_new_parallel_paths(
             CNSW-SNW_NTH    CNSW      SNW     AC
             CNSW-SNW_STH    CNSW      SNW     AC
 
+        limits (existing siblings, abbreviated):
+            path_id         direction  timeslice    capacity
+            CNSW-SNW_NTH    forward    peak_demand  900
+            CNSW-SNW_STH    forward    peak_demand  800
+
         flow_path_options keys: {"CNSW-SNW"}   # un-suffixed corridor
 
         returns paths (new row appended):
@@ -896,6 +902,17 @@ def _append_new_parallel_paths(
             CNSW-SNW_NTH    CNSW      SNW     AC
             CNSW-SNW_STH    CNSW      SNW     AC
             CNSW-SNW        CNSW      SNW     AC
+
+        returns limits (six explicit-zero rows appended for CNSW-SNW: 2 directions x 3 timeslices):
+            path_id         direction  timeslice         capacity
+            CNSW-SNW_NTH    forward    peak_demand       900
+            CNSW-SNW_STH    forward    peak_demand       800
+            CNSW-SNW        forward    peak_demand       0
+            CNSW-SNW        forward    summer_typical    0
+            CNSW-SNW        forward    winter_reference  0
+            CNSW-SNW        reverse    peak_demand       0
+            CNSW-SNW        reverse    summer_typical    0
+            CNSW-SNW        reverse    winter_reference  0
     """
     new_paths, new_limits = _new_parallel_path_rows(
         flow_path_options, set(paths["path_id"])

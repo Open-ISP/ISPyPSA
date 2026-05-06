@@ -142,10 +142,16 @@ def _aggregate_flow_path_augmentations_to_nem_regions(
     """Drops intra-region augmentation entries and re-keys cross-region ones.
 
     I/O Example:
-        augmentations keys: {"CQ-NQ", "NNSW-SQ", "NNSW-SQ_Terranora"}
+        augmentations:
+            "CQ-NQ":             <DataFrame with "Flow path" column = "CQ-NQ">             # intra-QLD
+            "NNSW-SQ":           <DataFrame with "Flow path" column = "NNSW-SQ">           # NSW <-> QLD
+            "NNSW-SQ_Terranora": <DataFrame with "Flow path" column = "NNSW-SQ_Terranora"> # parallel suffix
+
         region_lookup: {"CQ": "QLD", "NQ": "QLD", "NNSW": "NSW", "SQ": "QLD"}
 
-        returns keys: {"NSW-QLD", "NSW-QLD_Terranora"}        # CQ-NQ dropped (intra-QLD)
+        returns:
+            "NSW-QLD":           <DataFrame with "Flow path" column = "NSW-QLD">           # CQ-NQ dropped (intra-QLD)
+            "NSW-QLD_Terranora": <DataFrame with "Flow path" column = "NSW-QLD_Terranora"> # suffix preserved
     """
     result = {}
     for old_key, df in augmentations.items():
@@ -266,6 +272,8 @@ def _template_network_expansion(
                 path_id  geo_from  geo_to  carrier
                 CQ-NQ    CQ        NQ      AC
                 N1-CNSW  N1        CNSW    AC
+
+            rez_ids: {"N1"}   # used to filter network_transmission_paths to REZ-only rows
 
         Outputs:
 
