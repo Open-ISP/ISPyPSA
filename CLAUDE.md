@@ -125,9 +125,12 @@ are `raise`d, not logged.
 ### What not to log
 
 - The successful happy path inside a helper.
-- Individual row contents — aggregate into a `sorted(...)` list and log once. The
-  fuzzy-match log in `helpers.py` is an exception: it logs each non-exact match
-  individually so the user can audit name-matching decisions one by one.
+- Repeated firings of the same event — when one logical decision (a drop, a fallback, a
+  fuzzy match) would fire many times because of redundant rows (e.g. once per year per
+  option), aggregate into a `sorted(...)` list and log once. When each firing is a
+  *distinct* decision the user may want to audit (one log line per dropped option, one
+  per fuzzy match), per-row is fine. The fuzzy-match log in `helpers.py` is the
+  canonical example of the per-row case.
 - Anything readily inspected from the returned DataFrame.
 - The same condition at multiple call sites — log once at the source where the cause
   is visible.
