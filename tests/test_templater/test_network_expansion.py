@@ -10,13 +10,19 @@ keeps the column list out of every test body.
 import logging
 
 import pandas as pd
+import pytest
 
 from ispypsa.templater.network_expansion import (
     _FLOW_PATH_FORWARD_MW_COL,
     _FLOW_PATH_REVERSE_MW_COL,
     _align_option_names_to_options,
+    _extract_flow_path_costs_from_iasr,
     _filter_flow_path_augmentations_to_granularity,
     _first_year_with_complete_costs_per_expansion,
+    _iasr_tables_with_prefix,
+    _looks_like_financial_year,
+    _normalise_cost_frame,
+    _parse_numeric,
     _rekey_augmentation_path_to_region,
     _template_network_expansion,
 )
@@ -31,6 +37,39 @@ _FP_OPT_COLS = [
 
 def _fp_options(rows: list[tuple]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=_FP_OPT_COLS)
+
+
+# --- IASR extraction ---
+
+
+def test_iasr_tables_with_prefix_strips_prefix_and_filters_others():
+    iasr_tables = {
+        "flow_path_augmentation_options_CQ-NQ": pd.DataFrame({"x": [1]}),
+        "flow_path_augmentation_options_NNSW-SQ": pd.DataFrame({"x": [2]}),
+        "rez_augmentation_options_NSW": pd.DataFrame({"x": [3]}),
+        "renewable_energy_zones": pd.DataFrame({"x": [4]}),
+    }
+
+    result = _iasr_tables_with_prefix(iasr_tables, "flow_path_augmentation_options_")
+
+    assert set(result.keys()) == {"CQ-NQ", "NNSW-SQ"}
+
+
+def test_extract_flow_path_costs_from_iasr_absorbs_workbook_typo():
+    # Workbook v7.5 has one mistyped table using singular "cost" instead of "costs".
+    # The extractor accepts either prefix and merges the results, while ignoring
+    # tables for other scenarios.
+    iasr_tables = {
+        "flow_path_augmentation_costs_step_change_CQ-NQ": pd.DataFrame({"x": [1]}),
+        "flow_path_augmentation_cost_step_change_NNSW-SQ": pd.DataFrame({"x": [2]}),
+        "flow_path_augmentation_costs_progressive_change_CQ-NQ": pd.DataFrame(
+            {"x": [3]}
+        ),
+    }
+
+    result = _extract_flow_path_costs_from_iasr(iasr_tables, "Step Change")
+
+    assert set(result.keys()) == {"CQ-NQ", "NNSW-SQ"}
 
 
 def test_template_network_expansion_picks_least_cost_and_splits_directions(
@@ -164,6 +203,51 @@ def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df):
         ),
         check_dtype=False,
     )
+
+
+def test_template_network_expansion_logs_skipped_non_numeric_capacity_options(
+    csv_str_to_df, caplog
+):
+    # Same shape as the skip test above, but asserts the INFO log fires for the
+    # dropped option so the operator can audit silent filtering.
+    flow_path_options = {
+        "CQ-NQ": _fp_options(
+            [
+                ("CQ-NQ", "CQ-NQ Option 1", 1000, 1000),
+                (
+                    "CQ-NQ",
+                    "CQ-NQ Option 2",
+                    "Removes limit",
+                    "Non-network augmentation",
+                ),
+            ]
+        ),
+    }
+    flow_path_costs = {
+        "CQ-NQ": csv_str_to_df("""
+            Flow path,  Option,          2024-25,  2025-26
+            CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+            CQ-NQ,      CQ-NQ Option 2,  500000,   505000
+        """),
+    }
+
+    with caplog.at_level(logging.INFO):
+        _template_network_expansion(
+            flow_path_options=flow_path_options,
+            flow_path_costs=flow_path_costs,
+            rez_options={},
+            rez_costs={},
+            network_transmission_paths=csv_str_to_df("""
+                path_id,  geo_from
+                CQ-NQ,    CQ
+            """),
+            rez_ids=set(),
+        )
+
+    assert (
+        "Skipping option 'CQ-NQ Option 2' for 'CQ-NQ': "
+        "no numeric capacity in forward or reverse direction."
+    ) in caplog.text
 
 
 def test_template_network_expansion_fuzzy_matches_em_dash_option_names(csv_str_to_df):
@@ -451,6 +535,37 @@ def test_align_option_names_warns_when_costs_have_no_matching_options(
     ) in caplog.text
 
 
+def test_align_option_names_rewrites_em_dash_to_hyphen(csv_str_to_df):
+    # The cost option_name uses an em-dash; the options table uses a hyphen.
+    # Fuzzy matching should rewrite the cost option_name to the hyphen form so
+    # downstream joins on (expansion_id, option_name) succeed.
+    options = csv_str_to_df("""
+        expansion_id,  option_name
+        NNSW-SQ,       NNSW-SQ Option 1
+    """)
+    costs = pd.DataFrame(
+        {
+            "expansion_id": ["NNSW-SQ", "NNSW-SQ"],
+            "option_name": ["NNSW–SQ Option 1", "NNSW–SQ Option 1"],
+            "year": [2025, 2026],
+            "cost": [500000, 510000],
+        }
+    )
+
+    result = _align_option_names_to_options(costs, options)
+
+    expected = csv_str_to_df("""
+        expansion_id,  option_name,       year,  cost
+        NNSW-SQ,       NNSW-SQ Option 1,  2025,  500000
+        NNSW-SQ,       NNSW-SQ Option 1,  2026,  510000
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
 def test_first_year_with_complete_costs_warns_and_skips_when_no_complete_year(
     csv_str_to_df, caplog
 ):
@@ -478,6 +593,32 @@ def test_first_year_with_complete_costs_warns_and_skips_when_no_complete_year(
         "No year has costs for all options of expansion 'CQ-NQ'; "
         "dropping the expansion. Likely indicates gaps in the upstream cost table."
     ) in caplog.text
+
+
+def test_first_year_with_complete_costs_picks_earliest_complete_year(csv_str_to_df):
+    # 2025 is missing Option 2's cost; both 2026 and 2027 have all options.
+    # The earliest complete year (2026) is selected and only those rows survive.
+    costs = csv_str_to_df("""
+        expansion_id,  option_name,  year,  cost
+        CQ-NQ,         Option 1,     2025,  500000
+        CQ-NQ,         Option 1,     2026,  510000
+        CQ-NQ,         Option 1,     2027,  520000
+        CQ-NQ,         Option 2,     2026,  600000
+        CQ-NQ,         Option 2,     2027,  610000
+    """)
+
+    result = _first_year_with_complete_costs_per_expansion(costs)
+
+    expected = csv_str_to_df("""
+        expansion_id,  option_name,  year,  cost
+        CQ-NQ,         Option 1,     2026,  510000
+        CQ-NQ,         Option 2,     2026,  600000
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("option_name").reset_index(drop=True),
+        expected.sort_values("option_name").reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_template_network_expansion_drops_expansion_with_no_complete_year(
@@ -714,3 +855,52 @@ def test_filter_flow_path_augmentations_does_not_mutate_input_frames():
     )
 
     pd.testing.assert_frame_equal(augmentations["NNSW-SQ"], snapshot)
+
+
+def test_filter_flow_path_augmentations_unknown_granularity_raises():
+    with pytest.raises(ValueError, match="Unknown regional_granularity"):
+        _filter_flow_path_augmentations_to_granularity({}, "regional", _REGION_LOOKUP)
+
+
+# --- Utilities ---
+
+
+def test_parse_numeric_handles_comma_thousands():
+    # Strings with thousands separators are parsed; non-numeric and empty become NaN.
+    series = pd.Series(["1,000", "1,500.5", "abc", ""])
+
+    result = _parse_numeric(series)
+
+    expected = pd.Series([1000.0, 1500.5, float("nan"), float("nan")])
+    pd.testing.assert_series_equal(result, expected, check_dtype=False)
+
+
+def test_normalise_cost_frame_drops_non_numeric_year_cells(csv_str_to_df):
+    # Drop is per-cell after the melt: Option 1 keeps 2026 only; Option 2 keeps 2025 only.
+    df = csv_str_to_df("""
+        Flow path,  Option,    2024-25,  2025-26
+        CQ-NQ,      Option 1,  N/A,      510000
+        CQ-NQ,      Option 2,  600000,   N/A
+    """)
+
+    result = _normalise_cost_frame(df, id_col="Flow path", option_col="Option")
+
+    expected = csv_str_to_df("""
+        expansion_id,  option_name,  year,  cost
+        CQ-NQ,         Option 1,     2026,  510000
+        CQ-NQ,         Option 2,     2025,  600000
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("option_name").reset_index(drop=True),
+        expected.sort_values("option_name").reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_looks_like_financial_year_matches_only_canonical_format():
+    assert _looks_like_financial_year("2024-25") is True
+    assert _looks_like_financial_year("2025-26") is True
+    assert _looks_like_financial_year("2024-2025") is False
+    assert _looks_like_financial_year("24-25") is False
+    assert _looks_like_financial_year("Status") is False
+    assert _looks_like_financial_year("Flow path") is False
