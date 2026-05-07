@@ -152,8 +152,9 @@ def test_template_network_expansion_picks_least_cost_and_splits_directions(
     )
 
 
-def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df):
-    # SWNSW1-style option with "Removes limit" should be skipped.
+def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df, caplog):
+    # SWNSW1-style option with "Removes limit" should be skipped, with an INFO log
+    # so the operator can audit silent filtering.
     flow_path_options = {
         "CQ-NQ": _fp_options(
             [
@@ -181,14 +182,15 @@ def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df):
         CQ-NQ,    CQ
     """)
 
-    options, costs = _template_network_expansion(
-        flow_path_options=flow_path_options,
-        flow_path_costs=flow_path_costs,
-        rez_options=rez_options,
-        rez_costs=rez_costs,
-        network_transmission_paths=network_transmission_paths,
-        rez_ids=set(),
-    )
+    with caplog.at_level(logging.INFO):
+        options, costs = _template_network_expansion(
+            flow_path_options=flow_path_options,
+            flow_path_costs=flow_path_costs,
+            rez_options=rez_options,
+            rez_costs=rez_costs,
+            network_transmission_paths=network_transmission_paths,
+            rez_ids=set(),
+        )
 
     # Only Option 1 survives (Option 2 has non-numeric capacity, skipped).
     expected_options = csv_str_to_df("""
@@ -203,46 +205,6 @@ def test_template_network_expansion_skips_non_numeric_capacity(csv_str_to_df):
         ),
         check_dtype=False,
     )
-
-
-def test_template_network_expansion_logs_skipped_non_numeric_capacity_options(
-    csv_str_to_df, caplog
-):
-    # Same shape as the skip test above, but asserts the INFO log fires for the
-    # dropped option so the operator can audit silent filtering.
-    flow_path_options = {
-        "CQ-NQ": _fp_options(
-            [
-                ("CQ-NQ", "CQ-NQ Option 1", 1000, 1000),
-                (
-                    "CQ-NQ",
-                    "CQ-NQ Option 2",
-                    "Removes limit",
-                    "Non-network augmentation",
-                ),
-            ]
-        ),
-    }
-    flow_path_costs = {
-        "CQ-NQ": csv_str_to_df("""
-            Flow path,  Option,          2024-25,  2025-26
-            CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
-            CQ-NQ,      CQ-NQ Option 2,  500000,   505000
-        """),
-    }
-
-    with caplog.at_level(logging.INFO):
-        _template_network_expansion(
-            flow_path_options=flow_path_options,
-            flow_path_costs=flow_path_costs,
-            rez_options={},
-            rez_costs={},
-            network_transmission_paths=csv_str_to_df("""
-                path_id,  geo_from
-                CQ-NQ,    CQ
-            """),
-            rez_ids=set(),
-        )
 
     assert (
         "Skipping option 'CQ-NQ Option 2' for 'CQ-NQ': "
