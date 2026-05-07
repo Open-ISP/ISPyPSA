@@ -50,26 +50,14 @@ def modify_config_value(config_path, key_path, new_value):
         yaml.dump(config, f)
 
 
-@pytest.fixture
-def prepare_test_cache(tmp_path, mock_workbook_file):
-    """Prepare test cache by copying from test_workbook_table_cache.
-
-    Creates a complete cache directory with all required CSV files,
-    ensuring timestamps are newer than the workbook file so the cache
-    task considers itself up-to-date.
-
-    Args:
-        tmp_path: pytest temporary directory
-        mock_workbook_file: Path to mock Excel workbook
-
-    Returns:
-        Path: Path to the prepared cache directory
-    """
+def _populate_test_cache(tmp_path, mock_workbook_file, version):
+    """Copy the version-specific test cache CSVs into a tmp cache dir."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy all CSV files from tests/test_workbook_table_cache to cache_dir
-    test_cache_dir = Path(__file__).parent.parent / "test_workbook_table_cache"
+    test_cache_dir = (
+        Path(__file__).parent.parent / "test_workbook_table_cache" / version
+    )
 
     for csv_file in test_cache_dir.glob("*.csv"):
         shutil.copy2(csv_file, cache_dir / csv_file.name)
@@ -85,6 +73,23 @@ def prepare_test_cache(tmp_path, mock_workbook_file):
     )  # 1 hour older
 
     return cache_dir
+
+
+@pytest.fixture
+def prepare_test_cache(tmp_path, mock_workbook_file):
+    """Prepare a 6.0-format test cache by copying from test_workbook_table_cache/6.0.
+
+    Creates a complete cache directory with all required CSV files,
+    ensuring timestamps are newer than the workbook file so the cache
+    task considers itself up-to-date.
+    """
+    return _populate_test_cache(tmp_path, mock_workbook_file, "6.0")
+
+
+@pytest.fixture
+def prepare_test_cache_new_format(tmp_path, mock_workbook_file):
+    """Prepare a 7.5 new-format test cache from test_workbook_table_cache/7.5."""
+    return _populate_test_cache(tmp_path, mock_workbook_file, "7.5")
 
 
 @pytest.fixture

@@ -1,0 +1,48 @@
+ID,Name,NEM region,ISP sub-region
+Q1,Far North QLD,QLD,NQ
+Q2,North Qld Clean Energy Hub,QLD,NQ
+Q3,Northern Qld,QLD,NQ
+Q4,Isaac,QLD,CQ
+Q5,Barcaldine,QLD,CQ
+Q6,Fitzroy,QLD,CQ
+Q7,Wide Bay,QLD,SQ
+Q8,Darling Downs,QLD,SQ
+Q9,Banana,QLD,CQ
+Q10,Collinsville,QLD,NQ
+N1,North West NSW,NSW,NNSW
+N2,New England,NSW,NNSW
+N3,Central-West Orana,NSW,CNSW
+N4,Broken Hill,NSW,SNSW
+N5,South West NSW,NSW,SNSW
+N6,Wagga Wagga,NSW,SNSW
+N7,Tumut,NSW,SNSW
+N8,Cooma-Monaro,NSW,SNSW
+N9,Hunter-Central Coast,NSW,CNSW
+N10,Hunter Coast,NSW,SNW
+N11,Illawarra Coast,NSW,SNW
+N12,Illawarra,NSW,SNW
+N13,South Cobar,NSW,SNSW
+V1,North West VIC,VIC,WNV
+V2,Central Highlands VIC,VIC,WNV
+V3,Wimmera Grampians,VIC,WNV
+V4,Wimmera Southern Mallee,VIC,WNV
+V5,South West VIC,VIC,WNV
+V6,Gippsland Onshore,VIC,SEV
+V7,Central North VIC,VIC,WNV
+V8,Gippsland Offshore,VIC,SEV
+V9,Southern Ocean,VIC,WNV
+S1,South East SA,SA,SESA
+S2,Riverland,SA,CSA
+S3,Mid-North SA,SA,CSA
+S4,Yorke Peninsula,SA,CSA
+S5,Northern SA,SA,NSA
+S6,Roxby Downs,SA,NSA
+S7,Eastern Eyre Peninsula,SA,NSA
+S8,Western Eyre Peninsula,SA,NSA
+T1,North East Tasmania,TAS,TAS
+T2,North West Tasmania,TAS,TAS
+T3,Central Highlands,TAS,TAS
+T4,North Tasmania Coast,TAS,TAS
+DN1,Dubbo,NSW,CNSW
+DN2,Yass,NSW,SNSW
+DN3,Marulan,NSW,CNSW

@@ -1,0 +1,48 @@
+REZ ID,REZ name,Additional constraint information,REZ transmission network limit_Peak demand,REZ transmission network limit_Summer typical,REZ transmission network limit_Winter reference,Electrolyser import limit,Indicative transmission expansion cost ($M/MW)_Tranche 1,Indicative transmission expansion cost ($M/MW)_Tranche 2,Indicative transmission expansion cost ($M/MW)_Tranche 2 conditions,Indicative transmission expansion cost ($M/MW)_Tranche 3,Indicative transmission expansion cost ($M/MW)_Tranche 3 conditions,Notes
+Q1,Far North QLD,,750.0,750.0,750.0,92.0,3.230142325581395,,,,,
+Q2,North Qld Clean Energy Hub,,700.0,700.0,700.0,,2.1876343598666,1.1373254964742,Apply after 500 MW,,,
+Q3,Northern Qld,Modelled as part of Group Constraint NQ1,,,,,,,,,,
+Q4,Isaac,Modelled as part of the Group Constraint CQ1,,,,,,,,,,
+Q5,Barcaldine,,85.0,85.0,85.0,,3.2983242321192,,,,,
+Q6,Fitzroy,Modelled as part of SQ-CQ sub-regional limit,,,,,,,,,,A REZ network limit of 3000 MW has also been modelled for the Accelerated Transition Exports scenario for Q6 to reflect changes in power flow direction associated with significant Hydrogen demand in the CQ sub-region
+Q7,Wide Bay,Modelled as part of Group Constraint SQ1,,,,,,,,,,
+Q8,Darling Downs,See Transmission Limit SWQLD1,,,,,,,,,,
+Q9,Banana,,150.0,150.0,150.0,,Included in connection costs,,,,,Q9 expansion is considered in its connection costs
+Q10,Collinsville,Modelled as part of CQ-NQ sub-regional limit,,,,,,,,,,High generation in Q10 may also result in northerly flow.
+N1,North West NSW,,171.0,171.0,171.0,56.0,3.592798629037289,,,,,"For REZs in NNSW, distance to Armidale used, for REZs in CNSW distance to Bayswater used, and REZs in SNSW distance to Bannaby used. This is to allow for the NSW sub-regional modelling"
+N2,New England,,577.0,577.0,577.0,,0.4539920833333333,0.46233018468968,Apply after 2400 MW,,,
+N3,Central-West Orana,,900.0,900.0,900.0,900.0,0.57012414539296,0.4691846182812429,Apply after 1500 MW,0.5484140967896667,Apply after 2900 MW,Build limit does not initially include the capacity gained by the development of the Central-West Orana REZ Pilot project supported by NSW Government.
+N4,Broken Hill,,250.0,250.0,250.0,,1.62029654467125,1.668901939714125,Apply after 1400 MW,,,
+N5,South West NSW,Also see Secondary Transmission Limit SWNSW1,450.0,450.0,450.0,,1.9,0.06452211945691666,Apply after 350 MW,,,
+N6,Wagga Wagga,,1100.0,1100.0,1100.0,,,,,,,Network upgrades modelled with SNSW-CNSW cutset options 3 and 4
+N7,Tumut,,0.0,0.0,0.0,,,,,,,Indicative transmission expansion cost is N/A as available wind and solar resource capacity is less than the existing transmission capacity.
+N8,Cooma-Monaro,,350.0,350.0,350.0,135.0,1.3767416,1.9287016509198,Apply after 500 MW,,,
+N9,Hunter-Central Coast,,400.0,400.0,400.0,,0.604,0.5877777777777777,Apply after 1000 MW,0.74125,After 900 MW,
+N10,Hunter Coast,,5650.0,5650.0,5650.0,,,,,,,Expansion cost based on CNSW to SNW Option 1.
+N11,Illawarra Coast,,1000.0,1000.0,1000.0,,0.5114530112100499,,,,,
+N12,Illawarra,,1000.0,1000.0,1000.0,1000.0,0.5114530112100499,,,,,
+N13,South Cobar,,106.0,106.0,119.0,,1.373357523917708,,,,,
+V1,North West VIC,,440.0,440.0,650.0,370.0,3.75,2.39622641509434,Apply after 200 MW,,,
+V2,Central Highlands VIC,,600.0,600.0,800.0,,0.9,,,,,
+V3,Wimmera Grampians,See Group Constraint WV1,,,,,,,,,,
+V4,Wimmera Southern Mallee,See Group Constraint WV1,,,,,,,,,,
+V5,South West VIC,See Group Constraint Limit SWV1,,,,3180.0,,,,,,
+V6,Gippsland Onshore,Modelled as part of SEV-MEL subregional limit,,,,,,,,,,
+V7,Central North VIC,,650.0,650.0,1300.0,500.0,1.58,3.96,Apply after 500 MW,,,
+V8,Gippsland Offshore,,0.0,0.0,0.0,,0.75,0.395,Apply after 2000 MW,,,
+V9,Southern Ocean,See Group Constraint SWV1,,,,,,,,,,
+S1,South East SA,Modelled as part of SESA-CSA sub-regional limit,,,,,,,,,,
+S2,Riverland,,130.0,130.0,130.0,,0.2174971132525572,,,,,
+S3,Mid-North SA,See Group Constraint MN1,,,,448.0,,,,,,
+S4,Yorke Peninsula,,100.0,100.0,100.0,,0.9382884620485665,,,,,
+S5,Northern SA,See Group Constraint NSA1,,,,,,,,,,
+S6,Roxby Downs,,500.0,500.0,500.0,,1.437085391281474,,,,,
+S7,Eastern Eyre Peninsula,,300.0,300.0,300.0,151.0,0.5966666666666667,,,,,The REZ transmission limit capacity assumes the completed Eyre Peninsula Reinforcement Project.
+S8,Western Eyre Peninsula,,0.0,0.0,0.0,,1.551788509424105,1.36752480540128,Apply after 950 MW,,,
+T1,North East Tasmania,,400.0,400.0,400.0,450.0,1.029837411172013,0.7898218092332874,Apply after 800 MW,,,
+T2,North West Tasmania,,277.0,277.0,112.0,,0.306762875,1.031308486556562,Apply after 800 MW,,,
+T3,Central Highlands,,702.0,702.0,843.0,550.0,0.4036036036036036,0.759253301577174,Apply after 555 MW,,,
+T4,North Tasmania Coast,Included in Group Constraint NET1,,,,,0.280540300228375,0.4941038451760222,Apply after 1360 MW,,,
+DN1,Dubbo,see Group Constraint CNSW1,0.0,0.0,0.0,,0.8671428571428571,0.25,After 700 MW,0.79,After 500 MW,
+DN2,Yass,,0.0,0.0,0.0,,0.7306666666666667,,,,,
+DN3,Marulan,,0.0,0.0,0.0,,0.77,,,,,
