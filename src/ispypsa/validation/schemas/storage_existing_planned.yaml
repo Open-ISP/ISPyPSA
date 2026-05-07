@@ -2,6 +2,11 @@ table: storage_existing_planned
 required: false
 unique:
   - [name]
+custom_validation:
+  - name: soc_min_lte_soc_max
+    description: >
+      When both soc_min and soc_max are present for a row, soc_min must be less than
+      or equal to soc_max.
 description: >
   Existing and planned-build storage unit characteristics, including battery storage
   and pumped hydro.
@@ -13,12 +18,12 @@ description: >
     - `existing_committed_anticipated_additional_generator_summary`
     - `renewable_energy_zones`
     - `maximum_capacity_existing_committed_anticipated_additional_generators`
-    - `fixed_opex_existing_committed_anticipated_additional_generators`
     - `battery_properties`
     - `pumped_hydro_existing_committed_anticipated_additional_properties`
     - `expected_closure_years`
 
-  If absent: only new entrant storage will be modelled (greenfield model).
+  If absent:
+  Only new entrant storage will be modelled (greenfield storage model).
 columns:
   name:
     type: string
@@ -44,98 +49,104 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      table: network_geography
-      column: geo_id
+      - network_geography: geo_id
     description: Network geography identifier where the storage unit is connected.
   fuel_type:
     type: string
     required: true
+    allowed_values: ["Water", "Battery"]
     description: >
       Fuel type used by the storage unit.
 
-      Defines the `carrier` in PyPSA. Maintained for consistency and grouping results,
-      though less relevant for storage than generators.
+      Defines the `carrier` in PyPSA. Maintained for consistency and grouping results.
   capacity:
     type: float
     required: true
     units: MW
-    description: >
-      Nameplate capacity (maximum power rating) in MW. Must be > 0.0.
+    gt: 0.0
+    description: Nameplate capacity (maximum power rating) in MW.
   storage_capacity:
     type: float
     required: true
     units: MWh
-    description: >
-      Energy capacity in MWh. Must be > 0.0.
-  fom:
-    type: float
-    required: false
-    units: $/MW/year
-    description: >
-      Fixed operation and maintenance cost per MW per year (AUD). Must be >= $0.0
-      or blank (assumed $0.0).
-
-      In the 2026 ISP, this determines retirement schedules via revenue sufficiency;
-      not yet implemented here.
-
-      If absent: no change.
+    gt: 0.0
+    description: Energy capacity in MWh.
   efficiency_charge:
     type: float
     required: true
     units: '%'
+    gte: 0.0
+    lte: 100.0
     description: >
-      Charging efficiency (%). Must be between 0.0 and 100.0.
+      Charging efficiency (%).
 
-      For PHES with only round-trip efficiency, calculated as round_trip**(1/2)
-      assuming symmetric charge/discharge.
+      Source notes:
+      For PHES with only round-trip efficiency given in IASR workbook tables, this
+      is calculated as round_trip**(1/2) assuming symmetric charge/discharge.
   efficiency_discharge:
     type: float
     required: true
     units: '%'
+    gte: 0.0
+    lte: 100.0
     description: >
-      Discharging efficiency (%). Must be between 0.0 and 100.0.
+      Discharging efficiency (%).
 
-      For PHES with only round-trip efficiency, calculated as round_trip**(1/2)
-      assuming symmetric charge/discharge.
+      Source notes:
+      For PHES with only round-trip efficiency given in IASR workbook tables, this
+      is calculated as round_trip**(1/2) assuming symmetric charge/discharge.
   soc_max:
+    # note: soc constraints not yet implemented.
     type: float
     required: false
     units: '%'
+    gte: 0.0
+    lte: 100.0
+    nan_fill: 100.0
     description: >
-      Maximum allowed state of charge (%). Must be between 0.0 and 100.0,
-      and >= soc_min if both present.
+      Maximum allowed state of charge (%).
 
-      If absent: defaults to 100.
+      If absent:
+      No maximum state of charge constraint applies to this unit.
   soc_min:
     type: float
     required: false
     units: '%'
+    gte: 0.0
+    lte: 100.0
+    nan_fill: 0.0
     description: >
-      Minimum allowed state of charge (%). Must be between 0.0 and 100.0,
-      and <= soc_max if both present.
+      Minimum allowed state of charge (%).
 
-      If absent: defaults to 0.
+      If absent:
+      No minimum state of charge constraint applies to this unit.
   degradation_annual:
     type: float
     required: false
     units: '%'
+    gte: 0.0
+    lte: 100.0
     description: >
-      Annual capacity degradation rate (%). Must be between 0.0 and 100.0.
+      Annual capacity degradation rate (%).
 
       Not currently applied in the model.
 
-      If absent: no degradation modelled.
+      If absent:
+      No degradation modelled.
   commissioning_date:
     type: date
     required: false
+    format: "%d/%m/%Y"
     description: >
-      Date when the storage unit begins operation. Format: %d/%m/%Y
+      Date when the storage unit begins operation.
 
-      If absent: operational from start of modelling horizon.
+      If absent:
+      The unit is assumed operational from start of modelling horizon.
   closure_year:
     type: int
     required: false
     description: >
       Financial year when the storage unit retires.
 
-      If absent: no retirement during modelling horizon.
+      If absent:
+      The unit is not retired during the modelling horizon.

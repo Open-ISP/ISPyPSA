@@ -11,52 +11,67 @@ description: >
   Source tables:
     - `connection_cost_forecast_wind_and_solar`
     - `connection_cost_forecast_other`
+    - `connection_costs_for_wind_and_solar`
+    - `connection_costs_other`
+    - `efficient_level_of_system_strength_cost`
 
-  If absent: no additional connection or system security costs apply to new entrant
-  build costs.
+  If absent:
+  No additional connection or system security costs apply to new entrant build costs.
 columns:
   geo_id:
     type: string
     required: true
     allowed_values_from:
-      table: network_geography
-      column: geo_id
+      - network_geography: geo_id
     description: >
       Network geography identifier where the connection cost applies.
 
-      If costs are given by region in source data, create separate rows for each
-      geo_id in the region with the same cost.
+      Source notes:
+      If costs are given by region in source data, separate rows for each geo_id in
+      the region are created by the `templater` with the same cost applied across each.
   technology:
     type: string
-    required: true
+    required: false
+    allowed_values_from:
+      - costs_new_entrant_build: technology
     description: >
-      Standardised technology name mapping to new entrant technologies in
-      `generators_new_entrant` and/or `storage_new_entrant` tables.
+      Standardised technology name mapping to new entrant technologies.
 
-      If blank: treat as geo_id-level VRE connection cost.
+      If absent (or empty):
+      The connection cost applies to all new entrant technologies in `geo_id` that
+      have no technology-specific connection cost for the applicable year.
   year:
     type: int
     required: true
-    description: >
-      Financial year in which this cost applies.
-
-      Used to map to new entrant storage/generation by build year.
+    description: Year in which this cost applies.
   connection_cost:
     type: float
-    required: true
+    required: false
     units: $/MW
+    gte: 0.0
+    nan_fill: 0.0
     description: >
-      Additional cost for new build reflecting transmission infrastructure required
-      for grid connection (AUD). Must be >= $0.0.
+      Additional cost in AUD for new build reflecting transmission infrastructure required
+      for grid connection.
+
+      Used in calculating the total capital cost of new entrant technologies.
+
+      If absent (or empty):
+      No additional connection cost applies for the corresponding technology, geo_id
+      and build year.
   system_strength_cost:
     type: float
     required: false
     units: $/MW
+    gte: 0.0
+    nan_fill: 0.0
     description: >
-      Additional cost for inverter-based resources to meet efficient levels of
-      system strength (AUD). Must be >= $0.0 or blank (assumed $0.0).
+      Additional cost in AUD for inverter-based resources to meet efficient levels of
+      system strength.
 
-      Per IASR: "This cost is a blend of remediation with synchronous condenser
-      and grid forming batteries".
+      Used in calculating the total capital cost for some new entrant technologies.
+      Per IASR, "This cost is a blend of remediation with synchronous condenser
+      and grid forming batteries" (IASR workbook v7.5, 'Power System Security' sheet).
 
-      If absent: only `connection_cost` is added to new entrant build cost.
+      If absent (or empty):
+      Only the `connection_cost` value is added to new entrant build costs.
