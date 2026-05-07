@@ -69,6 +69,17 @@ _BASE_TEMPLATE_OUTPUTS = [
     "custom_constraints_rhs",
 ]
 
+# Outputs from the new-format templater branch. Granularity-invariant: the
+# same five tables are emitted for sub_regions, nem_regions, and single_region
+# (only their contents differ).
+_NEW_FORMAT_TEMPLATE_OUTPUTS = [
+    "network_geography",
+    "network_transmission_paths",
+    "network_transmission_path_limits",
+    "network_expansion_options",
+    "network_transmission_path_expansion_costs",
+]
+
 
 def create_ispypsa_inputs_template(
     scenario: str,
@@ -272,11 +283,14 @@ def create_ispypsa_inputs_template(
 
 
 def list_templater_output_files(regional_granularity, output_path=None):
-    files = _BASE_TEMPLATE_OUTPUTS.copy()
-    if regional_granularity in ["sub_regions", "single_region"]:
-        files.remove("nem_regions")
-    if regional_granularity == "single_region":
-        files.remove("flow_paths")
+    if FEATURE_FLAGS["use_new_table_format"]:
+        files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
+    else:
+        files = _BASE_TEMPLATE_OUTPUTS.copy()
+        if regional_granularity in ["sub_regions", "single_region"]:
+            files.remove("nem_regions")
+        if regional_granularity == "single_region":
+            files.remove("flow_paths")
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files
