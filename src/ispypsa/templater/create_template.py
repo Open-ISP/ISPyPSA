@@ -72,6 +72,8 @@ _BASE_TEMPLATE_OUTPUTS = [
 # Outputs from the new-format templater branch. Granularity-invariant: the
 # same five tables are emitted for sub_regions, nem_regions, and single_region
 # (only their contents differ).
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
+# delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_geography",
     "network_transmission_paths",
@@ -146,6 +148,8 @@ def create_ispypsa_inputs_template(
             "Cannot specify both filter_to_nem_regions and filter_to_isp_sub_regions"
         )
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch (legacy
+    # templater path) and inline this branch.
     if FEATURE_FLAGS["use_new_table_format"]:
         template = {}
         sub_regional_geography = _template_network_geography(
@@ -283,6 +287,8 @@ def create_ispypsa_inputs_template(
 
 
 def list_templater_output_files(regional_granularity, output_path=None):
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch and the
+    # granularity-specific file removals.
     if FEATURE_FLAGS["use_new_table_format"]:
         files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
     else:

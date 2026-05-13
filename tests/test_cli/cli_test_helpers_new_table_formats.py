@@ -5,6 +5,9 @@ becomes the only path, this file is renamed back to cli_test_helpers.py
 (after the legacy file is removed) without needing to disentangle anything.
 Format-agnostic infrastructure (run_cli_command, assert_task_ran, the
 mock_workbook_file fixture, etc.) stays in the sibling shared module.
+
+FEATURE_FLAG_CLEANUP[use_new_table_format]: merge this file into the sibling
+cli_test_helpers.py and delete it.
 """
 
 import pytest

@@ -5,6 +5,9 @@ that when the feature flag goes away and 6.0 is dropped, the test
 restructuring becomes a sequence of file operations rather than a diff inside
 test bodies.
 
+FEATURE_FLAG_CLEANUP[use_new_table_format]: merge this file into the sibling
+test_create_ispypsa_inputs.py and delete it.
+
 Coverage:
 - Mechanism: fresh run, up-to-date detection, config_changed (irrelevant +
   relevant), plus the extensive-only dependency-modified + missing-target-file

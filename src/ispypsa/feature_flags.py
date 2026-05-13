@@ -12,6 +12,7 @@ with open(_flags_path) as f:
 # a flag for a subprocess CLI run, where monkeypatching the imported dict isn't
 # an option.
 _ENV_OVERRIDES = {
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: remove this entry.
     "use_new_table_format": "ISPYPSA_USE_NEW_TABLE_FORMAT",
 }
 for _flag, _env_var in _ENV_OVERRIDES.items():

@@ -36,6 +36,8 @@ def _load_known_tables() -> dict[str, list[str]]:
 
 
 def _build_required_tables(iasr_workbook_version: str) -> list[str]:
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch (legacy
+    # required-tables list).
     if FEATURE_FLAGS["use_new_table_format"]:
         all_tables = _load_known_tables()[iasr_workbook_version]
         augmentation = [n for n in all_tables if n.startswith(_AUGMENTATION_PREFIXES)]
