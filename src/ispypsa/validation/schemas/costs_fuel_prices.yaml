@@ -36,7 +36,6 @@ columns:
   fuel_type:
     type: string
     required: true
-    allowed_values: ["Black Coal", "Brown Coal", "Liquid Fuel", "Gas", "Water", "Solar", "Wind", "Biomass", "Biomethane"]
     description: >
       Fuel type for which the price applies.
 

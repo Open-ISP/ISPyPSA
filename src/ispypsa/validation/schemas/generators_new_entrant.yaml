@@ -41,7 +41,8 @@ columns:
   resource_type:
     type: string
     required: false
-    allowed_values: ["solar", "solar_thermal", "wind_medium", "wind_high", "wind_offshore_fixed", "wind_offshore_floating"]
+    allowed_values_from:
+      - resource_limits: resource_type
     description: >
       Standard string value specifying the ISP-defined resource type of variable
       renewable energy (VRE) generating units only.
@@ -61,7 +62,8 @@ columns:
   fuel_type:
     type: string
     required: true
-    allowed_values: ["Black Coal", "Brown Coal", "Liquid Fuel", "Gas", "Water", "Solar", "Wind", "Biomass"]
+    allowed_values_from:
+      - costs_fuel_prices: fuel_type
     description: >
       The name of the type of fuel used by the generating unit.
 

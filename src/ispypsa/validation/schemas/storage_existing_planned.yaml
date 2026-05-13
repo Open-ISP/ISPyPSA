@@ -146,7 +146,7 @@ columns:
     type: int
     required: false
     description: >
-      Financial year when the storage unit retires.
+      Year when the storage unit retires.
 
       If absent:
       The unit is not retired during the modelling horizon.

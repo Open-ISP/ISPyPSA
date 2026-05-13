@@ -25,7 +25,7 @@ columns:
   year:
     type: int
     required: true
-    description: Financial year in which this blend rate applies.
+    description: Year in which this blend rate applies.
   gpg_emissions_factor:
     type: float
     required: true

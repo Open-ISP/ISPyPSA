@@ -55,7 +55,8 @@ columns:
   fuel_type:
     type: string
     required: true
-    allowed_values: ["Black Coal", "Brown Coal", "Liquid Fuel", "Gas", "Water", "Solar", "Wind", "Biomass"]
+    allowed_values_from:
+      - costs_fuel_prices: fuel_type
     description: >
       The name of the type of fuel used by the generating unit.
 
