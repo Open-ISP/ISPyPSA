@@ -8,7 +8,7 @@ table: costs_fuel_prices
 # columns/tables needed to calculate SRMC (dynamic) required.
 required: true
 unique:
-  - [fuel_type, fuel_price_node, year]
+  - [fuel_type, fuel_price_mapping, year]
 description: >
   Fuel prices by year for generation and storage units.
 
