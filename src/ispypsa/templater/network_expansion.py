@@ -443,16 +443,10 @@ def _map_rez_id_to_expansion_id(
 
         returns:
             N1-NNSW    # REZ mapped to its path_id
-            SWQLD1     # constraint group passes through
-            None       # NaN → None for caller to drop
+            SWQLD1     # constraint group passes through (not in map)
+            NaN        # passes through (not in map); caller drops it
     """
-
-    def convert(r):
-        if pd.isna(r):
-            return None
-        return geo_from_to_path_id.get(r, r)
-
-    return rez_id.map(convert)
+    return rez_id.replace(geo_from_to_path_id)
 
 
 def _build_geo_from_to_path_id_map(
