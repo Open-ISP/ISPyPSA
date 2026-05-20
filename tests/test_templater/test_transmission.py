@@ -1,6 +1,9 @@
+import warnings
+
 import pandas as pd
 
 from ispypsa.templater.transmission import (
+    _append_new_parallel_paths,
     _collapse_paths_with_no_limits,
     _new_parallel_path_rows,
     _template_network_transmission,
@@ -607,3 +610,48 @@ def test_new_parallel_path_rows_picks_up_keys_without_existing_path(csv_str_to_d
         check_exact=False,
         check_dtype=False,
     )
+
+
+def test_append_new_parallel_paths_no_new_keys_is_a_silent_noop(csv_str_to_df):
+    # Exercises the branch where every augmentation key already has a matching
+    # path_id, so `_new_parallel_path_rows` returns empty frames.
+    #
+    # This branch used to be guarded by `if new_paths.empty: return paths, limits`
+    # in `_append_new_parallel_paths` — not for correctness (the concat already
+    # produced the right rows) but to dodge a pandas FutureWarning fired when
+    # an empty, object-dtype `capacity` column is concatenated onto the
+    # populated float64 one. The guard was removed in favour of typing the
+    # empty `limits` frame in `_new_parallel_path_rows` itself. This test pins
+    # both halves of that fix:
+    #
+    #   1. The concat is silent. `simplefilter("error")` promotes any
+    #      FutureWarning into a test failure, so if the upstream typing
+    #      regresses (or a new untyped non-object column gets added later) the
+    #      test breaks here, not in production logs.
+    #   2. The function returns its inputs unchanged.
+    #
+    # The float literal `1200.0` matters: `csv_str_to_df` parses bare integers
+    # as int64, and int64-vs-object concat doesn't fire the warning — it just
+    # silently coerces the result to object. Only float-vs-object trips the
+    # warning, and float is what the real upstream limits frame carries.
+    paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+        CQ-NQ,    CQ,        NQ,      AC
+    """)
+    limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,    capacity
+        CQ-NQ,    forward,    peak_demand,  1200.0
+    """)
+    flow_path_options = {"CQ-NQ": pd.DataFrame()}
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result_paths, result_limits = _append_new_parallel_paths(
+            paths, limits, flow_path_options
+        )
+
+    pd.testing.assert_frame_equal(result_paths, paths)
+    # check_dtype=False because the dtype contract this test cares about is
+    # enforced by the warning-as-error above, not by an equality check against
+    # the csv_str_to_df-parsed input frame.
+    pd.testing.assert_frame_equal(result_limits, limits, check_dtype=False)

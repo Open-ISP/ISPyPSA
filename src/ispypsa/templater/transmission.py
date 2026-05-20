@@ -917,8 +917,6 @@ def _append_new_parallel_paths(
     new_paths, new_limits = _new_parallel_path_rows(
         flow_path_options, set(paths["path_id"])
     )
-    if new_paths.empty:
-        return paths, limits
     paths = pd.concat([paths, new_paths], ignore_index=True)
     limits = pd.concat([limits, new_limits], ignore_index=True)
     return paths, limits
@@ -953,6 +951,12 @@ def _new_parallel_path_rows(
         [_parse_path_key(k) for k in new_keys],
         columns=["path_id", "geo_from", "geo_to", "carrier"],
     )
+    # `capacity` must be explicitly typed so the empty-keys case still produces
+    # a float64 column. Without this, an empty `new_keys` yields an object-dtype
+    # `capacity`, and concatenating it onto the populated (float64) limits frame
+    # downstream both raises a pandas FutureWarning and silently coerces the
+    # result column to object. The string columns don't need typing — they're
+    # object on both sides regardless.
     limits = pd.DataFrame(
         [
             {"path_id": k, "direction": d, "timeslice": t, "capacity": 0.0}
@@ -961,7 +965,7 @@ def _new_parallel_path_rows(
             for t in _NEW_PATH_TIMESLICES
         ],
         columns=["path_id", "direction", "timeslice", "capacity"],
-    )
+    ).astype({"capacity": "float64"})
     return paths, limits
 
 
