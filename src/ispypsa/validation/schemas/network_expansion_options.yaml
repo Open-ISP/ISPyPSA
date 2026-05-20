@@ -13,10 +13,8 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      - table: network_transmission_paths
-        column: path_id
-      - table: constraints_rhs
-        column: constraint_id
+      - network_transmission_paths: path_id
+      - constraints_rhs: constraint_id
     description: >
       Identifier for the expandable network element. Maps to path_id in
       network_transmission_paths for physical paths, or to constraint_id
