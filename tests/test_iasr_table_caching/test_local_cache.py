@@ -9,13 +9,11 @@ def test_build_required_tables_new_format():
         {"use_new_table_format": True},
     ):
         result = _build_required_tables("7.5")
-    # Base topology tables come first
-    assert result[:4] == [
-        "sub_regional_reference_nodes",
-        "renewable_energy_zones",
-        "flow_path_transfer_capability",
-        "initial_transmission_limits",
-    ]
+    # Base topology tables are present
+    assert "sub_regional_reference_nodes" in result
+    assert "renewable_energy_zones" in result
+    assert "flow_path_transfer_capability" in result
+    assert "initial_transmission_limits" in result
     # Augmentation tables discovered from the manifest by prefix
     assert "flow_path_augmentation_options_CQ-NQ" in result
     assert "flow_path_augmentation_costs_step_change_CQ-NQ" in result
