@@ -1,11 +1,11 @@
 import logging
-import re
 
 import pandas as pd
 
 from .helpers import (
     _financial_year_string_to_end_year_int,
     _fuzzy_match_names,
+    _looks_like_financial_year,
     _snakecase_string,
 )
 
@@ -606,11 +606,6 @@ def _normalise_cost_frame(
     long["year"] = long["year"].map(_financial_year_string_to_end_year_int)
     long["cost"] = pd.to_numeric(long["cost"], errors="coerce")
     return long.dropna(subset=["cost"]).reset_index(drop=True)
-
-
-def _looks_like_financial_year(col: str) -> bool:
-    """True if column name matches a financial year pattern like '2024-25'."""
-    return bool(re.match(r"^\d{4}-\d{2}$", str(col)))
 
 
 # --- Selection ---

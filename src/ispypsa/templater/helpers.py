@@ -225,6 +225,11 @@ def _add_units_to_financial_year_columns(
     return cols
 
 
+def _looks_like_financial_year(col: str) -> bool:
+    """True if column name matches a financial year pattern like '2024-25'."""
+    return bool(re.match(r"^\d{4}-\d{2}$", str(col)))
+
+
 def _financial_year_string_to_end_year_int(fy_string: str) -> int:
     """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
 

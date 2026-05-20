@@ -20,7 +20,6 @@ from ispypsa.templater.network_expansion import (
     _filter_flow_path_augmentations_to_granularity,
     _first_year_with_complete_costs_per_expansion,
     _iasr_tables_with_prefix,
-    _looks_like_financial_year,
     _normalise_cost_frame,
     _parse_numeric,
     _rekey_augmentation_path_to_region,
@@ -857,12 +856,3 @@ def test_normalise_cost_frame_drops_non_numeric_year_cells(csv_str_to_df):
         expected.sort_values("option_name").reset_index(drop=True),
         check_dtype=False,
     )
-
-
-def test_looks_like_financial_year_matches_only_canonical_format():
-    assert _looks_like_financial_year("2024-25") is True
-    assert _looks_like_financial_year("2025-26") is True
-    assert _looks_like_financial_year("2024-2025") is False
-    assert _looks_like_financial_year("24-25") is False
-    assert _looks_like_financial_year("Status") is False
-    assert _looks_like_financial_year("Flow path") is False
