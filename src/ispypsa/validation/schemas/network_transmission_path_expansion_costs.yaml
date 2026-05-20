@@ -13,8 +13,7 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      table: network_expansion_options
-      column: expansion_id
+      - network_expansion_options: expansion_id
     description: Identifier for the expandable network element.
   year:
     type: integer
