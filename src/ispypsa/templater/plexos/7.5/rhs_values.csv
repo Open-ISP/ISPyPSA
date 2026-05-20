@@ -1,0 +1,49 @@
+constraint_name,value,date_from,date_to,tags
+CNSW-SNW South GPG,2790.0,,,NSW Typical Summer
+CNSW-SNW South GPG,2790.0,,,NSW Hot Day
+CNSW-SNW South GPG,2790.0,,,NSW Winter
+CNSW-SNW South GPG,6390.0,2037-07-01T00:00:00,,NSW Hot Day
+CNSW-SNW South GPG,6390.0,2037-07-01T00:00:00,,NSW Winter
+CNSW-SNW South GPG,6390.0,2037-07-01T00:00:00,,NSW Typical Summer
+ExportGroup_CNSW1,815.0,,,NSW Hot Day
+ExportGroup_CNSW1,815.0,,,NSW Typical Summer
+ExportGroup_CNSW1,815.0,,,NSW Winter
+ExportGroup_CQ1,1700.0,,,QLD Typical Summer
+ExportGroup_CQ1,1700.0,,,QLD Hot Day
+ExportGroup_CQ1,2070.0,,,QLD Winter
+ExportGroup_MN1,1630.0,,,SA Typical Summer
+ExportGroup_MN1,1860.0,,,SA Winter
+ExportGroup_MN1,1630.0,,,SA Hot Day
+ExportGroup_NET1,1600.0,,,TAS Winter
+ExportGroup_NET1,1600.0,,,TAS Typical Summer
+ExportGroup_NET1,1600.0,,,TAS Hot Day
+ExportGroup_NQ1,2420.0,,,QLD Hot Day
+ExportGroup_NQ1,2420.0,,,QLD Typical Summer
+ExportGroup_NQ1,2650.0,,,QLD Winter
+ExportGroup_NSA1,585.0,,,SA Winter
+ExportGroup_NSA1,585.0,,,SA Typical Summer
+ExportGroup_NSA1,585.0,,,SA Hot Day
+ExportGroup_SEVIC1,4200.0,,,VIC Typical Summer
+ExportGroup_SEVIC1,4200.0,,,VIC Winter
+ExportGroup_SEVIC1,4200.0,,,VIC Hot Day
+ExportGroup_SQ1,1400.0,,,QLD Hot Day
+ExportGroup_SQ1,1400.0,,,QLD Winter
+ExportGroup_SQ1,1400.0,,,QLD Typical Summer
+ExportGroup_SWNSW1,1200.0,,,NSW Typical Summer
+ExportGroup_SWNSW1,1200.0,,,NSW Winter
+ExportGroup_SWNSW1,1200.0,,,NSW Hot Day
+ExportGroup_SWNSW2,4400.0,,,NSW Hot Day
+ExportGroup_SWNSW2,4400.0,,,NSW Typical Summer
+ExportGroup_SWNSW2,4400.0,,,NSW Winter
+ExportGroup_SWQLD1,3000.0,,,QLD Hot Day
+ExportGroup_SWQLD1,3000.0,,,QLD Typical Summer
+ExportGroup_SWQLD1,3000.0,,,QLD Winter
+ExportGroup_SWV1,2495.0,,,VIC Winter
+ExportGroup_SWV1,2495.0,,,VIC Hot Day
+ExportGroup_SWV1,2495.0,,,VIC Typical Summer
+ExportGroup_WNV1,2040.0,,,VIC Typical Summer
+ExportGroup_WNV1,2040.0,,,VIC Hot Day
+ExportGroup_WNV1,3195.0,,,VIC Winter
+ExportGroup_WV1,780.0,,,VIC Hot Day
+ExportGroup_WV1,780.0,,,VIC Typical Summer
+ExportGroup_WV1,980.0,,,VIC Winter
