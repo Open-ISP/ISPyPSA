@@ -1,0 +1,203 @@
+table: storage_new_entrant
+required: false
+unique:
+  - [name]
+custom_validation:
+  - name: soc_min_lte_soc_max
+    description: >
+      When both soc_min and soc_max are present for a row, soc_min must be less than
+      or equal to soc_max.
+description: >
+  New entrant storage unit characteristics, including battery storage and pumped hydro.
+
+  Each row represents a single new entrant storage technology option.
+
+  Source tables:
+    - `new_entrants_summary`
+    - `renewable_energy_zones`
+    - `maximum_capacity_new_entrants`
+    - `fixed_opex_new_entrants`
+    - `battery_properties`
+    - `pumped_hydro_new_entrant_properties`
+    - `gpg_min_stable_level_new_entrants`
+    - `lead_time_and_project_life`
+    - `locational_cost_factors`
+    - `locational_cost_pumped_hydro_factors`
+    - `technology_cost_breakdown_ratios`
+
+  If absent:
+  Only existing or planned storage will be modelled.
+columns:
+  name:
+    type: string
+    required: true
+    description: Unique identifier for the storage unit (e.g. IASR ID or full name).
+  power_station:
+    type: string
+    required: true
+    description: >
+      Power station name grouping storage units together.
+
+      For new entrant storage units, this is always the same as the `name` field
+      (i.e, no grouping is performed). Keeping for consistency with existing storage tables.
+  technology:
+    type: string
+    required: true
+    allowed_values_from:
+      - costs_new_entrant_build: technology
+    description: >
+      Technology type as given in the IASR workbook.
+
+      Used as the canonical technology type across the model to standardise
+      spellings and group results by technology. Any technology present in this
+      table must have a build cost defined.
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - network_geography: geo_id
+    description: Network geography identifier where the storage unit can be built.
+  fuel_type:
+    type: string
+    required: true
+    allowed_values: ["Water", "Battery"]
+    description: >
+      Fuel type used by the storage unit.
+
+      Defines the `carrier` in PyPSA. Maintained for consistency and grouping results.
+  storage_hours:
+    type: float
+    required: true
+    units: h
+    gt: 0.0
+    description: Maximum storage duration in hours.
+  fom:
+    type: float
+    required: true
+    units: $/MW/year
+    gte: 0.0
+    description: >
+      Fixed operation and maintenance cost per MW per year.
+
+      Used to calculate annuitised capital costs for new entrant storage units.
+  efficiency_charge:
+    type: float
+    required: true
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    description: >
+      Charging efficiency (%).
+
+      Source notes:
+      For PHES with only round-trip efficiency given in IASR workbook tables, this
+      is calculated as round_trip**(1/2) assuming symmetric charge/discharge.
+  efficiency_discharge:
+    type: float
+    required: true
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    description: >
+      Discharging efficiency (%).
+
+      Source notes:
+      For PHES with only round-trip efficiency given in IASR workbook tables, this
+      is calculated as round_trip**(1/2) assuming symmetric charge/discharge.
+  soc_max:
+    # note: soc constraints not yet implemented.
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    nan_fill: 100.0
+    description: >
+      Maximum allowed state of charge (%).
+
+      If absent:
+      No maximum state of charge constraint applies to this unit.
+  soc_min:
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    nan_fill: 0.0
+    description: >
+      Minimum allowed state of charge (%).
+
+      If absent:
+      No minimum state of charge constraint applies to this unit.
+  minimum_stable_level:
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    nan_fill: 0.0
+    description: >
+      Minimum stable operating level as a percentage of maximum capacity.
+
+      Only applies to PHES units per the IASR workbook.
+
+      If absent:
+      No minimum operating level constraint.
+  lcf_build:
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    nan_fill: 100.0
+    description: >
+      Locational cost factor - applies to build and connection costs to
+      scale costs according to location.
+
+      If absent:
+      Costs are as given with no locational scaling applied.
+  lcf_om:
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    nan_fill: 100.0
+    description: >
+      Locational cost factor - applies to fixed and variable operation and maintenance
+      costs to scale costs according to location.
+
+      If absent:
+      Costs are as given with no locational scaling applied.
+  lifetime_technical:
+    type: float
+    required: true
+    units: years
+    gt: 0.0
+    description: >
+      Technical lifetime in years.
+
+      Determines whether the unit is operational during a given investment period.
+  lifetime_economic:
+    type: float
+    required: false
+    units: years
+    gt: 0.0
+    description: >
+      Economic lifetime in years.
+
+      Used to calculate annuitised capital cost.
+
+      If absent:
+      `lifetime_technical` is used.
+  degradation_annual:
+    type: float
+    required: false
+    units: '%'
+    gte: 0.0
+    lte: 100.0
+    description: >
+      Annual capacity degradation rate (%).
+
+      Not currently applied in the model.
+
+      If absent:
+      No degradation modelled.
