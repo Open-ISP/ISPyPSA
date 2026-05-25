@@ -50,6 +50,7 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "connection_cost_forecast_other",
             "connection_costs_for_wind_and_solar",
             "connection_costs_other",
+            "efficient_level_of_system_strength_cost",
         ] + augmentation
 
     else:

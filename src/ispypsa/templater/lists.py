@@ -25,7 +25,7 @@ _CONDENSED_GENERATOR_TYPES = [
     "new_entrants",
 ]
 
-_ISP_SCENARIOS = ["Progressive Change", "Step Change", "Green Energy Exports"]
+_ISP_SCENARIOS = ["Slower Growth", "Step Change", "Accelerated Transition"]
 
 _MINIMUM_REQUIRED_GENERATOR_COLUMNS = [
     # naming

@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.feature_flags import FEATURE_FLAGS
+from ispypsa.templater.connection_and_build_costs import _template_connection_costs
 from ispypsa.templater.dynamic_generator_properties import (
     _template_generator_dynamic_properties,
 )
@@ -88,8 +89,8 @@ def create_ispypsa_inputs_template(
     regional_granularity: str,
     iasr_tables: dict[str, pd.DataFrame],
     manually_extracted_tables: dict[str, pd.DataFrame],
-    filter_to_nem_regions: list[str] = None,
-    filter_to_isp_sub_regions: list[str] = None,
+    filter_to_nem_regions: list[str] | None = None,
+    filter_to_isp_sub_regions: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Creates a template set of [`ISPyPSA` input tables](tables/ispypsa.md).
 
@@ -198,6 +199,18 @@ def create_ispypsa_inputs_template(
         )
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
+
+        # todo: replace with actual generators_new_entrant once that templating
+        # function is written — passing empty placeholder for now so costs_connection
+        # is wired up but produces no VRE rows until generators are templated.
+        generators_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
+        template["costs_connection"] = _template_connection_costs(
+            iasr_tables["connection_cost_forecast_wind_and_solar"],
+            iasr_tables["connection_costs_for_wind_and_solar"],
+            iasr_tables["efficient_level_of_system_strength_cost"],
+            scenario,
+            generators_new_entrant,
+        )
         return template
 
     template = {}

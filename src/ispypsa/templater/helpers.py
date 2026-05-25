@@ -136,6 +136,79 @@ def _log_fuzzy_match(
             logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
 
 
+def _best_fuzzy_match(value: str, choices: Iterable[str], threshold: int) -> str | None:
+    """Returns the highest-scoring match from choices if score >= threshold, else None.
+
+    I/O Example:
+        _best_fuzzy_match("Step Chaneg", ["Step Change", "Slower Growth"], 85)
+        → "Step Change"   # fuzz.ratio ~89, above threshold
+
+        _best_fuzzy_match("Hmm", ["Step Change", "Slower Growth"], 85)
+        → None            # best score well below threshold
+    """
+    best_choice, best_score = max(
+        ((c, fuzz.ratio(value, c)) for c in choices),
+        key=lambda x: x[1],
+    )
+    return best_choice if best_score >= threshold else None
+
+
+def _warn_unmatched_fuzzy_values(
+    name_series: pd.Series, match_dict: dict[str, str | None], task_desc: str
+) -> None:
+    """Logs a WARNING for unique values in name_series that could not be fuzzy matched."""
+    unmatched = sorted(k for k, v in match_dict.items() if v is None)
+    if unmatched:
+        logging.warning(
+            f"Could not fuzzy match to a standard name whilst {task_desc}: "
+            f"{unmatched} — original values retained"
+        )
+
+
+def _fuzzy_map_to_canonical(
+    name_series: pd.Series,
+    choices: Iterable[str],
+    task_desc: str,
+    threshold: int = 85,
+) -> pd.Series:
+    """Maps each value in name_series to the closest match in choices (many-to-one).
+
+    Unlike _fuzzy_match_names, choices are not consumed — multiple input values can
+    map to the same canonical name. Values scoring below ``threshold`` keep their
+    original value and are logged as WARNING. Successful fuzzy corrections are
+    logged at INFO via _log_fuzzy_match.
+
+    Args:
+        name_series: Series of names to map.
+        choices: Canonical names to match against.
+        task_desc: Description included in log messages.
+        threshold: Minimum fuzz.ratio score (0–100) to accept a replacement. Default 85.
+
+    Returns:
+        Series with values replaced by the closest match where score >= threshold.
+
+    I/O Example:
+        name_series:  ["Step Change", "Step Chaneg", "Step Change", "Hmm"]
+        choices:      ["Step Change", "Slower Growth"]
+        threshold:    85
+
+        returns:      ["Step Change", "Step Change", "Step Change", "Hmm"]
+        # "Step Chaneg" corrected → INFO logged
+        # "Hmm" unmatched → WARNING logged, original retained
+        # duplicate "Step Change" values both resolve — choices are not consumed
+    """
+    canonical = set(choices)
+    match_dict = {
+        v: _best_fuzzy_match(v, canonical, threshold) for v in name_series.unique()
+    }
+    matched = name_series.map(
+        lambda v: match_dict[v] if match_dict[v] is not None else v
+    )
+    _log_fuzzy_match(name_series, matched, task_desc)
+    _warn_unmatched_fuzzy_values(name_series, match_dict, task_desc)
+    return matched
+
+
 def _snakecase_string(string: str) -> str:
     """Returns the input string in snakecase
 
@@ -401,11 +474,16 @@ def _rez_name_to_id_mapping(
     return series_fixed_rez_names.replace(rez_name_to_id)
 
 
-def _get_financial_year_int_from_string(year_string: str) -> int:
-    """Extract the financial year defined in a string in the format "YYYY_YY" and return as an integer."""
-    pattern = r"(?P<start_year>\d{4})_(?P<end_year>\d{2})"
-    match = re.match(pattern, year_string)
-    if match:
-        return int(match.group("start_year")) + 1
-    else:
-        raise ValueError(f"Invalid financial year string: {year_string}")
+# note: updated to use version of this function from: https://github.com/Open-ISP/ISPyPSA/pull/102 'helpers.py'
+def _financial_year_string_to_end_year_int(fy_string: str) -> int:
+    """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
+
+    Adds 1 to the start year (rather than parsing the two-digit end) to avoid
+    century-crossover ambiguity, mirroring
+    :func:`ispypsa.translator.helpers._get_financial_year_int_from_string`.
+
+    I/O Example:
+        "2024-25" -> 2025
+        "2099-00" -> 2100
+    """
+    return int(fy_string.split("-")[0]) + 1
