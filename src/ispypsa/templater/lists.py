@@ -25,7 +25,12 @@ _CONDENSED_GENERATOR_TYPES = [
     "new_entrants",
 ]
 
-_ISP_SCENARIOS = ["Slower Growth", "Step Change", "Accelerated Transition"]
+
+_ISP_SCENARIOS = ["Progressive Change", "Step Change", "Green Energy Exports"]
+
+# TODO FEATURE_FLAG["use_new_table_format"] cleanup - replace _ISP_SCENARIOS everywhere
+# with _ISP_SCENARIOS_NEW
+_ISP_SCENARIOS_NEW = ["Slower Growth", "Step Change", "Accelerated Transition"]
 
 _MINIMUM_REQUIRED_GENERATOR_COLUMNS = [
     # naming

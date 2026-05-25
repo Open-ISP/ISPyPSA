@@ -12,7 +12,7 @@ from ispypsa.templater.helpers import (
     _fuzzy_map_to_canonical,
     _where_any_substring_appears,
 )
-from ispypsa.templater.lists import _ISP_SCENARIOS
+from ispypsa.templater.lists import _ISP_SCENARIOS_NEW
 
 _VRE_COLUMN_RENAMES = {
     "REZ ID": "geo_id",
@@ -542,7 +542,7 @@ def _filter_table_by_isp_scenario(
     table = table.copy()
     table[scenario_col_name] = _fuzzy_map_to_canonical(
         table[scenario_col_name],
-        _ISP_SCENARIOS,
+        _ISP_SCENARIOS_NEW,
         task_desc=f"filtering {table_desc} table by ISP scenario",
         threshold=80,
     )
