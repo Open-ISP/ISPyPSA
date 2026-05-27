@@ -22,6 +22,11 @@ def test_build_required_tables_new_format():
     # Typo'd table is included so the templater can pick it up while
     # Open-ISP/isp-workbook-parser#80 is open.
     assert "flow_path_augmentation_cost_slower_growth_CNSW-NNSW" in result
+    assert "connection_cost_forecast_wind_and_solar" in result
+    assert "connection_cost_forecast_other" in result
+    assert "connection_costs_for_wind_and_solar" in result
+    assert "connection_costs_other" in result
+    assert "efficient_level_of_system_strength_cost" in result
 
 
 def test_build_required_tables_old_format():

@@ -477,18 +477,3 @@ def _rez_name_to_id_mapping(
     )
 
     return series_fixed_rez_names.replace(rez_name_to_id)
-
-
-# note: updated to use version of this function from: https://github.com/Open-ISP/ISPyPSA/pull/102 'helpers.py'
-def _financial_year_string_to_end_year_int(fy_string: str) -> int:
-    """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
-
-    Adds 1 to the start year (rather than parsing the two-digit end) to avoid
-    century-crossover ambiguity, mirroring
-    :func:`ispypsa.translator.helpers._get_financial_year_int_from_string`.
-
-    I/O Example:
-        "2024-25" -> 2025
-        "2099-00" -> 2100
-    """
-    return int(fy_string.split("-")[0]) + 1

@@ -10,6 +10,7 @@ import pandas as pd
 from ispypsa.templater.helpers import (
     _financial_year_string_to_end_year_int,
     _fuzzy_map_to_canonical,
+    _looks_like_financial_year,
     _where_any_substring_appears,
 )
 from ispypsa.templater.lists import _ISP_SCENARIOS_NEW
@@ -564,10 +565,3 @@ def _warn_if_no_scenario_rows(
             f"No rows matched scenario '{scenario}' in {table_desc} table "
             "— filtered table will be empty"
         )
-
-
-# temp define here - copied over from https://github.com/Open-ISP/ISPyPSA/pull/102/changes#top `network_expansion.py`
-# todo: move to helpers.py / just pull in once that PR gets merged
-def _looks_like_financial_year(col: str) -> bool:
-    """True if column name matches a financial year pattern like '2024-25'."""
-    return bool(re.match(r"^\d{4}-\d{2}$", str(col)))

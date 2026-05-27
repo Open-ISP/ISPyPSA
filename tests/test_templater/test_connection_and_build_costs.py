@@ -7,7 +7,6 @@ from ispypsa.templater.connection_and_build_costs import (
     _enforce_numeric_cols,
     _filter_table_by_isp_scenario,
     _get_unique_vre_geo_id_rows,
-    _looks_like_financial_year,
     _merge_and_filter_system_strength_costs,
     _merge_connection_cost_and_capacity_frames,
     _normalise_connection_cost_forecast_frame,
@@ -28,17 +27,6 @@ _CONNECTION_SYSTEM_STRENGTH_COST_COLS = [
     "connection_cost",
     "system_strength_cost",
 ]
-
-# --- _looks_like_financial_year ---
-
-
-def test_looks_like_financial_year():
-    assert _looks_like_financial_year("2024-25") is True
-    assert _looks_like_financial_year("2099-00") is True
-    assert _looks_like_financial_year("REZ ID") is False
-    assert _looks_like_financial_year("2024") is False
-    assert _looks_like_financial_year("2024-2025") is False
-    assert _looks_like_financial_year("Notes") is False
 
 
 # --- _filter_table_by_isp_scenario ---
