@@ -219,6 +219,20 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # 3 expansion_ids x 2 years
     assert len(expansion_costs) == 6
 
+    assert "costs_connection" in result
+    costs_connection = result["costs_connection"]
+    assert set(costs_connection.columns) == {
+        "geo_id",
+        "technology",
+        "year",
+        "connection_cost",
+        "system_strength_cost",
+    }
+    # costs_connection key present with correct columns; currently
+    # generators_new_entrant is placeholder (empty) so no VRE rows are produced
+    # yet (but no errors either).
+    assert costs_connection.empty
+
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
@@ -270,6 +284,18 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         REZ / Constraint ID,  Option,    2024-25,  2025-26
         N3,                   Option 1,  750000,   760000
     """)
+    connection_cost_forecast_wind_and_solar = csv_str_to_df("""
+        REZ__ID,    Scenario,       2024-25
+        Q1,         Step__Change,   73000000
+    """)
+    connection_costs_for_wind_and_solar = csv_str_to_df("""
+        REZ__ID,    Connection__capacity__(MVA)
+        Q1,         400
+    """)
+    efficient_level_of_system_strength_cost = csv_str_to_df("""
+        label,  2024-25
+        IBR,    10
+    """)
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -289,15 +315,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "flow_path_augmentation_costs_step_change_NNSW-SQ": flow_path_aug_costs_nnsw_sq,
                 "rez_augmentation_options_NSW": rez_aug_options_nsw,
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
-                "connection_cost_forecast_wind_and_solar": csv_str_to_df(
-                    "REZ__ID, Scenario, 2024-25\nQ1, Step__Change, 73000000"
-                ),
-                "connection_costs_for_wind_and_solar": csv_str_to_df(
-                    "REZ__ID, Connection__capacity__(MVA)\nQ1, 400"
-                ),
-                "efficient_level_of_system_strength_cost": csv_str_to_df(
-                    "label, 2024-25\nIBR, 10"
-                ),
+                "connection_cost_forecast_wind_and_solar": connection_cost_forecast_wind_and_solar,
+                "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
+                "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
             manually_extracted_tables={},
         )
@@ -308,18 +328,6 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
-    # costs_connection key present with correct columns; content covered by
-    # test_connection_and_build_costs.py. generators_new_entrant is placeholder
-    # (empty) so no VRE rows are produced yet (but no errors either).
-    assert "costs_connection" in result
-    assert set(result["costs_connection"].columns) == {
-        "geo_id",
-        "technology",
-        "year",
-        "connection_cost",
-        "system_strength_cost",
-    }
-    assert result["costs_connection"].empty
 
     # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept; 2 REZ paths kept.
     assert len(paths) == 3
@@ -340,6 +348,15 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"NSW-QLD", "N3-NSW"}
     # 2 expansion_ids x 2 years
     assert len(expansion_costs) == 4
+    costs_connection = result["costs_connection"]
+    assert set(costs_connection.columns) == {
+        "geo_id",
+        "technology",
+        "year",
+        "connection_cost",
+        "system_strength_cost",
+    }
+    assert costs_connection.empty
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -380,6 +397,18 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         REZ / Constraint ID,  Option,    2024-25,  2025-26
         N3,                   Option 1,  750000,   760000
     """)
+    connection_cost_forecast_wind_and_solar = csv_str_to_df("""
+        REZ__ID,    Scenario,       2024-25
+        Q1,         Step__Change,   73000000
+    """)
+    connection_costs_for_wind_and_solar = csv_str_to_df("""
+        REZ__ID,    Connection__capacity__(MVA)
+        Q1,         400
+    """)
+    efficient_level_of_system_strength_cost = csv_str_to_df("""
+        label,  2024-25
+        IBR,    10
+    """)
 
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -397,15 +426,9 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "flow_path_augmentation_costs_step_change_CQ-NQ": flow_path_aug_costs_cq_nq,
                 "rez_augmentation_options_NSW": rez_aug_options_nsw,
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
-                "connection_cost_forecast_wind_and_solar": csv_str_to_df(
-                    "REZ__ID, Scenario, 2024-25\nQ1, Step__Change, 73000000"
-                ),
-                "connection_costs_for_wind_and_solar": csv_str_to_df(
-                    "REZ__ID, Connection__capacity__(MVA)\nQ1, 400"
-                ),
-                "efficient_level_of_system_strength_cost": csv_str_to_df(
-                    "label, 2024-25\nIBR, 10"
-                ),
+                "connection_cost_forecast_wind_and_solar": connection_cost_forecast_wind_and_solar,
+                "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
+                "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
             manually_extracted_tables={},
         )
@@ -435,3 +458,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"N3-NEM"}
     # 1 expansion_id x 2 years
     assert len(expansion_costs) == 2
+    connection_costs = result["costs_connection"]
+    assert set(connection_costs.columns) == {
+        "geo_id",
+        "technology",
+        "year",
+        "connection_cost",
+        "system_strength_cost",
+    }
+    assert connection_costs.empty

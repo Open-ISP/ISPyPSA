@@ -146,23 +146,12 @@ def _best_fuzzy_match(value: str, choices: Iterable[str], threshold: int) -> str
         _best_fuzzy_match("Hmm", ["Step Change", "Slower Growth"], 85)
         → None            # best score well below threshold
     """
+    # NOTE https://github.com/Open-ISP/ISPyPSA/issues/106 (short strings)
     best_choice, best_score = max(
         ((c, fuzz.ratio(value, c)) for c in choices),
         key=lambda x: x[1],
     )
     return best_choice if best_score >= threshold else None
-
-
-def _warn_unmatched_fuzzy_values(
-    name_series: pd.Series, match_dict: dict[str, str | None], task_desc: str
-) -> None:
-    """Logs a WARNING for unique values in name_series that could not be fuzzy matched."""
-    unmatched = sorted(k for k, v in match_dict.items() if v is None)
-    if unmatched:
-        logging.warning(
-            f"Could not fuzzy match to a standard name whilst {task_desc}: "
-            f"{unmatched} — original values retained"
-        )
 
 
 def _fuzzy_map_to_canonical(
@@ -174,9 +163,9 @@ def _fuzzy_map_to_canonical(
     """Maps each value in name_series to the closest match in choices (many-to-one).
 
     Unlike _fuzzy_match_names, choices are not consumed — multiple input values can
-    map to the same canonical name. Values scoring below ``threshold`` keep their
-    original value and are logged as WARNING. Successful fuzzy corrections are
-    logged at INFO via _log_fuzzy_match.
+    map to the same canonical name. Successful fuzzy corrections are logged at INFO
+    via _log_fuzzy_match. Any remaining values scoring below ``threshold`` after
+    matching raises a ValueError.
 
     Args:
         name_series: Series of names to map.
@@ -187,15 +176,28 @@ def _fuzzy_map_to_canonical(
     Returns:
         Series with values replaced by the closest match where score >= threshold.
 
-    I/O Example:
-        name_series:  ["Step Change", "Step Chaneg", "Step Change", "Hmm"]
-        choices:      ["Step Change", "Slower Growth"]
-        threshold:    85
+    Raises:
+        ValueError: if any unmatched values remain - values that aren't able to be
+        canonicalised (but are expected to be) flag potential inconsistencies across
+        datasets.
 
-        returns:      ["Step Change", "Step Change", "Step Change", "Hmm"]
+    I/O Examples:
+        name_series:    ["Step Change", "Step Chaneg", "Step Change"]
+        choices:        ["Step Change", "Slower Growth"]
+        task_desc:      "canonicalising scenarios"
+        threshold:      85
+
+        returns:      ["Step Change", "Step Change", "Step Change"]
         # "Step Chaneg" corrected → INFO logged
-        # "Hmm" unmatched → WARNING logged, original retained
-        # duplicate "Step Change" values both resolve — choices are not consumed
+
+        name_series:    ["Wind", "Wind", "Solar PV", "Solar pv", "the sun"]
+        choices:        ["Wind", "Solar PV"]
+        task_desc:      "fixing technologies"
+        threshold:      85
+
+        raises:
+            ValueError: "Could not fuzzy match to a canonical value
+                        whilst fixing technologies: ['the sun']"
     """
     canonical = set(choices)
     match_dict = {
@@ -205,7 +207,10 @@ def _fuzzy_map_to_canonical(
         lambda v: match_dict[v] if match_dict[v] is not None else v
     )
     _log_fuzzy_match(name_series, matched, task_desc)
-    _warn_unmatched_fuzzy_values(name_series, match_dict, task_desc)
+    unmatched = sorted(k for k, v in match_dict.items() if v is None)
+    if unmatched:
+        msg = f"Could not fuzzy match to a canonical value whilst {task_desc}: {unmatched}"
+        raise ValueError(msg)
     return matched
 
 
