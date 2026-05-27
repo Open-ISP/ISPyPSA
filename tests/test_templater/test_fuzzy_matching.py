@@ -1,6 +1,11 @@
 import pandas as pd
+import pytest
 
-from ispypsa.templater.helpers import _fuzzy_match_names
+from ispypsa.templater.helpers import (
+    _best_fuzzy_match,
+    _fuzzy_map_to_canonical,
+    _fuzzy_match_names,
+)
 
 
 def test_regions() -> None:
@@ -144,7 +149,7 @@ def test_abstract_threshold() -> None:
         name_series=pd.Series(to_match),
         choices=choices,
         task_desc="testing",
-        threshold=90.0,
+        threshold=90,
     )
     assert (matches == pd.Series(correct_answers)).all()
 
@@ -163,7 +168,7 @@ def test_abstract_threshold_no_match() -> None:
         name_series=pd.Series(to_match),
         choices=choices,
         task_desc="testing",
-        threshold=90.0,
+        threshold=90,
         not_match="No Match",
     )
     assert (matches == pd.Series(correct_answers)).all()
@@ -187,3 +192,98 @@ def test_abstract_run_out_of_choices() -> None:
         task_desc="testing",
     )
     assert (matches == pd.Series(correct_answers)).all()
+
+
+# ── _best_fuzzy_match ────────────────────────────────────────────────────────
+
+
+def test_best_fuzzy_match_returns_best_match_above_threshold():
+    scenario_result = _best_fuzzy_match(
+        "Step Chaneg", ["Step Change", "Slower Growth"], 85
+    )
+    assert scenario_result == "Step Change"
+
+    storage_result = _best_fuzzy_match(
+        "Battery storage (8hrs Storage)",  # swapped capitalised 'S'
+        [
+            "Battery Storage (2hrs storage)",
+            "Battery Storage (4hrs storage)",
+            "Battery Storage (8hrs storage)",
+        ],
+        90,
+    )
+    assert storage_result == "Battery Storage (8hrs storage)"
+
+
+def test_best_fuzzy_match_returns_none_when_below_threshold():
+    result = _best_fuzzy_match("Hmm", ["Step Change", "Slower Growth"], 85)
+    assert result is None
+
+
+def test_best_fuzzy_match_exact_match_at_any_threshold():
+    # fuzz.ratio of an exact match is 100; regardless of threshold set func should
+    # always return exact match if present in choices, not first/closest.
+    value_to_match = "Accelerated Transition"
+    choices = [
+        "accelerated transition",
+        "Accellerated Transition",
+        "Accelerated Transition",  # exact match
+        "Step Change",
+    ]
+    results = [
+        _best_fuzzy_match(value_to_match, choices, thresh) == value_to_match
+        for thresh in range(0, 105, 5)
+    ]
+    assert all(results)
+
+
+def test_best_fuzzy_match_picks_highest_scoring_choice():
+    # "Step Change" should score higher than "Slower Growth" against "Step Chaneg"
+    # regardless of list order
+    result = _best_fuzzy_match("Step Chaneg", ["Slower Growth", "Step Change"], 0)
+    assert result == "Step Change"
+
+
+# ── _fuzzy_map_to_canonical ──────────────────────────────────────────────────
+
+
+def test_fuzzy_map_to_canonical_corrects_typo_and_logs_info(caplog):
+    series = pd.Series(["Step Chaneg"])
+    with caplog.at_level("INFO"):
+        result = _fuzzy_map_to_canonical(
+            series, ["Step Change", "Slower Growth"], "testing correction"
+        )
+    expected = pd.Series(["Step Change"])
+    pd.testing.assert_series_equal(result, expected)
+    assert (
+        "'Step Chaneg' matched to 'Step Change' whilst testing correction"
+    ) in caplog.text
+
+
+def test_fuzzy_map_to_canonical_exact_match_no_info_log(caplog):
+    series = pd.Series(["Step Change"])
+    with caplog.at_level("INFO"):
+        result = _fuzzy_map_to_canonical(
+            series, ["Step Change", "Slower Growth"], "testing exact"
+        )
+    expected = pd.Series(["Step Change"])
+    pd.testing.assert_series_equal(result, expected)
+    assert "matched to" not in caplog.text
+
+
+def test_fuzzy_map_to_canonical_unmatched_raises_error():
+    series = pd.Series(["Wind", "the sun", "Solar PV"])
+    msg = r"Could not fuzzy match to a canonical value whilst testing unmatched: \['the sun'\]"
+    with pytest.raises(ValueError, match=msg):
+        _fuzzy_map_to_canonical(
+            series, ["Wind", "Solar PV"], "testing unmatched", threshold=85
+        )
+
+
+def test_fuzzy_map_to_canonical_empty_series():
+    series = pd.Series([], dtype=object)
+    result = _fuzzy_map_to_canonical(
+        series, ["Step Change", "Slower Growth"], "testing empty"
+    )
+    expected = pd.Series([], dtype=object)
+    pd.testing.assert_series_equal(result, expected)
