@@ -12,8 +12,7 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      table: network_geography
-      column: geo_id
+      - network_geography: geo_id
     description: Geography identifier.
   resource_type:
     type: string

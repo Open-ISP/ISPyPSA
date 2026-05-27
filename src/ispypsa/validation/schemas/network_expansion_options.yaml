@@ -1,29 +1,37 @@
 table: network_expansion_options
 required: false
 unique:
-  - [expansion_id]
+  - [expansion_id, expansion_type]
 description: >
   Defines the selected expansion option and allowed capacity increase for
   expandable network elements. Covers both physical transmission paths and
-  group constraints that can be relaxed through expansion.
+  group constraints that can be relaxed through expansion. Physical paths
+  emit two rows (forward and reverse); constraint groups emit one
+  constraint_relaxation row.
 columns:
   expansion_id:
     type: string
     required: true
     allowed_values_from:
-      - table: network_transmission_paths
-        column: path_id
-      - table: constraints_rhs
-        column: constraint_id
+      - network_transmission_paths: path_id
+      - constraints_rhs: constraint_id
     description: >
       Identifier for the expandable network element. Maps to path_id in
       network_transmission_paths for physical paths, or to constraint_id
       in constraints_rhs for group constraints.
+  expansion_type:
+    type: string
+    required: true
+    allowed_values: [forward, reverse, constraint_relaxation]
+    description: >
+      Aspect of the network this row's capacity describes. ``forward`` and
+      ``reverse`` apply to physical paths; ``constraint_relaxation`` applies
+      to group constraints.
   allowed_expansion:
     type: float
     required: true
     units: MW
-    description: Capacity increase provided by the selected expansion option.
+    description: Capacity increase provided by the selected expansion option for this expansion_type.
   expansion_option:
     type: string
     required: false

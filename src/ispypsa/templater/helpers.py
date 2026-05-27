@@ -123,11 +123,16 @@ def _one_to_one_priority_based_fuzzy_matching(
 def _log_fuzzy_match(
     original_series: pd.Series, matched_series: pd.Series, task_desc: str
 ) -> None:
-    """Log any fuzzy matches at the INFO level"""
+    """Log any fuzzy matches at the INFO level — one line per distinct mapping.
+
+    Callers may pass series with the same (original, match) pair repeated across
+    rows (e.g. one cost row per year for the same option name). Dedup so each
+    name-matching decision appears exactly once in the log, regardless of how many
+    rows shared it. Sorted for stable order across runs.
+    """
     if any(diff := matched_series != original_series):
-        originals = original_series[diff]
-        matches = matched_series[diff]
-        for original, match in zip(originals, matches):
+        pairs = sorted(set(zip(original_series[diff], matched_series[diff])))
+        for original, match in pairs:
             logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
 
 
@@ -218,6 +223,25 @@ def _add_units_to_financial_year_columns(
         for col in columns
     ]
     return cols
+
+
+def _looks_like_financial_year(col: str) -> bool:
+    """True if column name matches a financial year pattern like '2024-25'."""
+    return bool(re.match(r"^\d{4}-\d{2}$", str(col)))
+
+
+def _financial_year_string_to_end_year_int(fy_string: str) -> int:
+    """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
+
+    Adds 1 to the start year (rather than parsing the two-digit end) to avoid
+    century-crossover ambiguity, mirroring
+    :func:`ispypsa.translator.helpers._get_financial_year_int_from_string`.
+
+    I/O Example:
+        "2024-25" -> 2025
+        "2099-00" -> 2100
+    """
+    return int(fy_string.split("-")[0]) + 1
 
 
 def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:

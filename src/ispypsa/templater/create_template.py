@@ -18,6 +18,14 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_paths,
 )
 from ispypsa.templater.geography import _template_network_geography
+from ispypsa.templater.network_expansion import (
+    _extract_flow_path_costs_from_iasr,
+    _extract_flow_path_options_from_iasr,
+    _extract_rez_costs_from_iasr,
+    _extract_rez_options_from_iasr,
+    _filter_flow_path_augmentations_to_granularity,
+    _template_network_expansion,
+)
 from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
@@ -61,15 +69,28 @@ _BASE_TEMPLATE_OUTPUTS = [
     "custom_constraints_rhs",
 ]
 
+# Outputs from the new-format templater branch. Granularity-invariant: the
+# same five tables are emitted for sub_regions, nem_regions, and single_region
+# (only their contents differ).
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
+# delete _BASE_TEMPLATE_OUTPUTS above.
+_NEW_FORMAT_TEMPLATE_OUTPUTS = [
+    "network_geography",
+    "network_transmission_paths",
+    "network_transmission_path_limits",
+    "network_expansion_options",
+    "network_transmission_path_expansion_costs",
+]
+
 
 def create_ispypsa_inputs_template(
     scenario: str,
     regional_granularity: str,
-    iasr_tables: dict[str : pd.DataFrame],
-    manually_extracted_tables: dict[str : pd.DataFrame],
+    iasr_tables: dict[str, pd.DataFrame],
+    manually_extracted_tables: dict[str, pd.DataFrame],
     filter_to_nem_regions: list[str] = None,
     filter_to_isp_sub_regions: list[str] = None,
-) -> dict[str : pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     """Creates a template set of [`ISPyPSA` input tables](tables/ispypsa.md).
 
     Examples:
@@ -127,6 +148,8 @@ def create_ispypsa_inputs_template(
             "Cannot specify both filter_to_nem_regions and filter_to_isp_sub_regions"
         )
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch (legacy
+    # templater path) and inline this branch.
     if FEATURE_FLAGS["use_new_table_format"]:
         template = {}
         sub_regional_geography = _template_network_geography(
@@ -142,15 +165,39 @@ def create_ispypsa_inputs_template(
                 iasr_tables["renewable_energy_zones"],
                 regional_granularity,
             )
+        region_lookup = dict(
+            zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+        )
+        flow_path_options = _filter_flow_path_augmentations_to_granularity(
+            _extract_flow_path_options_from_iasr(iasr_tables),
+            regional_granularity,
+            region_lookup,
+        )
+        flow_path_costs = _filter_flow_path_augmentations_to_granularity(
+            _extract_flow_path_costs_from_iasr(iasr_tables, scenario),
+            regional_granularity,
+            region_lookup,
+        )
         paths, limits = _template_network_transmission(
             iasr_tables["flow_path_transfer_capability"],
             iasr_tables["initial_transmission_limits"],
             iasr_tables["renewable_energy_zones"],
             sub_regional_geography,
             regional_granularity,
+            flow_path_options,
         )
         template["network_transmission_paths"] = paths
         template["network_transmission_path_limits"] = limits
+        expansion_options, expansion_costs = _template_network_expansion(
+            flow_path_options=flow_path_options,
+            flow_path_costs=flow_path_costs,
+            rez_options=_extract_rez_options_from_iasr(iasr_tables),
+            rez_costs=_extract_rez_costs_from_iasr(iasr_tables, scenario),
+            network_transmission_paths=paths,
+            rez_ids=set(iasr_tables["renewable_energy_zones"]["ID"]),
+        )
+        template["network_expansion_options"] = expansion_options
+        template["network_transmission_path_expansion_costs"] = expansion_costs
         return template
 
     template = {}
@@ -240,11 +287,16 @@ def create_ispypsa_inputs_template(
 
 
 def list_templater_output_files(regional_granularity, output_path=None):
-    files = _BASE_TEMPLATE_OUTPUTS.copy()
-    if regional_granularity in ["sub_regions", "single_region"]:
-        files.remove("nem_regions")
-    if regional_granularity == "single_region":
-        files.remove("flow_paths")
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch and the
+    # granularity-specific file removals.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
+    else:
+        files = _BASE_TEMPLATE_OUTPUTS.copy()
+        if regional_granularity in ["sub_regions", "single_region"]:
+            files.remove("nem_regions")
+        if regional_granularity == "single_region":
+            files.remove("flow_paths")
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files

@@ -1,0 +1,16 @@
+NEM region,ISP sub-region,Sub-regional reference node
+Queensland,Northern Queensland (NQ),Ross 275 kV
+Queensland,Central Queensland (CQ),Broadsound 275 kV
+Queensland,Gladstone Grid (GG),Calliope River 275 kV
+Queensland,Southern Queensland (SQ),South Pine 275 kV
+New South Wales,Northern New South Wales (NNSW),Armidale 330 kV
+New South Wales,Central New South Wales (CNSW),Wellington 330 kV
+New South Wales,Southern NSW (SNSW),Canberra 330 kV
+New South Wales,"Sydney, Newcastle, Wollongong (SNW)",Sydney West 330 kV
+Victoria,West and North Victoria (WNV),Moorabool 220 kV
+Victoria,South East Victoria (SEV),Hazelwood 500 kV
+Victoria,Greater Melbourne and Geelong (MEL),Thomastown 66 kV
+South Australia,Northern South Australia (NSA),Davenport 275 kV
+South Australia,Central South Australia (CSA),Torrens Island 66 kV
+South Australia,South East South Australia (SESA),South East 132 kV
+Tasmania,Tasmania (TAS),George Town 220 kV

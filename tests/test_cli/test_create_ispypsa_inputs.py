@@ -8,6 +8,9 @@ Coverage:
 - CLI flags and dependency chain execution (combined)
 - Config path variations (combined)
 - Single task mode failure
+
+New-format (use_new_table_format=true) coverage lives in the sibling file
+test_create_ispypsa_inputs_new_table_formats.py.
 """
 
 import shutil

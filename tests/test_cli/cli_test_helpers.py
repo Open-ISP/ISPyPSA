@@ -50,26 +50,14 @@ def modify_config_value(config_path, key_path, new_value):
         yaml.dump(config, f)
 
 
-@pytest.fixture
-def prepare_test_cache(tmp_path, mock_workbook_file):
-    """Prepare test cache by copying from test_workbook_table_cache.
-
-    Creates a complete cache directory with all required CSV files,
-    ensuring timestamps are newer than the workbook file so the cache
-    task considers itself up-to-date.
-
-    Args:
-        tmp_path: pytest temporary directory
-        mock_workbook_file: Path to mock Excel workbook
-
-    Returns:
-        Path: Path to the prepared cache directory
-    """
+def _populate_test_cache(tmp_path, mock_workbook_file, version):
+    """Copy the version-specific test cache CSVs into a tmp cache dir."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy all CSV files from tests/test_workbook_table_cache to cache_dir
-    test_cache_dir = Path(__file__).parent.parent / "test_workbook_table_cache"
+    test_cache_dir = (
+        Path(__file__).parent.parent / "test_workbook_table_cache" / version
+    )
 
     for csv_file in test_cache_dir.glob("*.csv"):
         shutil.copy2(csv_file, cache_dir / csv_file.name)
@@ -85,6 +73,17 @@ def prepare_test_cache(tmp_path, mock_workbook_file):
     )  # 1 hour older
 
     return cache_dir
+
+
+@pytest.fixture
+def prepare_test_cache(tmp_path, mock_workbook_file):
+    """Prepare a 6.0-format test cache by copying from test_workbook_table_cache/6.0.
+
+    Creates a complete cache directory with all required CSV files,
+    ensuring timestamps are newer than the workbook file so the cache
+    task considers itself up-to-date.
+    """
+    return _populate_test_cache(tmp_path, mock_workbook_file, "6.0")
 
 
 @pytest.fixture
@@ -109,27 +108,42 @@ def mock_workbook_file(tmp_path):
     return workbook_path
 
 
-@pytest.fixture
-def mock_config(tmp_path, mock_workbook_file):
-    """Create a minimal valid ISPyPSA configuration.
+def build_mock_config(
+    tmp_path,
+    mock_workbook_file,
+    *,
+    version="6.0",
+    granularity="sub_regions",
+    scenario="Step Change",
+    filter_by_isp_sub_regions=None,
+    filename="test_config.yaml",
+):
+    """Write an ISPyPSA YAML config tuned for CLI tests.
+
+    Single source of truth for config-shape across all CLI tests. Callers
+    override only the dimensions they care about (workbook version, network
+    granularity, scenario, sub-region filter).
 
     Args:
         tmp_path: pytest temporary directory
         mock_workbook_file: Path to mock Excel workbook
-
-    Returns:
-        Path: Path to the created config YAML file
+        version: IASR workbook version string (e.g. "6.0", "7.5")
+        granularity: regional granularity for the network
+        scenario: ISP scenario name
+        filter_by_isp_sub_regions: optional sub-region whitelist; omitted from
+            the config when None
+        filename: yaml filename to write inside tmp_path
     """
-    config_path = tmp_path / "test_config.yaml"
+    config_path = tmp_path / filename
     config_content = {
-        "scenario": "Step Change",
+        "scenario": scenario,
         "wacc": 0.07,
         "discount_rate": 0.05,
         "network": {
             "transmission_expansion": True,
             "rez_transmission_expansion": True,
             "annuitisation_lifetime": 30,
-            "nodes": {"regional_granularity": "sub_regions", "rezs": "discrete_nodes"},
+            "nodes": {"regional_granularity": granularity, "rezs": "discrete_nodes"},
             "transmission_expansion_limit_override": None,
             "rez_connection_expansion_limit_override": None,
             "rez_to_sub_region_transmission_default_limit": 1e6,
@@ -153,7 +167,7 @@ def mock_config(tmp_path, mock_workbook_file):
         },
         "unserved_energy": {"cost": 10000.0, "max_per_node": 1e5},
         "solver": "highs",
-        "iasr_workbook_version": "6.0",
+        "iasr_workbook_version": version,
         "paths": {
             "ispypsa_run_name": "test_run",
             "parsed_traces_directory": "tests/trace_data",
@@ -165,13 +179,29 @@ def mock_config(tmp_path, mock_workbook_file):
             "dataset_type": "example",
             "dateset_year": 2024,
         },
-        "filter_by_isp_sub_regions": ["NNSW", "SQ"],
     }
-    # Write YAML config
+    if filter_by_isp_sub_regions is not None:
+        config_content["filter_by_isp_sub_regions"] = filter_by_isp_sub_regions
+
     with open(config_path, "w") as f:
         yaml.dump(config_content, f)
 
     return config_path
+
+
+@pytest.fixture
+def mock_config(tmp_path, mock_workbook_file):
+    """Create a minimal valid ISPyPSA configuration (6.0 + sub_regions + filter).
+
+    Defaults preserved for backwards compatibility with existing tests across
+    the CLI suite. Tests that need different dimensions should call
+    `build_mock_config` directly with explicit kwargs.
+    """
+    return build_mock_config(
+        tmp_path,
+        mock_workbook_file,
+        filter_by_isp_sub_regions=["NNSW", "SQ"],
+    )
 
 
 @pytest.fixture

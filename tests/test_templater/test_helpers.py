@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
+    _looks_like_financial_year,
     _manual_remove_footnotes_from_generator_names,
     _rez_name_to_id_mapping,
     _snakecase_string,
@@ -363,3 +364,12 @@ def test_rez_name_to_id_mapping_empty_input():
 
     # Check the result
     pd.testing.assert_series_equal(result, expected)
+
+
+def test_looks_like_financial_year_matches_only_canonical_format():
+    assert _looks_like_financial_year("2024-25") is True
+    assert _looks_like_financial_year("2025-26") is True
+    assert _looks_like_financial_year("2024-2025") is False
+    assert _looks_like_financial_year("24-25") is False
+    assert _looks_like_financial_year("Status") is False
+    assert _looks_like_financial_year("Flow path") is False

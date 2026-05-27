@@ -21,15 +21,13 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      table: network_geography
-      column: geo_id
+      - network_geography: geo_id
     description: Origin geography. Defines the forward flow direction.
   geo_to:
     type: string
     required: true
     allowed_values_from:
-      table: network_geography
-      column: geo_id
+      - network_geography: geo_id
     description: Destination geography. Defines the forward flow direction.
   carrier:
     type: string

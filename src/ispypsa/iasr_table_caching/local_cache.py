@@ -1,5 +1,7 @@
+from importlib.resources import files
 from pathlib import Path
 
+import yaml
 from isp_workbook_parser import Parser
 
 from ..feature_flags import FEATURE_FLAGS
@@ -14,16 +16,37 @@ from ..templater.mappings import (
     _REZ_CONNECTION_PREPATORY_ACTIVITIES_TABLES,
 )
 
+_KNOWN_TABLES_RESOURCE = files("ispypsa.iasr_table_caching") / "known_tables.yaml"
 
-def _build_required_tables() -> list[str]:
+# Augmentation table prefixes the new-format templater consumes. Two flow-path
+# cost prefixes are listed to absorb a known workbook typo — see
+# Open-ISP/isp-workbook-parser#80; drop the singular form once fixed upstream.
+_AUGMENTATION_PREFIXES = (
+    "flow_path_augmentation_options_",
+    "flow_path_augmentation_costs_",
+    "flow_path_augmentation_cost_",
+    "rez_augmentation_options_",
+    "rez_augmentation_costs_",
+)
+
+
+def _load_known_tables() -> dict[str, list[str]]:
+    """Loads the static manifest of all tables known to exist per workbook version."""
+    return yaml.safe_load(_KNOWN_TABLES_RESOURCE.read_text())
+
+
+def _build_required_tables(iasr_workbook_version: str) -> list[str]:
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the else-branch (legacy
+    # required-tables list).
     if FEATURE_FLAGS["use_new_table_format"]:
-        _NETWORK_REQUIRED_TABLES = [
+        all_tables = _load_known_tables()[iasr_workbook_version]
+        augmentation = [n for n in all_tables if n.startswith(_AUGMENTATION_PREFIXES)]
+        return [
             "sub_regional_reference_nodes",
             "renewable_energy_zones",
             "flow_path_transfer_capability",
             "initial_transmission_limits",
-        ]
-        return _NETWORK_REQUIRED_TABLES
+        ] + augmentation
     else:
         _GENERATOR_PROPERTY_TABLES = [
             table_name
@@ -109,9 +132,6 @@ def _build_required_tables() -> list[str]:
         )
 
 
-REQUIRED_TABLES = _build_required_tables()
-
-
 def build_local_cache(
     cache_path: Path | str, workbook_path: Path | str, iasr_workbook_version: str
 ) -> None:
@@ -144,12 +164,12 @@ def build_local_cache(
             "The IASR workbook provided does not match the version "
             "specified in the config."
         )
-    tables_to_get = REQUIRED_TABLES
+    tables_to_get = _build_required_tables(iasr_workbook_version)
     workbook.save_tables(cache_path, tables=tables_to_get)
     return None
 
 
-def list_cache_files(cache_path):
-    files = REQUIRED_TABLES
+def list_cache_files(cache_path, iasr_workbook_version: str):
+    files = _build_required_tables(iasr_workbook_version)
     files = [cache_path / Path(file + ".csv") for file in files]
     return files

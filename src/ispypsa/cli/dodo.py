@@ -208,7 +208,7 @@ def get_operational_pypsa_file():
 @return_empty_list_if_no_config
 def get_local_cache_files():
     """Get list of local cache files."""
-    return list_cache_files(get_parsed_workbook_cache())
+    return list_cache_files(get_parsed_workbook_cache(), config.iasr_workbook_version)
 
 
 @return_empty_list_if_no_config
@@ -308,11 +308,13 @@ def build_parsed_workbook_cache() -> None:
     if os.environ.get("ISPYPSA_TEST_MOCK_CACHE", "").lower() == "true":
         # In test mode, just ensure cache directory exists and copy pre-existing files
         parsed_workbook_cache.mkdir(parents=True, exist_ok=True)
-        # Copy any existing test cache files if they don't already exist
+        # Copy any existing test cache files if they don't already exist. The
+        # cache is partitioned by workbook version on disk.
         test_cache_dir = (
             Path(__file__).parent.parent.parent.parent
             / "tests"
             / "test_workbook_table_cache"
+            / version
         )
         if test_cache_dir.exists():
             for csv_file in test_cache_dir.glob("*.csv"):

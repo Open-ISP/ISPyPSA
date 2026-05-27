@@ -88,6 +88,7 @@ select = [
 [tool.hatch.build]
 include = [
     "src/ispypsa/**/*.py",
+    "src/ispypsa/**/*.yaml",
     "src/ispypsa/data_fetch/manifests/**/*.txt",
     "src/ispypsa/templater/manually_extracted_template_tables/**/*.csv",
 ]

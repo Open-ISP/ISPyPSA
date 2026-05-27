@@ -32,11 +32,13 @@ def _template_network_transmission(
     renewable_energy_zones: pd.DataFrame,
     sub_regional_geography: pd.DataFrame,
     regional_granularity: str,
+    flow_path_options: dict[str, pd.DataFrame] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Creates the network_transmission_paths and network_transmission_path_limits tables.
 
     Sub-regional paths and limits are built first; then if a coarser granularity
-    is requested, the result is aggregated to that level.
+    is requested, the result is aggregated to that level. Finally, augmentation
+    keys without an existing path (new parallel corridors) are appended.
 
     Args:
         flow_path_transfer_capability: IASR flow path transfer capability table.
@@ -48,6 +50,11 @@ def _template_network_transmission(
             flow paths when aggregating to a coarser granularity.
         regional_granularity: one of "sub_regions", "nem_regions", or
             "single_region".
+        flow_path_options: granularity-filtered dict of flow-path augmentation
+            options, keyed by path_id. Keys without an existing path become
+            new zero-capacity parallel corridors (see ``_append_new_parallel_paths``).
+            ``None`` (the default) means no augmentation data — used by tests that
+            don't exercise parallel-path behaviour.
 
     Returns:
         Tuple of (network_transmission_paths, network_transmission_path_limits).
@@ -118,6 +125,11 @@ def _template_network_transmission(
                 path_id  direction  timeslice    capacity
                 Q1-NEM   forward    peak_demand  750
                 N1-NEM   (NaN)      (NaN)        (NaN)
+
+        When ``flow_path_options`` contains keys without a matching path_id (e.g.
+        ``CNSW-SNW`` when only ``CNSW-SNW_NTH``/``_STH`` exist), those corridors are
+        appended as zero-capacity parallel paths — see ``_append_new_parallel_paths``
+        for an example.
     """
     topology = _parse_flow_path_topology(flow_path_transfer_capability["Flow Paths"])
     flow_paths = _add_flow_path_carrier(topology)
@@ -130,16 +142,34 @@ def _template_network_transmission(
     paths = pd.concat([flow_paths, rez_paths], ignore_index=True)
     limits = pd.concat([flow_limits, rez_limits], ignore_index=True)
     limits = _collapse_paths_with_no_limits(limits)
+    paths, limits = _aggregate_to_granularity(
+        paths,
+        limits,
+        regional_granularity,
+        renewable_energy_zones,
+        sub_regional_geography,
+    )
+    return _append_new_parallel_paths(paths, limits, flow_path_options or {})
+
+
+def _aggregate_to_granularity(
+    paths: pd.DataFrame,
+    limits: pd.DataFrame,
+    regional_granularity: str,
+    renewable_energy_zones: pd.DataFrame,
+    sub_regional_geography: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Dispatches to the appropriate aggregation step for the chosen granularity."""
     if regional_granularity == "sub_regions":
         return paths, limits
     rez_ids = set(renewable_energy_zones["ID"])
-    region_lookup = dict(
-        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
-    )
-    if regional_granularity == "nem_regions":
-        return _aggregate_to_nem_regions(paths, limits, region_lookup, rez_ids)
     if regional_granularity == "single_region":
         return _aggregate_to_single_region(paths, limits, rez_ids)
+    if regional_granularity == "nem_regions":
+        region_lookup = dict(
+            zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+        )
+        return _aggregate_to_nem_regions(paths, limits, region_lookup, rez_ids)
     raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
 
 
@@ -561,6 +591,7 @@ def _aggregate_to_nem_regions(
             path_id  direction  timeslice    capacity
             NSW-QLD  forward    peak_demand  950             # CQ-NQ row dropped
             Q1-QLD   forward    peak_demand  750
+            N1-NSW   (NaN)      (NaN)        (NaN)           # collapsed row preserved through rename
 
         Raises ValueError if any flow-path or REZ-path geo is missing from
         ``region_lookup`` (every geo must map to a real region).
@@ -809,3 +840,136 @@ def _remap_limit_path_ids(
     kept = limits[limits["path_id"].isin(rename_map.keys())].copy()
     kept["path_id"] = kept["path_id"].map(rename_map)
     return kept.reset_index(drop=True)
+
+
+# --- Augmentation-driven new parallel corridors ---
+
+_NEW_PATH_DIRECTIONS = ("forward", "reverse")
+_NEW_PATH_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
+
+
+def _append_new_parallel_paths(
+    paths: pd.DataFrame,
+    limits: pd.DataFrame,
+    flow_path_options: dict[str, pd.DataFrame],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Appends topology + limit rows for augmentation corridors not already in the path table.
+
+    Some flow-path augmentation tables in the IASR are keyed at corridor level
+    (e.g. ``flow_path_augmentation_options_CNSW-SNW``), not at the level of an
+    individual physical path. The corridor's existing topology is split across
+    parallel suffixed paths (``CNSW-SNW_NTH``, ``CNSW-SNW_STH``), so the un-suffixed
+    key has no matching ``path_id`` in the base topology — but it still describes
+    a real transmission expansion option.
+
+    Without injecting a synthetic path for that un-suffixed key, the expansion
+    orchestrator misclassifies the option. ``_build_options_table`` discriminates
+    physical paths from constraint groups by membership in
+    ``network_transmission_paths``, so an unmatched key would emit a single
+    ``constraint_relaxation`` row instead of forward+reverse expansion rows, and
+    the translator would build a phantom constraint rather than an expandable Link.
+
+    The fix is to inject a third Link alongside the NTH/STH siblings with no
+    pre-existing capacity. The IASR's ``Development path`` column distinguishes
+    NTH-specific, STH-specific, and "new corridor" options at the per-option level,
+    but threading that through reliably wasn't straightforward and we chose
+    simplicity: collapse all of them onto one new parallel link. This loses the
+    directional preference between NTH/STH/new-build — fine until a custom
+    constraint actually differentiates them.
+
+    Limits on the new link are explicit zeros, not NaN. NaN means "translator
+    applies default capacity" downstream (see ``_collapse_paths_with_no_limits``),
+    which would let the model dispatch flow across a corridor that doesn't yet
+    exist. Explicit zero forbids dispatch until the augmentation is actually built.
+
+    See Open-ISP/ISPyPSA#96 for the original modelling decision.
+
+    I/O Example:
+        paths:
+            path_id         geo_from  geo_to  carrier
+            CNSW-SNW_NTH    CNSW      SNW     AC
+            CNSW-SNW_STH    CNSW      SNW     AC
+
+        limits (existing siblings, abbreviated):
+            path_id         direction  timeslice    capacity
+            CNSW-SNW_NTH    forward    peak_demand  900
+            CNSW-SNW_STH    forward    peak_demand  800
+
+        flow_path_options keys: {"CNSW-SNW"}   # un-suffixed corridor
+
+        returns paths (new row appended):
+            path_id         geo_from  geo_to  carrier
+            CNSW-SNW_NTH    CNSW      SNW     AC
+            CNSW-SNW_STH    CNSW      SNW     AC
+            CNSW-SNW        CNSW      SNW     AC
+
+        returns limits (six explicit-zero rows appended for CNSW-SNW: 2 directions x 3 timeslices):
+            path_id         direction  timeslice         capacity
+            CNSW-SNW_NTH    forward    peak_demand       900
+            CNSW-SNW_STH    forward    peak_demand       800
+            CNSW-SNW        forward    peak_demand       0
+            CNSW-SNW        forward    summer_typical    0
+            CNSW-SNW        forward    winter_reference  0
+            CNSW-SNW        reverse    peak_demand       0
+            CNSW-SNW        reverse    summer_typical    0
+            CNSW-SNW        reverse    winter_reference  0
+    """
+    new_paths, new_limits = _new_parallel_path_rows(
+        flow_path_options, set(paths["path_id"])
+    )
+    paths = pd.concat([paths, new_paths], ignore_index=True)
+    limits = pd.concat([limits, new_limits], ignore_index=True)
+    return paths, limits
+
+
+def _new_parallel_path_rows(
+    flow_path_options: dict[str, pd.DataFrame],
+    existing_path_ids: set[str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Builds topology + zero-capacity limit rows for augmentation keys without an existing path.
+
+    Limits are explicit zeros (not NaN) because these paths physically don't exist
+    yet — NaN in this schema means "translator applies default capacity", which
+    would let the model dispatch flow on a Link that hasn't been built.
+
+    I/O Example:
+        flow_path_options keys: {"CQ-NQ", "CNSW-SNW"}
+        existing_path_ids: {"CQ-NQ", "CNSW-SNW_NTH", "CNSW-SNW_STH"}
+
+        returns:
+            paths:
+                path_id    geo_from  geo_to  carrier
+                CNSW-SNW   CNSW      SNW     AC
+            limits (6 rows: 2 directions x 3 timeslices, all 0 MW):
+                path_id    direction  timeslice         capacity
+                CNSW-SNW   forward    peak_demand       0
+                CNSW-SNW   forward    summer_typical    0
+                ... etc
+    """
+    new_keys = sorted(set(flow_path_options.keys()) - existing_path_ids)
+    paths = pd.DataFrame(
+        [_parse_path_key(k) for k in new_keys],
+        columns=["path_id", "geo_from", "geo_to", "carrier"],
+    )
+    # `capacity` must be explicitly typed so the empty-keys case still produces
+    # a float64 column. Without this, an empty `new_keys` yields an object-dtype
+    # `capacity`, and concatenating it onto the populated (float64) limits frame
+    # downstream both raises a pandas FutureWarning and silently coerces the
+    # result column to object. The string columns don't need typing — they're
+    # object on both sides regardless.
+    limits = pd.DataFrame(
+        [
+            {"path_id": k, "direction": d, "timeslice": t, "capacity": 0.0}
+            for k in new_keys
+            for d in _NEW_PATH_DIRECTIONS
+            for t in _NEW_PATH_TIMESLICES
+        ],
+        columns=["path_id", "direction", "timeslice", "capacity"],
+    ).astype({"capacity": "float64"})
+    return paths, limits
+
+
+def _parse_path_key(key: str) -> dict:
+    """Parses a flow-path key like 'CNSW-SNW' into topology fields. Splits on the first hyphen."""
+    geo_from, geo_to = key.split("-", 1)
+    return {"path_id": key, "geo_from": geo_from, "geo_to": geo_to, "carrier": "AC"}
