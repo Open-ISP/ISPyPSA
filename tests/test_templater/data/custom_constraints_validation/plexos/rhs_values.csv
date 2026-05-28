@@ -1,0 +1,16 @@
+constraint_name,value,date_from,date_to,tags
+ExportGroup_CQ1,1700.0,,,QLD Typical Summer
+ExportGroup_CQ1,1700.0,,,QLD Hot Day
+ExportGroup_CQ1,2070.0,,,QLD Winter
+ExportGroup_MN1,1630.0,,,SA Typical Summer
+ExportGroup_MN1,1860.0,,,SA Winter
+ExportGroup_MN1,1630.0,,,SA Hot Day
+ExportGroup_NET1,1600.0,,,TAS Winter
+ExportGroup_NET1,1600.0,,,TAS Typical Summer
+ExportGroup_NET1,1600.0,,,TAS Hot Day
+ExportGroup_NQ1,2420.0,,,QLD Hot Day
+ExportGroup_NQ1,2420.0,,,QLD Typical Summer
+ExportGroup_NQ1,2650.0,,,QLD Winter
+ExportGroup_WV1,780.0,,,VIC Hot Day
+ExportGroup_WV1,780.0,,,VIC Typical Summer
+ExportGroup_WV1,980.0,,,VIC Winter
