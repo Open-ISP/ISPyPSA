@@ -23,13 +23,47 @@ _FP_AUG_OPTION_COLS = [
 ]
 
 
+def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
+    """Identifiable, non-empty stand-in for ``template_custom_constraints_from_plexos``.
+
+    Has known row counts (1 constraint, 2 LHS terms, 1 RHS row). The sub_regions
+    wiring test asserts these are spliced into the template output at the right
+    counts; the nem_regions / single_region tests use it as a guard, so a
+    regression in the granularity gate surfaces as a clean assertion failure
+    rather than a PLEXOS-extract disk read. Full content is covered by the
+    per-module tests in ``test_custom_constraints_from_plexos.py``.
+    """
+    return {
+        "custom_constraints": pd.DataFrame(
+            {"constraint_id": ["SWQLD1"], "direction": ["<="]}
+        ),
+        "custom_constraints_lhs": pd.DataFrame(
+            {
+                "constraint_id": ["SWQLD1", "SWQLD1"],
+                "term_type": ["generator_output", "storage_output"],
+                "variable_name": ["BW01", "Q8 Battery - 2h"],
+                "coefficient": [0.5, 1.0],
+                "date_from": [pd.NA, pd.NA],
+            }
+        ),
+        "custom_constraints_rhs": pd.DataFrame(
+            {
+                "constraint_id": ["SWQLD1"],
+                "timeslice": ["qld_winter_reference"],
+                "rhs": [3000.0],
+                "date_from": [pd.NA],
+            }
+        ),
+    }
+
+
 def test_create_ispypsa_inputs_template_sub_regions(
     workbook_table_cache_test_path: Path,
 ):
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     manual_tables = load_manually_extracted_tables("6.0")
     template_tables = create_ispypsa_inputs_template(
-        "Step Change", "sub_regions", iasr_tables, manual_tables
+        "Step Change", "sub_regions", iasr_tables, manual_tables, "6.0"
     )
 
     for table in list_templater_output_files("sub_regions"):
@@ -49,7 +83,7 @@ def test_create_ispypsa_inputs_template_regions(workbook_table_cache_test_path: 
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     manual_tables = load_manually_extracted_tables("6.0")
     template_tables = create_ispypsa_inputs_template(
-        "Step Change", "nem_regions", iasr_tables, manual_tables
+        "Step Change", "nem_regions", iasr_tables, manual_tables, "6.0"
     )
 
     for table in list_templater_output_files("nem_regions"):
@@ -70,7 +104,7 @@ def test_create_ispypsa_inputs_template_single_regions(
     iasr_tables = read_csvs(workbook_table_cache_test_path)
     manual_tables = load_manually_extracted_tables("6.0")
     template_tables = create_ispypsa_inputs_template(
-        "Step Change", "single_region", iasr_tables, manual_tables
+        "Step Change", "single_region", iasr_tables, manual_tables, "6.0"
     )
 
     for table in list_templater_output_files("single_region"):
@@ -158,9 +192,15 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         IBR,    10
     """)
 
-    with patch(
-        "ispypsa.templater.create_template.FEATURE_FLAGS",
-        {"use_new_table_format": True},
+    with (
+        patch(
+            "ispypsa.templater.create_template.FEATURE_FLAGS",
+            {"use_new_table_format": True},
+        ),
+        patch(
+            "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
+            return_value=_stub_custom_constraints_tables(),
+        ),
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -181,6 +221,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
             manually_extracted_tables={},
+            iasr_workbook_version="ignored-by-patch",
         )
 
     geography = result["network_geography"]
@@ -232,6 +273,34 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # generators_new_entrant is placeholder (empty) so no VRE rows are produced
     # yet (but no errors either).
     assert costs_connection.empty
+
+    # Custom-constraints tables are spliced into the output via
+    # template.update(template_custom_constraints_from_plexos(...)). The
+    # templater is mocked with _stub_custom_constraints_tables (full content is
+    # covered by test_custom_constraints_from_plexos.py); assert wiring only --
+    # keys present, column set, and the stub's row counts flow through.
+    constraints = result["custom_constraints"]
+    assert set(constraints.columns) == {"constraint_id", "direction"}
+    assert len(constraints) == 1
+
+    constraints_lhs = result["custom_constraints_lhs"]
+    assert set(constraints_lhs.columns) == {
+        "constraint_id",
+        "term_type",
+        "variable_name",
+        "coefficient",
+        "date_from",
+    }
+    assert len(constraints_lhs) == 2
+
+    constraints_rhs = result["custom_constraints_rhs"]
+    assert set(constraints_rhs.columns) == {
+        "constraint_id",
+        "timeslice",
+        "rhs",
+        "date_from",
+    }
+    assert len(constraints_rhs) == 1
 
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
@@ -297,9 +366,15 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         IBR,    10
     """)
 
-    with patch(
-        "ispypsa.templater.create_template.FEATURE_FLAGS",
-        {"use_new_table_format": True},
+    with (
+        patch(
+            "ispypsa.templater.create_template.FEATURE_FLAGS",
+            {"use_new_table_format": True},
+        ),
+        patch(
+            "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
+            return_value=_stub_custom_constraints_tables(),
+        ) as mock_template_custom_constraints,
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -320,6 +395,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
             manually_extracted_tables={},
+            iasr_workbook_version="ignored-by-patch",
         )
 
     geography = result["network_geography"]
@@ -357,6 +433,15 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         "system_strength_cost",
     }
     assert costs_connection.empty
+
+    # Custom constraints from PLEXOS are sub-regional export limits with no
+    # meaningful representation once sub-regions are collapsed, so the templater
+    # skips them at nem_regions granularity. The mock turns a regression in that
+    # gate into a clean assertion failure instead of a PLEXOS-extract disk read.
+    mock_template_custom_constraints.assert_not_called()
+    assert "custom_constraints" not in result
+    assert "custom_constraints_lhs" not in result
+    assert "custom_constraints_rhs" not in result
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -410,9 +495,15 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         IBR,    10
     """)
 
-    with patch(
-        "ispypsa.templater.create_template.FEATURE_FLAGS",
-        {"use_new_table_format": True},
+    with (
+        patch(
+            "ispypsa.templater.create_template.FEATURE_FLAGS",
+            {"use_new_table_format": True},
+        ),
+        patch(
+            "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
+            return_value=_stub_custom_constraints_tables(),
+        ) as mock_template_custom_constraints,
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -431,6 +522,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
             manually_extracted_tables={},
+            iasr_workbook_version="ignored-by-patch",
         )
 
     geography = result["network_geography"]
@@ -467,3 +559,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         "system_strength_cost",
     }
     assert connection_costs.empty
+
+    # Custom constraints from PLEXOS are sub-regional export limits with no
+    # meaningful representation at single_region, so the templater skips them.
+    # The mock turns a regression in that gate into a clean assertion failure
+    # instead of a PLEXOS-extract disk read.
+    mock_template_custom_constraints.assert_not_called()
+    assert "custom_constraints" not in result
+    assert "custom_constraints_lhs" not in result
+    assert "custom_constraints_rhs" not in result
