@@ -8,6 +8,7 @@ from .helpers import (
     _fuzzy_match_names,
     _snakecase_string,
 )
+from .mappings import _CANONICAL_TIMESLICES
 
 _FLOW_PATH_FORWARD_MW_COL = (
     "Notional transfer level increase (MW) Note: Same increase applies to all transfer "
@@ -31,7 +32,6 @@ _FLOW_PATH_REVERSE_MW_COL = _FLOW_PATH_FORWARD_MW_COL.replace(
 
 
 _NEW_PATH_DIRECTIONS = ("forward", "reverse")
-_NEW_PATH_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 
 
 def _new_parallel_path_rows(
@@ -68,7 +68,7 @@ def _new_parallel_path_rows(
             {"path_id": k, "direction": d, "timeslice": t, "capacity": 0.0}
             for k in new_keys
             for d in _NEW_PATH_DIRECTIONS
-            for t in _NEW_PATH_TIMESLICES
+            for t in _CANONICAL_TIMESLICES
         ],
         columns=["path_id", "direction", "timeslice", "capacity"],
     )
