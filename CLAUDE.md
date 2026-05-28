@@ -94,6 +94,20 @@ def _duplicate_for_both_directions(limits: pd.DataFrame) -> pd.DataFrame:
     """
 ```
 
+### External references
+
+Comments, docstrings, and other in-repo docs must not refer to files that
+aren't checked in — anything under `notes/` is gitignored and any path that
+only lives on one developer's machine is a dead link to everyone else.
+
+When external reasoning needs to be referenced, link to a **GitHub issue**
+on the project instead (e.g. `Open-ISP/ISPyPSA#123`). If the issue doesn't
+exist yet, file it first and use the real number; if that's blocked, use a
+clearly grep-able placeholder like `Open-ISP/ISPyPSA#TBD` and add a task to
+come back and file it.
+
+In-repo paths (`docs/...`, `src/...`, `tests/...`) are fine to reference.
+
 ## Logging
 
 Logging surfaces things a user or operator wants to know during a template/translation
