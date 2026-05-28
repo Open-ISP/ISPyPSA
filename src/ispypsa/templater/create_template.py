@@ -4,6 +4,9 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.feature_flags import FEATURE_FLAGS
+from ispypsa.templater.custom_constraints_from_plexos import (
+    template_custom_constraints_from_plexos,
+)
 from ispypsa.templater.dynamic_generator_properties import (
     _template_generator_dynamic_properties,
 )
@@ -76,6 +79,7 @@ def create_ispypsa_inputs_template(
     regional_granularity: str,
     iasr_tables: dict[str, pd.DataFrame],
     manually_extracted_tables: dict[str, pd.DataFrame],
+    iasr_workbook_version: str,
     filter_to_nem_regions: list[str] = None,
     filter_to_isp_sub_regions: list[str] = None,
 ) -> dict[str, pd.DataFrame]:
@@ -103,7 +107,8 @@ def create_ispypsa_inputs_template(
         ... scenario="Step Change",
         ... regional_granularity="sub_regions",
         ... iasr_tables=iasr_tables,
-        ... manually_extracted_tables=manually_extracted_tables
+        ... manually_extracted_tables=manually_extracted_tables,
+        ... iasr_workbook_version="7.5",
         ... )
 
         Write the template tables to a directory as CSVs.
@@ -117,6 +122,9 @@ def create_ispypsa_inputs_template(
             extracted using the `isp_workbook_parser`.
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
+        iasr_workbook_version: the IASR workbook version (e.g. `"7.5"`), used
+            to select the PLEXOS extract directory for the custom-constraints
+            templater.
         filter_to_nem_regions: Optional list of NEM region IDs (e.g., ['NSW', 'VIC'])
             to filter the template to. Cannot be specified together with
             filter_to_isp_sub_regions.
@@ -183,6 +191,18 @@ def create_ispypsa_inputs_template(
         )
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
+        # Custom constraints from PLEXOS are sub-regional export-group limits:
+        # their LHS references sub-region nodes, sub-regional flow paths, and
+        # REZ-located units that only exist as distinct entities at sub_regions
+        # granularity. Once sub-regions are collapsed (nem_regions /
+        # single_region) they have no meaningful representation, so only emit
+        # them for sub_regions.
+        if regional_granularity == "sub_regions":
+            template.update(
+                template_custom_constraints_from_plexos(
+                    iasr_tables, iasr_workbook_version=iasr_workbook_version
+                )
+            )
         return template
 
     template = {}
