@@ -1,0 +1,14 @@
+Term,Description,Group constraint ID,Transmission-limited total build_Summer peak,Transmission-limited total build_Summer typical,Transmission-limited total build_Winter reference,Import limit,Indicative transmission expansion cost ($M/MW),Indicative transmission expansion cost ($M/MW) Tranche 2,Notes
+Q1,Far North QLD,NQ1,2420,2420,2650,2650,2.64577987921,1.60498988047773,Limit assumes Powerlink upgrades limiting 8km of line into Ross from Strathmore 275kV.
+Q2,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub
+Q3,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD
+- CQ-NQ,Central Queensland - North Queensland,CQ1,1700,1700,2070,2070,0.3334846898519813,0.8434474317195667,0.8434474317195667
+Q4,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac
+S3,Mid-North SA,MN1,1630,1630,1860,1860,0.5166666666666667,0.6666666666666666,Combined from TEOR and Draft IASR 2025 new limit
+S4,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula
+- CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA
+0.2 * SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA
+T1,North East Tasmania,NET1,1600,1600,1600,1600,1600,1600,1600
+T4,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast
+V3,combined V3 + V4 + Existing wind generation in Western Victoria West of Ballarat,WV1,780,780,980,980,2.25,2.25,2.25
+V4,V4,V4,V4,V4,V4,V4,V4,V4,V4

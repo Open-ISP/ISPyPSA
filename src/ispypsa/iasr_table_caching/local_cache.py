@@ -44,6 +44,8 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "renewable_energy_zones",
             "flow_path_transfer_capability",
             "initial_transmission_limits",
+            "existing_committed_anticipated_additional_generator_summary",
+            "new_entrants_summary",
         ] + augmentation
     else:
         _GENERATOR_PROPERTY_TABLES = [
