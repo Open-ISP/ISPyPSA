@@ -72,33 +72,35 @@ def test_nem_regions_filters_intra_region_paths_and_rekeys(csv_str_to_df):
         expected_paths.sort_values("path_id").reset_index(drop=True),
     )
 
-    # CQ-NQ is dropped (intra-QLD); NNSW-SQ becomes NSW-QLD; etc.
+    # CQ-NQ is dropped (intra-QLD); NNSW-SQ becomes NSW-QLD; etc. Timeslices are
+    # region-prefixed: forward carries the destination region, reverse the origin.
+    # TAS-VIC is the asymmetric cross-region case (forward into VIC, reverse into TAS).
     expected_limits = csv_str_to_df("""
-        path_id,            direction,  timeslice,         capacity
-        NSW-QLD,            forward,    peak_demand,       950
-        NSW-QLD,            forward,    summer_typical,    950
-        NSW-QLD,            forward,    winter_reference,  950
-        NSW-QLD,            reverse,    peak_demand,       1450
-        NSW-QLD,            reverse,    summer_typical,    1450
-        NSW-QLD,            reverse,    winter_reference,  1450
-        NSW-QLD_Terranora,  forward,    peak_demand,       0
-        NSW-QLD_Terranora,  forward,    summer_typical,    50
-        NSW-QLD_Terranora,  forward,    winter_reference,  50
-        NSW-QLD_Terranora,  reverse,    peak_demand,       130
-        NSW-QLD_Terranora,  reverse,    summer_typical,    150
-        NSW-QLD_Terranora,  reverse,    winter_reference,  200
-        TAS-VIC,            forward,    peak_demand,       594
-        TAS-VIC,            forward,    summer_typical,    594
-        TAS-VIC,            forward,    winter_reference,  594
-        TAS-VIC,            reverse,    peak_demand,       478
-        TAS-VIC,            reverse,    summer_typical,    478
-        TAS-VIC,            reverse,    winter_reference,  478
-        Q1-QLD,             forward,    peak_demand,       750
-        Q1-QLD,             forward,    summer_typical,    750
-        Q1-QLD,             forward,    winter_reference,  750
-        Q1-QLD,             reverse,    peak_demand,       750
-        Q1-QLD,             reverse,    summer_typical,    750
-        Q1-QLD,             reverse,    winter_reference,  750
+        path_id,            direction,  timeslice,             capacity
+        NSW-QLD,            forward,    qld_peak_demand,       950
+        NSW-QLD,            forward,    qld_summer_typical,    950
+        NSW-QLD,            forward,    qld_winter_reference,  950
+        NSW-QLD,            reverse,    nsw_peak_demand,       1450
+        NSW-QLD,            reverse,    nsw_summer_typical,    1450
+        NSW-QLD,            reverse,    nsw_winter_reference,  1450
+        NSW-QLD_Terranora,  forward,    qld_peak_demand,       0
+        NSW-QLD_Terranora,  forward,    qld_summer_typical,    50
+        NSW-QLD_Terranora,  forward,    qld_winter_reference,  50
+        NSW-QLD_Terranora,  reverse,    nsw_peak_demand,       130
+        NSW-QLD_Terranora,  reverse,    nsw_summer_typical,    150
+        NSW-QLD_Terranora,  reverse,    nsw_winter_reference,  200
+        TAS-VIC,            forward,    vic_peak_demand,       594
+        TAS-VIC,            forward,    vic_summer_typical,    594
+        TAS-VIC,            forward,    vic_winter_reference,  594
+        TAS-VIC,            reverse,    tas_peak_demand,       478
+        TAS-VIC,            reverse,    tas_summer_typical,    478
+        TAS-VIC,            reverse,    tas_winter_reference,  478
+        Q1-QLD,             forward,    qld_peak_demand,       750
+        Q1-QLD,             forward,    qld_summer_typical,    750
+        Q1-QLD,             forward,    qld_winter_reference,  750
+        Q1-QLD,             reverse,    qld_peak_demand,       750
+        Q1-QLD,             reverse,    qld_summer_typical,    750
+        Q1-QLD,             reverse,    qld_winter_reference,  750
     """)
     pd.testing.assert_frame_equal(
         limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(

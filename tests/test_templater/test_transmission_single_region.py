@@ -40,7 +40,13 @@ def test_single_region_drops_flow_paths_and_rekeys_rez(csv_str_to_df):
     """)
 
     sub_regional_geography = csv_str_to_df("""
-        geo_id,  geo_type,  region_id,  subregion_id
+        geo_id,  geo_type,   region_id,  subregion_id
+        CQ,      subregion,  QLD,        CQ
+        NQ,      subregion,  QLD,        NQ
+        SQ,      subregion,  QLD,        SQ
+        NNSW,    subregion,  NSW,        NNSW
+        Q1,      rez,        QLD,        NQ
+        N1,      rez,        NSW,        NNSW
     """)
 
     paths, limits = _template_network_transmission(
@@ -61,15 +67,17 @@ def test_single_region_drops_flow_paths_and_rekeys_rez(csv_str_to_df):
         expected_paths.sort_values("path_id").reset_index(drop=True),
     )
 
-    # CQ-NQ and NNSW-SQ flow path limits are dropped; only REZ limits remain.
+    # CQ-NQ and NNSW-SQ flow path limits are dropped; only REZ limits remain. The
+    # REZ keeps its own region prefix (qld) even though geo_to is now the NEM geo —
+    # the prefix is fixed at the sub-regional level before aggregation.
     expected_limits = csv_str_to_df("""
-        path_id,  direction,  timeslice,         capacity
-        Q1-NEM,   forward,    peak_demand,       750
-        Q1-NEM,   forward,    summer_typical,    750
-        Q1-NEM,   forward,    winter_reference,  750
-        Q1-NEM,   reverse,    peak_demand,       750
-        Q1-NEM,   reverse,    summer_typical,    750
-        Q1-NEM,   reverse,    winter_reference,  750
+        path_id,  direction,  timeslice,             capacity
+        Q1-NEM,   forward,    qld_peak_demand,       750
+        Q1-NEM,   forward,    qld_summer_typical,    750
+        Q1-NEM,   forward,    qld_winter_reference,  750
+        Q1-NEM,   reverse,    qld_peak_demand,       750
+        Q1-NEM,   reverse,    qld_summer_typical,    750
+        Q1-NEM,   reverse,    qld_winter_reference,  750
         N1-NEM,   ,           ,
     """)
     pd.testing.assert_frame_equal(
@@ -131,7 +139,9 @@ def test_single_region_rez_with_no_initial_limit_keeps_collapsed_row(csv_str_to_
     """)
 
     sub_regional_geography = csv_str_to_df("""
-        geo_id,  geo_type,  region_id,  subregion_id
+        geo_id,  geo_type,   region_id,  subregion_id
+        NNSW,    subregion,  NSW,        NNSW
+        N1,      rez,        NSW,        NNSW
     """)
 
     paths, limits = _template_network_transmission(

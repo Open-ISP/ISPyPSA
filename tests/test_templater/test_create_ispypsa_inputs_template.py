@@ -152,10 +152,13 @@ def test_create_ispypsa_inputs_template_single_regions(
 # per-module templater tests.
 def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # SNW is included alongside NQ and CNSW so the parallel-path scenario below
-    # (CNSW-SNW corridor) has valid endpoints in the geography.
+    # (CNSW-SNW corridor) has valid endpoints in the geography. CQ is included so
+    # the CQ-NQ flow path's region prefix resolves (every flow-path endpoint must
+    # appear in the geography).
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                        Sub-regional reference node
         Queensland,       Northern Queensland (NQ),              Ross 275 kV
+        Queensland,       Central Queensland (CQ),               Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),        Wellington 330 kV
         New South Wales,  Southern New South Wales (SNW),        Lower Tumut 330 kV
     """)
@@ -254,8 +257,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
-    # 3 subregions (NQ + CNSW + SNW) + 2 REZs.
-    assert len(geography) == 5
+    # 4 subregions (NQ + CQ + CNSW + SNW) + 2 REZs.
+    assert len(geography) == 6
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -473,9 +476,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
+    # CQ is included so the CQ-NQ flow path's region prefix resolves at the
+    # sub-regional level (prefixing runs before single_region drops flow paths).
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                  Sub-regional reference node
         Queensland,       Northern Queensland (NQ),        Ross 275 kV
+        Queensland,       Central Queensland (CQ),         Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
