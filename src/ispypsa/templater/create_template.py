@@ -86,6 +86,18 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_expansion_costs",
 ]
 
+# Custom constraints are templated only at sub_regions granularity (see the gate
+# in create_ispypsa_inputs_template) — coarser granularities collapse the
+# sub-region nodes, sub-regional flow paths and REZ-located units the constraints
+# reference, leaving nothing to constrain. Listed as outputs only at that
+# granularity so the create_ispypsa_inputs task tracks them where they are
+# written and does not expect them where they never are.
+_CUSTOM_CONSTRAINT_OUTPUTS = [
+    "custom_constraints",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+]
+
 
 def create_ispypsa_inputs_template(
     scenario: str,
@@ -324,6 +336,8 @@ def list_templater_output_files(regional_granularity, output_path=None):
     # granularity-specific file removals.
     if FEATURE_FLAGS["use_new_table_format"]:
         files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
+        if regional_granularity == "sub_regions":
+            files += _CUSTOM_CONSTRAINT_OUTPUTS
     else:
         files = _BASE_TEMPLATE_OUTPUTS.copy()
         if regional_granularity in ["sub_regions", "single_region"]:

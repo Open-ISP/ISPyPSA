@@ -74,6 +74,16 @@ _NEW_FORMAT_OUTPUTS = [
     "costs_connection",
 ]
 
+# Custom constraints are templated only at sub_regions (coarser granularities
+# collapse the entities they reference). Detailed content lives in
+# test_custom_constraints_from_plexos.py; here we check the CLI writes them at
+# sub_regions and omits them otherwise.
+_CUSTOM_CONSTRAINT_OUTPUTS = [
+    "custom_constraints",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+]
+
 
 def test_create_ispypsa_inputs_task_new_format(
     mock_config_new_format,
@@ -344,3 +354,19 @@ def test_create_ispypsa_inputs_new_format(
     # is uneven).
     assert set(costs["expansion_id"]) == set(options["expansion_id"])
     assert len(costs) == _EXPECTED_EXPANSION_COST_ROWS_75[granularity]
+
+    # custom_constraints — written only at sub_regions. Detailed content is
+    # covered by test_custom_constraints_from_plexos.py; here we assert the CLI
+    # emits the three tables at sub_regions with no orphan LHS/RHS rows, and
+    # omits them entirely at coarser granularities.
+    if granularity == "sub_regions":
+        verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
+        constraints = pd.read_csv(output_dir / "custom_constraints.csv")
+        lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
+        rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
+        constraint_ids = set(constraints["constraint_id"])
+        assert set(lhs["constraint_id"]) <= constraint_ids
+        assert set(rhs["constraint_id"]) <= constraint_ids
+    else:
+        for name in _CUSTOM_CONSTRAINT_OUTPUTS:
+            assert not (output_dir / f"{name}.csv").exists()

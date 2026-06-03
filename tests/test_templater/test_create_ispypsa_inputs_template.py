@@ -57,6 +57,34 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
     }
 
 
+def test_list_templater_output_files_includes_custom_constraints_only_at_sub_regions():
+    """Custom-constraint tables are declared as task outputs only at sub_regions.
+
+    They are templated (and written) only at sub_regions, so they must appear in
+    the output-file list there — otherwise the create_ispypsa_inputs task leaves
+    files it writes untracked — and must be absent at nem_regions /
+    single_region, where declaring them would make the task expect files that are
+    never written.
+    """
+    custom_constraint_files = {
+        "custom_constraints",
+        "custom_constraints_lhs",
+        "custom_constraints_rhs",
+    }
+
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        sub_regions = set(list_templater_output_files("sub_regions"))
+        nem_regions = set(list_templater_output_files("nem_regions"))
+        single_region = set(list_templater_output_files("single_region"))
+
+    assert custom_constraint_files <= sub_regions
+    assert custom_constraint_files.isdisjoint(nem_regions)
+    assert custom_constraint_files.isdisjoint(single_region)
+
+
 def test_create_ispypsa_inputs_template_sub_regions(
     workbook_table_cache_test_path: Path,
 ):
