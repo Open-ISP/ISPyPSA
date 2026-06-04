@@ -35,6 +35,7 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _log_injected_batteries,
     _match_unit_name,
     _pick_location,
+    _plexos_extract_dir,
     _rename_battery_name,
     _rename_first_token,
     _rename_generator_name,
@@ -1114,3 +1115,20 @@ def test_dedupe_lhs_terms_no_log_when_nothing_to_dedupe(csv_str_to_df, caplog):
         _dedupe_lhs_terms(lhs)
 
     assert "Deduped" not in caplog.text
+
+
+# --- _plexos_extract_dir ---
+
+
+def test_plexos_extract_dir_resolves_to_shipped_extract():
+    """The default extract directory points at the package's shipped 7.5 CSVs.
+
+    Production callers leave ``plexos_extract_dir`` unset, so the templater
+    resolves the extract through ``importlib.resources``. This guards that the
+    three CSVs ship with the package and stay discoverable.
+    """
+    extract_dir = _plexos_extract_dir("7.5")
+
+    assert (extract_dir / "constraints.csv").is_file()
+    assert (extract_dir / "lhs_terms.csv").is_file()
+    assert (extract_dir / "rhs_values.csv").is_file()

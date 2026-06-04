@@ -94,6 +94,7 @@ from __future__ import annotations
 
 import logging
 import re
+from importlib.resources import files
 from pathlib import Path
 
 import pandas as pd
@@ -206,7 +207,7 @@ def template_custom_constraints_from_plexos(
 
 
 def _plexos_extract_dir(version: str) -> Path:
-    return Path(__file__).parent / "plexos" / version
+    return files("ispypsa.templater") / "plexos" / version
 
 
 def _load_plexos_csv(path: Path) -> pd.DataFrame:
