@@ -71,6 +71,7 @@ _NEW_FORMAT_OUTPUTS = [
     "network_transmission_path_limits",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
+    "costs_connection",
 ]
 
 
