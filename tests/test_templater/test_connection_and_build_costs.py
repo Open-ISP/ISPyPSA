@@ -1,11 +1,19 @@
 import pandas as pd
+import pytest
 
 from ispypsa.templater.connection_and_build_costs import (
+    _NON_VRE_COLUMN_RENAMES,
     _VRE_COLUMN_RENAMES,
+    _average_connection_costs_across_regions,
     _build_vre_cost_rows,
     _calculate_connection_cost_per_mw,
+    _canonicalise_non_vre_technologies,
+    _create_non_vre_rez_cost_rows,
     _enforce_numeric_cols,
+    _expand_non_vre_connection_costs_to_subregions,
+    _filter_connection_costs_by_regional_granularity,
     _filter_table_by_isp_scenario,
+    _get_canon_technology_and_geo_id_pairs,
     _get_unique_vre_geo_id_rows,
     _merge_and_filter_system_strength_costs,
     _merge_connection_cost_and_capacity_frames,
@@ -14,6 +22,7 @@ from ispypsa.templater.connection_and_build_costs import (
     _set_non_ibr_system_strength_cost_to_zero,
     _set_solar_thermal_system_strength_costs_to_zero,
     _template_connection_costs,
+    _template_non_vre_connection_costs,
     _template_vre_connection_costs,
     _warn_nan_connection_costs,
 )
@@ -133,15 +142,44 @@ def test_normalise_connection_cost_forecast_frame(csv_str_to_df):
     )
 
     expected = csv_str_to_df("""
-        geo_id,  year,  connection_capacity,  connection_cost
-        N1,      2025,  400.0,                730000000.0
-        N1,      2026,  400.0,                740000000.0
-        Q9,      2025,  1800.0,               8540000000.0
-        Q9,      2026,  1800.0,               8670000000.0
+        geo_id,  connection_capacity,  year,  connection_cost
+        N1,      400.0,                2025,  730000000.0
+        N1,      400.0,                2026,  740000000.0
+        Q9,      1800.0,               2025,  8540000000.0
+        Q9,      1800.0,               2026,  8670000000.0
     """)
     pd.testing.assert_frame_equal(
         result.sort_values(["geo_id", "year"]).reset_index(drop=True),
         expected.sort_values(["geo_id", "year"]).reset_index(drop=True),
+        check_exact=False,
+        rtol=1e-5,
+        check_dtype=False,
+    )
+
+
+def test_normalise_connection_cost_forecast_frame_non_vre_renames(csv_str_to_df):
+    # Non-VRE path melts with a 3-key rename dict (Region, Generator Type,
+    # capacity) — a different, multi-id-column shape from the VRE case above.
+    connection_cost_forecast = csv_str_to_df("""
+        Region,  Generator__Type,  Connection__capacity__(MVA),  2024-25,   2025-26
+        NSW,     CCGT,             400,                          40000000,  42000000
+        QLD,     CCGT,             300,                          36000000,  37000000
+    """)
+
+    result = _normalise_connection_cost_forecast_frame(
+        connection_cost_forecast, id_cols_rename=_NON_VRE_COLUMN_RENAMES
+    )
+
+    expected = csv_str_to_df("""
+        region_id,  technology,  connection_capacity,  year,  connection_cost
+        NSW,        CCGT,        400.0,                2025,  40000000.0
+        NSW,        CCGT,        400.0,                2026,  42000000.0
+        QLD,        CCGT,        300.0,                2025,  36000000.0
+        QLD,        CCGT,        300.0,                2026,  37000000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["region_id", "year"]).reset_index(drop=True),
+        expected.sort_values(["region_id", "year"]).reset_index(drop=True),
         check_exact=False,
         rtol=1e-5,
         check_dtype=False,
@@ -161,9 +199,9 @@ def test_normalise_connection_cost_forecast_frame_preserves_nan_rows(csv_str_to_
     )
 
     expected = csv_str_to_df("""
-        geo_id,     year,   connection_capacity,    connection_cost
-        DN1,        2025,   150.0,
-        Q1,         2025,   ,                       160000000.0
+        geo_id,     connection_capacity,    year,   connection_cost
+        DN1,        150.0,                  2025,
+        Q1,         ,                       2025,   160000000.0
     """)
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
@@ -182,7 +220,7 @@ def test_normalise_connection_cost_forecast_frame_empty_input(csv_str_to_df):
     )
 
     expected = csv_str_to_df("""
-        geo_id,     year,   connection_capacity,    connection_cost
+        geo_id,     connection_capacity,    year,   connection_cost
     """)
 
     pd.testing.assert_frame_equal(
@@ -353,7 +391,7 @@ def test_warn_nan_connection_costs_logs_warning_with_identifiers(csv_str_to_df, 
         _warn_nan_connection_costs(costs, id_cols=["geo_id"])
 
     msg = (
-        "NaN connection cost after per-MW calculation for: (geo_id=DN1, year=2025) "
+        "NaN connection cost after per-MW calculation for: ['geo_id=DN1, year=2025'] "
         "— no additional connection cost will be applied here"
     )
     assert msg in caplog.text
@@ -381,10 +419,11 @@ def test_warn_nan_connection_costs_no_warning_when_all_costs_valid(
 def test_normalise_system_strength_cost_frame(csv_str_to_df):
     # Wide single-row table → long (year, system_strength_cost).
     # $/kW * 1000 = $/MW conversion applied.
-    # FY strings converted to year int. Non-year label column dropped.
+    # FY strings converted to year int, long-form year string fix applied correctly.
+    # Non-year label column dropped.
     system_strength_cost_table = csv_str_to_df("""
-        label,            2024-25,  2025-26,    Notes
-        IBR__remediation, 10,       12,         Some__extra__note
+        label,            2024-25,  2025-26,    2026-2027,      Notes
+        IBR__remediation, 10,       12,         15,             Some__extra__note
     """)
 
     result = _normalise_system_strength_cost_frame(system_strength_cost_table)
@@ -393,6 +432,7 @@ def test_normalise_system_strength_cost_frame(csv_str_to_df):
         year,  system_strength_cost
         2025,  10000.0
         2026,  12000.0
+        2027,  15000.0
     """)
     pd.testing.assert_frame_equal(
         result.sort_values("year").reset_index(drop=True),
@@ -601,11 +641,11 @@ def test_merge_and_filter_system_strength_costs_empty_inputs(csv_str_to_df):
 
 
 def test_get_unique_vre_geo_id_rows(csv_str_to_df):
-    # Non-VRE rows (Pumped Hydro) are excluded. 'Distributed' rows excluded.
-    # Duplicate (N1, Solar PV) rows are deduplicated to one.
-    generators_new_entrant = csv_str_to_df("""
+    # Non-VRE rows (Pumped Hydro) are excluded. 'Distributed' rows excluded
+    # (including 'Distributed Resources Solar' despite containing 'solar').
+    # Input is assumed already deduplicated upstream — this function does not dedup.
+    canonical_tech_geo_ids = csv_str_to_df("""
         geo_id,  technology
-        N1,      Large__scale__Solar__PV
         N1,      Large__scale__Solar__PV
         N1,      Wind
         NNSW,    Pumped__Hydro__(24hrs__storage)
@@ -615,7 +655,7 @@ def test_get_unique_vre_geo_id_rows(csv_str_to_df):
         SESA,    Distributed__Resources__Solar
     """)
 
-    result = _get_unique_vre_geo_id_rows(generators_new_entrant)
+    result = _get_unique_vre_geo_id_rows(canonical_tech_geo_ids)
 
     expected = csv_str_to_df("""
         geo_id,  technology
@@ -861,61 +901,507 @@ def test_template_vre_connection_costs_empty_capacity_gives_nan_costs(csv_str_to
     )
 
 
+# --- _get_canon_technology_and_geo_id_pairs ---
+
+
+def test_get_canon_technology_and_geo_id_pairs(csv_str_to_df):
+    # Union of generator and storage (geo_id, technology) pairs, deduplicated.
+    # (CNSW, CCGT) appears in both tables and as a within-table duplicate → one row.
+    generators_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        N1,      Wind
+        CNSW,    CCGT
+        CNSW,    CCGT
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        CNSW,    Battery__Storage__(4h)
+        CNSW,    CCGT
+    """)
+
+    result = _get_canon_technology_and_geo_id_pairs(
+        generators_new_entrant, storage_new_entrant
+    )
+
+    expected = csv_str_to_df("""
+        geo_id,  technology
+        N1,      Wind
+        CNSW,    CCGT
+        CNSW,    Battery__Storage__(4h)
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(_GEO_TECH_COLS).reset_index(drop=True),
+        expected.sort_values(_GEO_TECH_COLS).reset_index(drop=True),
+    )
+
+
+# --- _canonicalise_non_vre_technologies ---
+
+
+def test_canonicalise_non_vre_technologies(csv_str_to_df):
+    # Excluded techs dropped; remaining values fuzzy-mapped to canonical names.
+    df = csv_str_to_df("""
+        region_id,  technology,         year,  connection_capacity,  connection_cost
+        NSW,        CCGT,               2025,  400,                  40000000.0
+        NSW,        OCGT__small__GT,    2025,  400,                  32000000.0
+        TAS,        BOTN__-__Cethana,   2025,  250,                  0.0
+    """)
+    canonical_technologies = {"CCGT", "OCGT (small GT)"}
+
+    result = _canonicalise_non_vre_technologies(df, canonical_technologies)
+
+    expected = csv_str_to_df("""
+        region_id,  technology,         year,  connection_capacity,  connection_cost
+        NSW,        CCGT,               2025,  400,                  40000000.0
+        NSW,        OCGT__(small__GT),  2025,  400,                  32000000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["region_id", "technology"]).reset_index(drop=True),
+        expected.sort_values(["region_id", "technology"]).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_canonicalise_non_vre_technologies_unmatched_raises(csv_str_to_df):
+    # A technology that can't be fuzzy-matched to any canonical name raises.
+    # Pins the (deferred) behaviour for only-VRE / inconsistent inputs — see the
+    # NOTE in _canonicalise_non_vre_technologies.
+    df = csv_str_to_df("""
+        region_id,  technology,  year,  connection_capacity,  connection_cost
+        NSW,        CCGT,        2025,  400,                  40000000.0
+    """)
+    canonical_technologies = {"Wind", "Large scale Solar PV"}
+
+    with pytest.raises(ValueError, match="Could not fuzzy match"):
+        _canonicalise_non_vre_technologies(df, canonical_technologies)
+
+
+def test_canonicalise_non_vre_technologies_empty_canonical_set_returns_empty(
+    csv_str_to_df,
+):
+    # Brownfield: no new-entrant non-VRE technologies → empty output, no raise.
+    df = csv_str_to_df("""
+        region_id,  technology,  year,  connection_capacity,  connection_cost
+        NSW,        CCGT,        2025,  400,                  40000000.0
+    """)
+
+    result = _canonicalise_non_vre_technologies(df, set())
+
+    expected = csv_str_to_df("""
+        region_id,  technology,  year,  connection_capacity,  connection_cost
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+# --- _create_non_vre_rez_cost_rows ---
+
+
+def test_create_non_vre_rez_cost_rows(csv_str_to_df):
+    # Only non-VRE technologies sited in REZs are returned, with parent region.
+    # S1 Battery (REZ, non-VRE) kept, inherits parent region (SA) cost;
+    # S1 CCGT (REZ, non-VRE) not in connection_costs -> excluded;
+    # S1 Wind (REZ but VRE) excluded; CSA Battery and NQ CCGT (non-VRE but
+    # subregions, not REZs) excluded; NQ Wind (VRE, not REZ) excluded.
+    canon_tech_geo_id_pairs = csv_str_to_df("""
+        geo_id,     technology
+        S1,         Battery__Storage__(4h)
+        S1,         CCGT
+        S1,         Wind
+        CSA,        Battery__Storage__(4h)
+        NQ,         CCGT
+        NQ,         Wind
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        S1,         rez,            SA
+        CSA,        subregion,      SA
+        NQ,         subregion,      QLD
+    """)
+    connection_costs = csv_str_to_df("""
+        region_id,  technology,             year,   connection_cost
+        SA,         Battery__Storage__(4h), 2025,   90000.0
+        SA,         Battery__Storage__(4h), 2026,   95000.0
+        QLD,        CCGT,                   2025,   100000.0
+        QLD,        CCGT,                   2026,   110000.0
+    """)
+
+    result = _create_non_vre_rez_cost_rows(
+        canon_tech_geo_id_pairs, sub_regional_geography, connection_costs
+    )
+
+    expected = csv_str_to_df("""
+        geo_id,     technology,             year,   connection_cost
+        S1,         Battery__Storage__(4h), 2025,   90000.0
+        S1,         Battery__Storage__(4h), 2026,   95000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["geo_id", "year"]).reset_index(drop=True),
+        expected.sort_values(["geo_id", "year"]).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+# --- _expand_non_vre_connection_costs_to_subregions ---
+
+
+def test_expand_non_vre_connection_costs_to_subregions(csv_str_to_df):
+    # Region-level costs fan out to one row per subregion; REZ rows in the
+    # geography are ignored (inner merge on subregions only).
+    non_vre_connection_costs = csv_str_to_df("""
+        region_id,  technology,         year,  connection_cost
+        QLD,        OCGT__(small__GT),  2025,  120000.0
+        QLD,        OCGT__(small__GT),  2026,  130000.0
+        NSW,        OCGT__(small__GT),  2025,  100000.0
+        NSW,        OCGT__(small__GT),  2026,  110000.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        Q9,      rez,        QLD
+        NQ,      subregion,  QLD
+        CQ,      subregion,  QLD
+        NNSW,    subregion,  NSW
+    """)
+
+    result = _expand_non_vre_connection_costs_to_subregions(
+        non_vre_connection_costs, sub_regional_geography
+    )
+
+    expected = csv_str_to_df("""
+        geo_id,  technology,         year,  connection_cost
+        NQ,      OCGT__(small__GT),  2025,  120000.0
+        NQ,      OCGT__(small__GT),  2026,  130000.0
+        CQ,      OCGT__(small__GT),  2025,  120000.0
+        CQ,      OCGT__(small__GT),  2026,  130000.0
+        NNSW,    OCGT__(small__GT),  2025,  100000.0
+        NNSW,    OCGT__(small__GT),  2026,  110000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("geo_id").reset_index(drop=True),
+        expected.sort_values("geo_id").reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+# --- _average_connection_costs_across_regions ---
+
+
+def test_average_connection_costs_across_regions(csv_str_to_df):
+    # Costs averaged across regions per (technology, year); geo_id set to "NEM".
+    non_vre_connection_costs = csv_str_to_df("""
+        region_id,  technology,         year,  connection_cost
+        NSW,        OCGT__(small__GT),  2025,  100000.0
+        NSW,        OCGT__(small__GT),  2026,  110000.0
+        QLD,        OCGT__(small__GT),  2025,  120000.0
+        QLD,        OCGT__(small__GT),  2026,  130000.0
+        VIC,        OCGT__(small__GT),  2025,  80000.0
+        VIC,        OCGT__(small__GT),  2026,  90000.0
+    """)
+
+    result = _average_connection_costs_across_regions(non_vre_connection_costs)
+
+    expected = csv_str_to_df("""
+        geo_id,  technology,         year,  connection_cost
+        NEM,     OCGT__(small__GT),  2025,  100000.0
+        NEM,     OCGT__(small__GT),  2026,  110000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+# --- _filter_connection_costs_by_regional_granularity ---
+
+
+def test_filter_connection_costs_by_regional_granularity(csv_str_to_df):
+    # All three branches share inputs; each appends the REZ-battery row (N1,
+    # inheriting the NSW cost). Asserted per branch below.
+    non_vre_connection_costs = csv_str_to_df("""
+        region_id,  technology,              year,  connection_cost
+        NSW,        CCGT,                    2025,  100000.0
+        NSW,        Battery__Storage__(4h),  2025,  50000.0
+        QLD,        CCGT,                    2025,  120000.0
+        QLD,        Battery__Storage__(4h),  2025,  60000.0
+    """)
+    canon_tech_geo_id_pairs = csv_str_to_df("""
+        geo_id,  technology
+        N1,      Battery__Storage__(4h)
+        SNW,     Battery__Storage__(4h)
+        SNW,     CCGT
+        CQ,      Battery__Storage__(4h)
+        CQ,      CCGT
+        NQ,      Battery__Storage__(4h)
+        NQ,      CCGT
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        N1,      rez,        NSW
+        SNW,     subregion,  NSW
+        CQ,      subregion,  QLD
+        NQ,      subregion,  QLD
+    """)
+
+    sort_cols = ["geo_id", "technology"]
+
+    # nem_regions: region_id renamed to geo_id; REZ row appended.
+    result_nem = _filter_connection_costs_by_regional_granularity(
+        non_vre_connection_costs,
+        "nem_regions",
+        canon_tech_geo_id_pairs,
+        sub_regional_geography,
+    )
+    expected_nem = csv_str_to_df("""
+        geo_id,  technology,              year,  connection_cost
+        NSW,     CCGT,                    2025,  100000.0
+        NSW,     Battery__Storage__(4h),  2025,  50000.0
+        QLD,     CCGT,                    2025,  120000.0
+        QLD,     Battery__Storage__(4h),  2025,  60000.0
+        N1,      Battery__Storage__(4h),  2025,  50000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result_nem.sort_values(sort_cols).reset_index(drop=True),
+        expected_nem.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    # sub_regions: costs expanded to each subregion; REZ row appended.
+    result_sub = _filter_connection_costs_by_regional_granularity(
+        non_vre_connection_costs,
+        "sub_regions",
+        canon_tech_geo_id_pairs,
+        sub_regional_geography,
+    )
+    expected_sub = csv_str_to_df("""
+        geo_id,  technology,              year,  connection_cost
+        SNW,     CCGT,                    2025,  100000.0
+        SNW,     Battery__Storage__(4h),  2025,  50000.0
+        CQ,      CCGT,                    2025,  120000.0
+        CQ,      Battery__Storage__(4h),  2025,  60000.0
+        NQ,      CCGT,                    2025,  120000.0
+        NQ,      Battery__Storage__(4h),  2025,  60000.0
+        N1,      Battery__Storage__(4h),  2025,  50000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result_sub.sort_values(sort_cols).reset_index(drop=True),
+        expected_sub.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    # single_region: costs averaged to one "NEM" geo_id; REZ row keeps NSW cost.
+    result_single = _filter_connection_costs_by_regional_granularity(
+        non_vre_connection_costs,
+        "single_region",
+        canon_tech_geo_id_pairs,
+        sub_regional_geography,
+    )
+    expected_single = csv_str_to_df("""
+        geo_id,  technology,              year,  connection_cost
+        NEM,     CCGT,                    2025,  110000.0
+        NEM,     Battery__Storage__(4h),  2025,  55000.0
+        N1,      Battery__Storage__(4h),  2025,  50000.0
+    """)
+    pd.testing.assert_frame_equal(
+        result_single.sort_values(sort_cols).reset_index(drop=True),
+        expected_single.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_filter_connection_costs_by_regional_granularity_invalid_raises(csv_str_to_df):
+    non_vre_connection_costs = csv_str_to_df("""
+        region_id,  technology,  year,  connection_cost
+        NSW,        CCGT,        2025,  100000.0
+    """)
+    canon_tech_geo_id_pairs = csv_str_to_df("""
+        geo_id,  technology
+        SNW,     CCGT
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        SNW,     subregion,  NSW
+    """)
+
+    with pytest.raises(ValueError, match="Unknown regional_granularity"):
+        _filter_connection_costs_by_regional_granularity(
+            non_vre_connection_costs,
+            "various_swamps",
+            canon_tech_geo_id_pairs,
+            sub_regional_geography,
+        )
+
+
+# --- _template_non_vre_connection_costs (integration) ---
+# Wiring test only — detailed content covered by the unit tests above.
+
+
+def test_template_non_vre_connection_costs(csv_str_to_df):
+    connection_cost_forecast_other = csv_str_to_df("""
+        Generator__Type,        Region,     Scenario,       2024-25
+        CCGT,                   NSW,        Step__Change,   40000000
+        Battery__Storage__(4h), NSW,        Step__Change,   20000000
+        CCGT,                   QLD,        Step__Change,   40000000
+        Battery__Storage__(4h), QLD,        Step__Change,   20000000
+    """)
+    connection_capacity_df = csv_str_to_df("""
+        Region,     Generator__Type,        Connection__capacity__(MVA)
+        NSW,        CCGT,                   400
+        NSW,        Battery__Storage__(4h), 400
+        QLD,        CCGT,                   300
+        QLD,        Battery__Storage__(4h), 300
+    """)
+    canon_tech_geo_id_pairs = csv_str_to_df("""
+        geo_id,     technology
+        SQ,         CCGT
+        SQ,         Battery__Storage__(4h)
+        CNSW,       CCGT
+        CNSW,       Battery__Storage__(4h)
+        SNW,        CCGT
+        SNW,        Battery__Storage__(4h)
+        N1,         Battery__Storage__(4h)
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,   region_id
+        SQ,         subregion,  QLD
+        CNSW,       subregion,  NSW
+        SNW,        subregion,  NSW
+        N1,         rez,        NSW
+    """)
+
+    result_subregions = _template_non_vre_connection_costs(
+        connection_cost_forecast_other,
+        connection_capacity_df,
+        "Step Change",
+        canon_tech_geo_id_pairs,
+        "sub_regions",
+        sub_regional_geography,
+    )
+
+    # 6 subregion rows: (CCGT, Battery) x (CNSW, SNW, SQ) + 1 REZ-battery append (N1) = 7
+    assert list(result_subregions.columns) == _CONNECTION_ONLY_COST_COLS
+    assert len(result_subregions) == 7
+
+    result_nem_regions = _template_non_vre_connection_costs(
+        connection_cost_forecast_other,
+        connection_capacity_df,
+        "Step Change",
+        canon_tech_geo_id_pairs,
+        "nem_regions",
+        sub_regional_geography,
+    )
+
+    # 4 NEM region rows (Battery, CCGT) x (NSW, QLD) + 1 REZ-battery append (N1) = 5
+    assert list(result_nem_regions.columns) == _CONNECTION_ONLY_COST_COLS
+    assert len(result_nem_regions) == 5
+
+    result_single_region = _template_non_vre_connection_costs(
+        connection_cost_forecast_other,
+        connection_capacity_df,
+        "Step Change",
+        canon_tech_geo_id_pairs,
+        "single_region",
+        sub_regional_geography,
+    )
+
+    # 2 NEM rows (CCGT, Battery) + 1 REZ-battery append (N1) = 3.
+    assert list(result_single_region.columns) == _CONNECTION_ONLY_COST_COLS
+    assert len(result_single_region) == 3
+
+
 # --- _template_connection_costs (integration) ---
 # Wiring test only — detailed content covered by unit tests above.
 
 
 def test_template_connection_costs(csv_str_to_df):
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ__ID,  Scenario,     2024-25
-        N1,       Step__Change, 73000000
-    """)
-    connection_costs_for_vre = csv_str_to_df("""
-        REZ__ID,  Connection__capacity__(MVA)
-        N1,       400
-    """)
-    system_strength_cost_table = csv_str_to_df("""
-        label,  2024-25
-        IBR,    10
-    """)
+    # Wiring test: exercises the VRE path, the non-VRE region-expansion path, and
+    # the REZ-battery append path together. Detailed content is covered by the
+    # per-helper unit tests above, so we assert column set + row count only.
+    iasr_tables = {
+        "connection_cost_forecast_wind_and_solar": csv_str_to_df("""
+            REZ__ID,  Scenario,      2024-25
+            N1,       Step__Change,  73000000
+        """),
+        "connection_costs_for_wind_and_solar": csv_str_to_df("""
+            REZ__ID,  Connection__capacity__(MVA)
+            N1,       400
+        """),
+        "connection_cost_forecast_other": csv_str_to_df("""
+            Generator__Type,         Region,  Scenario,      2024-25
+            CCGT,                    NSW,     Step__Change,  40000000
+            Battery__Storage__(4h),  NSW,     Step__Change,  20000000
+        """),
+        "connection_capacity_non_vre": csv_str_to_df("""
+            Region,  Generator__Type,         Connection__capacity__(MVA)
+            NSW,     CCGT,                    400
+            NSW,     Battery__Storage__(4h),  400
+        """),
+        "efficient_level_of_system_strength_cost": csv_str_to_df("""
+            label,  2024-25
+            IBR,    10
+        """),
+    }
     generators_new_entrant = csv_str_to_df("""
         geo_id,  technology
         N1,      Wind
+        CNSW,    CCGT
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        CNSW,    Battery__Storage__(4h)
+        N1,      Battery__Storage__(4h)
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        N1,      rez,        NSW
     """)
 
     result = _template_connection_costs(
-        connection_cost_forecast_vre,
-        connection_costs_for_vre,
-        system_strength_cost_table,
+        iasr_tables,
         "Step Change",
+        "sub_regions",
         generators_new_entrant,
+        storage_new_entrant,
+        sub_regional_geography,
     )
 
+    # 1 VRE (N1 Wind) + 2 non-VRE subregion (CNSW CCGT, CNSW Battery)
+    # + 1 REZ-battery append (N1 Battery, inheriting the NSW cost) = 4 rows.
     assert list(result.columns) == _CONNECTION_SYSTEM_STRENGTH_COST_COLS
-    assert len(result) == 1  # one (geo_id, technology, year) combination
+    assert len(result) == 4
 
 
 def test_template_connection_costs_empty_inputs_give_empty_output(csv_str_to_df):
     # All empty inputs → empty output with all expected columns present.
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ__ID,  Scenario,     2024-25
-    """)
-    connection_costs_for_vre = csv_str_to_df("""
-        REZ__ID,  Connection__capacity__(MVA)
-    """)
-    system_strength_cost_table = csv_str_to_df("""
-        label,  2024-25
-    """)
-    generators_new_entrant = csv_str_to_df("""
-        geo_id,  technology
-    """)
+    iasr_tables = {
+        "connection_cost_forecast_wind_and_solar": csv_str_to_df("""
+            REZ__ID,  Scenario,  2024-25
+        """),
+        "connection_costs_for_wind_and_solar": csv_str_to_df("""
+            REZ__ID,  Connection__capacity__(MVA)
+        """),
+        "connection_cost_forecast_other": csv_str_to_df("""
+            Generator__Type,  Region,  Scenario,  2024-25
+        """),
+        "connection_capacity_non_vre": csv_str_to_df("""
+            Region,  Generator__Type,  Connection__capacity__(MVA)
+        """),
+        "efficient_level_of_system_strength_cost": csv_str_to_df("""
+            label,  2024-25
+        """),
+    }
 
     result = _template_connection_costs(
-        connection_cost_forecast_vre,
-        connection_costs_for_vre,
-        system_strength_cost_table,
+        iasr_tables,
         "Step Change",
-        generators_new_entrant,
+        "sub_regions",
+        pd.DataFrame(columns=_GEO_TECH_COLS),
+        pd.DataFrame(columns=_GEO_TECH_COLS),
+        pd.DataFrame(columns=["geo_id", "geo_type", "region_id"]),
     )
 
     assert list(result.columns) == _CONNECTION_SYSTEM_STRENGTH_COST_COLS

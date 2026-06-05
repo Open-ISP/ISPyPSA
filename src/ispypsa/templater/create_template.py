@@ -223,13 +223,23 @@ def create_ispypsa_inputs_template(
         # todo: replace with actual generators_new_entrant once that templating
         # function is written — passing empty placeholder for now so costs_connection
         # is wired up but produces no VRE rows until generators are templated.
+
+        # connection_capacity_non_vre is in manually_extracted_template_tables/ (sourced from
+        # ENOR tables 16-17 and confirmed with AEMO) but is needed as an iasr_tables input,
+        # not a template output.
+        iasr_tables["connection_capacity_non_vre"] = manually_extracted_tables.pop(
+            "connection_capacity_non_vre"
+        )
+
         generators_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
+        storage_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
         template["costs_connection"] = _template_connection_costs(
-            iasr_tables["connection_cost_forecast_wind_and_solar"],
-            iasr_tables["connection_costs_for_wind_and_solar"],
-            iasr_tables["efficient_level_of_system_strength_cost"],
+            iasr_tables,
             scenario,
+            regional_granularity,
             generators_new_entrant,
+            storage_new_entrant,
+            sub_regional_geography,
         )
         # Custom constraints from PLEXOS are sub-regional export-group limits:
         # their LHS references sub-region nodes, sub-regional flow paths, and

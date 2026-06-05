@@ -1,0 +1,81 @@
+﻿Region,Generator Type,Connection capacity (MVA)
+QLD,CCGT,300
+QLD,CCGT with CCS,300
+QLD,OCGT (small GT),300
+QLD,OCGT (large GT),300
+QLD,Distributed Resources Solar,300
+QLD,Distributed Resources Batteries,300
+QLD,Biomass,300
+QLD,Battery storage (1hr storage),300
+QLD,Battery storage (2hrs storage),300
+QLD,Battery storage (4hrs storage),300
+QLD,Battery Storage (8hrs storage),300
+QLD,Pumped Hydro (10hrs storage),300
+QLD,Pumped Hydro (24hrs storage),300
+QLD,Pumped Hydro (48hrs storage),300
+QLD,Alkaline Electrolyser,300
+QLD,BOTN - Cethana,300
+NSW,CCGT,400
+NSW,CCGT with CCS,400
+NSW,OCGT (small GT),400
+NSW,OCGT (large GT),400
+NSW,Distributed Resources Solar,400
+NSW,Distributed Resources Batteries,400
+NSW,Biomass,400
+NSW,Battery storage (1hr storage),400
+NSW,Battery storage (2hrs storage),400
+NSW,Battery storage (4hrs storage),400
+NSW,Battery Storage (8hrs storage),400
+NSW,Pumped Hydro (10hrs storage),400
+NSW,Pumped Hydro (24hrs storage),400
+NSW,Pumped Hydro (48hrs storage),400
+NSW,Alkaline Electrolyser,400
+NSW,BOTN - Cethana,400
+VIC,CCGT,600
+VIC,CCGT with CCS,600
+VIC,OCGT (small GT),250
+VIC,OCGT (large GT),250
+VIC,Distributed Resources Solar,250
+VIC,Distributed Resources Batteries,250
+VIC,Biomass,250
+VIC,Battery storage (1hr storage),250
+VIC,Battery storage (2hrs storage),250
+VIC,Battery storage (4hrs storage),250
+VIC,Battery Storage (8hrs storage),250
+VIC,Pumped Hydro (10hrs storage),250
+VIC,Pumped Hydro (24hrs storage),250
+VIC,Pumped Hydro (48hrs storage),250
+VIC,Alkaline Electrolyser,250
+VIC,BOTN - Cethana,250
+SA,CCGT,300
+SA,CCGT with CCS,300
+SA,OCGT (small GT),300
+SA,OCGT (large GT),300
+SA,Distributed Resources Solar,300
+SA,Distributed Resources Batteries,300
+SA,Biomass,300
+SA,Battery storage (1hr storage),300
+SA,Battery storage (2hrs storage),300
+SA,Battery storage (4hrs storage),300
+SA,Battery Storage (8hrs storage),300
+SA,Pumped Hydro (10hrs storage),300
+SA,Pumped Hydro (24hrs storage),300
+SA,Pumped Hydro (48hrs storage),300
+SA,Alkaline Electrolyser,300
+SA,BOTN - Cethana,300
+TAS,CCGT,250
+TAS,CCGT with CCS,250
+TAS,OCGT (small GT),250
+TAS,OCGT (large GT),250
+TAS,Distributed Resources Solar,250
+TAS,Distributed Resources Batteries,250
+TAS,Biomass,250
+TAS,Battery storage (1hr storage),250
+TAS,Battery storage (2hrs storage),250
+TAS,Battery storage (4hrs storage),250
+TAS,Battery Storage (8hrs storage),250
+TAS,Pumped Hydro (10hrs storage),250
+TAS,Pumped Hydro (24hrs storage),250
+TAS,Pumped Hydro (48hrs storage),250
+TAS,Alkaline Electrolyser,250
+TAS,BOTN - Cethana,250
