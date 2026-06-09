@@ -4,21 +4,29 @@ The PLEXOS extract under ``src/ispypsa/templater/plexos/<version>/`` is the
 opinionless intermediate produced by ``scripts/extract_plexos_constraints.py``.
 This module translates that into the ISPyPSA custom-constraint shape.
 
-LHS construction is two-pass:
+Inputs (CSVs in the PLEXOS extract dir):
 
-1. **PLEXOS pass**: translate the raw PLEXOS LHS rows -- generators, batteries,
-   lines, nodes -- into the ISPyPSA term schema. Unit names that don't match
-   an IASR ID are dropped (see "Dropped rows" below).
-2. **IASR new-entrant battery injection**: PLEXOS' battery entries in the
-   export constraints are scoped to per-constraint variants (e.g.
-   ``SWQLD1 Battery - 2h``) that don't match any IASR battery and that, on
-   inspection, encode a non-obvious LP variable layout we don't want to
-   mirror (see Open-ISP/ISPyPSA#110 for the underlying PLEXOS layout). The
-   pass-1 dropped constraint-scoped variants are replaced by a "common
-   sense" injection: for each constraint, find the REZ/sub-region locations
-   of its surviving new-entrant generator terms, then add a
-   ``storage_output`` row for every IASR new-entrant battery at those same
-   locations.
+* ``constraints.csv`` -- one row per (constraint, property); only the ``Sense``
+  property is translated. Columns: ``constraint_name``, ``property``, ``value``.
+* ``lhs_terms.csv`` -- one row per LHS term. Columns: ``constraint_name``,
+  ``parent_class``, ``parent_name``, ``property``, ``value``, ``date_from``.
+* ``rhs_values.csv`` -- one row per RHS value. Columns: ``constraint_name``,
+  ``value``, ``date_from``, ``tags``.
+
+Outputs (keys of the returned dict):
+
+* ``custom_constraints`` -- ``constraint_id``, ``direction``.
+* ``custom_constraints_lhs`` -- ``constraint_id``, ``term_type``,
+  ``variable_name``, ``coefficient``, ``date_from``.
+* ``custom_constraints_rhs`` -- ``constraint_id``, ``timeslice``, ``rhs``,
+  ``date_from``.
+
+The LHS table is built in two passes: pass 1 translates the raw PLEXOS LHS
+rows (generators, batteries, lines, nodes) into the ISPyPSA term schema,
+dropping units with no IASR match; pass 2 re-adds the IASR new-entrant
+batteries that PLEXOS scopes to per-constraint variants in a layout we don't
+mirror (Open-ISP/ISPyPSA#110). See ``_inject_iasr_new_entrant_batteries`` for
+the per-location coefficient logic pass 2 applies.
 
 PLEXOS -> ISPyPSA translations applied here:
 
@@ -309,10 +317,11 @@ def _build_custom_constraints_lhs(
     I/O Example:
         lhs_terms (abbreviated):
             constraint_name      parent_class  parent_name           property               value
-            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Generation Coefficient  1.0    # dropped (constraint-scoped)
-            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Load Coefficient       -1.0    # dropped (Load pair)
-            ExportGroup_SWQLD1   Generator     KINGASF1              Generation Sent Out C   0.14
+            ExportGroup_SWQLD1   Generator     KINGASF1              Generation Sent Out C   0.14   # new entrant in REZ Q8 -> triggers Q8
             ExportGroup_SWQLD1   Line          NSW1-QLD1             Flow Coefficient        0.84
+            ExportGroup_SWQLD1   Battery       Q8 Battery - 2h       Generation Coefficient  0.43   # matches IASR -> survives pass 1
+            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Generation Coefficient  1.0    # dropped (constraint-scoped, no IASR match)
+            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Load Coefficient       -1.0    # dropped (Load pair)
 
         new_entrants (abbreviated):
             IASR ID / DLT names  Sub-region  REZ ID           Technology Type
@@ -324,8 +333,8 @@ def _build_custom_constraints_lhs(
             constraint_id  term_type        variable_name    coefficient  date_from
             SWQLD1         generator_output KINGASF1          0.14
             SWQLD1         link_flow        NSW-QLD           0.84
-            SWQLD1         storage_output   Q8 Battery - 2h   1.0           # injected
-            SWQLD1         storage_output   Q8 Battery - 4h   1.0           # injected
+            SWQLD1         storage_output   Q8 Battery - 2h   0.43          # survived pass 1 (pass-2 re-injection deduped)
+            SWQLD1         storage_output   Q8 Battery - 4h   0.43          # injected; copies the 2h sibling's coefficient
     """
     lhs = _drop_excluded_classes(lhs_terms)
     lhs = _drop_constraint_relaxation_terms(lhs)
@@ -643,40 +652,83 @@ def _inject_iasr_new_entrant_batteries(
     For each ``generator_output`` term whose variable_name is a new-entrant
     generator IASR ID, look up that generator's location -- REZ ID if
     populated, else Sub-region -- and add ``storage_output`` rows for every
-    new-entrant battery at that same location. Coefficient is fixed at 1.0
-    (matches PLEXOS' Generation Coefficient on battery export terms) and
-    ``date_from`` is empty.
+    new-entrant battery at that same location. Each injected battery copies
+    the coefficient (and time-varying ``date_from`` rows) carried by the
+    new-entrant batteries that survived pass 1 at that location: PLEXOS applies
+    a per-unit export-loss coefficient and omits the 4h-duration batteries, but
+    the new-entrant batteries at a location share one value (e.g. 0.43 at
+    SWQLD1's Q8), so re-adding the omitted durations at the siblings'
+    coefficient keeps the whole location consistent. Where no new-entrant
+    battery survived pass 1 at the location, the coefficient defaults to 1.0
+    with empty ``date_from``.
 
-    See module docstring for the rationale; see Open-ISP/ISPyPSA#110
-    for the PLEXOS battery layout that motivated dropping the pass-1
-    constraint-scoped variants.
+    Every battery at a triggered location is appended, including any that
+    already survived pass 1, so the result can contain a duplicate that
+    ``_dedupe_lhs_terms`` removes downstream.
+
+    See Open-ISP/ISPyPSA#110 for the PLEXOS battery layout that motivated
+    dropping the pass-1 constraint-scoped variants.
 
     I/O Example:
         lhs (after pass 1, abbreviated):
-            constraint_id  term_type        variable_name
-            SWQLD1         generator_output Q8_SAT_Brisbane
-            NQ1            generator_output Q1_WH_Cairns
+            constraint_id  term_type        variable_name    coefficient
+            SWQLD1         generator_output Q8_SAT_Brisbane  0.43
+            SWQLD1         storage_output   Q8 Battery - 2h  0.43   # survived pass 1
+            NQ1            generator_output Q1_WH_Cairns     1.0
 
         new_entrants (abbreviated):
             IASR ID / DLT names  Sub-region  REZ ID  Technology Type
             Q8_SAT_Brisbane      SQ          Q8      Solar
             Q1_WH_Cairns         NQ          Q1      Wind
             Q8 Battery - 2h      SQ          Q8      Battery Storage ...
+            Q8 Battery - 4h      SQ          Q8      Battery Storage ...
             Q1 Battery - 2h      NQ          Q1      Battery Storage ...
 
-        returns (appended rows only):
+        returns (these rows appended after the unchanged pass-1 lhs rows):
             constraint_id  term_type        variable_name    coefficient  date_from
-            SWQLD1         storage_output   Q8 Battery - 2h   1.0
-            NQ1            storage_output   Q1 Battery - 2h   1.0
+            SWQLD1         storage_output   Q8 Battery - 2h  0.43          # re-injected duplicate of the survivor; _dedupe_lhs_terms drops it downstream
+            SWQLD1         storage_output   Q8 Battery - 4h  0.43          # PLEXOS-omitted duration, copies the 2h sibling's coefficient
+            NQ1            storage_output   Q1 Battery - 2h  1.0           # no surviving sibling -> default
     """
     gen_to_location = _generator_to_location(new_entrants)
     batteries_by_location = _batteries_by_location(new_entrants)
     triggered = _triggered_locations_per_constraint(lhs, gen_to_location)
-    injected = _battery_rows_for_triggers(triggered, batteries_by_location)
+    coefficients = _surviving_battery_coefficients(lhs, new_entrants)
+    injected = _battery_rows_for_triggers(
+        triggered, batteries_by_location, coefficients
+    )
     _log_injected_batteries(injected)
+    _warn_on_default_battery_coefficients(
+        triggered, coefficients, batteries_by_location
+    )
     if injected.empty:
         return lhs
     return pd.concat([lhs, injected], ignore_index=True)
+
+
+def _warn_on_default_battery_coefficients(
+    triggered: pd.DataFrame,
+    coefficients: pd.DataFrame,
+    batteries_by_location: dict[str, list[str]],
+) -> None:
+    """Warn when injected batteries fall back to the default 1.0 coefficient.
+
+    Fires for triggered locations that hold new-entrant batteries but have no
+    surviving sibling in ``coefficients`` to copy from, so the injection
+    defaults to 1.0. On a fractional-loss location that default is likely wrong
+    (cf. Open-ISP/ISPyPSA#110), and -- unlike an adopted coefficient -- it isn't
+    distinguishable from a correct 1.0 in the output, so the pairs are surfaced
+    for audit as one sorted line.
+    """
+    with_profile = set(map(tuple, coefficients[["constraint_id", "location"]].values))
+    injecting = triggered[triggered["location"].isin(batteries_by_location)]
+    pairs = set(map(tuple, injecting[["constraint_id", "location"]].values))
+    defaulted = sorted(f"{cid}: {loc}" for cid, loc in pairs - with_profile)
+    if defaulted:
+        logging.warning(
+            "New-entrant batteries injected with default coefficient 1.0 "
+            f"(no surviving sibling to copy from): {defaulted}"
+        )
 
 
 def _generator_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
@@ -721,6 +773,24 @@ def _batteries_by_location(new_entrants: pd.DataFrame) -> dict[str, list[str]]:
         .apply(lambda s: sorted(s.unique()))
         .to_dict()
     )
+
+
+def _battery_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
+    """Build a {battery IASR ID: REZ ID or Sub-region} lookup for new-entrant
+    batteries -- the inverse of ``_batteries_by_location``.
+
+    I/O Example:
+        new_entrants (abbreviated):
+            IASR ID / DLT names  Sub-region  REZ ID          Technology Type
+            Q8 Battery - 2h      SQ          Q8              Battery Storage (2hrs storage)
+            CSA Battery - 2h     CSA         Not Applicable  Battery Storage (2hrs storage)
+
+        returns:
+            {"Q8 Battery - 2h": "Q8", "CSA Battery - 2h": "CSA"}
+    """
+    batteries = new_entrants[_is_battery_row(new_entrants)].copy()
+    locations = batteries.apply(_pick_location, axis=1)
+    return dict(zip(batteries["IASR ID / DLT names"], locations))
 
 
 def _is_battery_row(new_entrants: pd.DataFrame) -> pd.Series:
@@ -779,11 +849,111 @@ def _triggered_locations_per_constraint(
     )
 
 
+def _surviving_battery_coefficients(
+    lhs: pd.DataFrame, new_entrants: pd.DataFrame
+) -> pd.DataFrame:
+    """The (coefficient, date_from) rows carried by the pass-1 new-entrant
+    batteries that survived in each (constraint_id, location).
+
+    PLEXOS applies a per-unit export-loss coefficient and drops the 4h-duration
+    batteries; the new-entrant batteries at a location share one value (e.g.
+    0.43 at SWQLD1's Q8, though the co-located generators may each differ --
+    0.14/0.43/1.0 there), so pass 2 re-adds those durations by copying this
+    profile rather than defaulting to 1.0. The copy is only well-defined if the
+    siblings agree, so within a (constraint, location) the surviving new-entrant
+    batteries must share one coefficient per date_from --
+    ``_raise_on_inconsistent_battery_coefficients`` enforces it (generators are
+    deliberately not checked: they keep their own per-unit coefficients).
+    Existing-plant batteries carry no new-entrant location and are ignored.
+
+    I/O Example:
+        lhs (storage_output rows, abbreviated):
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43
+            SWQLD1         storage_output  Q8 Battery - 8h  0.43
+            WNV1           storage_output  V7 Battery - 2h  0.78
+            WNV1           storage_output  V7 Battery - 2h  0.00         2031-11-30
+            SWQLD1         storage_output  Tarong BESS      0.14         # existing -> no location, ignored
+
+        returns:
+            constraint_id  location  coefficient  date_from
+            SWQLD1         Q8        0.43
+            WNV1           V7        0.78
+            WNV1           V7        0.00         2031-11-30
+    """
+    battery_location = _battery_to_location(new_entrants)
+    surviving = lhs[lhs["term_type"] == "storage_output"].copy()
+    surviving["location"] = surviving["variable_name"].map(battery_location)
+    surviving = surviving.dropna(subset=["location"])
+    profile = surviving[
+        ["constraint_id", "location", "coefficient", "date_from"]
+    ].drop_duplicates()
+    _raise_on_inconsistent_battery_coefficients(profile)
+    return profile
+
+
+def _raise_on_inconsistent_battery_coefficients(profile: pd.DataFrame) -> None:
+    """Raise if surviving new-entrant batteries disagree on coefficient within a
+    (constraint_id, location, date_from).
+
+    Pass 2 copies one coefficient per location and date onto the PLEXOS-omitted
+    batteries (e.g. the 4h duration), which is only well-defined if the siblings
+    it copies from agree. They do across the current 7.5 extract; a future
+    extract that split them would otherwise inject an arbitrary one silently
+    (``_dedupe_lhs_terms`` would keep whichever row sorted first). Grouped with
+    ``dropna=False`` because date_from is empty (NaN) on the common,
+    non-time-varying rows.
+    """
+    per_key = profile.groupby(["constraint_id", "location", "date_from"], dropna=False)[
+        "coefficient"
+    ].nunique()
+    conflicting = per_key[per_key > 1]
+    if not conflicting.empty:
+        offenders = sorted(
+            f"{cid}/{loc}@{date}" for cid, loc, date in conflicting.index
+        )
+        raise ValueError(
+            "Surviving new-entrant batteries disagree on coefficient within a "
+            f"(constraint, location, date_from): {offenders}"
+        )
+
+
+def _location_battery_pairs(
+    batteries_by_location: dict[str, list[str]],
+) -> pd.DataFrame:
+    """Flatten {location: [batteries]} into (location, variable_name) rows.
+
+    I/O Example:
+        {"Q8": ["Q8 Battery - 2h", "Q8 Battery - 4h"], "Q1": ["Q1 Battery - 2h"]}
+
+        returns:
+            location  variable_name
+            Q8        Q8 Battery - 2h
+            Q8        Q8 Battery - 4h
+            Q1        Q1 Battery - 2h
+    """
+    pairs = [
+        (location, battery)
+        for location, batteries in batteries_by_location.items()
+        for battery in batteries
+    ]
+    return pd.DataFrame(pairs, columns=["location", "variable_name"])
+
+
 def _battery_rows_for_triggers(
-    triggered: pd.DataFrame, batteries_by_location: dict[str, list[str]]
+    triggered: pd.DataFrame,
+    batteries_by_location: dict[str, list[str]],
+    coefficients: pd.DataFrame,
 ) -> pd.DataFrame:
     """Build the ``storage_output`` rows to inject for each (constraint_id,
-    location) pair.
+    location) pair, weighted by the location's surviving-battery coefficients.
+
+    Each triggered location's batteries are emitted once per (coefficient,
+    date_from) row in ``coefficients`` for that location; locations with no
+    surviving new-entrant battery fall back to a single row at coefficient 1.0
+    with empty date_from. The left merge keeps the np.nan null flavour the
+    pass-1 rows carry (read from CSV), avoiding a mixed-null date_from column
+    after the pass-1/pass-2 concat.
 
     I/O Example:
         triggered:
@@ -795,31 +965,45 @@ def _battery_rows_for_triggers(
             {"Q8": ["Q8 Battery - 2h", "Q8 Battery - 4h"],
              "Q1": ["Q1 Battery - 2h"]}
 
+        coefficients:
+            constraint_id  location  coefficient  date_from
+            SWQLD1         Q8        0.43
+
         returns:
             constraint_id  term_type       variable_name    coefficient  date_from
-            SWQLD1         storage_output  Q8 Battery - 2h   1.0
-            SWQLD1         storage_output  Q8 Battery - 4h   1.0
-            NQ1            storage_output  Q1 Battery - 2h   1.0
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43          # 0.43 from Q8 profile
+            SWQLD1         storage_output  Q8 Battery - 4h  0.43
+            NQ1            storage_output  Q1 Battery - 2h  1.0           # Q1 has no profile -> default
     """
-    # date_from uses float("nan"), not pd.NA, to match the null representation
-    # of the pass-1 rows (read from CSV via pandas, which yields np.nan for
-    # empty cells). Keeping a single null flavour avoids a mixed-null date_from
-    # column after the pass-1/pass-2 concat.
-    rows = [
-        (constraint_id, "storage_output", battery, 1.0, float("nan"))
-        for constraint_id, location in triggered.itertuples(index=False)
-        for battery in batteries_by_location.get(location, [])
-    ]
-    return pd.DataFrame(
-        rows,
-        columns=[
-            "constraint_id",
-            "term_type",
-            "variable_name",
-            "coefficient",
-            "date_from",
-        ],
+    # Short-circuit the empty case: an empty ``triggered`` carries a float64
+    # ``location`` column, which would raise on the object-keyed merge below.
+    if triggered.empty:
+        return pd.DataFrame(
+            columns=[
+                "constraint_id",
+                "term_type",
+                "variable_name",
+                "coefficient",
+                "date_from",
+            ]
+        )
+    # Inner merge: expand each triggered (constraint_id, location) into one row
+    # per new-entrant battery at that location. Triggered locations that hold no
+    # batteries (location absent from batteries_by_location) drop out here.
+    location_batteries = _location_battery_pairs(batteries_by_location)
+    triggered_batteries = triggered.merge(location_batteries, on="location")
+    # Left merge: attach the location's surviving-sibling coefficient profile. A
+    # time-varying profile (multiple date_from rows) fans each battery out into
+    # one row per profile entry; a location with no profile leaves coefficient
+    # NaN, which fillna turns into the 1.0 default.
+    rows = triggered_batteries.merge(
+        coefficients, on=["constraint_id", "location"], how="left"
     )
+    rows["coefficient"] = rows["coefficient"].fillna(1.0)
+    rows["term_type"] = "storage_output"
+    return rows[
+        ["constraint_id", "term_type", "variable_name", "coefficient", "date_from"]
+    ].reset_index(drop=True)
 
 
 def _log_injected_batteries(injected: pd.DataFrame) -> None:

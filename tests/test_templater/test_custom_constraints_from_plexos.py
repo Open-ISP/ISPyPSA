@@ -19,6 +19,7 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _assert_no_date_to,
     _batteries_by_location,
     _battery_rows_for_triggers,
+    _battery_to_location,
     _build_custom_constraints,
     _build_custom_constraints_lhs,
     _build_custom_constraints_rhs,
@@ -32,6 +33,7 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _inject_iasr_new_entrant_batteries,
     _is_battery_row,
     _line_variable_name,
+    _location_battery_pairs,
     _log_injected_batteries,
     _match_unit_name,
     _pick_location,
@@ -41,9 +43,11 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _rename_generator_name,
     _resolve_variable_name,
     _strip_area_suffix,
+    _surviving_battery_coefficients,
     _tag_to_timeslice,
     _triggered_locations_per_constraint,
     _warn_on_constraints_missing_lhs,
+    _warn_on_default_battery_coefficients,
     template_custom_constraints_from_plexos,
 )
 
@@ -919,7 +923,12 @@ def test_triggered_locations_per_constraint_no_generators(csv_str_to_df):
 # --- _battery_rows_for_triggers ---
 
 
-def test_battery_rows_for_triggers_cartesian_product(csv_str_to_df):
+_EMPTY_COEFFICIENTS = pd.DataFrame(
+    columns=["constraint_id", "location", "coefficient", "date_from"]
+)
+
+
+def test_battery_rows_for_triggers_defaults_to_one_without_profile(csv_str_to_df):
     triggered = csv_str_to_df("""
         constraint_id,  location
         SWQLD1,         Q8
@@ -931,11 +940,13 @@ def test_battery_rows_for_triggers_cartesian_product(csv_str_to_df):
         "Q99": ["unused"],
     }
 
-    result = _battery_rows_for_triggers(triggered, batteries_by_location)
+    result = _battery_rows_for_triggers(
+        triggered, batteries_by_location, _EMPTY_COEFFICIENTS
+    )
 
     # Q8 trigger -> 2 batteries injected; Q1 trigger -> 1 battery. Locations
-    # with no triggering generators (Q99) are ignored. Coefficient is fixed at
-    # 1.0 and date_from is empty.
+    # with no triggering generators (Q99) are ignored. With no surviving-battery
+    # profile, coefficient defaults to 1.0 and date_from is empty.
     expected = csv_str_to_df("""
         constraint_id,  term_type,       variable_name,    coefficient,  date_from
         SWQLD1,         storage_output,  Q8 Battery - 2h,  1.0,
@@ -950,11 +961,54 @@ def test_battery_rows_for_triggers_cartesian_product(csv_str_to_df):
     )
 
 
+def test_battery_rows_for_triggers_copies_location_profile(csv_str_to_df):
+    triggered = csv_str_to_df("""
+        constraint_id,  location
+        SWQLD1,         Q8
+        WNV1,           V7
+        NQ1,            Q1
+    """)
+    batteries_by_location = {
+        "Q8": ["Q8 Battery - 2h", "Q8 Battery - 4h"],
+        "V7": ["V7 Battery - 4h"],
+        "Q1": ["Q1 Battery - 2h"],
+    }
+    # SWQLD1/Q8 carries a flat 0.43; WNV1/V7 is time-varying (0.78 then 0.0);
+    # NQ1/Q1 has no profile so its battery falls back to 1.0.
+    coefficients = csv_str_to_df("""
+        constraint_id,  location,  coefficient,  date_from
+        SWQLD1,         Q8,        0.43,
+        WNV1,           V7,        0.78,
+        WNV1,           V7,        0.0,          2031-11-30T00:00:00
+    """)
+
+    result = _battery_rows_for_triggers(triggered, batteries_by_location, coefficients)
+
+    # Both Q8 batteries inherit 0.43; the V7 battery is emitted once per profile
+    # row (0.78 always, 0.0 from 2031-11-30); Q1's battery defaults to 1.0.
+    expected = csv_str_to_df("""
+        constraint_id,  term_type,       variable_name,    coefficient,  date_from
+        SWQLD1,         storage_output,  Q8 Battery - 2h,  0.43,
+        SWQLD1,         storage_output,  Q8 Battery - 4h,  0.43,
+        WNV1,           storage_output,  V7 Battery - 4h,  0.78,
+        WNV1,           storage_output,  V7 Battery - 4h,  0.0,          2031-11-30T00:00:00
+        NQ1,            storage_output,  Q1 Battery - 2h,  1.0,
+    """)
+    sort_cols = ["constraint_id", "variable_name", "coefficient"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_cols).reset_index(drop=True),
+        expected.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
 def test_battery_rows_for_triggers_missing_location_yields_no_rows():
     triggered = pd.DataFrame({"constraint_id": ["X"], "location": ["MISSING"]})
     batteries_by_location = {"Q1": ["Q1 Battery - 2h"]}
 
-    result = _battery_rows_for_triggers(triggered, batteries_by_location)
+    result = _battery_rows_for_triggers(
+        triggered, batteries_by_location, _EMPTY_COEFFICIENTS
+    )
 
     expected = pd.DataFrame(
         columns=[
@@ -1132,3 +1186,190 @@ def test_plexos_extract_dir_resolves_to_shipped_extract():
     assert (extract_dir / "constraints.csv").is_file()
     assert (extract_dir / "lhs_terms.csv").is_file()
     assert (extract_dir / "rhs_values.csv").is_file()
+
+
+# --- _battery_to_location ---
+
+
+def test_battery_to_location_maps_batteries_only(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,          Technology Type
+        Q8 Battery - 2h,      SQ,          Q8,              Battery Storage (2hrs storage)
+        CSA Battery - 2h,     CSA,         Not Applicable,  Battery Storage (2hrs storage)
+        Q8 Solar,             SQ,          Q8,              Solar
+    """)
+
+    result = _battery_to_location(new_entrants)
+
+    # Non-battery rows excluded; REZ ID used when populated, Sub-region as fallback.
+    assert result == {"Q8 Battery - 2h": "Q8", "CSA Battery - 2h": "CSA"}
+
+
+# --- _location_battery_pairs ---
+
+
+def test_location_battery_pairs_flattens(csv_str_to_df):
+    result = _location_battery_pairs(
+        {"Q8": ["Q8 Battery - 2h", "Q8 Battery - 4h"], "Q1": ["Q1 Battery - 2h"]}
+    )
+
+    expected = csv_str_to_df("""
+        location,  variable_name
+        Q8,        Q8 Battery - 2h
+        Q8,        Q8 Battery - 4h
+        Q1,        Q1 Battery - 2h
+    """)
+    sort_cols = ["location", "variable_name"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_cols).reset_index(drop=True),
+        expected.sort_values(sort_cols).reset_index(drop=True),
+    )
+
+
+# --- _surviving_battery_coefficients ---
+
+
+def test_surviving_battery_coefficients_profiles_per_location(csv_str_to_df):
+    lhs = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,    coefficient,  date_from
+        SWQLD1,         generator_output,  Q8 Solar,         0.43,
+        SWQLD1,         storage_output,    Q8 Battery - 2h,  0.43,
+        SWQLD1,         storage_output,    Q8 Battery - 8h,  0.43,
+        SWQLD1,         storage_output,    Tarong BESS,      0.14,
+        WNV1,           storage_output,    V7 Battery - 2h,  0.78,
+        WNV1,           storage_output,    V7 Battery - 2h,  0.0,          2031-11-30T00:00:00
+    """)
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
+        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
+        Q8 Battery - 8h,      SQ,          Q8,      Battery Storage (8hrs storage)
+        V7 Battery - 2h,      SEV,         V7,      Battery Storage (2hrs storage)
+    """)
+
+    result = _surviving_battery_coefficients(lhs, new_entrants)
+
+    # Q8's two surviving siblings collapse to one 0.43 profile row; the
+    # generator term and the existing Tarong BESS (not a new-entrant battery)
+    # are ignored; V7 keeps both time-varying rows.
+    expected = csv_str_to_df("""
+        constraint_id,  location,  coefficient,  date_from
+        SWQLD1,         Q8,        0.43,
+        WNV1,           V7,        0.78,
+        WNV1,           V7,        0.0,          2031-11-30T00:00:00
+    """)
+    sort_cols = ["constraint_id", "location", "coefficient"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_cols).reset_index(drop=True),
+        expected.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_surviving_battery_coefficients_raises_on_inconsistent_siblings(csv_str_to_df):
+    # Two surviving Q8 batteries disagree on coefficient at the same date_from,
+    # so the per-location copy onto the omitted durations would be ambiguous --
+    # the load-bearing "siblings agree" assumption is violated and must raise.
+    lhs = csv_str_to_df("""
+        constraint_id,  term_type,       variable_name,    coefficient,  date_from
+        SWQLD1,         storage_output,  Q8 Battery - 2h,  0.43,
+        SWQLD1,         storage_output,  Q8 Battery - 8h,  0.50,
+    """)
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
+        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
+        Q8 Battery - 8h,      SQ,          Q8,      Battery Storage (8hrs storage)
+    """)
+
+    with pytest.raises(ValueError, match="disagree on coefficient"):
+        _surviving_battery_coefficients(lhs, new_entrants)
+
+
+# --- _build_custom_constraints_lhs: injected battery inherits sibling coeff ---
+
+
+def test_build_custom_constraints_lhs_injected_battery_inherits_sibling_coefficient(
+    csv_str_to_df,
+):
+    # PLEXOS includes Q8 Battery - 2h at 0.43 (survives pass 1) but omits the
+    # 4h duration; a Q8 new-entrant generator triggers the injection. The
+    # injected 4h battery must inherit the 0.43 its 2h sibling carries, not the
+    # 1.0 default -- this is the regression the coefficient-profile copy fixes.
+    lhs_terms = csv_str_to_df("""
+        constraint_name,     parent_class,  parent_name,      property,                         value,  date_from
+        ExportGroup_SWQLD1,  Generator,     Q8_SAT_Brisbane,  Generation Sent Out Coefficient,  0.43,
+        ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Generation Coefficient,           0.43,
+    """)
+    iasr_ids = {"Q8_SAT_Brisbane", "Q8 Battery - 2h"}
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
+        Q8_SAT_Brisbane,      SQ,          Q8,      Solar
+        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
+        Q8 Battery - 4h,      SQ,          Q8,      Battery Storage (4hrs storage)
+    """)
+
+    result = _build_custom_constraints_lhs(lhs_terms, iasr_ids, new_entrants)
+
+    # Surviving 2h (0.43) is deduped against its pass-2 re-injection; the
+    # omitted 4h is injected at the inherited 0.43, not 1.0.
+    expected = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,    coefficient,  date_from
+        SWQLD1,         generator_output,  Q8_SAT_Brisbane,  0.43,
+        SWQLD1,         storage_output,    Q8 Battery - 2h,  0.43,
+        SWQLD1,         storage_output,    Q8 Battery - 4h,  0.43,
+    """)
+    sort_cols = ["term_type", "variable_name"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_cols).reset_index(drop=True),
+        expected.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+# --- _warn_on_default_battery_coefficients ---
+
+
+def test_warn_on_default_battery_coefficients_warns_for_fallback(csv_str_to_df, caplog):
+    triggered = csv_str_to_df("""
+        constraint_id,  location
+        SWQLD1,         Q8
+        WV1,            V3
+        NQ1,            S99
+    """)
+    # SWQLD1/Q8 has a surviving-sibling profile; WV1/V3 does not (-> default);
+    # NQ1/S99 has no batteries to inject at all, so it must not be reported.
+    coefficients = csv_str_to_df("""
+        constraint_id,  location,  coefficient,  date_from
+        SWQLD1,         Q8,        0.43,
+    """)
+    batteries_by_location = {"Q8": ["Q8 Battery - 4h"], "V3": ["V3 Battery - 4h"]}
+
+    with caplog.at_level("WARNING"):
+        _warn_on_default_battery_coefficients(
+            triggered, coefficients, batteries_by_location
+        )
+
+    assert (
+        "New-entrant batteries injected with default coefficient 1.0 "
+        "(no surviving sibling to copy from): ['WV1: V3']"
+    ) in caplog.text
+
+
+def test_warn_on_default_battery_coefficients_silent_when_all_have_profiles(
+    csv_str_to_df, caplog
+):
+    triggered = csv_str_to_df("""
+        constraint_id,  location
+        SWQLD1,         Q8
+    """)
+    coefficients = csv_str_to_df("""
+        constraint_id,  location,  coefficient,  date_from
+        SWQLD1,         Q8,        0.43,
+    """)
+    batteries_by_location = {"Q8": ["Q8 Battery - 4h"]}
+
+    with caplog.at_level("WARNING"):
+        _warn_on_default_battery_coefficients(
+            triggered, coefficients, batteries_by_location
+        )
+
+    assert "default coefficient" not in caplog.text
