@@ -224,8 +224,8 @@ def _template_vre_connection_costs(
         "Scenario",
         "VRE connection cost forecast",
     )
-    merged_df = _merge_connection_cost_and_capacity_frames(
-        scenario_cost_forecast, connection_costs_for_vre, ["REZ ID"]
+    merged_df = scenario_cost_forecast.merge(
+        connection_costs_for_vre, how="left", on=["REZ ID"]
     )
     normalised_df = _normalise_connection_cost_forecast_frame(
         merged_df, id_cols_rename=_VRE_COLUMN_RENAMES
@@ -391,10 +391,8 @@ def _template_non_vre_connection_costs(
         "Scenario",
         "Non-VRE connection cost forecast",
     )
-    merged_df = _merge_connection_cost_and_capacity_frames(
-        scenario_cost_forecast,
-        connection_capacity_df,
-        merge_cols=["Region", "Generator Type"],
+    merged_df = scenario_cost_forecast.merge(
+        connection_capacity_df, how="left", on=["Region", "Generator Type"]
     )
     normalised_df = _normalise_connection_cost_forecast_frame(
         merged_df, id_cols_rename=_NON_VRE_COLUMN_RENAMES
@@ -446,7 +444,7 @@ def _canonicalise_non_vre_technologies(
     """
     # NOTE: an only-VRE canonical set (non-empty, but no non-VRE techs) still raises
     # via _fuzzy_map_to_canonical when the forecast has non-VRE rows.
-    # Intentional (for now) — kinda related to https://github.com/Open-ISP/ISPyPSA/discussions/103
+    # Intentional (for now) — kinda related to https://github.com/Open-ISP/ISPyPSA/discussions/103 and the final role(s) of validator.
     if not canonical_technologies:
         return pd.DataFrame(columns=df.columns).astype(df.dtypes)
 
@@ -831,18 +829,6 @@ def _enforce_numeric_cols(df: pd.DataFrame, numeric_cols: list[str]) -> pd.DataF
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
-
-
-def _merge_connection_cost_and_capacity_frames(
-    cost_df: pd.DataFrame, capacity_df: pd.DataFrame, merge_cols: list[str]
-) -> pd.DataFrame:
-    """Left-merges cost forecast with connection capacity on ``merge_cols``.
-
-    Note: for VRE connection costs, REZ IDs present only in ``capacity_df`` are
-    dropped; offshore REZs with no cost forecast are handled downstream by
-    ``_build_vre_cost_rows``.
-    """
-    return cost_df.merge(capacity_df, how="left", on=merge_cols)
 
 
 def _calculate_connection_cost_per_mw(
