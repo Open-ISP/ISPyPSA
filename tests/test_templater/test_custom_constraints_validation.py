@@ -51,15 +51,18 @@ Why are there *any* differences?
          which the templater drops by design (hydrogen demand isn't
          modelled). The workbook lists them as REZ-tagged ``load`` units.
 
-   (The PLEXOS data carries two battery patterns that a literal
-   translation would surface here -- constraint-scoped battery variants
-   that map ambiguously to IASR units, and a quiet exclusion of
-   4h-duration batteries from export constraints. Rather than translate
-   PLEXOS' battery participation directly, the templater discards it and
-   injects the full set of REZ-located IASR new-entrant batteries for
-   each triggered REZ (the second LHS pass), so neither pattern appears
-   as a workbook-vs-PLEXOS diff. See Open-ISP/ISPyPSA#110 for the
-   underlying PLEXOS layout and ``custom_constraints_from_plexos.py``
+   (Batteries don't surface as a diff for these constraints either. PLEXOS
+   carries two battery patterns a literal translation would expose --
+   constraint-scoped variants (e.g. ``SWQLD1 Battery - 2h``) that map
+   ambiguously to IASR units, and a quiet exclusion of the 4h-duration
+   batteries. Pass 1 keeps the named PLEXOS batteries that match an IASR unit
+   at their real coefficients and drops the constraint-scoped variants; pass 2
+   then re-adds the omitted durations at their surviving siblings' coefficient
+   (the second LHS pass). The five validated constraints are all
+   unit-coefficient, so both routes land the same batteries at 1.0 and neither
+   pattern shows up here -- the coefficient-copy itself only bites on the
+   fractional constraints this cross-check can't reach. See Open-ISP/ISPyPSA#110
+   for the underlying PLEXOS layout and ``custom_constraints_from_plexos.py``
    for the injection logic.)
 
 The ``EXPECTED_DELTAS`` table below names every known mismatch with an
