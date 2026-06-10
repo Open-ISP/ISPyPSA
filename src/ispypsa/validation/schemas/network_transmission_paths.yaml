@@ -3,10 +3,23 @@ required: false
 unique:
   - [path_id]
 description: >
-  Transmission paths connecting geographies in the network model, including
-  inter-subregional flow paths, regional interconnectors, and REZ-to-subregion
-  connections. If absent, the model is constructed with no transmission paths.
-  Geographies with no connecting paths are electrically isolated.
+  Transmission paths connecting geographies in the network model.
+
+  Includes inter-subregional flow paths, regional interconnectors, and
+  REZ-to-subregion connections.
+
+  Source tables:
+    - `flow_path_transfer_capability`
+    - `renewable_energy_zones`
+    - `flow_path_augmentation_options_<flow_path>`
+
+  Source notes:
+  Augmentation options for corridors with no existing path (new parallel
+  corridors) are appended as zero-capacity paths by the `templater`.
+
+  If absent:
+  The model is constructed with no transmission paths. Geographies with no
+  connecting paths are electrically isolated.
 columns:
   path_id:
     type: string
