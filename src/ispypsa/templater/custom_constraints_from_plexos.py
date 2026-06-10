@@ -281,14 +281,28 @@ def _build_custom_constraints(constraints: pd.DataFrame) -> pd.DataFrame:
             CNSW-SNW South GPG   <=
     """
     sense_rows = constraints[constraints["property"] == "Sense"]
+    directions = sense_rows["value"].astype(int).map(_SENSE_TO_DIRECTION)
+    _raise_on_unmapped_sense(sense_rows, directions)
     return pd.DataFrame(
         {
             "constraint_id": sense_rows["constraint_name"].map(
                 _strip_constraint_prefix
             ),
-            "direction": sense_rows["value"].astype(int).map(_SENSE_TO_DIRECTION),
+            "direction": directions,
         }
     ).reset_index(drop=True)
+
+
+def _raise_on_unmapped_sense(sense_rows: pd.DataFrame, directions: pd.Series) -> None:
+    """Raise if any Sense value has no direction mapping -- like an unmapped
+    (parent_class, property) pair, this signals a new PLEXOS encoding the
+    templater needs to learn about, and must not pass through as a NaN
+    direction silently.
+    """
+    unmapped = sense_rows[directions.isna()]
+    if not unmapped.empty:
+        pairs = sorted(set(zip(unmapped["constraint_name"], unmapped["value"])))
+        raise ValueError(f"PLEXOS Sense values with no direction mapping: {pairs}")
 
 
 def _strip_constraint_prefix(name: str) -> str:
@@ -406,6 +420,10 @@ def _drop_battery_load_coefficient_rows(lhs: pd.DataFrame) -> pd.DataFrame:
     pair of ``Generation Coefficient`` rows that survive as the single
     ``storage_output`` term.
 
+    Raises if a Load row has no Generation pair for the same (constraint,
+    battery): dropping it would silently delete the battery's only LHS term
+    rather than a redundant negative pair.
+
     I/O Example:
         lhs:
             parent_class  parent_name    property                value
@@ -419,7 +437,43 @@ def _drop_battery_load_coefficient_rows(lhs: pd.DataFrame) -> pd.DataFrame:
     drop_mask = (lhs["parent_class"] == "Battery") & (
         lhs["property"] == "Load Coefficient"
     )
+    _raise_on_unpaired_battery_load_rows(lhs, drop_mask)
+    if drop_mask.any():
+        logging.info(
+            f"Dropped {drop_mask.sum()} battery Load Coefficient LHS rows "
+            "(negative pairs of the kept Generation Coefficient rows)"
+        )
     return lhs[~drop_mask].copy()
+
+
+def _raise_on_unpaired_battery_load_rows(
+    lhs: pd.DataFrame, load_mask: pd.Series
+) -> None:
+    """Raise if a battery Load Coefficient row has no Generation Coefficient
+    row for the same (constraint, battery) -- a load-only battery term that
+    dropping would silently lose, loosening the constraint.
+    """
+    generation_mask = (lhs["parent_class"] == "Battery") & (
+        lhs["property"] == "Generation Coefficient"
+    )
+    generation_keys = set(
+        zip(
+            lhs.loc[generation_mask, "constraint_name"],
+            lhs.loc[generation_mask, "parent_name"],
+        )
+    )
+    load_keys = set(
+        zip(lhs.loc[load_mask, "constraint_name"], lhs.loc[load_mask, "parent_name"])
+    )
+    unpaired = sorted(
+        f"{_strip_constraint_prefix(constraint)}: {name}"
+        for constraint, name in load_keys - generation_keys
+    )
+    if unpaired:
+        raise ValueError(
+            "Battery Load Coefficient rows with no Generation Coefficient pair "
+            f"(dropping them would lose the battery's only LHS term): {unpaired}"
+        )
 
 
 def _add_term_type_column(lhs: pd.DataFrame) -> pd.DataFrame:
@@ -646,13 +700,15 @@ def _inject_iasr_new_entrant_batteries(
     lhs: pd.DataFrame, new_entrants: pd.DataFrame
 ) -> pd.DataFrame:
     """Append a ``storage_output`` row for every IASR new-entrant battery in
-    each REZ/sub-region whose new-entrant generators participate in the
-    constraint.
+    each REZ/sub-region whose new-entrant units participate in the constraint.
 
-    For each ``generator_output`` term whose variable_name is a new-entrant
-    generator IASR ID, look up that generator's location -- REZ ID if
-    populated, else Sub-region -- and add ``storage_output`` rows for every
-    new-entrant battery at that same location. Each injected battery copies
+    For each ``generator_output`` or ``storage_output`` term whose
+    variable_name is a new-entrant IASR ID, look up that unit's location --
+    REZ ID if populated, else Sub-region -- and add ``storage_output`` rows
+    for every new-entrant battery at that same location. Surviving batteries
+    trigger as well as generators so a location that PLEXOS includes via
+    batteries alone still gets its omitted durations (e.g. 4h) re-added.
+    Each injected battery copies
     the coefficient (and time-varying ``date_from`` rows) carried by the
     new-entrant batteries that survived pass 1 at that location: PLEXOS applies
     a per-unit export-loss coefficient and omits the 4h-duration batteries, but
@@ -690,9 +746,14 @@ def _inject_iasr_new_entrant_batteries(
             SWQLD1         storage_output   Q8 Battery - 4h  0.43          # PLEXOS-omitted duration, copies the 2h sibling's coefficient
             NQ1            storage_output   Q1 Battery - 2h  1.0           # no surviving sibling -> default
     """
-    gen_to_location = _generator_to_location(new_entrants)
+    # Generator and battery IASR IDs never collide, so one combined lookup
+    # serves both trigger kinds.
+    unit_to_location = {
+        **_generator_to_location(new_entrants),
+        **_battery_to_location(new_entrants),
+    }
     batteries_by_location = _batteries_by_location(new_entrants)
-    triggered = _triggered_locations_per_constraint(lhs, gen_to_location)
+    triggered = _triggered_locations_per_constraint(lhs, unit_to_location)
     coefficients = _surviving_battery_coefficients(lhs, new_entrants)
     injected = _battery_rows_for_triggers(
         triggered, batteries_by_location, coefficients
@@ -818,32 +879,36 @@ def _pick_location(row: pd.Series) -> str:
 
 
 def _triggered_locations_per_constraint(
-    lhs: pd.DataFrame, gen_to_location: dict[str, str]
+    lhs: pd.DataFrame, unit_to_location: dict[str, str]
 ) -> pd.DataFrame:
     """Find the distinct {constraint_id, location} pairs implied by the
-    surviving new-entrant generator terms.
+    surviving new-entrant generator and battery terms.
 
-    Generators whose IASR ID isn't in ``gen_to_location`` (existing /
-    committed / anticipated plant) don't trigger; only new-entrant generators
-    drive the injection.
+    Units whose IASR ID isn't in ``unit_to_location`` (existing / committed /
+    anticipated plant) don't trigger; only new-entrant units drive the
+    injection. Surviving batteries trigger as well as generators so a location
+    whose generators were all dropped (or that PLEXOS includes via batteries
+    alone) still gets its omitted durations re-added.
 
     I/O Example:
         lhs (abbreviated):
             constraint_id  term_type        variable_name
             SWQLD1         generator_output Q8_SAT_Brisbane     # triggers Q8
-            SWQLD1         generator_output Tarong BESS         # existing, no trigger
-            SWQLD1         link_flow        NSW-QLD             # not generator
+            SWQLD1         generator_output Mt Piper            # existing, no trigger
+            SWQLD1         link_flow        NSW-QLD             # not a unit term
+            NQ1            storage_output   Q1 Battery - 2h     # battery triggers Q1
 
-        gen_to_location: {"Q8_SAT_Brisbane": "Q8"}
+        unit_to_location: {"Q8_SAT_Brisbane": "Q8", "Q1 Battery - 2h": "Q1"}
 
         returns:
             constraint_id  location
             SWQLD1         Q8
+            NQ1            Q1
     """
-    generators = lhs[lhs["term_type"] == "generator_output"].copy()
-    generators["location"] = generators["variable_name"].map(gen_to_location)
+    units = lhs[lhs["term_type"].isin(["generator_output", "storage_output"])].copy()
+    units["location"] = units["variable_name"].map(unit_to_location)
     return (
-        generators.dropna(subset=["location"])[["constraint_id", "location"]]
+        units.dropna(subset=["location"])[["constraint_id", "location"]]
         .drop_duplicates()
         .reset_index(drop=True)
     )
@@ -861,8 +926,8 @@ def _surviving_battery_coefficients(
     0.14/0.43/1.0 there), so pass 2 re-adds those durations by copying this
     profile rather than defaulting to 1.0. The copy is only well-defined if the
     siblings agree, so within a (constraint, location) the surviving new-entrant
-    batteries must share one coefficient per date_from --
-    ``_raise_on_inconsistent_battery_coefficients`` enforces it (generators are
+    batteries must share one (date_from, coefficient) profile --
+    ``_raise_on_inconsistent_battery_profiles`` enforces it (generators are
     deliberately not checked: they keep their own per-unit coefficients).
     Existing-plant batteries carry no new-entrant location and are ignored.
 
@@ -885,36 +950,38 @@ def _surviving_battery_coefficients(
     surviving = lhs[lhs["term_type"] == "storage_output"].copy()
     surviving["location"] = surviving["variable_name"].map(battery_location)
     surviving = surviving.dropna(subset=["location"])
-    profile = surviving[
+    _raise_on_inconsistent_battery_profiles(surviving)
+    return surviving[
         ["constraint_id", "location", "coefficient", "date_from"]
     ].drop_duplicates()
-    _raise_on_inconsistent_battery_coefficients(profile)
-    return profile
 
 
-def _raise_on_inconsistent_battery_coefficients(profile: pd.DataFrame) -> None:
-    """Raise if surviving new-entrant batteries disagree on coefficient within a
-    (constraint_id, location, date_from).
+def _raise_on_inconsistent_battery_profiles(surviving: pd.DataFrame) -> None:
+    """Raise unless the surviving new-entrant batteries within each
+    (constraint_id, location) carry identical (date_from, coefficient) profiles.
 
-    Pass 2 copies one coefficient per location and date onto the PLEXOS-omitted
-    batteries (e.g. the 4h duration), which is only well-defined if the siblings
-    it copies from agree. They do across the current 7.5 extract; a future
-    extract that split them would otherwise inject an arbitrary one silently
-    (``_dedupe_lhs_terms`` would keep whichever row sorted first). Grouped with
-    ``dropna=False`` because date_from is empty (NaN) on the common,
-    non-time-varying rows.
+    Pass 2 copies the location's one profile onto the PLEXOS-omitted batteries
+    (e.g. the 4h duration), which is only well-defined if the siblings it
+    copies from agree -- both on the coefficient at each date AND on which
+    dates exist. Comparing whole profiles catches both failure modes: siblings
+    disagreeing at a shared date, and a time-varying sibling whose extra
+    date_from rows would otherwise be grafted onto its constant siblings
+    silently (the injected extra-date rows survive ``_dedupe_lhs_terms``
+    because nothing matches their date_from). Siblings do agree across the
+    current 7.5 extract; this guards future extracts.
     """
-    per_key = profile.groupby(["constraint_id", "location", "date_from"], dropna=False)[
-        "coefficient"
-    ].nunique()
-    conflicting = per_key[per_key > 1]
+    if surviving.empty:
+        return
+    per_battery = surviving.groupby(["constraint_id", "location", "variable_name"])[
+        ["coefficient", "date_from"]
+    ].apply(lambda g: frozenset(zip(g["date_from"].fillna(""), g["coefficient"])))
+    per_location = per_battery.groupby(level=["constraint_id", "location"]).nunique()
+    conflicting = per_location[per_location > 1]
     if not conflicting.empty:
-        offenders = sorted(
-            f"{cid}/{loc}@{date}" for cid, loc, date in conflicting.index
-        )
+        offenders = sorted(f"{cid}: {loc}" for cid, loc in conflicting.index)
         raise ValueError(
-            "Surviving new-entrant batteries disagree on coefficient within a "
-            f"(constraint, location, date_from): {offenders}"
+            "Surviving new-entrant batteries at a (constraint, location) do not "
+            f"share one (date_from, coefficient) profile: {offenders}"
         )
 
 

@@ -144,8 +144,10 @@ def test_template_custom_constraints_from_plexos_end_to_end(
     # DN1 Dubbo Battery -> DREZ; translates the NSW1-QLD1 line and CNSW node;
     # drops the Purchaser, Installed Capacity Coefficient and battery Load
     # Coefficient rows, plus the unmatched SA Hydrogen Turbine. Pass 2 injects
-    # the Q8 batteries (triggered by Q8_SAT_Brisbane in SWQLD1) and the T1
-    # battery (triggered by T1_Wind in NET1). EQ carries only its NQ load term.
+    # the Q8 batteries (triggered by Q8_SAT_Brisbane in SWQLD1), the T1
+    # battery (triggered by T1_Wind in NET1), and re-injects the surviving
+    # DREZ Dubbo battery (its own DN1 trigger; deduped against pass 1).
+    # EQ carries only its NQ load term.
     expected_lhs = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,            coefficient,  date_from
         EQ,             load,              NQ,                       1.0,
@@ -184,7 +186,7 @@ def test_template_custom_constraints_from_plexos_end_to_end(
     # End-to-end side effects: dropping the unmatched generator loosens the
     # constraint (WARNING); the pass-2 injection is summarised (INFO).
     assert "SWQLD1: SA Hydrogen Turbine" in caplog.text
-    assert "Injected 3 new-entrant battery storage_output rows" in caplog.text
+    assert "Injected 4 new-entrant battery storage_output rows" in caplog.text
 
 
 # --- _assert_no_date_to ---
@@ -298,6 +300,18 @@ def test_build_custom_constraints_filters_sense_and_strips_prefix(csv_str_to_df)
     pd.testing.assert_frame_equal(result, expected)
 
 
+def test_build_custom_constraints_raises_on_unmapped_sense(csv_str_to_df):
+    # A sense outside {-1, 0, 1} is a new PLEXOS encoding the templater
+    # doesn't know -- it must raise, not pass through as a NaN direction.
+    constraints = csv_str_to_df("""
+        constraint_name,      property,  value
+        ExportGroup_SWQLD1,   Sense,     2.0
+    """)
+
+    with pytest.raises(ValueError, match="no direction mapping"):
+        _build_custom_constraints(constraints)
+
+
 # --- _drop_excluded_classes (Purchaser) ---
 
 
@@ -372,22 +386,55 @@ def test_drop_constraint_relaxation_terms_no_log_when_none(csv_str_to_df, caplog
 # --- _drop_battery_load_coefficient_rows ---
 
 
-def test_drop_battery_load_coefficient_rows_drops_only_battery_load(csv_str_to_df):
+def test_drop_battery_load_coefficient_rows_drops_only_battery_load(
+    csv_str_to_df, caplog
+):
     lhs = csv_str_to_df("""
-        parent_class,  parent_name,   property
-        Battery,       Tarong BESS,  Generation Coefficient
-        Battery,       Tarong BESS,  Load Coefficient
-        Node,          NSA,           Load Coefficient
+        constraint_name,    parent_class,  parent_name,   property
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Generation Coefficient
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Load Coefficient
+        ExportGroup_SWQLD1, Node,          NSA,           Load Coefficient
     """)
 
-    result = _drop_battery_load_coefficient_rows(lhs)
+    with caplog.at_level("INFO"):
+        result = _drop_battery_load_coefficient_rows(lhs)
 
     expected = csv_str_to_df("""
-        parent_class,  parent_name,   property
-        Battery,       Tarong BESS,  Generation Coefficient
-        Node,          NSA,           Load Coefficient
+        constraint_name,    parent_class,  parent_name,   property
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Generation Coefficient
+        ExportGroup_SWQLD1, Node,          NSA,           Load Coefficient
     """)
     pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
+    assert (
+        "Dropped 1 battery Load Coefficient LHS rows "
+        "(negative pairs of the kept Generation Coefficient rows)"
+    ) in caplog.text
+
+
+def test_drop_battery_load_coefficient_rows_no_log_when_none(csv_str_to_df, caplog):
+    lhs = csv_str_to_df("""
+        constraint_name,    parent_class,  parent_name,  property
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Generation Coefficient
+    """)
+
+    with caplog.at_level("INFO"):
+        _drop_battery_load_coefficient_rows(lhs)
+
+    assert "Dropped" not in caplog.text
+
+
+def test_drop_battery_load_coefficient_rows_raises_on_unpaired_load(csv_str_to_df):
+    # A battery Load row with no Generation pair is the battery's only LHS
+    # term -- dropping it would silently loosen the constraint, so it raises.
+    lhs = csv_str_to_df("""
+        constraint_name,    parent_class,  parent_name,  property
+        ExportGroup_SWQLD1, Battery,       Lone BESS,    Load Coefficient
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Generation Coefficient
+        ExportGroup_SWQLD1, Battery,       Tarong BESS,  Load Coefficient
+    """)
+
+    with pytest.raises(ValueError, match="no Generation Coefficient pair"):
+        _drop_battery_load_coefficient_rows(lhs)
 
 
 # --- _add_term_type_column + _raise_on_unmapped_term_type ---
@@ -889,17 +936,25 @@ def test_triggered_locations_per_constraint_dedupes_and_drops_unknown(csv_str_to
         SWQLD1,         generator_output,  Tarong BESS
         SWQLD1,         link_flow,         NSW-QLD
         NQ1,            generator_output,  Q1 Solar
+        NET1,           storage_output,    T1 Battery - 2h
     """)
-    gen_to_location = {"Q8 Solar": "Q8", "Q8 Wind": "Q8", "Q1 Solar": "Q1"}
+    unit_to_location = {
+        "Q8 Solar": "Q8",
+        "Q8 Wind": "Q8",
+        "Q1 Solar": "Q1",
+        "T1 Battery - 2h": "T1",
+    }
 
-    result = _triggered_locations_per_constraint(lhs, gen_to_location)
+    result = _triggered_locations_per_constraint(lhs, unit_to_location)
 
     # Two SWQLD1 generators in Q8 dedupe to one row; Tarong BESS (not in
-    # gen_to_location) drops; link_flow ignored.
+    # unit_to_location) drops; link_flow ignored; NET1's surviving battery
+    # triggers T1 on its own.
     expected = csv_str_to_df("""
         constraint_id,  location
         SWQLD1,         Q8
         NQ1,            Q1
+        NET1,           T1
     """)
     pd.testing.assert_frame_equal(
         result.sort_values(["constraint_id", "location"]).reset_index(drop=True),
@@ -907,14 +962,14 @@ def test_triggered_locations_per_constraint_dedupes_and_drops_unknown(csv_str_to
     )
 
 
-def test_triggered_locations_per_constraint_no_generators(csv_str_to_df):
+def test_triggered_locations_per_constraint_no_unit_terms(csv_str_to_df):
     lhs = csv_str_to_df("""
         constraint_id,  term_type,   variable_name
         SWQLD1,         link_flow,   NSW-QLD
     """)
-    gen_to_location = {"Q8 Solar": "Q8"}
+    unit_to_location = {"Q8 Solar": "Q8"}
 
-    result = _triggered_locations_per_constraint(lhs, gen_to_location)
+    result = _triggered_locations_per_constraint(lhs, unit_to_location)
 
     expected = pd.DataFrame(columns=["constraint_id", "location"])
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
@@ -1280,7 +1335,29 @@ def test_surviving_battery_coefficients_raises_on_inconsistent_siblings(csv_str_
         Q8 Battery - 8h,      SQ,          Q8,      Battery Storage (8hrs storage)
     """)
 
-    with pytest.raises(ValueError, match="disagree on coefficient"):
+    with pytest.raises(ValueError, match="share one"):
+        _surviving_battery_coefficients(lhs, new_entrants)
+
+
+def test_surviving_battery_coefficients_raises_on_divergent_date_sets(csv_str_to_df):
+    # The siblings agree wherever both have a row, but the 2h battery is
+    # time-varying while the 8h is constant. Copying the union profile would
+    # silently graft the 2031 step onto the 8h battery (the injected extra-date
+    # row survives deduping because nothing matches its date_from), so the
+    # whole-profile comparison must raise.
+    lhs = csv_str_to_df("""
+        constraint_id,  term_type,       variable_name,    coefficient,  date_from
+        WNV1,           storage_output,  V7 Battery - 2h,  0.78,
+        WNV1,           storage_output,  V7 Battery - 2h,  0.0,          2031-11-30T00:00:00
+        WNV1,           storage_output,  V7 Battery - 8h,  0.78,
+    """)
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
+        V7 Battery - 2h,      SEV,         V7,      Battery Storage (2hrs storage)
+        V7 Battery - 8h,      SEV,         V7,      Battery Storage (8hrs storage)
+    """)
+
+    with pytest.raises(ValueError, match="share one"):
         _surviving_battery_coefficients(lhs, new_entrants)
 
 
@@ -1316,6 +1393,39 @@ def test_build_custom_constraints_lhs_injected_battery_inherits_sibling_coeffici
         SWQLD1,         generator_output,  Q8_SAT_Brisbane,  0.43,
         SWQLD1,         storage_output,    Q8 Battery - 2h,  0.43,
         SWQLD1,         storage_output,    Q8 Battery - 4h,  0.43,
+    """)
+    sort_cols = ["term_type", "variable_name"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_cols).reset_index(drop=True),
+        expected.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_build_custom_constraints_lhs_battery_only_survivor_triggers_injection(
+    csv_str_to_df,
+):
+    # No new-entrant generator participates: the surviving 2h battery alone
+    # triggers Q8, so the PLEXOS-omitted 4h duration is still injected, at the
+    # 2h sibling's coefficient.
+    lhs_terms = csv_str_to_df("""
+        constraint_name,     parent_class,  parent_name,      property,                value,  date_from
+        ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Generation Coefficient,  0.43,
+        ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Load Coefficient,        -0.43,
+    """)
+    iasr_ids = {"Q8 Battery - 2h"}
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
+        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
+        Q8 Battery - 4h,      SQ,          Q8,      Battery Storage (4hrs storage)
+    """)
+
+    result = _build_custom_constraints_lhs(lhs_terms, iasr_ids, new_entrants)
+
+    expected = csv_str_to_df("""
+        constraint_id,  term_type,       variable_name,    coefficient,  date_from
+        SWQLD1,         storage_output,  Q8 Battery - 2h,  0.43,
+        SWQLD1,         storage_output,  Q8 Battery - 4h,  0.43,
     """)
     sort_cols = ["term_type", "variable_name"]
     pd.testing.assert_frame_equal(
