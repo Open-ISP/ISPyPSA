@@ -1,0 +1,64 @@
+table: custom_constraints_lhs
+required: false
+custom_validation:
+  - name: no_duplicate_constraint_term_date
+    description: >
+      No two rows may have the same constraint_id, term_type, variable_name,
+      and date_from value. For NaN date_from rows, at most one row is
+      permitted per (constraint_id, term_type, variable_name) combination.
+description: >
+  Left-hand-side terms of the custom constraints: one row per (constraint,
+  model variable) coefficient.
+
+  Source tables:
+    - PLEXOS model extract (`lhs_terms.csv`), via the custom-constraints
+      templater.
+
+  Source notes:
+  variable_name uses IASR IDs for generators and batteries and path_ids for
+  links. Generator and battery terms may reference units that are not in the
+  model (e.g. before generator templating lands, or units outside a filtered
+  region); such terms are skipped with a log line when constraints are
+  applied.
+
+  If absent:
+  Constraints have no terms, so no custom constraints bind.
+columns:
+  constraint_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - custom_constraints: constraint_id
+    description: Constraint the term belongs to.
+  term_type:
+    type: string
+    required: true
+    allowed_values: [generator_output, storage_output, link_flow, load]
+    description: >
+      Model variable type the term applies to: a generator's dispatch, a
+      battery's discharge, a transmission path's flow, or a node's load
+      consumption (load terms are not yet modelled and are skipped, with a
+      log line, when constraints are applied).
+  variable_name:
+    type: string
+    required: true
+    description: >
+      Name of the component the term's variable belongs to: an IASR ID for
+      generator_output and storage_output terms, a path_id for link_flow
+      terms.
+  coefficient:
+    type: float
+    required: true
+    description: Coefficient the variable is multiplied by in the constraint.
+  date_from:
+    type: date
+    required: false
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date this row's coefficient takes effect. For each investment period,
+      the coefficient active at the period's start applies for the whole
+      period.
+
+      If absent (or empty):
+      The coefficient applies from the start of the model horizon (until
+      another row's date_from supersedes it).

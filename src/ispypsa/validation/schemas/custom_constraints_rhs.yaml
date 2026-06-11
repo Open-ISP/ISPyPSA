@@ -1,0 +1,51 @@
+table: custom_constraints_rhs
+required: false
+custom_validation:
+  - name: no_duplicate_constraint_timeslice_date
+    description: >
+      No two rows may have the same constraint_id, timeslice, and date_from
+      value. NaN timeslice and NaN date_from each count as a single value for
+      this purpose (e.g. at most one all-NaN row per constraint_id).
+description: >
+  Right-hand-side limit values of the custom constraints, by timeslice.
+
+  Source tables:
+    - PLEXOS model extract (`rhs_values.csv`), via the custom-constraints
+      templater.
+
+  If absent:
+  Constraints have no limit values, so no custom constraints bind.
+columns:
+  constraint_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - custom_constraints: constraint_id
+    description: Constraint the limit value belongs to.
+  timeslice:
+    type: string
+    required: false
+    allowed_values_from:
+      - timeslices: timeslice_id
+    description: >
+      Demand condition the limit applies to: the constraint binds only at
+      snapshots inside the timeslice's active windows. A constraint with RHS
+      rows for only some timeslices does not bind outside them.
+
+      If absent (or empty):
+      The limit applies at all snapshots.
+  rhs:
+    type: float
+    required: true
+    description: Limit value the constraint's LHS is compared against.
+  date_from:
+    type: date
+    required: false
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date this row's limit takes effect. For each investment period, the
+      limit active at the period's start applies for the whole period.
+
+      If absent (or empty):
+      The limit applies from the start of the model horizon (until another
+      row's date_from supersedes it).
