@@ -1,0 +1,3388 @@
+DATETIME,NAME,TIMESLICE
+30/06/2021,NSW Hot Day,0
+18/12/2021,NSW Hot Day,-1
+20/12/2021,NSW Hot Day,0
+01/02/2022,NSW Hot Day,-1
+02/02/2022,NSW Hot Day,0
+10/02/2022,NSW Hot Day,-1
+11/02/2022,NSW Hot Day,0
+17/02/2022,NSW Hot Day,-1
+18/02/2022,NSW Hot Day,0
+26/01/2023,NSW Hot Day,-1
+27/01/2023,NSW Hot Day,0
+11/02/2023,NSW Hot Day,-1
+12/02/2023,NSW Hot Day,0
+06/03/2023,NSW Hot Day,-1
+07/03/2023,NSW Hot Day,0
+16/03/2023,NSW Hot Day,-1
+17/03/2023,NSW Hot Day,0
+19/03/2023,NSW Hot Day,-1
+20/03/2023,NSW Hot Day,0
+09/12/2023,NSW Hot Day,-1
+10/12/2023,NSW Hot Day,0
+14/12/2023,NSW Hot Day,-1
+15/12/2023,NSW Hot Day,0
+21/01/2024,NSW Hot Day,-1
+22/01/2024,NSW Hot Day,0
+26/01/2024,NSW Hot Day,-1
+27/01/2024,NSW Hot Day,0
+29/02/2024,NSW Hot Day,-1
+01/03/2024,NSW Hot Day,0
+27/11/2024,NSW Hot Day,-1
+28/11/2024,NSW Hot Day,0
+17/12/2024,NSW Hot Day,-1
+18/12/2024,NSW Hot Day,0
+27/12/2024,NSW Hot Day,-1
+28/12/2024,NSW Hot Day,0
+28/01/2025,NSW Hot Day,-1
+29/01/2025,NSW Hot Day,0
+28/02/2025,NSW Hot Day,-1
+01/03/2025,NSW Hot Day,0
+14/11/2025,NSW Hot Day,-1
+15/11/2025,NSW Hot Day,0
+21/11/2025,NSW Hot Day,-1
+22/11/2025,NSW Hot Day,0
+23/11/2025,NSW Hot Day,-1
+24/11/2025,NSW Hot Day,0
+25/01/2026,NSW Hot Day,-1
+26/01/2026,NSW Hot Day,0
+01/03/2026,NSW Hot Day,-1
+02/03/2026,NSW Hot Day,0
+01/01/2027,NSW Hot Day,-1
+02/01/2027,NSW Hot Day,0
+31/01/2027,NSW Hot Day,-1
+02/02/2027,NSW Hot Day,0
+05/02/2027,NSW Hot Day,-1
+06/02/2027,NSW Hot Day,0
+19/02/2027,NSW Hot Day,-1
+20/02/2027,NSW Hot Day,0
+08/11/2027,NSW Hot Day,-1
+10/11/2027,NSW Hot Day,0
+14/11/2027,NSW Hot Day,-1
+15/11/2027,NSW Hot Day,0
+20/11/2027,NSW Hot Day,-1
+21/11/2027,NSW Hot Day,0
+04/01/2028,NSW Hot Day,-1
+05/01/2028,NSW Hot Day,0
+30/11/2028,NSW Hot Day,-1
+02/12/2028,NSW Hot Day,0
+08/01/2029,NSW Hot Day,-1
+09/01/2029,NSW Hot Day,0
+18/01/2029,NSW Hot Day,-1
+19/01/2029,NSW Hot Day,0
+22/01/2029,NSW Hot Day,-1
+23/01/2029,NSW Hot Day,0
+08/11/2029,NSW Hot Day,-1
+09/11/2029,NSW Hot Day,0
+20/12/2029,NSW Hot Day,-1
+21/12/2029,NSW Hot Day,0
+22/12/2029,NSW Hot Day,-1
+24/12/2029,NSW Hot Day,0
+02/01/2030,NSW Hot Day,-1
+03/01/2030,NSW Hot Day,0
+14/11/2030,NSW Hot Day,-1
+15/11/2030,NSW Hot Day,0
+21/11/2030,NSW Hot Day,-1
+22/11/2030,NSW Hot Day,0
+23/11/2030,NSW Hot Day,-1
+24/11/2030,NSW Hot Day,0
+25/01/2031,NSW Hot Day,-1
+26/01/2031,NSW Hot Day,0
+01/03/2031,NSW Hot Day,-1
+02/03/2031,NSW Hot Day,0
+19/11/2031,NSW Hot Day,-1
+21/11/2031,NSW Hot Day,0
+14/01/2032,NSW Hot Day,-1
+15/01/2032,NSW Hot Day,0
+20/01/2032,NSW Hot Day,-1
+21/01/2032,NSW Hot Day,0
+25/02/2032,NSW Hot Day,-1
+26/02/2032,NSW Hot Day,0
+11/01/2033,NSW Hot Day,-1
+12/01/2033,NSW Hot Day,0
+30/01/2033,NSW Hot Day,-1
+01/02/2033,NSW Hot Day,0
+05/02/2033,NSW Hot Day,-1
+06/02/2033,NSW Hot Day,0
+10/02/2033,NSW Hot Day,-1
+12/02/2033,NSW Hot Day,0
+14/12/2033,NSW Hot Day,-1
+15/12/2033,NSW Hot Day,0
+20/12/2033,NSW Hot Day,-1
+21/12/2033,NSW Hot Day,0
+24/12/2033,NSW Hot Day,-1
+25/12/2033,NSW Hot Day,0
+07/01/2034,NSW Hot Day,-1
+08/01/2034,NSW Hot Day,0
+18/03/2034,NSW Hot Day,-1
+19/03/2034,NSW Hot Day,0
+28/12/2034,NSW Hot Day,-1
+30/12/2034,NSW Hot Day,0
+05/01/2035,NSW Hot Day,-1
+06/01/2035,NSW Hot Day,0
+18/01/2035,NSW Hot Day,-1
+19/01/2035,NSW Hot Day,0
+31/01/2035,NSW Hot Day,-1
+01/02/2035,NSW Hot Day,0
+19/12/2035,NSW Hot Day,-1
+20/12/2035,NSW Hot Day,0
+31/12/2035,NSW Hot Day,-1
+01/01/2036,NSW Hot Day,0
+04/01/2036,NSW Hot Day,-1
+05/01/2036,NSW Hot Day,0
+23/01/2036,NSW Hot Day,-1
+24/01/2036,NSW Hot Day,0
+01/02/2036,NSW Hot Day,-1
+02/02/2036,NSW Hot Day,0
+16/11/2036,NSW Hot Day,-1
+17/11/2036,NSW Hot Day,0
+28/11/2036,NSW Hot Day,-1
+30/11/2036,NSW Hot Day,0
+24/01/2037,NSW Hot Day,-1
+25/01/2037,NSW Hot Day,0
+26/01/2037,NSW Hot Day,-1
+27/01/2037,NSW Hot Day,0
+18/12/2037,NSW Hot Day,-1
+20/12/2037,NSW Hot Day,0
+01/02/2038,NSW Hot Day,-1
+02/02/2038,NSW Hot Day,0
+10/02/2038,NSW Hot Day,-1
+11/02/2038,NSW Hot Day,0
+17/02/2038,NSW Hot Day,-1
+18/02/2038,NSW Hot Day,0
+26/01/2039,NSW Hot Day,-1
+27/01/2039,NSW Hot Day,0
+11/02/2039,NSW Hot Day,-1
+12/02/2039,NSW Hot Day,0
+06/03/2039,NSW Hot Day,-1
+07/03/2039,NSW Hot Day,0
+16/03/2039,NSW Hot Day,-1
+17/03/2039,NSW Hot Day,0
+19/03/2039,NSW Hot Day,-1
+20/03/2039,NSW Hot Day,0
+09/12/2039,NSW Hot Day,-1
+10/12/2039,NSW Hot Day,0
+14/12/2039,NSW Hot Day,-1
+15/12/2039,NSW Hot Day,0
+21/01/2040,NSW Hot Day,-1
+22/01/2040,NSW Hot Day,0
+26/01/2040,NSW Hot Day,-1
+27/01/2040,NSW Hot Day,0
+29/02/2040,NSW Hot Day,-1
+01/03/2040,NSW Hot Day,0
+27/11/2040,NSW Hot Day,-1
+28/11/2040,NSW Hot Day,0
+17/12/2040,NSW Hot Day,-1
+18/12/2040,NSW Hot Day,0
+27/12/2040,NSW Hot Day,-1
+28/12/2040,NSW Hot Day,0
+28/01/2041,NSW Hot Day,-1
+29/01/2041,NSW Hot Day,0
+28/02/2041,NSW Hot Day,-1
+01/03/2041,NSW Hot Day,0
+14/11/2041,NSW Hot Day,-1
+15/11/2041,NSW Hot Day,0
+21/11/2041,NSW Hot Day,-1
+22/11/2041,NSW Hot Day,0
+23/11/2041,NSW Hot Day,-1
+24/11/2041,NSW Hot Day,0
+25/01/2042,NSW Hot Day,-1
+26/01/2042,NSW Hot Day,0
+01/03/2042,NSW Hot Day,-1
+02/03/2042,NSW Hot Day,0
+01/01/2043,NSW Hot Day,-1
+02/01/2043,NSW Hot Day,0
+31/01/2043,NSW Hot Day,-1
+02/02/2043,NSW Hot Day,0
+05/02/2043,NSW Hot Day,-1
+06/02/2043,NSW Hot Day,0
+19/02/2043,NSW Hot Day,-1
+20/02/2043,NSW Hot Day,0
+08/11/2043,NSW Hot Day,-1
+10/11/2043,NSW Hot Day,0
+14/11/2043,NSW Hot Day,-1
+15/11/2043,NSW Hot Day,0
+20/11/2043,NSW Hot Day,-1
+21/11/2043,NSW Hot Day,0
+04/01/2044,NSW Hot Day,-1
+05/01/2044,NSW Hot Day,0
+30/11/2044,NSW Hot Day,-1
+02/12/2044,NSW Hot Day,0
+08/01/2045,NSW Hot Day,-1
+09/01/2045,NSW Hot Day,0
+18/01/2045,NSW Hot Day,-1
+19/01/2045,NSW Hot Day,0
+22/01/2045,NSW Hot Day,-1
+23/01/2045,NSW Hot Day,0
+08/11/2045,NSW Hot Day,-1
+09/11/2045,NSW Hot Day,0
+20/12/2045,NSW Hot Day,-1
+21/12/2045,NSW Hot Day,0
+22/12/2045,NSW Hot Day,-1
+24/12/2045,NSW Hot Day,0
+02/01/2046,NSW Hot Day,-1
+03/01/2046,NSW Hot Day,0
+14/11/2046,NSW Hot Day,-1
+15/11/2046,NSW Hot Day,0
+21/11/2046,NSW Hot Day,-1
+22/11/2046,NSW Hot Day,0
+23/11/2046,NSW Hot Day,-1
+24/11/2046,NSW Hot Day,0
+25/01/2047,NSW Hot Day,-1
+26/01/2047,NSW Hot Day,0
+01/03/2047,NSW Hot Day,-1
+02/03/2047,NSW Hot Day,0
+19/11/2047,NSW Hot Day,-1
+21/11/2047,NSW Hot Day,0
+14/01/2048,NSW Hot Day,-1
+15/01/2048,NSW Hot Day,0
+20/01/2048,NSW Hot Day,-1
+21/01/2048,NSW Hot Day,0
+25/02/2048,NSW Hot Day,-1
+26/02/2048,NSW Hot Day,0
+11/01/2049,NSW Hot Day,-1
+12/01/2049,NSW Hot Day,0
+30/01/2049,NSW Hot Day,-1
+01/02/2049,NSW Hot Day,0
+05/02/2049,NSW Hot Day,-1
+06/02/2049,NSW Hot Day,0
+10/02/2049,NSW Hot Day,-1
+12/02/2049,NSW Hot Day,0
+14/12/2049,NSW Hot Day,-1
+15/12/2049,NSW Hot Day,0
+20/12/2049,NSW Hot Day,-1
+21/12/2049,NSW Hot Day,0
+24/12/2049,NSW Hot Day,-1
+25/12/2049,NSW Hot Day,0
+07/01/2050,NSW Hot Day,-1
+08/01/2050,NSW Hot Day,0
+18/03/2050,NSW Hot Day,-1
+19/03/2050,NSW Hot Day,0
+28/12/2050,NSW Hot Day,-1
+30/12/2050,NSW Hot Day,0
+05/01/2051,NSW Hot Day,-1
+06/01/2051,NSW Hot Day,0
+18/01/2051,NSW Hot Day,-1
+19/01/2051,NSW Hot Day,0
+31/01/2051,NSW Hot Day,-1
+01/02/2051,NSW Hot Day,0
+19/12/2051,NSW Hot Day,-1
+20/12/2051,NSW Hot Day,0
+31/12/2051,NSW Hot Day,-1
+01/01/2052,NSW Hot Day,0
+04/01/2052,NSW Hot Day,-1
+05/01/2052,NSW Hot Day,0
+23/01/2052,NSW Hot Day,-1
+24/01/2052,NSW Hot Day,0
+01/02/2052,NSW Hot Day,-1
+02/02/2052,NSW Hot Day,0
+16/11/2052,NSW Hot Day,-1
+17/11/2052,NSW Hot Day,0
+28/11/2052,NSW Hot Day,-1
+30/11/2052,NSW Hot Day,0
+24/01/2053,NSW Hot Day,-1
+25/01/2053,NSW Hot Day,0
+26/01/2053,NSW Hot Day,-1
+27/01/2053,NSW Hot Day,0
+18/12/2053,NSW Hot Day,-1
+20/12/2053,NSW Hot Day,0
+01/02/2054,NSW Hot Day,-1
+02/02/2054,NSW Hot Day,0
+10/02/2054,NSW Hot Day,-1
+11/02/2054,NSW Hot Day,0
+17/02/2054,NSW Hot Day,-1
+18/02/2054,NSW Hot Day,0
+26/01/2055,NSW Hot Day,-1
+27/01/2055,NSW Hot Day,0
+11/02/2055,NSW Hot Day,-1
+12/02/2055,NSW Hot Day,0
+06/03/2055,NSW Hot Day,-1
+07/03/2055,NSW Hot Day,0
+16/03/2055,NSW Hot Day,-1
+17/03/2055,NSW Hot Day,0
+19/03/2055,NSW Hot Day,-1
+20/03/2055,NSW Hot Day,0
+09/12/2055,NSW Hot Day,-1
+10/12/2055,NSW Hot Day,0
+14/12/2055,NSW Hot Day,-1
+15/12/2055,NSW Hot Day,0
+21/01/2056,NSW Hot Day,-1
+22/01/2056,NSW Hot Day,0
+26/01/2056,NSW Hot Day,-1
+27/01/2056,NSW Hot Day,0
+29/02/2056,NSW Hot Day,-1
+01/03/2056,NSW Hot Day,0
+27/11/2056,NSW Hot Day,-1
+28/11/2056,NSW Hot Day,0
+17/12/2056,NSW Hot Day,-1
+18/12/2056,NSW Hot Day,0
+27/12/2056,NSW Hot Day,-1
+28/12/2056,NSW Hot Day,0
+28/01/2057,NSW Hot Day,-1
+29/01/2057,NSW Hot Day,0
+28/02/2057,NSW Hot Day,-1
+01/03/2057,NSW Hot Day,0
+14/11/2057,NSW Hot Day,-1
+15/11/2057,NSW Hot Day,0
+21/11/2057,NSW Hot Day,-1
+22/11/2057,NSW Hot Day,0
+23/11/2057,NSW Hot Day,-1
+24/11/2057,NSW Hot Day,0
+25/01/2058,NSW Hot Day,-1
+26/01/2058,NSW Hot Day,0
+01/03/2058,NSW Hot Day,-1
+02/03/2058,NSW Hot Day,0
+30/06/2021,NSW Typical Summer,0
+01/11/2021,NSW Typical Summer,-1
+18/12/2021,NSW Typical Summer,0
+20/12/2021,NSW Typical Summer,-1
+01/02/2022,NSW Typical Summer,0
+02/02/2022,NSW Typical Summer,-1
+10/02/2022,NSW Typical Summer,0
+11/02/2022,NSW Typical Summer,-1
+17/02/2022,NSW Typical Summer,0
+18/02/2022,NSW Typical Summer,-1
+01/04/2022,NSW Typical Summer,0
+01/11/2022,NSW Typical Summer,-1
+26/01/2023,NSW Typical Summer,0
+27/01/2023,NSW Typical Summer,-1
+11/02/2023,NSW Typical Summer,0
+12/02/2023,NSW Typical Summer,-1
+06/03/2023,NSW Typical Summer,0
+07/03/2023,NSW Typical Summer,-1
+16/03/2023,NSW Typical Summer,0
+17/03/2023,NSW Typical Summer,-1
+19/03/2023,NSW Typical Summer,0
+20/03/2023,NSW Typical Summer,-1
+01/04/2023,NSW Typical Summer,0
+01/11/2023,NSW Typical Summer,-1
+09/12/2023,NSW Typical Summer,0
+10/12/2023,NSW Typical Summer,-1
+14/12/2023,NSW Typical Summer,0
+15/12/2023,NSW Typical Summer,-1
+21/01/2024,NSW Typical Summer,0
+22/01/2024,NSW Typical Summer,-1
+26/01/2024,NSW Typical Summer,0
+27/01/2024,NSW Typical Summer,-1
+29/02/2024,NSW Typical Summer,0
+01/03/2024,NSW Typical Summer,-1
+01/04/2024,NSW Typical Summer,0
+01/11/2024,NSW Typical Summer,-1
+27/11/2024,NSW Typical Summer,0
+28/11/2024,NSW Typical Summer,-1
+17/12/2024,NSW Typical Summer,0
+18/12/2024,NSW Typical Summer,-1
+27/12/2024,NSW Typical Summer,0
+28/12/2024,NSW Typical Summer,-1
+28/01/2025,NSW Typical Summer,0
+29/01/2025,NSW Typical Summer,-1
+28/02/2025,NSW Typical Summer,0
+01/03/2025,NSW Typical Summer,-1
+01/04/2025,NSW Typical Summer,0
+01/11/2025,NSW Typical Summer,-1
+14/11/2025,NSW Typical Summer,0
+15/11/2025,NSW Typical Summer,-1
+21/11/2025,NSW Typical Summer,0
+22/11/2025,NSW Typical Summer,-1
+23/11/2025,NSW Typical Summer,0
+24/11/2025,NSW Typical Summer,-1
+25/01/2026,NSW Typical Summer,0
+26/01/2026,NSW Typical Summer,-1
+01/03/2026,NSW Typical Summer,0
+02/03/2026,NSW Typical Summer,-1
+01/04/2026,NSW Typical Summer,0
+01/11/2026,NSW Typical Summer,-1
+01/01/2027,NSW Typical Summer,0
+02/01/2027,NSW Typical Summer,-1
+31/01/2027,NSW Typical Summer,0
+02/02/2027,NSW Typical Summer,-1
+05/02/2027,NSW Typical Summer,0
+06/02/2027,NSW Typical Summer,-1
+19/02/2027,NSW Typical Summer,0
+20/02/2027,NSW Typical Summer,-1
+01/04/2027,NSW Typical Summer,0
+01/11/2027,NSW Typical Summer,-1
+08/11/2027,NSW Typical Summer,0
+10/11/2027,NSW Typical Summer,-1
+14/11/2027,NSW Typical Summer,0
+15/11/2027,NSW Typical Summer,-1
+20/11/2027,NSW Typical Summer,0
+21/11/2027,NSW Typical Summer,-1
+04/01/2028,NSW Typical Summer,0
+05/01/2028,NSW Typical Summer,-1
+01/04/2028,NSW Typical Summer,0
+01/11/2028,NSW Typical Summer,-1
+30/11/2028,NSW Typical Summer,0
+02/12/2028,NSW Typical Summer,-1
+08/01/2029,NSW Typical Summer,0
+09/01/2029,NSW Typical Summer,-1
+18/01/2029,NSW Typical Summer,0
+19/01/2029,NSW Typical Summer,-1
+22/01/2029,NSW Typical Summer,0
+23/01/2029,NSW Typical Summer,-1
+01/04/2029,NSW Typical Summer,0
+01/11/2029,NSW Typical Summer,-1
+08/11/2029,NSW Typical Summer,0
+09/11/2029,NSW Typical Summer,-1
+20/12/2029,NSW Typical Summer,0
+21/12/2029,NSW Typical Summer,-1
+22/12/2029,NSW Typical Summer,0
+24/12/2029,NSW Typical Summer,-1
+02/01/2030,NSW Typical Summer,0
+03/01/2030,NSW Typical Summer,-1
+01/04/2030,NSW Typical Summer,0
+01/11/2030,NSW Typical Summer,-1
+14/11/2030,NSW Typical Summer,0
+15/11/2030,NSW Typical Summer,-1
+21/11/2030,NSW Typical Summer,0
+22/11/2030,NSW Typical Summer,-1
+23/11/2030,NSW Typical Summer,0
+24/11/2030,NSW Typical Summer,-1
+25/01/2031,NSW Typical Summer,0
+26/01/2031,NSW Typical Summer,-1
+01/03/2031,NSW Typical Summer,0
+02/03/2031,NSW Typical Summer,-1
+01/04/2031,NSW Typical Summer,0
+01/11/2031,NSW Typical Summer,-1
+19/11/2031,NSW Typical Summer,0
+21/11/2031,NSW Typical Summer,-1
+14/01/2032,NSW Typical Summer,0
+15/01/2032,NSW Typical Summer,-1
+20/01/2032,NSW Typical Summer,0
+21/01/2032,NSW Typical Summer,-1
+25/02/2032,NSW Typical Summer,0
+26/02/2032,NSW Typical Summer,-1
+01/04/2032,NSW Typical Summer,0
+01/11/2032,NSW Typical Summer,-1
+11/01/2033,NSW Typical Summer,0
+12/01/2033,NSW Typical Summer,-1
+30/01/2033,NSW Typical Summer,0
+01/02/2033,NSW Typical Summer,-1
+05/02/2033,NSW Typical Summer,0
+06/02/2033,NSW Typical Summer,-1
+10/02/2033,NSW Typical Summer,0
+12/02/2033,NSW Typical Summer,-1
+01/04/2033,NSW Typical Summer,0
+01/11/2033,NSW Typical Summer,-1
+14/12/2033,NSW Typical Summer,0
+15/12/2033,NSW Typical Summer,-1
+20/12/2033,NSW Typical Summer,0
+21/12/2033,NSW Typical Summer,-1
+24/12/2033,NSW Typical Summer,0
+25/12/2033,NSW Typical Summer,-1
+07/01/2034,NSW Typical Summer,0
+08/01/2034,NSW Typical Summer,-1
+18/03/2034,NSW Typical Summer,0
+19/03/2034,NSW Typical Summer,-1
+01/04/2034,NSW Typical Summer,0
+01/11/2034,NSW Typical Summer,-1
+28/12/2034,NSW Typical Summer,0
+30/12/2034,NSW Typical Summer,-1
+05/01/2035,NSW Typical Summer,0
+06/01/2035,NSW Typical Summer,-1
+18/01/2035,NSW Typical Summer,0
+19/01/2035,NSW Typical Summer,-1
+31/01/2035,NSW Typical Summer,0
+01/02/2035,NSW Typical Summer,-1
+01/04/2035,NSW Typical Summer,0
+01/11/2035,NSW Typical Summer,-1
+19/12/2035,NSW Typical Summer,0
+20/12/2035,NSW Typical Summer,-1
+31/12/2035,NSW Typical Summer,0
+01/01/2036,NSW Typical Summer,-1
+04/01/2036,NSW Typical Summer,0
+05/01/2036,NSW Typical Summer,-1
+23/01/2036,NSW Typical Summer,0
+24/01/2036,NSW Typical Summer,-1
+01/02/2036,NSW Typical Summer,0
+02/02/2036,NSW Typical Summer,-1
+01/04/2036,NSW Typical Summer,0
+01/11/2036,NSW Typical Summer,-1
+16/11/2036,NSW Typical Summer,0
+17/11/2036,NSW Typical Summer,-1
+28/11/2036,NSW Typical Summer,0
+30/11/2036,NSW Typical Summer,-1
+24/01/2037,NSW Typical Summer,0
+25/01/2037,NSW Typical Summer,-1
+26/01/2037,NSW Typical Summer,0
+27/01/2037,NSW Typical Summer,-1
+01/04/2037,NSW Typical Summer,0
+01/11/2037,NSW Typical Summer,-1
+18/12/2037,NSW Typical Summer,0
+20/12/2037,NSW Typical Summer,-1
+01/02/2038,NSW Typical Summer,0
+02/02/2038,NSW Typical Summer,-1
+10/02/2038,NSW Typical Summer,0
+11/02/2038,NSW Typical Summer,-1
+17/02/2038,NSW Typical Summer,0
+18/02/2038,NSW Typical Summer,-1
+01/04/2038,NSW Typical Summer,0
+01/11/2038,NSW Typical Summer,-1
+26/01/2039,NSW Typical Summer,0
+27/01/2039,NSW Typical Summer,-1
+11/02/2039,NSW Typical Summer,0
+12/02/2039,NSW Typical Summer,-1
+06/03/2039,NSW Typical Summer,0
+07/03/2039,NSW Typical Summer,-1
+16/03/2039,NSW Typical Summer,0
+17/03/2039,NSW Typical Summer,-1
+19/03/2039,NSW Typical Summer,0
+20/03/2039,NSW Typical Summer,-1
+01/04/2039,NSW Typical Summer,0
+01/11/2039,NSW Typical Summer,-1
+09/12/2039,NSW Typical Summer,0
+10/12/2039,NSW Typical Summer,-1
+14/12/2039,NSW Typical Summer,0
+15/12/2039,NSW Typical Summer,-1
+21/01/2040,NSW Typical Summer,0
+22/01/2040,NSW Typical Summer,-1
+26/01/2040,NSW Typical Summer,0
+27/01/2040,NSW Typical Summer,-1
+29/02/2040,NSW Typical Summer,0
+01/03/2040,NSW Typical Summer,-1
+01/04/2040,NSW Typical Summer,0
+01/11/2040,NSW Typical Summer,-1
+27/11/2040,NSW Typical Summer,0
+28/11/2040,NSW Typical Summer,-1
+17/12/2040,NSW Typical Summer,0
+18/12/2040,NSW Typical Summer,-1
+27/12/2040,NSW Typical Summer,0
+28/12/2040,NSW Typical Summer,-1
+28/01/2041,NSW Typical Summer,0
+29/01/2041,NSW Typical Summer,-1
+28/02/2041,NSW Typical Summer,0
+01/03/2041,NSW Typical Summer,-1
+01/04/2041,NSW Typical Summer,0
+01/11/2041,NSW Typical Summer,-1
+14/11/2041,NSW Typical Summer,0
+15/11/2041,NSW Typical Summer,-1
+21/11/2041,NSW Typical Summer,0
+22/11/2041,NSW Typical Summer,-1
+23/11/2041,NSW Typical Summer,0
+24/11/2041,NSW Typical Summer,-1
+25/01/2042,NSW Typical Summer,0
+26/01/2042,NSW Typical Summer,-1
+01/03/2042,NSW Typical Summer,0
+02/03/2042,NSW Typical Summer,-1
+01/04/2042,NSW Typical Summer,0
+01/11/2042,NSW Typical Summer,-1
+01/01/2043,NSW Typical Summer,0
+02/01/2043,NSW Typical Summer,-1
+31/01/2043,NSW Typical Summer,0
+02/02/2043,NSW Typical Summer,-1
+05/02/2043,NSW Typical Summer,0
+06/02/2043,NSW Typical Summer,-1
+19/02/2043,NSW Typical Summer,0
+20/02/2043,NSW Typical Summer,-1
+01/04/2043,NSW Typical Summer,0
+01/11/2043,NSW Typical Summer,-1
+08/11/2043,NSW Typical Summer,0
+10/11/2043,NSW Typical Summer,-1
+14/11/2043,NSW Typical Summer,0
+15/11/2043,NSW Typical Summer,-1
+20/11/2043,NSW Typical Summer,0
+21/11/2043,NSW Typical Summer,-1
+04/01/2044,NSW Typical Summer,0
+05/01/2044,NSW Typical Summer,-1
+01/04/2044,NSW Typical Summer,0
+01/11/2044,NSW Typical Summer,-1
+30/11/2044,NSW Typical Summer,0
+02/12/2044,NSW Typical Summer,-1
+08/01/2045,NSW Typical Summer,0
+09/01/2045,NSW Typical Summer,-1
+18/01/2045,NSW Typical Summer,0
+19/01/2045,NSW Typical Summer,-1
+22/01/2045,NSW Typical Summer,0
+23/01/2045,NSW Typical Summer,-1
+01/04/2045,NSW Typical Summer,0
+01/11/2045,NSW Typical Summer,-1
+08/11/2045,NSW Typical Summer,0
+09/11/2045,NSW Typical Summer,-1
+20/12/2045,NSW Typical Summer,0
+21/12/2045,NSW Typical Summer,-1
+22/12/2045,NSW Typical Summer,0
+24/12/2045,NSW Typical Summer,-1
+02/01/2046,NSW Typical Summer,0
+03/01/2046,NSW Typical Summer,-1
+01/04/2046,NSW Typical Summer,0
+01/11/2046,NSW Typical Summer,-1
+14/11/2046,NSW Typical Summer,0
+15/11/2046,NSW Typical Summer,-1
+21/11/2046,NSW Typical Summer,0
+22/11/2046,NSW Typical Summer,-1
+23/11/2046,NSW Typical Summer,0
+24/11/2046,NSW Typical Summer,-1
+25/01/2047,NSW Typical Summer,0
+26/01/2047,NSW Typical Summer,-1
+01/03/2047,NSW Typical Summer,0
+02/03/2047,NSW Typical Summer,-1
+01/04/2047,NSW Typical Summer,0
+01/11/2047,NSW Typical Summer,-1
+19/11/2047,NSW Typical Summer,0
+21/11/2047,NSW Typical Summer,-1
+14/01/2048,NSW Typical Summer,0
+15/01/2048,NSW Typical Summer,-1
+20/01/2048,NSW Typical Summer,0
+21/01/2048,NSW Typical Summer,-1
+25/02/2048,NSW Typical Summer,0
+26/02/2048,NSW Typical Summer,-1
+01/04/2048,NSW Typical Summer,0
+01/11/2048,NSW Typical Summer,-1
+11/01/2049,NSW Typical Summer,0
+12/01/2049,NSW Typical Summer,-1
+30/01/2049,NSW Typical Summer,0
+01/02/2049,NSW Typical Summer,-1
+05/02/2049,NSW Typical Summer,0
+06/02/2049,NSW Typical Summer,-1
+10/02/2049,NSW Typical Summer,0
+12/02/2049,NSW Typical Summer,-1
+01/04/2049,NSW Typical Summer,0
+01/11/2049,NSW Typical Summer,-1
+14/12/2049,NSW Typical Summer,0
+15/12/2049,NSW Typical Summer,-1
+20/12/2049,NSW Typical Summer,0
+21/12/2049,NSW Typical Summer,-1
+24/12/2049,NSW Typical Summer,0
+25/12/2049,NSW Typical Summer,-1
+07/01/2050,NSW Typical Summer,0
+08/01/2050,NSW Typical Summer,-1
+18/03/2050,NSW Typical Summer,0
+19/03/2050,NSW Typical Summer,-1
+01/04/2050,NSW Typical Summer,0
+01/11/2050,NSW Typical Summer,-1
+28/12/2050,NSW Typical Summer,0
+30/12/2050,NSW Typical Summer,-1
+05/01/2051,NSW Typical Summer,0
+06/01/2051,NSW Typical Summer,-1
+18/01/2051,NSW Typical Summer,0
+19/01/2051,NSW Typical Summer,-1
+31/01/2051,NSW Typical Summer,0
+01/02/2051,NSW Typical Summer,-1
+01/04/2051,NSW Typical Summer,0
+01/11/2051,NSW Typical Summer,-1
+19/12/2051,NSW Typical Summer,0
+20/12/2051,NSW Typical Summer,-1
+31/12/2051,NSW Typical Summer,0
+01/01/2052,NSW Typical Summer,-1
+04/01/2052,NSW Typical Summer,0
+05/01/2052,NSW Typical Summer,-1
+23/01/2052,NSW Typical Summer,0
+24/01/2052,NSW Typical Summer,-1
+01/02/2052,NSW Typical Summer,0
+02/02/2052,NSW Typical Summer,-1
+01/04/2052,NSW Typical Summer,0
+01/11/2052,NSW Typical Summer,-1
+16/11/2052,NSW Typical Summer,0
+17/11/2052,NSW Typical Summer,-1
+28/11/2052,NSW Typical Summer,0
+30/11/2052,NSW Typical Summer,-1
+24/01/2053,NSW Typical Summer,0
+25/01/2053,NSW Typical Summer,-1
+26/01/2053,NSW Typical Summer,0
+27/01/2053,NSW Typical Summer,-1
+01/04/2053,NSW Typical Summer,0
+01/11/2053,NSW Typical Summer,-1
+18/12/2053,NSW Typical Summer,0
+20/12/2053,NSW Typical Summer,-1
+01/02/2054,NSW Typical Summer,0
+02/02/2054,NSW Typical Summer,-1
+10/02/2054,NSW Typical Summer,0
+11/02/2054,NSW Typical Summer,-1
+17/02/2054,NSW Typical Summer,0
+18/02/2054,NSW Typical Summer,-1
+01/04/2054,NSW Typical Summer,0
+01/11/2054,NSW Typical Summer,-1
+26/01/2055,NSW Typical Summer,0
+27/01/2055,NSW Typical Summer,-1
+11/02/2055,NSW Typical Summer,0
+12/02/2055,NSW Typical Summer,-1
+06/03/2055,NSW Typical Summer,0
+07/03/2055,NSW Typical Summer,-1
+16/03/2055,NSW Typical Summer,0
+17/03/2055,NSW Typical Summer,-1
+19/03/2055,NSW Typical Summer,0
+20/03/2055,NSW Typical Summer,-1
+01/04/2055,NSW Typical Summer,0
+01/11/2055,NSW Typical Summer,-1
+09/12/2055,NSW Typical Summer,0
+10/12/2055,NSW Typical Summer,-1
+14/12/2055,NSW Typical Summer,0
+15/12/2055,NSW Typical Summer,-1
+21/01/2056,NSW Typical Summer,0
+22/01/2056,NSW Typical Summer,-1
+26/01/2056,NSW Typical Summer,0
+27/01/2056,NSW Typical Summer,-1
+29/02/2056,NSW Typical Summer,0
+01/03/2056,NSW Typical Summer,-1
+01/04/2056,NSW Typical Summer,0
+01/11/2056,NSW Typical Summer,-1
+27/11/2056,NSW Typical Summer,0
+28/11/2056,NSW Typical Summer,-1
+17/12/2056,NSW Typical Summer,0
+18/12/2056,NSW Typical Summer,-1
+27/12/2056,NSW Typical Summer,0
+28/12/2056,NSW Typical Summer,-1
+28/01/2057,NSW Typical Summer,0
+29/01/2057,NSW Typical Summer,-1
+28/02/2057,NSW Typical Summer,0
+01/03/2057,NSW Typical Summer,-1
+01/04/2057,NSW Typical Summer,0
+01/11/2057,NSW Typical Summer,-1
+14/11/2057,NSW Typical Summer,0
+15/11/2057,NSW Typical Summer,-1
+21/11/2057,NSW Typical Summer,0
+22/11/2057,NSW Typical Summer,-1
+23/11/2057,NSW Typical Summer,0
+24/11/2057,NSW Typical Summer,-1
+25/01/2058,NSW Typical Summer,0
+26/01/2058,NSW Typical Summer,-1
+01/03/2058,NSW Typical Summer,0
+02/03/2058,NSW Typical Summer,-1
+01/04/2058,NSW Typical Summer,0
+30/06/2021,NSW Winter,-1
+01/11/2021,NSW Winter,0
+01/04/2022,NSW Winter,-1
+01/11/2022,NSW Winter,0
+01/04/2023,NSW Winter,-1
+01/11/2023,NSW Winter,0
+01/04/2024,NSW Winter,-1
+01/11/2024,NSW Winter,0
+01/04/2025,NSW Winter,-1
+01/11/2025,NSW Winter,0
+01/04/2026,NSW Winter,-1
+01/11/2026,NSW Winter,0
+01/04/2027,NSW Winter,-1
+01/11/2027,NSW Winter,0
+01/04/2028,NSW Winter,-1
+01/11/2028,NSW Winter,0
+01/04/2029,NSW Winter,-1
+01/11/2029,NSW Winter,0
+01/04/2030,NSW Winter,-1
+01/11/2030,NSW Winter,0
+01/04/2031,NSW Winter,-1
+01/11/2031,NSW Winter,0
+01/04/2032,NSW Winter,-1
+01/11/2032,NSW Winter,0
+01/04/2033,NSW Winter,-1
+01/11/2033,NSW Winter,0
+01/04/2034,NSW Winter,-1
+01/11/2034,NSW Winter,0
+01/04/2035,NSW Winter,-1
+01/11/2035,NSW Winter,0
+01/04/2036,NSW Winter,-1
+01/11/2036,NSW Winter,0
+01/04/2037,NSW Winter,-1
+01/11/2037,NSW Winter,0
+01/04/2038,NSW Winter,-1
+01/11/2038,NSW Winter,0
+01/04/2039,NSW Winter,-1
+01/11/2039,NSW Winter,0
+01/04/2040,NSW Winter,-1
+01/11/2040,NSW Winter,0
+01/04/2041,NSW Winter,-1
+01/11/2041,NSW Winter,0
+01/04/2042,NSW Winter,-1
+01/11/2042,NSW Winter,0
+01/04/2043,NSW Winter,-1
+01/11/2043,NSW Winter,0
+01/04/2044,NSW Winter,-1
+01/11/2044,NSW Winter,0
+01/04/2045,NSW Winter,-1
+01/11/2045,NSW Winter,0
+01/04/2046,NSW Winter,-1
+01/11/2046,NSW Winter,0
+01/04/2047,NSW Winter,-1
+01/11/2047,NSW Winter,0
+01/04/2048,NSW Winter,-1
+01/11/2048,NSW Winter,0
+01/04/2049,NSW Winter,-1
+01/11/2049,NSW Winter,0
+01/04/2050,NSW Winter,-1
+01/11/2050,NSW Winter,0
+01/04/2051,NSW Winter,-1
+01/11/2051,NSW Winter,0
+01/04/2052,NSW Winter,-1
+01/11/2052,NSW Winter,0
+01/04/2053,NSW Winter,-1
+01/11/2053,NSW Winter,0
+01/04/2054,NSW Winter,-1
+01/11/2054,NSW Winter,0
+01/04/2055,NSW Winter,-1
+01/11/2055,NSW Winter,0
+01/04/2056,NSW Winter,-1
+01/11/2056,NSW Winter,0
+01/04/2057,NSW Winter,-1
+01/11/2057,NSW Winter,0
+01/04/2058,NSW Winter,-1
+30/06/2021,QLD Hot Day,0
+20/12/2021,QLD Hot Day,-1
+21/12/2021,QLD Hot Day,0
+01/02/2022,QLD Hot Day,-1
+03/02/2022,QLD Hot Day,0
+08/03/2022,QLD Hot Day,-1
+10/03/2022,QLD Hot Day,0
+06/12/2022,QLD Hot Day,-1
+07/12/2022,QLD Hot Day,0
+03/02/2023,QLD Hot Day,-1
+04/02/2023,QLD Hot Day,0
+12/02/2023,QLD Hot Day,-1
+14/02/2023,QLD Hot Day,0
+16/03/2023,QLD Hot Day,-1
+18/03/2023,QLD Hot Day,0
+15/12/2023,QLD Hot Day,-1
+16/12/2023,QLD Hot Day,0
+28/12/2023,QLD Hot Day,-1
+30/12/2023,QLD Hot Day,0
+22/01/2024,QLD Hot Day,-1
+23/01/2024,QLD Hot Day,0
+27/01/2024,QLD Hot Day,-1
+28/01/2024,QLD Hot Day,0
+08/12/2024,QLD Hot Day,-1
+09/12/2024,QLD Hot Day,0
+16/01/2025,QLD Hot Day,-1
+17/01/2025,QLD Hot Day,0
+22/01/2025,QLD Hot Day,-1
+23/01/2025,QLD Hot Day,0
+24/01/2025,QLD Hot Day,-1
+25/01/2025,QLD Hot Day,0
+16/02/2025,QLD Hot Day,-1
+17/02/2025,QLD Hot Day,0
+16/11/2025,QLD Hot Day,-1
+17/11/2025,QLD Hot Day,0
+17/12/2025,QLD Hot Day,-1
+18/12/2025,QLD Hot Day,0
+30/12/2025,QLD Hot Day,-1
+31/12/2025,QLD Hot Day,0
+15/01/2026,QLD Hot Day,-1
+16/01/2026,QLD Hot Day,0
+17/01/2026,QLD Hot Day,-1
+19/01/2026,QLD Hot Day,0
+25/01/2026,QLD Hot Day,-1
+26/01/2026,QLD Hot Day,0
+05/03/2026,QLD Hot Day,-1
+06/03/2026,QLD Hot Day,0
+19/03/2026,QLD Hot Day,-1
+20/03/2026,QLD Hot Day,0
+18/01/2027,QLD Hot Day,-1
+19/01/2027,QLD Hot Day,0
+20/02/2027,QLD Hot Day,-1
+22/02/2027,QLD Hot Day,0
+01/03/2027,QLD Hot Day,-1
+02/03/2027,QLD Hot Day,0
+22/03/2027,QLD Hot Day,-1
+23/03/2027,QLD Hot Day,0
+15/11/2027,QLD Hot Day,-1
+16/11/2027,QLD Hot Day,0
+27/11/2027,QLD Hot Day,-1
+28/11/2027,QLD Hot Day,0
+09/01/2028,QLD Hot Day,-1
+10/01/2028,QLD Hot Day,0
+11/01/2028,QLD Hot Day,-1
+12/01/2028,QLD Hot Day,0
+06/02/2028,QLD Hot Day,-1
+07/02/2028,QLD Hot Day,0
+04/12/2028,QLD Hot Day,-1
+05/12/2028,QLD Hot Day,0
+02/01/2029,QLD Hot Day,-1
+03/01/2029,QLD Hot Day,0
+12/01/2029,QLD Hot Day,-1
+14/01/2029,QLD Hot Day,0
+19/01/2029,QLD Hot Day,-1
+20/01/2029,QLD Hot Day,0
+05/12/2029,QLD Hot Day,-1
+06/12/2029,QLD Hot Day,0
+29/12/2029,QLD Hot Day,-1
+30/12/2029,QLD Hot Day,0
+03/01/2030,QLD Hot Day,-1
+05/01/2030,QLD Hot Day,0
+22/01/2030,QLD Hot Day,-1
+23/01/2030,QLD Hot Day,0
+16/11/2030,QLD Hot Day,-1
+17/11/2030,QLD Hot Day,0
+17/12/2030,QLD Hot Day,-1
+18/12/2030,QLD Hot Day,0
+30/12/2030,QLD Hot Day,-1
+31/12/2030,QLD Hot Day,0
+15/01/2031,QLD Hot Day,-1
+16/01/2031,QLD Hot Day,0
+17/01/2031,QLD Hot Day,-1
+19/01/2031,QLD Hot Day,0
+25/01/2031,QLD Hot Day,-1
+26/01/2031,QLD Hot Day,0
+05/03/2031,QLD Hot Day,-1
+06/03/2031,QLD Hot Day,0
+19/03/2031,QLD Hot Day,-1
+20/03/2031,QLD Hot Day,0
+21/11/2031,QLD Hot Day,-1
+22/11/2031,QLD Hot Day,0
+29/01/2032,QLD Hot Day,-1
+30/01/2032,QLD Hot Day,0
+01/02/2032,QLD Hot Day,-1
+03/02/2032,QLD Hot Day,0
+16/02/2032,QLD Hot Day,-1
+17/02/2032,QLD Hot Day,0
+27/02/2032,QLD Hot Day,-1
+28/02/2032,QLD Hot Day,0
+05/11/2032,QLD Hot Day,-1
+06/11/2032,QLD Hot Day,0
+13/11/2032,QLD Hot Day,-1
+14/11/2032,QLD Hot Day,0
+21/12/2032,QLD Hot Day,-1
+22/12/2032,QLD Hot Day,0
+01/01/2033,QLD Hot Day,-1
+02/01/2033,QLD Hot Day,0
+12/01/2033,QLD Hot Day,-1
+13/01/2033,QLD Hot Day,0
+14/01/2033,QLD Hot Day,-1
+15/01/2033,QLD Hot Day,0
+18/01/2033,QLD Hot Day,-1
+19/01/2033,QLD Hot Day,0
+11/02/2033,QLD Hot Day,-1
+13/02/2033,QLD Hot Day,0
+25/12/2033,QLD Hot Day,-1
+26/12/2033,QLD Hot Day,0
+13/01/2034,QLD Hot Day,-1
+15/01/2034,QLD Hot Day,0
+31/01/2034,QLD Hot Day,-1
+01/02/2034,QLD Hot Day,0
+11/02/2034,QLD Hot Day,-1
+12/02/2034,QLD Hot Day,0
+28/11/2034,QLD Hot Day,-1
+29/11/2034,QLD Hot Day,0
+21/12/2034,QLD Hot Day,-1
+22/12/2034,QLD Hot Day,0
+11/03/2035,QLD Hot Day,-1
+13/03/2035,QLD Hot Day,0
+24/03/2035,QLD Hot Day,-1
+25/03/2035,QLD Hot Day,0
+08/11/2035,QLD Hot Day,-1
+09/11/2035,QLD Hot Day,0
+16/11/2035,QLD Hot Day,-1
+17/11/2035,QLD Hot Day,0
+05/12/2035,QLD Hot Day,-1
+08/12/2035,QLD Hot Day,0
+16/12/2035,QLD Hot Day,-1
+17/12/2035,QLD Hot Day,0
+03/02/2036,QLD Hot Day,-1
+04/02/2036,QLD Hot Day,0
+06/12/2036,QLD Hot Day,-1
+08/12/2036,QLD Hot Day,0
+16/01/2037,QLD Hot Day,-1
+17/01/2037,QLD Hot Day,0
+07/02/2037,QLD Hot Day,-1
+08/02/2037,QLD Hot Day,0
+22/02/2037,QLD Hot Day,-1
+23/02/2037,QLD Hot Day,0
+20/12/2037,QLD Hot Day,-1
+21/12/2037,QLD Hot Day,0
+01/02/2038,QLD Hot Day,-1
+03/02/2038,QLD Hot Day,0
+08/03/2038,QLD Hot Day,-1
+10/03/2038,QLD Hot Day,0
+06/12/2038,QLD Hot Day,-1
+07/12/2038,QLD Hot Day,0
+03/02/2039,QLD Hot Day,-1
+04/02/2039,QLD Hot Day,0
+12/02/2039,QLD Hot Day,-1
+14/02/2039,QLD Hot Day,0
+16/03/2039,QLD Hot Day,-1
+18/03/2039,QLD Hot Day,0
+15/12/2039,QLD Hot Day,-1
+16/12/2039,QLD Hot Day,0
+28/12/2039,QLD Hot Day,-1
+30/12/2039,QLD Hot Day,0
+22/01/2040,QLD Hot Day,-1
+23/01/2040,QLD Hot Day,0
+27/01/2040,QLD Hot Day,-1
+28/01/2040,QLD Hot Day,0
+08/12/2040,QLD Hot Day,-1
+09/12/2040,QLD Hot Day,0
+16/01/2041,QLD Hot Day,-1
+17/01/2041,QLD Hot Day,0
+22/01/2041,QLD Hot Day,-1
+23/01/2041,QLD Hot Day,0
+24/01/2041,QLD Hot Day,-1
+25/01/2041,QLD Hot Day,0
+16/02/2041,QLD Hot Day,-1
+17/02/2041,QLD Hot Day,0
+16/11/2041,QLD Hot Day,-1
+17/11/2041,QLD Hot Day,0
+17/12/2041,QLD Hot Day,-1
+18/12/2041,QLD Hot Day,0
+30/12/2041,QLD Hot Day,-1
+31/12/2041,QLD Hot Day,0
+15/01/2042,QLD Hot Day,-1
+16/01/2042,QLD Hot Day,0
+17/01/2042,QLD Hot Day,-1
+19/01/2042,QLD Hot Day,0
+25/01/2042,QLD Hot Day,-1
+26/01/2042,QLD Hot Day,0
+05/03/2042,QLD Hot Day,-1
+06/03/2042,QLD Hot Day,0
+19/03/2042,QLD Hot Day,-1
+20/03/2042,QLD Hot Day,0
+18/01/2043,QLD Hot Day,-1
+19/01/2043,QLD Hot Day,0
+20/02/2043,QLD Hot Day,-1
+22/02/2043,QLD Hot Day,0
+01/03/2043,QLD Hot Day,-1
+02/03/2043,QLD Hot Day,0
+22/03/2043,QLD Hot Day,-1
+23/03/2043,QLD Hot Day,0
+15/11/2043,QLD Hot Day,-1
+16/11/2043,QLD Hot Day,0
+27/11/2043,QLD Hot Day,-1
+28/11/2043,QLD Hot Day,0
+09/01/2044,QLD Hot Day,-1
+10/01/2044,QLD Hot Day,0
+11/01/2044,QLD Hot Day,-1
+12/01/2044,QLD Hot Day,0
+06/02/2044,QLD Hot Day,-1
+07/02/2044,QLD Hot Day,0
+04/12/2044,QLD Hot Day,-1
+05/12/2044,QLD Hot Day,0
+02/01/2045,QLD Hot Day,-1
+03/01/2045,QLD Hot Day,0
+12/01/2045,QLD Hot Day,-1
+14/01/2045,QLD Hot Day,0
+19/01/2045,QLD Hot Day,-1
+20/01/2045,QLD Hot Day,0
+05/12/2045,QLD Hot Day,-1
+06/12/2045,QLD Hot Day,0
+29/12/2045,QLD Hot Day,-1
+30/12/2045,QLD Hot Day,0
+03/01/2046,QLD Hot Day,-1
+05/01/2046,QLD Hot Day,0
+22/01/2046,QLD Hot Day,-1
+23/01/2046,QLD Hot Day,0
+16/11/2046,QLD Hot Day,-1
+17/11/2046,QLD Hot Day,0
+17/12/2046,QLD Hot Day,-1
+18/12/2046,QLD Hot Day,0
+30/12/2046,QLD Hot Day,-1
+31/12/2046,QLD Hot Day,0
+15/01/2047,QLD Hot Day,-1
+16/01/2047,QLD Hot Day,0
+17/01/2047,QLD Hot Day,-1
+19/01/2047,QLD Hot Day,0
+25/01/2047,QLD Hot Day,-1
+26/01/2047,QLD Hot Day,0
+05/03/2047,QLD Hot Day,-1
+06/03/2047,QLD Hot Day,0
+19/03/2047,QLD Hot Day,-1
+20/03/2047,QLD Hot Day,0
+21/11/2047,QLD Hot Day,-1
+22/11/2047,QLD Hot Day,0
+29/01/2048,QLD Hot Day,-1
+30/01/2048,QLD Hot Day,0
+01/02/2048,QLD Hot Day,-1
+03/02/2048,QLD Hot Day,0
+16/02/2048,QLD Hot Day,-1
+17/02/2048,QLD Hot Day,0
+27/02/2048,QLD Hot Day,-1
+28/02/2048,QLD Hot Day,0
+05/11/2048,QLD Hot Day,-1
+06/11/2048,QLD Hot Day,0
+13/11/2048,QLD Hot Day,-1
+14/11/2048,QLD Hot Day,0
+21/12/2048,QLD Hot Day,-1
+22/12/2048,QLD Hot Day,0
+01/01/2049,QLD Hot Day,-1
+02/01/2049,QLD Hot Day,0
+12/01/2049,QLD Hot Day,-1
+13/01/2049,QLD Hot Day,0
+14/01/2049,QLD Hot Day,-1
+15/01/2049,QLD Hot Day,0
+18/01/2049,QLD Hot Day,-1
+19/01/2049,QLD Hot Day,0
+11/02/2049,QLD Hot Day,-1
+13/02/2049,QLD Hot Day,0
+25/12/2049,QLD Hot Day,-1
+26/12/2049,QLD Hot Day,0
+13/01/2050,QLD Hot Day,-1
+15/01/2050,QLD Hot Day,0
+31/01/2050,QLD Hot Day,-1
+01/02/2050,QLD Hot Day,0
+11/02/2050,QLD Hot Day,-1
+12/02/2050,QLD Hot Day,0
+28/11/2050,QLD Hot Day,-1
+29/11/2050,QLD Hot Day,0
+21/12/2050,QLD Hot Day,-1
+22/12/2050,QLD Hot Day,0
+11/03/2051,QLD Hot Day,-1
+13/03/2051,QLD Hot Day,0
+24/03/2051,QLD Hot Day,-1
+25/03/2051,QLD Hot Day,0
+08/11/2051,QLD Hot Day,-1
+09/11/2051,QLD Hot Day,0
+16/11/2051,QLD Hot Day,-1
+17/11/2051,QLD Hot Day,0
+05/12/2051,QLD Hot Day,-1
+08/12/2051,QLD Hot Day,0
+16/12/2051,QLD Hot Day,-1
+17/12/2051,QLD Hot Day,0
+03/02/2052,QLD Hot Day,-1
+04/02/2052,QLD Hot Day,0
+06/12/2052,QLD Hot Day,-1
+08/12/2052,QLD Hot Day,0
+16/01/2053,QLD Hot Day,-1
+17/01/2053,QLD Hot Day,0
+07/02/2053,QLD Hot Day,-1
+08/02/2053,QLD Hot Day,0
+22/02/2053,QLD Hot Day,-1
+23/02/2053,QLD Hot Day,0
+20/12/2053,QLD Hot Day,-1
+21/12/2053,QLD Hot Day,0
+01/02/2054,QLD Hot Day,-1
+03/02/2054,QLD Hot Day,0
+08/03/2054,QLD Hot Day,-1
+10/03/2054,QLD Hot Day,0
+06/12/2054,QLD Hot Day,-1
+07/12/2054,QLD Hot Day,0
+03/02/2055,QLD Hot Day,-1
+04/02/2055,QLD Hot Day,0
+12/02/2055,QLD Hot Day,-1
+14/02/2055,QLD Hot Day,0
+16/03/2055,QLD Hot Day,-1
+18/03/2055,QLD Hot Day,0
+15/12/2055,QLD Hot Day,-1
+16/12/2055,QLD Hot Day,0
+28/12/2055,QLD Hot Day,-1
+30/12/2055,QLD Hot Day,0
+22/01/2056,QLD Hot Day,-1
+23/01/2056,QLD Hot Day,0
+27/01/2056,QLD Hot Day,-1
+28/01/2056,QLD Hot Day,0
+08/12/2056,QLD Hot Day,-1
+09/12/2056,QLD Hot Day,0
+16/01/2057,QLD Hot Day,-1
+17/01/2057,QLD Hot Day,0
+22/01/2057,QLD Hot Day,-1
+23/01/2057,QLD Hot Day,0
+24/01/2057,QLD Hot Day,-1
+25/01/2057,QLD Hot Day,0
+16/02/2057,QLD Hot Day,-1
+17/02/2057,QLD Hot Day,0
+16/11/2057,QLD Hot Day,-1
+17/11/2057,QLD Hot Day,0
+17/12/2057,QLD Hot Day,-1
+18/12/2057,QLD Hot Day,0
+30/12/2057,QLD Hot Day,-1
+31/12/2057,QLD Hot Day,0
+15/01/2058,QLD Hot Day,-1
+16/01/2058,QLD Hot Day,0
+17/01/2058,QLD Hot Day,-1
+19/01/2058,QLD Hot Day,0
+25/01/2058,QLD Hot Day,-1
+26/01/2058,QLD Hot Day,0
+05/03/2058,QLD Hot Day,-1
+06/03/2058,QLD Hot Day,0
+19/03/2058,QLD Hot Day,-1
+20/03/2058,QLD Hot Day,0
+30/06/2021,QLD Typical Summer,0
+01/11/2021,QLD Typical Summer,-1
+20/12/2021,QLD Typical Summer,0
+21/12/2021,QLD Typical Summer,-1
+01/02/2022,QLD Typical Summer,0
+03/02/2022,QLD Typical Summer,-1
+08/03/2022,QLD Typical Summer,0
+10/03/2022,QLD Typical Summer,-1
+01/04/2022,QLD Typical Summer,0
+01/11/2022,QLD Typical Summer,-1
+06/12/2022,QLD Typical Summer,0
+07/12/2022,QLD Typical Summer,-1
+03/02/2023,QLD Typical Summer,0
+04/02/2023,QLD Typical Summer,-1
+12/02/2023,QLD Typical Summer,0
+14/02/2023,QLD Typical Summer,-1
+16/03/2023,QLD Typical Summer,0
+18/03/2023,QLD Typical Summer,-1
+01/04/2023,QLD Typical Summer,0
+01/11/2023,QLD Typical Summer,-1
+15/12/2023,QLD Typical Summer,0
+16/12/2023,QLD Typical Summer,-1
+28/12/2023,QLD Typical Summer,0
+30/12/2023,QLD Typical Summer,-1
+22/01/2024,QLD Typical Summer,0
+23/01/2024,QLD Typical Summer,-1
+27/01/2024,QLD Typical Summer,0
+28/01/2024,QLD Typical Summer,-1
+01/04/2024,QLD Typical Summer,0
+01/11/2024,QLD Typical Summer,-1
+08/12/2024,QLD Typical Summer,0
+09/12/2024,QLD Typical Summer,-1
+16/01/2025,QLD Typical Summer,0
+17/01/2025,QLD Typical Summer,-1
+22/01/2025,QLD Typical Summer,0
+23/01/2025,QLD Typical Summer,-1
+24/01/2025,QLD Typical Summer,0
+25/01/2025,QLD Typical Summer,-1
+16/02/2025,QLD Typical Summer,0
+17/02/2025,QLD Typical Summer,-1
+01/04/2025,QLD Typical Summer,0
+01/11/2025,QLD Typical Summer,-1
+16/11/2025,QLD Typical Summer,0
+17/11/2025,QLD Typical Summer,-1
+17/12/2025,QLD Typical Summer,0
+18/12/2025,QLD Typical Summer,-1
+30/12/2025,QLD Typical Summer,0
+31/12/2025,QLD Typical Summer,-1
+15/01/2026,QLD Typical Summer,0
+16/01/2026,QLD Typical Summer,-1
+17/01/2026,QLD Typical Summer,0
+19/01/2026,QLD Typical Summer,-1
+25/01/2026,QLD Typical Summer,0
+26/01/2026,QLD Typical Summer,-1
+05/03/2026,QLD Typical Summer,0
+06/03/2026,QLD Typical Summer,-1
+19/03/2026,QLD Typical Summer,0
+20/03/2026,QLD Typical Summer,-1
+01/04/2026,QLD Typical Summer,0
+01/11/2026,QLD Typical Summer,-1
+18/01/2027,QLD Typical Summer,0
+19/01/2027,QLD Typical Summer,-1
+20/02/2027,QLD Typical Summer,0
+22/02/2027,QLD Typical Summer,-1
+01/03/2027,QLD Typical Summer,0
+02/03/2027,QLD Typical Summer,-1
+22/03/2027,QLD Typical Summer,0
+23/03/2027,QLD Typical Summer,-1
+01/04/2027,QLD Typical Summer,0
+01/11/2027,QLD Typical Summer,-1
+15/11/2027,QLD Typical Summer,0
+16/11/2027,QLD Typical Summer,-1
+27/11/2027,QLD Typical Summer,0
+28/11/2027,QLD Typical Summer,-1
+09/01/2028,QLD Typical Summer,0
+10/01/2028,QLD Typical Summer,-1
+11/01/2028,QLD Typical Summer,0
+12/01/2028,QLD Typical Summer,-1
+06/02/2028,QLD Typical Summer,0
+07/02/2028,QLD Typical Summer,-1
+01/04/2028,QLD Typical Summer,0
+01/11/2028,QLD Typical Summer,-1
+04/12/2028,QLD Typical Summer,0
+05/12/2028,QLD Typical Summer,-1
+02/01/2029,QLD Typical Summer,0
+03/01/2029,QLD Typical Summer,-1
+12/01/2029,QLD Typical Summer,0
+14/01/2029,QLD Typical Summer,-1
+19/01/2029,QLD Typical Summer,0
+20/01/2029,QLD Typical Summer,-1
+01/04/2029,QLD Typical Summer,0
+01/11/2029,QLD Typical Summer,-1
+05/12/2029,QLD Typical Summer,0
+06/12/2029,QLD Typical Summer,-1
+29/12/2029,QLD Typical Summer,0
+30/12/2029,QLD Typical Summer,-1
+03/01/2030,QLD Typical Summer,0
+05/01/2030,QLD Typical Summer,-1
+22/01/2030,QLD Typical Summer,0
+23/01/2030,QLD Typical Summer,-1
+01/04/2030,QLD Typical Summer,0
+01/11/2030,QLD Typical Summer,-1
+16/11/2030,QLD Typical Summer,0
+17/11/2030,QLD Typical Summer,-1
+17/12/2030,QLD Typical Summer,0
+18/12/2030,QLD Typical Summer,-1
+30/12/2030,QLD Typical Summer,0
+31/12/2030,QLD Typical Summer,-1
+15/01/2031,QLD Typical Summer,0
+16/01/2031,QLD Typical Summer,-1
+17/01/2031,QLD Typical Summer,0
+19/01/2031,QLD Typical Summer,-1
+25/01/2031,QLD Typical Summer,0
+26/01/2031,QLD Typical Summer,-1
+05/03/2031,QLD Typical Summer,0
+06/03/2031,QLD Typical Summer,-1
+19/03/2031,QLD Typical Summer,0
+20/03/2031,QLD Typical Summer,-1
+01/04/2031,QLD Typical Summer,0
+01/11/2031,QLD Typical Summer,-1
+21/11/2031,QLD Typical Summer,0
+22/11/2031,QLD Typical Summer,-1
+29/01/2032,QLD Typical Summer,0
+30/01/2032,QLD Typical Summer,-1
+01/02/2032,QLD Typical Summer,0
+03/02/2032,QLD Typical Summer,-1
+16/02/2032,QLD Typical Summer,0
+17/02/2032,QLD Typical Summer,-1
+27/02/2032,QLD Typical Summer,0
+28/02/2032,QLD Typical Summer,-1
+01/04/2032,QLD Typical Summer,0
+01/11/2032,QLD Typical Summer,-1
+05/11/2032,QLD Typical Summer,0
+06/11/2032,QLD Typical Summer,-1
+13/11/2032,QLD Typical Summer,0
+14/11/2032,QLD Typical Summer,-1
+21/12/2032,QLD Typical Summer,0
+22/12/2032,QLD Typical Summer,-1
+01/01/2033,QLD Typical Summer,0
+02/01/2033,QLD Typical Summer,-1
+12/01/2033,QLD Typical Summer,0
+13/01/2033,QLD Typical Summer,-1
+14/01/2033,QLD Typical Summer,0
+15/01/2033,QLD Typical Summer,-1
+18/01/2033,QLD Typical Summer,0
+19/01/2033,QLD Typical Summer,-1
+11/02/2033,QLD Typical Summer,0
+13/02/2033,QLD Typical Summer,-1
+01/04/2033,QLD Typical Summer,0
+01/11/2033,QLD Typical Summer,-1
+25/12/2033,QLD Typical Summer,0
+26/12/2033,QLD Typical Summer,-1
+13/01/2034,QLD Typical Summer,0
+15/01/2034,QLD Typical Summer,-1
+31/01/2034,QLD Typical Summer,0
+01/02/2034,QLD Typical Summer,-1
+11/02/2034,QLD Typical Summer,0
+12/02/2034,QLD Typical Summer,-1
+01/04/2034,QLD Typical Summer,0
+01/11/2034,QLD Typical Summer,-1
+28/11/2034,QLD Typical Summer,0
+29/11/2034,QLD Typical Summer,-1
+21/12/2034,QLD Typical Summer,0
+22/12/2034,QLD Typical Summer,-1
+11/03/2035,QLD Typical Summer,0
+13/03/2035,QLD Typical Summer,-1
+24/03/2035,QLD Typical Summer,0
+25/03/2035,QLD Typical Summer,-1
+01/04/2035,QLD Typical Summer,0
+01/11/2035,QLD Typical Summer,-1
+08/11/2035,QLD Typical Summer,0
+09/11/2035,QLD Typical Summer,-1
+16/11/2035,QLD Typical Summer,0
+17/11/2035,QLD Typical Summer,-1
+05/12/2035,QLD Typical Summer,0
+08/12/2035,QLD Typical Summer,-1
+16/12/2035,QLD Typical Summer,0
+17/12/2035,QLD Typical Summer,-1
+03/02/2036,QLD Typical Summer,0
+04/02/2036,QLD Typical Summer,-1
+01/04/2036,QLD Typical Summer,0
+01/11/2036,QLD Typical Summer,-1
+06/12/2036,QLD Typical Summer,0
+08/12/2036,QLD Typical Summer,-1
+16/01/2037,QLD Typical Summer,0
+17/01/2037,QLD Typical Summer,-1
+07/02/2037,QLD Typical Summer,0
+08/02/2037,QLD Typical Summer,-1
+22/02/2037,QLD Typical Summer,0
+23/02/2037,QLD Typical Summer,-1
+01/04/2037,QLD Typical Summer,0
+01/11/2037,QLD Typical Summer,-1
+20/12/2037,QLD Typical Summer,0
+21/12/2037,QLD Typical Summer,-1
+01/02/2038,QLD Typical Summer,0
+03/02/2038,QLD Typical Summer,-1
+08/03/2038,QLD Typical Summer,0
+10/03/2038,QLD Typical Summer,-1
+01/04/2038,QLD Typical Summer,0
+01/11/2038,QLD Typical Summer,-1
+06/12/2038,QLD Typical Summer,0
+07/12/2038,QLD Typical Summer,-1
+03/02/2039,QLD Typical Summer,0
+04/02/2039,QLD Typical Summer,-1
+12/02/2039,QLD Typical Summer,0
+14/02/2039,QLD Typical Summer,-1
+16/03/2039,QLD Typical Summer,0
+18/03/2039,QLD Typical Summer,-1
+01/04/2039,QLD Typical Summer,0
+01/11/2039,QLD Typical Summer,-1
+15/12/2039,QLD Typical Summer,0
+16/12/2039,QLD Typical Summer,-1
+28/12/2039,QLD Typical Summer,0
+30/12/2039,QLD Typical Summer,-1
+22/01/2040,QLD Typical Summer,0
+23/01/2040,QLD Typical Summer,-1
+27/01/2040,QLD Typical Summer,0
+28/01/2040,QLD Typical Summer,-1
+01/04/2040,QLD Typical Summer,0
+01/11/2040,QLD Typical Summer,-1
+08/12/2040,QLD Typical Summer,0
+09/12/2040,QLD Typical Summer,-1
+16/01/2041,QLD Typical Summer,0
+17/01/2041,QLD Typical Summer,-1
+22/01/2041,QLD Typical Summer,0
+23/01/2041,QLD Typical Summer,-1
+24/01/2041,QLD Typical Summer,0
+25/01/2041,QLD Typical Summer,-1
+16/02/2041,QLD Typical Summer,0
+17/02/2041,QLD Typical Summer,-1
+01/04/2041,QLD Typical Summer,0
+01/11/2041,QLD Typical Summer,-1
+16/11/2041,QLD Typical Summer,0
+17/11/2041,QLD Typical Summer,-1
+17/12/2041,QLD Typical Summer,0
+18/12/2041,QLD Typical Summer,-1
+30/12/2041,QLD Typical Summer,0
+31/12/2041,QLD Typical Summer,-1
+15/01/2042,QLD Typical Summer,0
+16/01/2042,QLD Typical Summer,-1
+17/01/2042,QLD Typical Summer,0
+19/01/2042,QLD Typical Summer,-1
+25/01/2042,QLD Typical Summer,0
+26/01/2042,QLD Typical Summer,-1
+05/03/2042,QLD Typical Summer,0
+06/03/2042,QLD Typical Summer,-1
+19/03/2042,QLD Typical Summer,0
+20/03/2042,QLD Typical Summer,-1
+01/04/2042,QLD Typical Summer,0
+01/11/2042,QLD Typical Summer,-1
+18/01/2043,QLD Typical Summer,0
+19/01/2043,QLD Typical Summer,-1
+20/02/2043,QLD Typical Summer,0
+22/02/2043,QLD Typical Summer,-1
+01/03/2043,QLD Typical Summer,0
+02/03/2043,QLD Typical Summer,-1
+22/03/2043,QLD Typical Summer,0
+23/03/2043,QLD Typical Summer,-1
+01/04/2043,QLD Typical Summer,0
+01/11/2043,QLD Typical Summer,-1
+15/11/2043,QLD Typical Summer,0
+16/11/2043,QLD Typical Summer,-1
+27/11/2043,QLD Typical Summer,0
+28/11/2043,QLD Typical Summer,-1
+09/01/2044,QLD Typical Summer,0
+10/01/2044,QLD Typical Summer,-1
+11/01/2044,QLD Typical Summer,0
+12/01/2044,QLD Typical Summer,-1
+06/02/2044,QLD Typical Summer,0
+07/02/2044,QLD Typical Summer,-1
+01/04/2044,QLD Typical Summer,0
+01/11/2044,QLD Typical Summer,-1
+04/12/2044,QLD Typical Summer,0
+05/12/2044,QLD Typical Summer,-1
+02/01/2045,QLD Typical Summer,0
+03/01/2045,QLD Typical Summer,-1
+12/01/2045,QLD Typical Summer,0
+14/01/2045,QLD Typical Summer,-1
+19/01/2045,QLD Typical Summer,0
+20/01/2045,QLD Typical Summer,-1
+01/04/2045,QLD Typical Summer,0
+01/11/2045,QLD Typical Summer,-1
+05/12/2045,QLD Typical Summer,0
+06/12/2045,QLD Typical Summer,-1
+29/12/2045,QLD Typical Summer,0
+30/12/2045,QLD Typical Summer,-1
+03/01/2046,QLD Typical Summer,0
+05/01/2046,QLD Typical Summer,-1
+22/01/2046,QLD Typical Summer,0
+23/01/2046,QLD Typical Summer,-1
+01/04/2046,QLD Typical Summer,0
+01/11/2046,QLD Typical Summer,-1
+16/11/2046,QLD Typical Summer,0
+17/11/2046,QLD Typical Summer,-1
+17/12/2046,QLD Typical Summer,0
+18/12/2046,QLD Typical Summer,-1
+30/12/2046,QLD Typical Summer,0
+31/12/2046,QLD Typical Summer,-1
+15/01/2047,QLD Typical Summer,0
+16/01/2047,QLD Typical Summer,-1
+17/01/2047,QLD Typical Summer,0
+19/01/2047,QLD Typical Summer,-1
+25/01/2047,QLD Typical Summer,0
+26/01/2047,QLD Typical Summer,-1
+05/03/2047,QLD Typical Summer,0
+06/03/2047,QLD Typical Summer,-1
+19/03/2047,QLD Typical Summer,0
+20/03/2047,QLD Typical Summer,-1
+01/04/2047,QLD Typical Summer,0
+01/11/2047,QLD Typical Summer,-1
+21/11/2047,QLD Typical Summer,0
+22/11/2047,QLD Typical Summer,-1
+29/01/2048,QLD Typical Summer,0
+30/01/2048,QLD Typical Summer,-1
+01/02/2048,QLD Typical Summer,0
+03/02/2048,QLD Typical Summer,-1
+16/02/2048,QLD Typical Summer,0
+17/02/2048,QLD Typical Summer,-1
+27/02/2048,QLD Typical Summer,0
+28/02/2048,QLD Typical Summer,-1
+01/04/2048,QLD Typical Summer,0
+01/11/2048,QLD Typical Summer,-1
+05/11/2048,QLD Typical Summer,0
+06/11/2048,QLD Typical Summer,-1
+13/11/2048,QLD Typical Summer,0
+14/11/2048,QLD Typical Summer,-1
+21/12/2048,QLD Typical Summer,0
+22/12/2048,QLD Typical Summer,-1
+01/01/2049,QLD Typical Summer,0
+02/01/2049,QLD Typical Summer,-1
+12/01/2049,QLD Typical Summer,0
+13/01/2049,QLD Typical Summer,-1
+14/01/2049,QLD Typical Summer,0
+15/01/2049,QLD Typical Summer,-1
+18/01/2049,QLD Typical Summer,0
+19/01/2049,QLD Typical Summer,-1
+11/02/2049,QLD Typical Summer,0
+13/02/2049,QLD Typical Summer,-1
+01/04/2049,QLD Typical Summer,0
+01/11/2049,QLD Typical Summer,-1
+25/12/2049,QLD Typical Summer,0
+26/12/2049,QLD Typical Summer,-1
+13/01/2050,QLD Typical Summer,0
+15/01/2050,QLD Typical Summer,-1
+31/01/2050,QLD Typical Summer,0
+01/02/2050,QLD Typical Summer,-1
+11/02/2050,QLD Typical Summer,0
+12/02/2050,QLD Typical Summer,-1
+01/04/2050,QLD Typical Summer,0
+01/11/2050,QLD Typical Summer,-1
+28/11/2050,QLD Typical Summer,0
+29/11/2050,QLD Typical Summer,-1
+21/12/2050,QLD Typical Summer,0
+22/12/2050,QLD Typical Summer,-1
+11/03/2051,QLD Typical Summer,0
+13/03/2051,QLD Typical Summer,-1
+24/03/2051,QLD Typical Summer,0
+25/03/2051,QLD Typical Summer,-1
+01/04/2051,QLD Typical Summer,0
+01/11/2051,QLD Typical Summer,-1
+08/11/2051,QLD Typical Summer,0
+09/11/2051,QLD Typical Summer,-1
+16/11/2051,QLD Typical Summer,0
+17/11/2051,QLD Typical Summer,-1
+05/12/2051,QLD Typical Summer,0
+08/12/2051,QLD Typical Summer,-1
+16/12/2051,QLD Typical Summer,0
+17/12/2051,QLD Typical Summer,-1
+03/02/2052,QLD Typical Summer,0
+04/02/2052,QLD Typical Summer,-1
+01/04/2052,QLD Typical Summer,0
+01/11/2052,QLD Typical Summer,-1
+06/12/2052,QLD Typical Summer,0
+08/12/2052,QLD Typical Summer,-1
+16/01/2053,QLD Typical Summer,0
+17/01/2053,QLD Typical Summer,-1
+07/02/2053,QLD Typical Summer,0
+08/02/2053,QLD Typical Summer,-1
+22/02/2053,QLD Typical Summer,0
+23/02/2053,QLD Typical Summer,-1
+01/04/2053,QLD Typical Summer,0
+01/11/2053,QLD Typical Summer,-1
+20/12/2053,QLD Typical Summer,0
+21/12/2053,QLD Typical Summer,-1
+01/02/2054,QLD Typical Summer,0
+03/02/2054,QLD Typical Summer,-1
+08/03/2054,QLD Typical Summer,0
+10/03/2054,QLD Typical Summer,-1
+01/04/2054,QLD Typical Summer,0
+01/11/2054,QLD Typical Summer,-1
+06/12/2054,QLD Typical Summer,0
+07/12/2054,QLD Typical Summer,-1
+03/02/2055,QLD Typical Summer,0
+04/02/2055,QLD Typical Summer,-1
+12/02/2055,QLD Typical Summer,0
+14/02/2055,QLD Typical Summer,-1
+16/03/2055,QLD Typical Summer,0
+18/03/2055,QLD Typical Summer,-1
+01/04/2055,QLD Typical Summer,0
+01/11/2055,QLD Typical Summer,-1
+15/12/2055,QLD Typical Summer,0
+16/12/2055,QLD Typical Summer,-1
+28/12/2055,QLD Typical Summer,0
+30/12/2055,QLD Typical Summer,-1
+22/01/2056,QLD Typical Summer,0
+23/01/2056,QLD Typical Summer,-1
+27/01/2056,QLD Typical Summer,0
+28/01/2056,QLD Typical Summer,-1
+01/04/2056,QLD Typical Summer,0
+01/11/2056,QLD Typical Summer,-1
+08/12/2056,QLD Typical Summer,0
+09/12/2056,QLD Typical Summer,-1
+16/01/2057,QLD Typical Summer,0
+17/01/2057,QLD Typical Summer,-1
+22/01/2057,QLD Typical Summer,0
+23/01/2057,QLD Typical Summer,-1
+24/01/2057,QLD Typical Summer,0
+25/01/2057,QLD Typical Summer,-1
+16/02/2057,QLD Typical Summer,0
+17/02/2057,QLD Typical Summer,-1
+01/04/2057,QLD Typical Summer,0
+01/11/2057,QLD Typical Summer,-1
+16/11/2057,QLD Typical Summer,0
+17/11/2057,QLD Typical Summer,-1
+17/12/2057,QLD Typical Summer,0
+18/12/2057,QLD Typical Summer,-1
+30/12/2057,QLD Typical Summer,0
+31/12/2057,QLD Typical Summer,-1
+15/01/2058,QLD Typical Summer,0
+16/01/2058,QLD Typical Summer,-1
+17/01/2058,QLD Typical Summer,0
+19/01/2058,QLD Typical Summer,-1
+25/01/2058,QLD Typical Summer,0
+26/01/2058,QLD Typical Summer,-1
+05/03/2058,QLD Typical Summer,0
+06/03/2058,QLD Typical Summer,-1
+19/03/2058,QLD Typical Summer,0
+20/03/2058,QLD Typical Summer,-1
+01/04/2058,QLD Typical Summer,0
+30/06/2021,QLD Winter,-1
+01/11/2021,QLD Winter,0
+01/04/2022,QLD Winter,-1
+01/11/2022,QLD Winter,0
+01/04/2023,QLD Winter,-1
+01/11/2023,QLD Winter,0
+01/04/2024,QLD Winter,-1
+01/11/2024,QLD Winter,0
+01/04/2025,QLD Winter,-1
+01/11/2025,QLD Winter,0
+01/04/2026,QLD Winter,-1
+01/11/2026,QLD Winter,0
+01/04/2027,QLD Winter,-1
+01/11/2027,QLD Winter,0
+01/04/2028,QLD Winter,-1
+01/11/2028,QLD Winter,0
+01/04/2029,QLD Winter,-1
+01/11/2029,QLD Winter,0
+01/04/2030,QLD Winter,-1
+01/11/2030,QLD Winter,0
+01/04/2031,QLD Winter,-1
+01/11/2031,QLD Winter,0
+01/04/2032,QLD Winter,-1
+01/11/2032,QLD Winter,0
+01/04/2033,QLD Winter,-1
+01/11/2033,QLD Winter,0
+01/04/2034,QLD Winter,-1
+01/11/2034,QLD Winter,0
+01/04/2035,QLD Winter,-1
+01/11/2035,QLD Winter,0
+01/04/2036,QLD Winter,-1
+01/11/2036,QLD Winter,0
+01/04/2037,QLD Winter,-1
+01/11/2037,QLD Winter,0
+01/04/2038,QLD Winter,-1
+01/11/2038,QLD Winter,0
+01/04/2039,QLD Winter,-1
+01/11/2039,QLD Winter,0
+01/04/2040,QLD Winter,-1
+01/11/2040,QLD Winter,0
+01/04/2041,QLD Winter,-1
+01/11/2041,QLD Winter,0
+01/04/2042,QLD Winter,-1
+01/11/2042,QLD Winter,0
+01/04/2043,QLD Winter,-1
+01/11/2043,QLD Winter,0
+01/04/2044,QLD Winter,-1
+01/11/2044,QLD Winter,0
+01/04/2045,QLD Winter,-1
+01/11/2045,QLD Winter,0
+01/04/2046,QLD Winter,-1
+01/11/2046,QLD Winter,0
+01/04/2047,QLD Winter,-1
+01/11/2047,QLD Winter,0
+01/04/2048,QLD Winter,-1
+01/11/2048,QLD Winter,0
+01/04/2049,QLD Winter,-1
+01/11/2049,QLD Winter,0
+01/04/2050,QLD Winter,-1
+01/11/2050,QLD Winter,0
+01/04/2051,QLD Winter,-1
+01/11/2051,QLD Winter,0
+01/04/2052,QLD Winter,-1
+01/11/2052,QLD Winter,0
+01/04/2053,QLD Winter,-1
+01/11/2053,QLD Winter,0
+01/04/2054,QLD Winter,-1
+01/11/2054,QLD Winter,0
+01/04/2055,QLD Winter,-1
+01/11/2055,QLD Winter,0
+01/04/2056,QLD Winter,-1
+01/11/2056,QLD Winter,0
+01/04/2057,QLD Winter,-1
+01/11/2057,QLD Winter,0
+01/04/2058,QLD Winter,-1
+30/06/2021,SA Hot Day,0
+17/12/2021,SA Hot Day,-1
+18/12/2021,SA Hot Day,0
+30/12/2021,SA Hot Day,-1
+01/01/2022,SA Hot Day,0
+10/01/2022,SA Hot Day,-1
+12/01/2022,SA Hot Day,0
+27/12/2022,SA Hot Day,-1
+28/12/2022,SA Hot Day,0
+14/01/2023,SA Hot Day,-1
+15/01/2023,SA Hot Day,0
+16/02/2023,SA Hot Day,-1
+17/02/2023,SA Hot Day,0
+22/02/2023,SA Hot Day,-1
+24/02/2023,SA Hot Day,0
+10/11/2023,SA Hot Day,-1
+11/11/2023,SA Hot Day,0
+23/01/2024,SA Hot Day,-1
+24/01/2024,SA Hot Day,0
+04/02/2024,SA Hot Day,-1
+05/02/2024,SA Hot Day,0
+09/03/2024,SA Hot Day,-1
+10/03/2024,SA Hot Day,0
+11/03/2024,SA Hot Day,-1
+12/03/2024,SA Hot Day,0
+03/02/2025,SA Hot Day,-1
+04/02/2025,SA Hot Day,0
+12/02/2025,SA Hot Day,-1
+13/02/2025,SA Hot Day,0
+22/02/2025,SA Hot Day,-1
+23/02/2025,SA Hot Day,0
+10/03/2025,SA Hot Day,-1
+11/03/2025,SA Hot Day,0
+15/03/2025,SA Hot Day,-1
+16/03/2025,SA Hot Day,0
+02/01/2026,SA Hot Day,-1
+03/01/2026,SA Hot Day,0
+06/01/2026,SA Hot Day,-1
+08/01/2026,SA Hot Day,0
+14/02/2026,SA Hot Day,-1
+15/02/2026,SA Hot Day,0
+22/02/2026,SA Hot Day,-1
+23/02/2026,SA Hot Day,0
+04/12/2026,SA Hot Day,-1
+05/12/2026,SA Hot Day,0
+30/12/2026,SA Hot Day,-1
+31/12/2026,SA Hot Day,0
+29/01/2027,SA Hot Day,-1
+01/02/2027,SA Hot Day,0
+24/12/2027,SA Hot Day,-1
+25/12/2027,SA Hot Day,0
+01/01/2028,SA Hot Day,-1
+03/01/2028,SA Hot Day,0
+24/02/2028,SA Hot Day,-1
+26/02/2028,SA Hot Day,0
+23/12/2028,SA Hot Day,-1
+24/12/2028,SA Hot Day,0
+03/01/2029,SA Hot Day,-1
+05/01/2029,SA Hot Day,0
+07/01/2029,SA Hot Day,-1
+08/01/2029,SA Hot Day,0
+17/01/2029,SA Hot Day,-1
+18/01/2029,SA Hot Day,0
+19/12/2029,SA Hot Day,-1
+20/12/2029,SA Hot Day,0
+13/01/2030,SA Hot Day,-1
+18/01/2030,SA Hot Day,0
+28/01/2030,SA Hot Day,-1
+29/01/2030,SA Hot Day,0
+01/02/2030,SA Hot Day,-1
+03/02/2030,SA Hot Day,0
+08/02/2030,SA Hot Day,-1
+09/02/2030,SA Hot Day,0
+11/02/2030,SA Hot Day,-1
+13/02/2030,SA Hot Day,0
+02/01/2031,SA Hot Day,-1
+03/01/2031,SA Hot Day,0
+06/01/2031,SA Hot Day,-1
+08/01/2031,SA Hot Day,0
+14/02/2031,SA Hot Day,-1
+15/02/2031,SA Hot Day,0
+22/02/2031,SA Hot Day,-1
+23/02/2031,SA Hot Day,0
+06/12/2031,SA Hot Day,-1
+07/12/2031,SA Hot Day,0
+16/12/2031,SA Hot Day,-1
+18/12/2031,SA Hot Day,0
+19/12/2031,SA Hot Day,-1
+20/12/2031,SA Hot Day,0
+31/12/2031,SA Hot Day,-1
+01/01/2032,SA Hot Day,0
+25/12/2032,SA Hot Day,-1
+26/12/2032,SA Hot Day,0
+07/01/2033,SA Hot Day,-1
+08/01/2033,SA Hot Day,0
+17/01/2033,SA Hot Day,-1
+18/01/2033,SA Hot Day,0
+08/02/2033,SA Hot Day,-1
+10/02/2033,SA Hot Day,0
+06/01/2034,SA Hot Day,-1
+07/01/2034,SA Hot Day,0
+18/01/2034,SA Hot Day,-1
+20/01/2034,SA Hot Day,0
+28/01/2034,SA Hot Day,-1
+29/01/2034,SA Hot Day,0
+07/02/2034,SA Hot Day,-1
+08/02/2034,SA Hot Day,0
+27/12/2034,SA Hot Day,-1
+28/12/2034,SA Hot Day,0
+03/01/2035,SA Hot Day,-1
+04/01/2035,SA Hot Day,0
+15/01/2035,SA Hot Day,-1
+16/01/2035,SA Hot Day,0
+23/01/2035,SA Hot Day,-1
+25/01/2035,SA Hot Day,0
+01/03/2035,SA Hot Day,-1
+02/03/2035,SA Hot Day,0
+20/11/2035,SA Hot Day,-1
+21/11/2035,SA Hot Day,0
+17/12/2035,SA Hot Day,-1
+21/12/2035,SA Hot Day,0
+27/12/2035,SA Hot Day,-1
+28/12/2035,SA Hot Day,0
+03/01/2036,SA Hot Day,-1
+04/01/2036,SA Hot Day,0
+09/01/2036,SA Hot Day,-1
+10/01/2036,SA Hot Day,0
+30/01/2036,SA Hot Day,-1
+31/01/2036,SA Hot Day,0
+21/11/2036,SA Hot Day,-1
+22/11/2036,SA Hot Day,0
+27/11/2036,SA Hot Day,-1
+28/11/2036,SA Hot Day,0
+23/01/2037,SA Hot Day,-1
+25/01/2037,SA Hot Day,0
+18/02/2037,SA Hot Day,-1
+19/02/2037,SA Hot Day,0
+17/12/2037,SA Hot Day,-1
+18/12/2037,SA Hot Day,0
+30/12/2037,SA Hot Day,-1
+01/01/2038,SA Hot Day,0
+10/01/2038,SA Hot Day,-1
+12/01/2038,SA Hot Day,0
+27/12/2038,SA Hot Day,-1
+28/12/2038,SA Hot Day,0
+14/01/2039,SA Hot Day,-1
+15/01/2039,SA Hot Day,0
+16/02/2039,SA Hot Day,-1
+17/02/2039,SA Hot Day,0
+22/02/2039,SA Hot Day,-1
+24/02/2039,SA Hot Day,0
+10/11/2039,SA Hot Day,-1
+11/11/2039,SA Hot Day,0
+23/01/2040,SA Hot Day,-1
+24/01/2040,SA Hot Day,0
+04/02/2040,SA Hot Day,-1
+05/02/2040,SA Hot Day,0
+09/03/2040,SA Hot Day,-1
+10/03/2040,SA Hot Day,0
+11/03/2040,SA Hot Day,-1
+12/03/2040,SA Hot Day,0
+03/02/2041,SA Hot Day,-1
+04/02/2041,SA Hot Day,0
+12/02/2041,SA Hot Day,-1
+13/02/2041,SA Hot Day,0
+22/02/2041,SA Hot Day,-1
+23/02/2041,SA Hot Day,0
+10/03/2041,SA Hot Day,-1
+11/03/2041,SA Hot Day,0
+15/03/2041,SA Hot Day,-1
+16/03/2041,SA Hot Day,0
+02/01/2042,SA Hot Day,-1
+03/01/2042,SA Hot Day,0
+06/01/2042,SA Hot Day,-1
+08/01/2042,SA Hot Day,0
+14/02/2042,SA Hot Day,-1
+15/02/2042,SA Hot Day,0
+22/02/2042,SA Hot Day,-1
+23/02/2042,SA Hot Day,0
+04/12/2042,SA Hot Day,-1
+05/12/2042,SA Hot Day,0
+30/12/2042,SA Hot Day,-1
+31/12/2042,SA Hot Day,0
+29/01/2043,SA Hot Day,-1
+01/02/2043,SA Hot Day,0
+24/12/2043,SA Hot Day,-1
+25/12/2043,SA Hot Day,0
+01/01/2044,SA Hot Day,-1
+03/01/2044,SA Hot Day,0
+24/02/2044,SA Hot Day,-1
+26/02/2044,SA Hot Day,0
+23/12/2044,SA Hot Day,-1
+24/12/2044,SA Hot Day,0
+03/01/2045,SA Hot Day,-1
+05/01/2045,SA Hot Day,0
+07/01/2045,SA Hot Day,-1
+08/01/2045,SA Hot Day,0
+17/01/2045,SA Hot Day,-1
+18/01/2045,SA Hot Day,0
+19/12/2045,SA Hot Day,-1
+20/12/2045,SA Hot Day,0
+13/01/2046,SA Hot Day,-1
+18/01/2046,SA Hot Day,0
+28/01/2046,SA Hot Day,-1
+29/01/2046,SA Hot Day,0
+01/02/2046,SA Hot Day,-1
+03/02/2046,SA Hot Day,0
+08/02/2046,SA Hot Day,-1
+09/02/2046,SA Hot Day,0
+11/02/2046,SA Hot Day,-1
+13/02/2046,SA Hot Day,0
+02/01/2047,SA Hot Day,-1
+03/01/2047,SA Hot Day,0
+06/01/2047,SA Hot Day,-1
+08/01/2047,SA Hot Day,0
+14/02/2047,SA Hot Day,-1
+15/02/2047,SA Hot Day,0
+22/02/2047,SA Hot Day,-1
+23/02/2047,SA Hot Day,0
+06/12/2047,SA Hot Day,-1
+07/12/2047,SA Hot Day,0
+16/12/2047,SA Hot Day,-1
+18/12/2047,SA Hot Day,0
+19/12/2047,SA Hot Day,-1
+20/12/2047,SA Hot Day,0
+31/12/2047,SA Hot Day,-1
+01/01/2048,SA Hot Day,0
+25/12/2048,SA Hot Day,-1
+26/12/2048,SA Hot Day,0
+07/01/2049,SA Hot Day,-1
+08/01/2049,SA Hot Day,0
+17/01/2049,SA Hot Day,-1
+18/01/2049,SA Hot Day,0
+08/02/2049,SA Hot Day,-1
+10/02/2049,SA Hot Day,0
+06/01/2050,SA Hot Day,-1
+07/01/2050,SA Hot Day,0
+18/01/2050,SA Hot Day,-1
+20/01/2050,SA Hot Day,0
+28/01/2050,SA Hot Day,-1
+29/01/2050,SA Hot Day,0
+07/02/2050,SA Hot Day,-1
+08/02/2050,SA Hot Day,0
+27/12/2050,SA Hot Day,-1
+28/12/2050,SA Hot Day,0
+03/01/2051,SA Hot Day,-1
+04/01/2051,SA Hot Day,0
+15/01/2051,SA Hot Day,-1
+16/01/2051,SA Hot Day,0
+23/01/2051,SA Hot Day,-1
+25/01/2051,SA Hot Day,0
+01/03/2051,SA Hot Day,-1
+02/03/2051,SA Hot Day,0
+20/11/2051,SA Hot Day,-1
+21/11/2051,SA Hot Day,0
+17/12/2051,SA Hot Day,-1
+21/12/2051,SA Hot Day,0
+27/12/2051,SA Hot Day,-1
+28/12/2051,SA Hot Day,0
+03/01/2052,SA Hot Day,-1
+04/01/2052,SA Hot Day,0
+09/01/2052,SA Hot Day,-1
+10/01/2052,SA Hot Day,0
+30/01/2052,SA Hot Day,-1
+31/01/2052,SA Hot Day,0
+21/11/2052,SA Hot Day,-1
+22/11/2052,SA Hot Day,0
+27/11/2052,SA Hot Day,-1
+28/11/2052,SA Hot Day,0
+23/01/2053,SA Hot Day,-1
+25/01/2053,SA Hot Day,0
+18/02/2053,SA Hot Day,-1
+19/02/2053,SA Hot Day,0
+17/12/2053,SA Hot Day,-1
+18/12/2053,SA Hot Day,0
+30/12/2053,SA Hot Day,-1
+01/01/2054,SA Hot Day,0
+10/01/2054,SA Hot Day,-1
+12/01/2054,SA Hot Day,0
+27/12/2054,SA Hot Day,-1
+28/12/2054,SA Hot Day,0
+14/01/2055,SA Hot Day,-1
+15/01/2055,SA Hot Day,0
+16/02/2055,SA Hot Day,-1
+17/02/2055,SA Hot Day,0
+22/02/2055,SA Hot Day,-1
+24/02/2055,SA Hot Day,0
+10/11/2055,SA Hot Day,-1
+11/11/2055,SA Hot Day,0
+23/01/2056,SA Hot Day,-1
+24/01/2056,SA Hot Day,0
+04/02/2056,SA Hot Day,-1
+05/02/2056,SA Hot Day,0
+09/03/2056,SA Hot Day,-1
+10/03/2056,SA Hot Day,0
+11/03/2056,SA Hot Day,-1
+12/03/2056,SA Hot Day,0
+03/02/2057,SA Hot Day,-1
+04/02/2057,SA Hot Day,0
+12/02/2057,SA Hot Day,-1
+13/02/2057,SA Hot Day,0
+22/02/2057,SA Hot Day,-1
+23/02/2057,SA Hot Day,0
+10/03/2057,SA Hot Day,-1
+11/03/2057,SA Hot Day,0
+15/03/2057,SA Hot Day,-1
+16/03/2057,SA Hot Day,0
+02/01/2058,SA Hot Day,-1
+03/01/2058,SA Hot Day,0
+06/01/2058,SA Hot Day,-1
+08/01/2058,SA Hot Day,0
+14/02/2058,SA Hot Day,-1
+15/02/2058,SA Hot Day,0
+22/02/2058,SA Hot Day,-1
+23/02/2058,SA Hot Day,0
+30/06/2021,SA Typical Summer,0
+01/11/2021,SA Typical Summer,-1
+17/12/2021,SA Typical Summer,0
+18/12/2021,SA Typical Summer,-1
+30/12/2021,SA Typical Summer,0
+01/01/2022,SA Typical Summer,-1
+10/01/2022,SA Typical Summer,0
+12/01/2022,SA Typical Summer,-1
+01/04/2022,SA Typical Summer,0
+01/11/2022,SA Typical Summer,-1
+27/12/2022,SA Typical Summer,0
+28/12/2022,SA Typical Summer,-1
+14/01/2023,SA Typical Summer,0
+15/01/2023,SA Typical Summer,-1
+16/02/2023,SA Typical Summer,0
+17/02/2023,SA Typical Summer,-1
+22/02/2023,SA Typical Summer,0
+24/02/2023,SA Typical Summer,-1
+01/04/2023,SA Typical Summer,0
+01/11/2023,SA Typical Summer,-1
+10/11/2023,SA Typical Summer,0
+11/11/2023,SA Typical Summer,-1
+23/01/2024,SA Typical Summer,0
+24/01/2024,SA Typical Summer,-1
+04/02/2024,SA Typical Summer,0
+05/02/2024,SA Typical Summer,-1
+09/03/2024,SA Typical Summer,0
+10/03/2024,SA Typical Summer,-1
+11/03/2024,SA Typical Summer,0
+12/03/2024,SA Typical Summer,-1
+01/04/2024,SA Typical Summer,0
+01/11/2024,SA Typical Summer,-1
+03/02/2025,SA Typical Summer,0
+04/02/2025,SA Typical Summer,-1
+12/02/2025,SA Typical Summer,0
+13/02/2025,SA Typical Summer,-1
+22/02/2025,SA Typical Summer,0
+23/02/2025,SA Typical Summer,-1
+10/03/2025,SA Typical Summer,0
+11/03/2025,SA Typical Summer,-1
+15/03/2025,SA Typical Summer,0
+16/03/2025,SA Typical Summer,-1
+01/04/2025,SA Typical Summer,0
+01/11/2025,SA Typical Summer,-1
+02/01/2026,SA Typical Summer,0
+03/01/2026,SA Typical Summer,-1
+06/01/2026,SA Typical Summer,0
+08/01/2026,SA Typical Summer,-1
+14/02/2026,SA Typical Summer,0
+15/02/2026,SA Typical Summer,-1
+22/02/2026,SA Typical Summer,0
+23/02/2026,SA Typical Summer,-1
+01/04/2026,SA Typical Summer,0
+01/11/2026,SA Typical Summer,-1
+04/12/2026,SA Typical Summer,0
+05/12/2026,SA Typical Summer,-1
+30/12/2026,SA Typical Summer,0
+31/12/2026,SA Typical Summer,-1
+29/01/2027,SA Typical Summer,0
+01/02/2027,SA Typical Summer,-1
+01/04/2027,SA Typical Summer,0
+01/11/2027,SA Typical Summer,-1
+24/12/2027,SA Typical Summer,0
+25/12/2027,SA Typical Summer,-1
+01/01/2028,SA Typical Summer,0
+03/01/2028,SA Typical Summer,-1
+24/02/2028,SA Typical Summer,0
+26/02/2028,SA Typical Summer,-1
+01/04/2028,SA Typical Summer,0
+01/11/2028,SA Typical Summer,-1
+23/12/2028,SA Typical Summer,0
+24/12/2028,SA Typical Summer,-1
+03/01/2029,SA Typical Summer,0
+05/01/2029,SA Typical Summer,-1
+07/01/2029,SA Typical Summer,0
+08/01/2029,SA Typical Summer,-1
+17/01/2029,SA Typical Summer,0
+18/01/2029,SA Typical Summer,-1
+01/04/2029,SA Typical Summer,0
+01/11/2029,SA Typical Summer,-1
+19/12/2029,SA Typical Summer,0
+20/12/2029,SA Typical Summer,-1
+13/01/2030,SA Typical Summer,0
+18/01/2030,SA Typical Summer,-1
+28/01/2030,SA Typical Summer,0
+29/01/2030,SA Typical Summer,-1
+01/02/2030,SA Typical Summer,0
+03/02/2030,SA Typical Summer,-1
+08/02/2030,SA Typical Summer,0
+09/02/2030,SA Typical Summer,-1
+11/02/2030,SA Typical Summer,0
+13/02/2030,SA Typical Summer,-1
+01/04/2030,SA Typical Summer,0
+01/11/2030,SA Typical Summer,-1
+02/01/2031,SA Typical Summer,0
+03/01/2031,SA Typical Summer,-1
+06/01/2031,SA Typical Summer,0
+08/01/2031,SA Typical Summer,-1
+14/02/2031,SA Typical Summer,0
+15/02/2031,SA Typical Summer,-1
+22/02/2031,SA Typical Summer,0
+23/02/2031,SA Typical Summer,-1
+01/04/2031,SA Typical Summer,0
+01/11/2031,SA Typical Summer,-1
+06/12/2031,SA Typical Summer,0
+07/12/2031,SA Typical Summer,-1
+16/12/2031,SA Typical Summer,0
+18/12/2031,SA Typical Summer,-1
+19/12/2031,SA Typical Summer,0
+20/12/2031,SA Typical Summer,-1
+31/12/2031,SA Typical Summer,0
+01/01/2032,SA Typical Summer,-1
+01/04/2032,SA Typical Summer,0
+01/11/2032,SA Typical Summer,-1
+25/12/2032,SA Typical Summer,0
+26/12/2032,SA Typical Summer,-1
+07/01/2033,SA Typical Summer,0
+08/01/2033,SA Typical Summer,-1
+17/01/2033,SA Typical Summer,0
+18/01/2033,SA Typical Summer,-1
+08/02/2033,SA Typical Summer,0
+10/02/2033,SA Typical Summer,-1
+01/04/2033,SA Typical Summer,0
+01/11/2033,SA Typical Summer,-1
+06/01/2034,SA Typical Summer,0
+07/01/2034,SA Typical Summer,-1
+18/01/2034,SA Typical Summer,0
+20/01/2034,SA Typical Summer,-1
+28/01/2034,SA Typical Summer,0
+29/01/2034,SA Typical Summer,-1
+07/02/2034,SA Typical Summer,0
+08/02/2034,SA Typical Summer,-1
+01/04/2034,SA Typical Summer,0
+01/11/2034,SA Typical Summer,-1
+27/12/2034,SA Typical Summer,0
+28/12/2034,SA Typical Summer,-1
+03/01/2035,SA Typical Summer,0
+04/01/2035,SA Typical Summer,-1
+15/01/2035,SA Typical Summer,0
+16/01/2035,SA Typical Summer,-1
+23/01/2035,SA Typical Summer,0
+25/01/2035,SA Typical Summer,-1
+01/03/2035,SA Typical Summer,0
+02/03/2035,SA Typical Summer,-1
+01/04/2035,SA Typical Summer,0
+01/11/2035,SA Typical Summer,-1
+20/11/2035,SA Typical Summer,0
+21/11/2035,SA Typical Summer,-1
+17/12/2035,SA Typical Summer,0
+21/12/2035,SA Typical Summer,-1
+27/12/2035,SA Typical Summer,0
+28/12/2035,SA Typical Summer,-1
+03/01/2036,SA Typical Summer,0
+04/01/2036,SA Typical Summer,-1
+09/01/2036,SA Typical Summer,0
+10/01/2036,SA Typical Summer,-1
+30/01/2036,SA Typical Summer,0
+31/01/2036,SA Typical Summer,-1
+01/04/2036,SA Typical Summer,0
+01/11/2036,SA Typical Summer,-1
+21/11/2036,SA Typical Summer,0
+22/11/2036,SA Typical Summer,-1
+27/11/2036,SA Typical Summer,0
+28/11/2036,SA Typical Summer,-1
+23/01/2037,SA Typical Summer,0
+25/01/2037,SA Typical Summer,-1
+18/02/2037,SA Typical Summer,0
+19/02/2037,SA Typical Summer,-1
+01/04/2037,SA Typical Summer,0
+01/11/2037,SA Typical Summer,-1
+17/12/2037,SA Typical Summer,0
+18/12/2037,SA Typical Summer,-1
+30/12/2037,SA Typical Summer,0
+01/01/2038,SA Typical Summer,-1
+10/01/2038,SA Typical Summer,0
+12/01/2038,SA Typical Summer,-1
+01/04/2038,SA Typical Summer,0
+01/11/2038,SA Typical Summer,-1
+27/12/2038,SA Typical Summer,0
+28/12/2038,SA Typical Summer,-1
+14/01/2039,SA Typical Summer,0
+15/01/2039,SA Typical Summer,-1
+16/02/2039,SA Typical Summer,0
+17/02/2039,SA Typical Summer,-1
+22/02/2039,SA Typical Summer,0
+24/02/2039,SA Typical Summer,-1
+01/04/2039,SA Typical Summer,0
+01/11/2039,SA Typical Summer,-1
+10/11/2039,SA Typical Summer,0
+11/11/2039,SA Typical Summer,-1
+23/01/2040,SA Typical Summer,0
+24/01/2040,SA Typical Summer,-1
+04/02/2040,SA Typical Summer,0
+05/02/2040,SA Typical Summer,-1
+09/03/2040,SA Typical Summer,0
+10/03/2040,SA Typical Summer,-1
+11/03/2040,SA Typical Summer,0
+12/03/2040,SA Typical Summer,-1
+01/04/2040,SA Typical Summer,0
+01/11/2040,SA Typical Summer,-1
+03/02/2041,SA Typical Summer,0
+04/02/2041,SA Typical Summer,-1
+12/02/2041,SA Typical Summer,0
+13/02/2041,SA Typical Summer,-1
+22/02/2041,SA Typical Summer,0
+23/02/2041,SA Typical Summer,-1
+10/03/2041,SA Typical Summer,0
+11/03/2041,SA Typical Summer,-1
+15/03/2041,SA Typical Summer,0
+16/03/2041,SA Typical Summer,-1
+01/04/2041,SA Typical Summer,0
+01/11/2041,SA Typical Summer,-1
+02/01/2042,SA Typical Summer,0
+03/01/2042,SA Typical Summer,-1
+06/01/2042,SA Typical Summer,0
+08/01/2042,SA Typical Summer,-1
+14/02/2042,SA Typical Summer,0
+15/02/2042,SA Typical Summer,-1
+22/02/2042,SA Typical Summer,0
+23/02/2042,SA Typical Summer,-1
+01/04/2042,SA Typical Summer,0
+01/11/2042,SA Typical Summer,-1
+04/12/2042,SA Typical Summer,0
+05/12/2042,SA Typical Summer,-1
+30/12/2042,SA Typical Summer,0
+31/12/2042,SA Typical Summer,-1
+29/01/2043,SA Typical Summer,0
+01/02/2043,SA Typical Summer,-1
+01/04/2043,SA Typical Summer,0
+01/11/2043,SA Typical Summer,-1
+24/12/2043,SA Typical Summer,0
+25/12/2043,SA Typical Summer,-1
+01/01/2044,SA Typical Summer,0
+03/01/2044,SA Typical Summer,-1
+24/02/2044,SA Typical Summer,0
+26/02/2044,SA Typical Summer,-1
+01/04/2044,SA Typical Summer,0
+01/11/2044,SA Typical Summer,-1
+23/12/2044,SA Typical Summer,0
+24/12/2044,SA Typical Summer,-1
+03/01/2045,SA Typical Summer,0
+05/01/2045,SA Typical Summer,-1
+07/01/2045,SA Typical Summer,0
+08/01/2045,SA Typical Summer,-1
+17/01/2045,SA Typical Summer,0
+18/01/2045,SA Typical Summer,-1
+01/04/2045,SA Typical Summer,0
+01/11/2045,SA Typical Summer,-1
+19/12/2045,SA Typical Summer,0
+20/12/2045,SA Typical Summer,-1
+13/01/2046,SA Typical Summer,0
+18/01/2046,SA Typical Summer,-1
+28/01/2046,SA Typical Summer,0
+29/01/2046,SA Typical Summer,-1
+01/02/2046,SA Typical Summer,0
+03/02/2046,SA Typical Summer,-1
+08/02/2046,SA Typical Summer,0
+09/02/2046,SA Typical Summer,-1
+11/02/2046,SA Typical Summer,0
+13/02/2046,SA Typical Summer,-1
+01/04/2046,SA Typical Summer,0
+01/11/2046,SA Typical Summer,-1
+02/01/2047,SA Typical Summer,0
+03/01/2047,SA Typical Summer,-1
+06/01/2047,SA Typical Summer,0
+08/01/2047,SA Typical Summer,-1
+14/02/2047,SA Typical Summer,0
+15/02/2047,SA Typical Summer,-1
+22/02/2047,SA Typical Summer,0
+23/02/2047,SA Typical Summer,-1
+01/04/2047,SA Typical Summer,0
+01/11/2047,SA Typical Summer,-1
+06/12/2047,SA Typical Summer,0
+07/12/2047,SA Typical Summer,-1
+16/12/2047,SA Typical Summer,0
+18/12/2047,SA Typical Summer,-1
+19/12/2047,SA Typical Summer,0
+20/12/2047,SA Typical Summer,-1
+31/12/2047,SA Typical Summer,0
+01/01/2048,SA Typical Summer,-1
+01/04/2048,SA Typical Summer,0
+01/11/2048,SA Typical Summer,-1
+25/12/2048,SA Typical Summer,0
+26/12/2048,SA Typical Summer,-1
+07/01/2049,SA Typical Summer,0
+08/01/2049,SA Typical Summer,-1
+17/01/2049,SA Typical Summer,0
+18/01/2049,SA Typical Summer,-1
+08/02/2049,SA Typical Summer,0
+10/02/2049,SA Typical Summer,-1
+01/04/2049,SA Typical Summer,0
+01/11/2049,SA Typical Summer,-1
+06/01/2050,SA Typical Summer,0
+07/01/2050,SA Typical Summer,-1
+18/01/2050,SA Typical Summer,0
+20/01/2050,SA Typical Summer,-1
+28/01/2050,SA Typical Summer,0
+29/01/2050,SA Typical Summer,-1
+07/02/2050,SA Typical Summer,0
+08/02/2050,SA Typical Summer,-1
+01/04/2050,SA Typical Summer,0
+01/11/2050,SA Typical Summer,-1
+27/12/2050,SA Typical Summer,0
+28/12/2050,SA Typical Summer,-1
+03/01/2051,SA Typical Summer,0
+04/01/2051,SA Typical Summer,-1
+15/01/2051,SA Typical Summer,0
+16/01/2051,SA Typical Summer,-1
+23/01/2051,SA Typical Summer,0
+25/01/2051,SA Typical Summer,-1
+01/03/2051,SA Typical Summer,0
+02/03/2051,SA Typical Summer,-1
+01/04/2051,SA Typical Summer,0
+01/11/2051,SA Typical Summer,-1
+20/11/2051,SA Typical Summer,0
+21/11/2051,SA Typical Summer,-1
+17/12/2051,SA Typical Summer,0
+21/12/2051,SA Typical Summer,-1
+27/12/2051,SA Typical Summer,0
+28/12/2051,SA Typical Summer,-1
+03/01/2052,SA Typical Summer,0
+04/01/2052,SA Typical Summer,-1
+09/01/2052,SA Typical Summer,0
+10/01/2052,SA Typical Summer,-1
+30/01/2052,SA Typical Summer,0
+31/01/2052,SA Typical Summer,-1
+01/04/2052,SA Typical Summer,0
+01/11/2052,SA Typical Summer,-1
+21/11/2052,SA Typical Summer,0
+22/11/2052,SA Typical Summer,-1
+27/11/2052,SA Typical Summer,0
+28/11/2052,SA Typical Summer,-1
+23/01/2053,SA Typical Summer,0
+25/01/2053,SA Typical Summer,-1
+18/02/2053,SA Typical Summer,0
+19/02/2053,SA Typical Summer,-1
+01/04/2053,SA Typical Summer,0
+01/11/2053,SA Typical Summer,-1
+17/12/2053,SA Typical Summer,0
+18/12/2053,SA Typical Summer,-1
+30/12/2053,SA Typical Summer,0
+01/01/2054,SA Typical Summer,-1
+10/01/2054,SA Typical Summer,0
+12/01/2054,SA Typical Summer,-1
+01/04/2054,SA Typical Summer,0
+01/11/2054,SA Typical Summer,-1
+27/12/2054,SA Typical Summer,0
+28/12/2054,SA Typical Summer,-1
+14/01/2055,SA Typical Summer,0
+15/01/2055,SA Typical Summer,-1
+16/02/2055,SA Typical Summer,0
+17/02/2055,SA Typical Summer,-1
+22/02/2055,SA Typical Summer,0
+24/02/2055,SA Typical Summer,-1
+01/04/2055,SA Typical Summer,0
+01/11/2055,SA Typical Summer,-1
+10/11/2055,SA Typical Summer,0
+11/11/2055,SA Typical Summer,-1
+23/01/2056,SA Typical Summer,0
+24/01/2056,SA Typical Summer,-1
+04/02/2056,SA Typical Summer,0
+05/02/2056,SA Typical Summer,-1
+09/03/2056,SA Typical Summer,0
+10/03/2056,SA Typical Summer,-1
+11/03/2056,SA Typical Summer,0
+12/03/2056,SA Typical Summer,-1
+01/04/2056,SA Typical Summer,0
+01/11/2056,SA Typical Summer,-1
+03/02/2057,SA Typical Summer,0
+04/02/2057,SA Typical Summer,-1
+12/02/2057,SA Typical Summer,0
+13/02/2057,SA Typical Summer,-1
+22/02/2057,SA Typical Summer,0
+23/02/2057,SA Typical Summer,-1
+10/03/2057,SA Typical Summer,0
+11/03/2057,SA Typical Summer,-1
+15/03/2057,SA Typical Summer,0
+16/03/2057,SA Typical Summer,-1
+01/04/2057,SA Typical Summer,0
+01/11/2057,SA Typical Summer,-1
+02/01/2058,SA Typical Summer,0
+03/01/2058,SA Typical Summer,-1
+06/01/2058,SA Typical Summer,0
+08/01/2058,SA Typical Summer,-1
+14/02/2058,SA Typical Summer,0
+15/02/2058,SA Typical Summer,-1
+22/02/2058,SA Typical Summer,0
+23/02/2058,SA Typical Summer,-1
+01/04/2058,SA Typical Summer,0
+30/06/2021,SA Winter,-1
+01/11/2021,SA Winter,0
+01/04/2022,SA Winter,-1
+01/11/2022,SA Winter,0
+01/04/2023,SA Winter,-1
+01/11/2023,SA Winter,0
+01/04/2024,SA Winter,-1
+01/11/2024,SA Winter,0
+01/04/2025,SA Winter,-1
+01/11/2025,SA Winter,0
+01/04/2026,SA Winter,-1
+01/11/2026,SA Winter,0
+01/04/2027,SA Winter,-1
+01/11/2027,SA Winter,0
+01/04/2028,SA Winter,-1
+01/11/2028,SA Winter,0
+01/04/2029,SA Winter,-1
+01/11/2029,SA Winter,0
+01/04/2030,SA Winter,-1
+01/11/2030,SA Winter,0
+01/04/2031,SA Winter,-1
+01/11/2031,SA Winter,0
+01/04/2032,SA Winter,-1
+01/11/2032,SA Winter,0
+01/04/2033,SA Winter,-1
+01/11/2033,SA Winter,0
+01/04/2034,SA Winter,-1
+01/11/2034,SA Winter,0
+01/04/2035,SA Winter,-1
+01/11/2035,SA Winter,0
+01/04/2036,SA Winter,-1
+01/11/2036,SA Winter,0
+01/04/2037,SA Winter,-1
+01/11/2037,SA Winter,0
+01/04/2038,SA Winter,-1
+01/11/2038,SA Winter,0
+01/04/2039,SA Winter,-1
+01/11/2039,SA Winter,0
+01/04/2040,SA Winter,-1
+01/11/2040,SA Winter,0
+01/04/2041,SA Winter,-1
+01/11/2041,SA Winter,0
+01/04/2042,SA Winter,-1
+01/11/2042,SA Winter,0
+01/04/2043,SA Winter,-1
+01/11/2043,SA Winter,0
+01/04/2044,SA Winter,-1
+01/11/2044,SA Winter,0
+01/04/2045,SA Winter,-1
+01/11/2045,SA Winter,0
+01/04/2046,SA Winter,-1
+01/11/2046,SA Winter,0
+01/04/2047,SA Winter,-1
+01/11/2047,SA Winter,0
+01/04/2048,SA Winter,-1
+01/11/2048,SA Winter,0
+01/04/2049,SA Winter,-1
+01/11/2049,SA Winter,0
+01/04/2050,SA Winter,-1
+01/11/2050,SA Winter,0
+01/04/2051,SA Winter,-1
+01/11/2051,SA Winter,0
+01/04/2052,SA Winter,-1
+01/11/2052,SA Winter,0
+01/04/2053,SA Winter,-1
+01/11/2053,SA Winter,0
+01/04/2054,SA Winter,-1
+01/11/2054,SA Winter,0
+01/04/2055,SA Winter,-1
+01/11/2055,SA Winter,0
+01/04/2056,SA Winter,-1
+01/11/2056,SA Winter,0
+01/04/2057,SA Winter,-1
+01/11/2057,SA Winter,0
+01/04/2058,SA Winter,-1
+30/06/2021,TAS Hot Day,0
+30/06/2021,TAS Typical Summer,0
+01/12/2021,TAS Typical Summer,-1
+01/03/2022,TAS Typical Summer,0
+01/12/2022,TAS Typical Summer,-1
+01/03/2023,TAS Typical Summer,0
+01/12/2023,TAS Typical Summer,-1
+01/03/2024,TAS Typical Summer,0
+01/12/2024,TAS Typical Summer,-1
+01/03/2025,TAS Typical Summer,0
+01/12/2025,TAS Typical Summer,-1
+01/03/2026,TAS Typical Summer,0
+01/12/2026,TAS Typical Summer,-1
+01/03/2027,TAS Typical Summer,0
+01/12/2027,TAS Typical Summer,-1
+01/03/2028,TAS Typical Summer,0
+01/12/2028,TAS Typical Summer,-1
+01/03/2029,TAS Typical Summer,0
+01/12/2029,TAS Typical Summer,-1
+01/03/2030,TAS Typical Summer,0
+01/12/2030,TAS Typical Summer,-1
+01/03/2031,TAS Typical Summer,0
+01/12/2031,TAS Typical Summer,-1
+01/03/2032,TAS Typical Summer,0
+01/12/2032,TAS Typical Summer,-1
+01/03/2033,TAS Typical Summer,0
+01/12/2033,TAS Typical Summer,-1
+01/03/2034,TAS Typical Summer,0
+01/12/2034,TAS Typical Summer,-1
+01/03/2035,TAS Typical Summer,0
+01/12/2035,TAS Typical Summer,-1
+01/03/2036,TAS Typical Summer,0
+01/12/2036,TAS Typical Summer,-1
+01/03/2037,TAS Typical Summer,0
+01/12/2037,TAS Typical Summer,-1
+01/03/2038,TAS Typical Summer,0
+01/12/2038,TAS Typical Summer,-1
+01/03/2039,TAS Typical Summer,0
+01/12/2039,TAS Typical Summer,-1
+01/03/2040,TAS Typical Summer,0
+01/12/2040,TAS Typical Summer,-1
+01/03/2041,TAS Typical Summer,0
+01/12/2041,TAS Typical Summer,-1
+01/03/2042,TAS Typical Summer,0
+01/12/2042,TAS Typical Summer,-1
+01/03/2043,TAS Typical Summer,0
+01/12/2043,TAS Typical Summer,-1
+01/03/2044,TAS Typical Summer,0
+01/12/2044,TAS Typical Summer,-1
+01/03/2045,TAS Typical Summer,0
+01/12/2045,TAS Typical Summer,-1
+01/03/2046,TAS Typical Summer,0
+01/12/2046,TAS Typical Summer,-1
+01/03/2047,TAS Typical Summer,0
+01/12/2047,TAS Typical Summer,-1
+01/03/2048,TAS Typical Summer,0
+01/12/2048,TAS Typical Summer,-1
+01/03/2049,TAS Typical Summer,0
+01/12/2049,TAS Typical Summer,-1
+01/03/2050,TAS Typical Summer,0
+01/12/2050,TAS Typical Summer,-1
+01/03/2051,TAS Typical Summer,0
+01/12/2051,TAS Typical Summer,-1
+01/03/2052,TAS Typical Summer,0
+01/12/2052,TAS Typical Summer,-1
+01/03/2053,TAS Typical Summer,0
+01/12/2053,TAS Typical Summer,-1
+01/03/2054,TAS Typical Summer,0
+01/12/2054,TAS Typical Summer,-1
+01/03/2055,TAS Typical Summer,0
+01/12/2055,TAS Typical Summer,-1
+01/03/2056,TAS Typical Summer,0
+01/12/2056,TAS Typical Summer,-1
+01/03/2057,TAS Typical Summer,0
+01/12/2057,TAS Typical Summer,-1
+01/03/2058,TAS Typical Summer,0
+30/06/2021,TAS Winter,-1
+01/12/2021,TAS Winter,0
+01/03/2022,TAS Winter,-1
+01/12/2022,TAS Winter,0
+01/03/2023,TAS Winter,-1
+01/12/2023,TAS Winter,0
+01/03/2024,TAS Winter,-1
+01/12/2024,TAS Winter,0
+01/03/2025,TAS Winter,-1
+01/12/2025,TAS Winter,0
+01/03/2026,TAS Winter,-1
+01/12/2026,TAS Winter,0
+01/03/2027,TAS Winter,-1
+01/12/2027,TAS Winter,0
+01/03/2028,TAS Winter,-1
+01/12/2028,TAS Winter,0
+01/03/2029,TAS Winter,-1
+01/12/2029,TAS Winter,0
+01/03/2030,TAS Winter,-1
+01/12/2030,TAS Winter,0
+01/03/2031,TAS Winter,-1
+01/12/2031,TAS Winter,0
+01/03/2032,TAS Winter,-1
+01/12/2032,TAS Winter,0
+01/03/2033,TAS Winter,-1
+01/12/2033,TAS Winter,0
+01/03/2034,TAS Winter,-1
+01/12/2034,TAS Winter,0
+01/03/2035,TAS Winter,-1
+01/12/2035,TAS Winter,0
+01/03/2036,TAS Winter,-1
+01/12/2036,TAS Winter,0
+01/03/2037,TAS Winter,-1
+01/12/2037,TAS Winter,0
+01/03/2038,TAS Winter,-1
+01/12/2038,TAS Winter,0
+01/03/2039,TAS Winter,-1
+01/12/2039,TAS Winter,0
+01/03/2040,TAS Winter,-1
+01/12/2040,TAS Winter,0
+01/03/2041,TAS Winter,-1
+01/12/2041,TAS Winter,0
+01/03/2042,TAS Winter,-1
+01/12/2042,TAS Winter,0
+01/03/2043,TAS Winter,-1
+01/12/2043,TAS Winter,0
+01/03/2044,TAS Winter,-1
+01/12/2044,TAS Winter,0
+01/03/2045,TAS Winter,-1
+01/12/2045,TAS Winter,0
+01/03/2046,TAS Winter,-1
+01/12/2046,TAS Winter,0
+01/03/2047,TAS Winter,-1
+01/12/2047,TAS Winter,0
+01/03/2048,TAS Winter,-1
+01/12/2048,TAS Winter,0
+01/03/2049,TAS Winter,-1
+01/12/2049,TAS Winter,0
+01/03/2050,TAS Winter,-1
+01/12/2050,TAS Winter,0
+01/03/2051,TAS Winter,-1
+01/12/2051,TAS Winter,0
+01/03/2052,TAS Winter,-1
+01/12/2052,TAS Winter,0
+01/03/2053,TAS Winter,-1
+01/12/2053,TAS Winter,0
+01/03/2054,TAS Winter,-1
+01/12/2054,TAS Winter,0
+01/03/2055,TAS Winter,-1
+01/12/2055,TAS Winter,0
+01/03/2056,TAS Winter,-1
+01/12/2056,TAS Winter,0
+01/03/2057,TAS Winter,-1
+01/12/2057,TAS Winter,0
+01/03/2058,TAS Winter,-1
+30/06/2021,VIC Hot Day,0
+30/12/2021,VIC Hot Day,-1
+02/01/2022,VIC Hot Day,0
+13/01/2022,VIC Hot Day,-1
+14/01/2022,VIC Hot Day,0
+26/01/2022,VIC Hot Day,-1
+27/01/2022,VIC Hot Day,0
+27/12/2022,VIC Hot Day,-1
+28/12/2022,VIC Hot Day,0
+14/01/2023,VIC Hot Day,-1
+15/01/2023,VIC Hot Day,0
+17/01/2023,VIC Hot Day,-1
+18/01/2023,VIC Hot Day,0
+16/02/2023,VIC Hot Day,-1
+18/02/2023,VIC Hot Day,0
+04/02/2024,VIC Hot Day,-1
+05/02/2024,VIC Hot Day,0
+13/02/2024,VIC Hot Day,-1
+14/02/2024,VIC Hot Day,0
+28/02/2024,VIC Hot Day,-1
+29/02/2024,VIC Hot Day,0
+09/03/2024,VIC Hot Day,-1
+11/03/2024,VIC Hot Day,0
+16/12/2024,VIC Hot Day,-1
+17/12/2024,VIC Hot Day,0
+05/01/2025,VIC Hot Day,-1
+06/01/2025,VIC Hot Day,0
+27/01/2025,VIC Hot Day,-1
+28/01/2025,VIC Hot Day,0
+02/02/2025,VIC Hot Day,-1
+04/02/2025,VIC Hot Day,0
+02/01/2026,VIC Hot Day,-1
+04/01/2026,VIC Hot Day,0
+07/01/2026,VIC Hot Day,-1
+08/01/2026,VIC Hot Day,0
+06/02/2026,VIC Hot Day,-1
+07/02/2026,VIC Hot Day,0
+21/02/2026,VIC Hot Day,-1
+22/02/2026,VIC Hot Day,0
+31/12/2026,VIC Hot Day,-1
+01/01/2027,VIC Hot Day,0
+07/01/2027,VIC Hot Day,-1
+09/01/2027,VIC Hot Day,0
+30/01/2027,VIC Hot Day,-1
+31/01/2027,VIC Hot Day,0
+01/02/2027,VIC Hot Day,-1
+02/02/2027,VIC Hot Day,0
+18/11/2027,VIC Hot Day,-1
+19/11/2027,VIC Hot Day,0
+02/01/2028,VIC Hot Day,-1
+03/01/2028,VIC Hot Day,0
+17/01/2028,VIC Hot Day,-1
+18/01/2028,VIC Hot Day,0
+23/01/2028,VIC Hot Day,-1
+24/01/2028,VIC Hot Day,0
+25/02/2028,VIC Hot Day,-1
+26/02/2028,VIC Hot Day,0
+29/11/2028,VIC Hot Day,-1
+30/11/2028,VIC Hot Day,0
+23/12/2028,VIC Hot Day,-1
+24/12/2028,VIC Hot Day,0
+04/01/2029,VIC Hot Day,-1
+05/01/2029,VIC Hot Day,0
+17/01/2029,VIC Hot Day,-1
+18/01/2029,VIC Hot Day,0
+06/02/2029,VIC Hot Day,-1
+07/02/2029,VIC Hot Day,0
+14/01/2030,VIC Hot Day,-1
+18/01/2030,VIC Hot Day,0
+28/01/2030,VIC Hot Day,-1
+29/01/2030,VIC Hot Day,0
+08/02/2030,VIC Hot Day,-1
+10/02/2030,VIC Hot Day,0
+02/01/2031,VIC Hot Day,-1
+04/01/2031,VIC Hot Day,0
+07/01/2031,VIC Hot Day,-1
+08/01/2031,VIC Hot Day,0
+06/02/2031,VIC Hot Day,-1
+07/02/2031,VIC Hot Day,0
+21/02/2031,VIC Hot Day,-1
+22/02/2031,VIC Hot Day,0
+19/12/2031,VIC Hot Day,-1
+20/12/2031,VIC Hot Day,0
+31/12/2031,VIC Hot Day,-1
+01/01/2032,VIC Hot Day,0
+13/01/2032,VIC Hot Day,-1
+14/01/2032,VIC Hot Day,0
+23/02/2032,VIC Hot Day,-1
+24/02/2032,VIC Hot Day,0
+08/03/2032,VIC Hot Day,-1
+09/03/2032,VIC Hot Day,0
+13/12/2032,VIC Hot Day,-1
+14/12/2032,VIC Hot Day,0
+25/12/2032,VIC Hot Day,-1
+26/12/2032,VIC Hot Day,0
+28/12/2032,VIC Hot Day,-1
+29/12/2032,VIC Hot Day,0
+17/01/2033,VIC Hot Day,-1
+18/01/2033,VIC Hot Day,0
+23/01/2033,VIC Hot Day,-1
+24/01/2033,VIC Hot Day,0
+06/01/2034,VIC Hot Day,-1
+07/01/2034,VIC Hot Day,0
+18/01/2034,VIC Hot Day,-1
+20/01/2034,VIC Hot Day,0
+28/01/2034,VIC Hot Day,-1
+29/01/2034,VIC Hot Day,0
+07/02/2034,VIC Hot Day,-1
+08/02/2034,VIC Hot Day,0
+07/12/2034,VIC Hot Day,-1
+08/12/2034,VIC Hot Day,0
+04/01/2035,VIC Hot Day,-1
+05/01/2035,VIC Hot Day,0
+24/01/2035,VIC Hot Day,-1
+26/01/2035,VIC Hot Day,0
+01/03/2035,VIC Hot Day,-1
+02/03/2035,VIC Hot Day,0
+21/11/2035,VIC Hot Day,-1
+22/11/2035,VIC Hot Day,0
+18/12/2035,VIC Hot Day,-1
+19/12/2035,VIC Hot Day,0
+20/12/2035,VIC Hot Day,-1
+21/12/2035,VIC Hot Day,0
+30/12/2035,VIC Hot Day,-1
+31/12/2035,VIC Hot Day,0
+30/01/2036,VIC Hot Day,-1
+01/02/2036,VIC Hot Day,0
+19/11/2036,VIC Hot Day,-1
+20/11/2036,VIC Hot Day,0
+27/11/2036,VIC Hot Day,-1
+28/11/2036,VIC Hot Day,0
+11/01/2037,VIC Hot Day,-1
+12/01/2037,VIC Hot Day,0
+24/01/2037,VIC Hot Day,-1
+26/01/2037,VIC Hot Day,0
+30/12/2037,VIC Hot Day,-1
+02/01/2038,VIC Hot Day,0
+13/01/2038,VIC Hot Day,-1
+14/01/2038,VIC Hot Day,0
+26/01/2038,VIC Hot Day,-1
+27/01/2038,VIC Hot Day,0
+27/12/2038,VIC Hot Day,-1
+28/12/2038,VIC Hot Day,0
+14/01/2039,VIC Hot Day,-1
+15/01/2039,VIC Hot Day,0
+17/01/2039,VIC Hot Day,-1
+18/01/2039,VIC Hot Day,0
+16/02/2039,VIC Hot Day,-1
+18/02/2039,VIC Hot Day,0
+04/02/2040,VIC Hot Day,-1
+05/02/2040,VIC Hot Day,0
+13/02/2040,VIC Hot Day,-1
+14/02/2040,VIC Hot Day,0
+28/02/2040,VIC Hot Day,-1
+29/02/2040,VIC Hot Day,0
+09/03/2040,VIC Hot Day,-1
+11/03/2040,VIC Hot Day,0
+16/12/2040,VIC Hot Day,-1
+17/12/2040,VIC Hot Day,0
+05/01/2041,VIC Hot Day,-1
+06/01/2041,VIC Hot Day,0
+27/01/2041,VIC Hot Day,-1
+28/01/2041,VIC Hot Day,0
+02/02/2041,VIC Hot Day,-1
+04/02/2041,VIC Hot Day,0
+02/01/2042,VIC Hot Day,-1
+04/01/2042,VIC Hot Day,0
+07/01/2042,VIC Hot Day,-1
+08/01/2042,VIC Hot Day,0
+06/02/2042,VIC Hot Day,-1
+07/02/2042,VIC Hot Day,0
+21/02/2042,VIC Hot Day,-1
+22/02/2042,VIC Hot Day,0
+31/12/2042,VIC Hot Day,-1
+01/01/2043,VIC Hot Day,0
+07/01/2043,VIC Hot Day,-1
+09/01/2043,VIC Hot Day,0
+30/01/2043,VIC Hot Day,-1
+31/01/2043,VIC Hot Day,0
+01/02/2043,VIC Hot Day,-1
+02/02/2043,VIC Hot Day,0
+18/11/2043,VIC Hot Day,-1
+19/11/2043,VIC Hot Day,0
+02/01/2044,VIC Hot Day,-1
+03/01/2044,VIC Hot Day,0
+17/01/2044,VIC Hot Day,-1
+18/01/2044,VIC Hot Day,0
+23/01/2044,VIC Hot Day,-1
+24/01/2044,VIC Hot Day,0
+25/02/2044,VIC Hot Day,-1
+26/02/2044,VIC Hot Day,0
+29/11/2044,VIC Hot Day,-1
+30/11/2044,VIC Hot Day,0
+23/12/2044,VIC Hot Day,-1
+24/12/2044,VIC Hot Day,0
+04/01/2045,VIC Hot Day,-1
+05/01/2045,VIC Hot Day,0
+17/01/2045,VIC Hot Day,-1
+18/01/2045,VIC Hot Day,0
+06/02/2045,VIC Hot Day,-1
+07/02/2045,VIC Hot Day,0
+14/01/2046,VIC Hot Day,-1
+18/01/2046,VIC Hot Day,0
+28/01/2046,VIC Hot Day,-1
+29/01/2046,VIC Hot Day,0
+08/02/2046,VIC Hot Day,-1
+10/02/2046,VIC Hot Day,0
+02/01/2047,VIC Hot Day,-1
+04/01/2047,VIC Hot Day,0
+07/01/2047,VIC Hot Day,-1
+08/01/2047,VIC Hot Day,0
+06/02/2047,VIC Hot Day,-1
+07/02/2047,VIC Hot Day,0
+21/02/2047,VIC Hot Day,-1
+22/02/2047,VIC Hot Day,0
+19/12/2047,VIC Hot Day,-1
+20/12/2047,VIC Hot Day,0
+31/12/2047,VIC Hot Day,-1
+01/01/2048,VIC Hot Day,0
+13/01/2048,VIC Hot Day,-1
+14/01/2048,VIC Hot Day,0
+23/02/2048,VIC Hot Day,-1
+24/02/2048,VIC Hot Day,0
+08/03/2048,VIC Hot Day,-1
+09/03/2048,VIC Hot Day,0
+13/12/2048,VIC Hot Day,-1
+14/12/2048,VIC Hot Day,0
+25/12/2048,VIC Hot Day,-1
+26/12/2048,VIC Hot Day,0
+28/12/2048,VIC Hot Day,-1
+29/12/2048,VIC Hot Day,0
+17/01/2049,VIC Hot Day,-1
+18/01/2049,VIC Hot Day,0
+23/01/2049,VIC Hot Day,-1
+24/01/2049,VIC Hot Day,0
+06/01/2050,VIC Hot Day,-1
+07/01/2050,VIC Hot Day,0
+18/01/2050,VIC Hot Day,-1
+20/01/2050,VIC Hot Day,0
+28/01/2050,VIC Hot Day,-1
+29/01/2050,VIC Hot Day,0
+07/02/2050,VIC Hot Day,-1
+08/02/2050,VIC Hot Day,0
+07/12/2050,VIC Hot Day,-1
+08/12/2050,VIC Hot Day,0
+04/01/2051,VIC Hot Day,-1
+05/01/2051,VIC Hot Day,0
+24/01/2051,VIC Hot Day,-1
+26/01/2051,VIC Hot Day,0
+01/03/2051,VIC Hot Day,-1
+02/03/2051,VIC Hot Day,0
+21/11/2051,VIC Hot Day,-1
+22/11/2051,VIC Hot Day,0
+18/12/2051,VIC Hot Day,-1
+19/12/2051,VIC Hot Day,0
+20/12/2051,VIC Hot Day,-1
+21/12/2051,VIC Hot Day,0
+30/12/2051,VIC Hot Day,-1
+31/12/2051,VIC Hot Day,0
+30/01/2052,VIC Hot Day,-1
+01/02/2052,VIC Hot Day,0
+19/11/2052,VIC Hot Day,-1
+20/11/2052,VIC Hot Day,0
+27/11/2052,VIC Hot Day,-1
+28/11/2052,VIC Hot Day,0
+11/01/2053,VIC Hot Day,-1
+12/01/2053,VIC Hot Day,0
+24/01/2053,VIC Hot Day,-1
+26/01/2053,VIC Hot Day,0
+30/12/2053,VIC Hot Day,-1
+02/01/2054,VIC Hot Day,0
+13/01/2054,VIC Hot Day,-1
+14/01/2054,VIC Hot Day,0
+26/01/2054,VIC Hot Day,-1
+27/01/2054,VIC Hot Day,0
+27/12/2054,VIC Hot Day,-1
+28/12/2054,VIC Hot Day,0
+14/01/2055,VIC Hot Day,-1
+15/01/2055,VIC Hot Day,0
+17/01/2055,VIC Hot Day,-1
+18/01/2055,VIC Hot Day,0
+16/02/2055,VIC Hot Day,-1
+18/02/2055,VIC Hot Day,0
+04/02/2056,VIC Hot Day,-1
+05/02/2056,VIC Hot Day,0
+13/02/2056,VIC Hot Day,-1
+14/02/2056,VIC Hot Day,0
+28/02/2056,VIC Hot Day,-1
+29/02/2056,VIC Hot Day,0
+09/03/2056,VIC Hot Day,-1
+11/03/2056,VIC Hot Day,0
+16/12/2056,VIC Hot Day,-1
+17/12/2056,VIC Hot Day,0
+05/01/2057,VIC Hot Day,-1
+06/01/2057,VIC Hot Day,0
+27/01/2057,VIC Hot Day,-1
+28/01/2057,VIC Hot Day,0
+02/02/2057,VIC Hot Day,-1
+04/02/2057,VIC Hot Day,0
+02/01/2058,VIC Hot Day,-1
+04/01/2058,VIC Hot Day,0
+07/01/2058,VIC Hot Day,-1
+08/01/2058,VIC Hot Day,0
+06/02/2058,VIC Hot Day,-1
+07/02/2058,VIC Hot Day,0
+21/02/2058,VIC Hot Day,-1
+22/02/2058,VIC Hot Day,0
+30/06/2021,VIC Typical Summer,0
+01/11/2021,VIC Typical Summer,-1
+30/12/2021,VIC Typical Summer,0
+02/01/2022,VIC Typical Summer,-1
+13/01/2022,VIC Typical Summer,0
+14/01/2022,VIC Typical Summer,-1
+26/01/2022,VIC Typical Summer,0
+27/01/2022,VIC Typical Summer,-1
+01/04/2022,VIC Typical Summer,0
+01/11/2022,VIC Typical Summer,-1
+27/12/2022,VIC Typical Summer,0
+28/12/2022,VIC Typical Summer,-1
+14/01/2023,VIC Typical Summer,0
+15/01/2023,VIC Typical Summer,-1
+17/01/2023,VIC Typical Summer,0
+18/01/2023,VIC Typical Summer,-1
+16/02/2023,VIC Typical Summer,0
+18/02/2023,VIC Typical Summer,-1
+01/04/2023,VIC Typical Summer,0
+01/11/2023,VIC Typical Summer,-1
+04/02/2024,VIC Typical Summer,0
+05/02/2024,VIC Typical Summer,-1
+13/02/2024,VIC Typical Summer,0
+14/02/2024,VIC Typical Summer,-1
+28/02/2024,VIC Typical Summer,0
+29/02/2024,VIC Typical Summer,-1
+09/03/2024,VIC Typical Summer,0
+11/03/2024,VIC Typical Summer,-1
+01/04/2024,VIC Typical Summer,0
+01/11/2024,VIC Typical Summer,-1
+16/12/2024,VIC Typical Summer,0
+17/12/2024,VIC Typical Summer,-1
+05/01/2025,VIC Typical Summer,0
+06/01/2025,VIC Typical Summer,-1
+27/01/2025,VIC Typical Summer,0
+28/01/2025,VIC Typical Summer,-1
+02/02/2025,VIC Typical Summer,0
+04/02/2025,VIC Typical Summer,-1
+01/04/2025,VIC Typical Summer,0
+01/11/2025,VIC Typical Summer,-1
+02/01/2026,VIC Typical Summer,0
+04/01/2026,VIC Typical Summer,-1
+07/01/2026,VIC Typical Summer,0
+08/01/2026,VIC Typical Summer,-1
+06/02/2026,VIC Typical Summer,0
+07/02/2026,VIC Typical Summer,-1
+21/02/2026,VIC Typical Summer,0
+22/02/2026,VIC Typical Summer,-1
+01/04/2026,VIC Typical Summer,0
+01/11/2026,VIC Typical Summer,-1
+31/12/2026,VIC Typical Summer,0
+01/01/2027,VIC Typical Summer,-1
+07/01/2027,VIC Typical Summer,0
+09/01/2027,VIC Typical Summer,-1
+30/01/2027,VIC Typical Summer,0
+31/01/2027,VIC Typical Summer,-1
+01/02/2027,VIC Typical Summer,0
+02/02/2027,VIC Typical Summer,-1
+01/04/2027,VIC Typical Summer,0
+01/11/2027,VIC Typical Summer,-1
+18/11/2027,VIC Typical Summer,0
+19/11/2027,VIC Typical Summer,-1
+02/01/2028,VIC Typical Summer,0
+03/01/2028,VIC Typical Summer,-1
+17/01/2028,VIC Typical Summer,0
+18/01/2028,VIC Typical Summer,-1
+23/01/2028,VIC Typical Summer,0
+24/01/2028,VIC Typical Summer,-1
+25/02/2028,VIC Typical Summer,0
+26/02/2028,VIC Typical Summer,-1
+01/04/2028,VIC Typical Summer,0
+01/11/2028,VIC Typical Summer,-1
+29/11/2028,VIC Typical Summer,0
+30/11/2028,VIC Typical Summer,-1
+23/12/2028,VIC Typical Summer,0
+24/12/2028,VIC Typical Summer,-1
+04/01/2029,VIC Typical Summer,0
+05/01/2029,VIC Typical Summer,-1
+17/01/2029,VIC Typical Summer,0
+18/01/2029,VIC Typical Summer,-1
+06/02/2029,VIC Typical Summer,0
+07/02/2029,VIC Typical Summer,-1
+01/04/2029,VIC Typical Summer,0
+01/11/2029,VIC Typical Summer,-1
+14/01/2030,VIC Typical Summer,0
+18/01/2030,VIC Typical Summer,-1
+28/01/2030,VIC Typical Summer,0
+29/01/2030,VIC Typical Summer,-1
+08/02/2030,VIC Typical Summer,0
+10/02/2030,VIC Typical Summer,-1
+01/04/2030,VIC Typical Summer,0
+01/11/2030,VIC Typical Summer,-1
+02/01/2031,VIC Typical Summer,0
+04/01/2031,VIC Typical Summer,-1
+07/01/2031,VIC Typical Summer,0
+08/01/2031,VIC Typical Summer,-1
+06/02/2031,VIC Typical Summer,0
+07/02/2031,VIC Typical Summer,-1
+21/02/2031,VIC Typical Summer,0
+22/02/2031,VIC Typical Summer,-1
+01/04/2031,VIC Typical Summer,0
+01/11/2031,VIC Typical Summer,-1
+19/12/2031,VIC Typical Summer,0
+20/12/2031,VIC Typical Summer,-1
+31/12/2031,VIC Typical Summer,0
+01/01/2032,VIC Typical Summer,-1
+13/01/2032,VIC Typical Summer,0
+14/01/2032,VIC Typical Summer,-1
+23/02/2032,VIC Typical Summer,0
+24/02/2032,VIC Typical Summer,-1
+08/03/2032,VIC Typical Summer,0
+09/03/2032,VIC Typical Summer,-1
+01/04/2032,VIC Typical Summer,0
+01/11/2032,VIC Typical Summer,-1
+13/12/2032,VIC Typical Summer,0
+14/12/2032,VIC Typical Summer,-1
+25/12/2032,VIC Typical Summer,0
+26/12/2032,VIC Typical Summer,-1
+28/12/2032,VIC Typical Summer,0
+29/12/2032,VIC Typical Summer,-1
+17/01/2033,VIC Typical Summer,0
+18/01/2033,VIC Typical Summer,-1
+23/01/2033,VIC Typical Summer,0
+24/01/2033,VIC Typical Summer,-1
+01/04/2033,VIC Typical Summer,0
+01/11/2033,VIC Typical Summer,-1
+06/01/2034,VIC Typical Summer,0
+07/01/2034,VIC Typical Summer,-1
+18/01/2034,VIC Typical Summer,0
+20/01/2034,VIC Typical Summer,-1
+28/01/2034,VIC Typical Summer,0
+29/01/2034,VIC Typical Summer,-1
+07/02/2034,VIC Typical Summer,0
+08/02/2034,VIC Typical Summer,-1
+01/04/2034,VIC Typical Summer,0
+01/11/2034,VIC Typical Summer,-1
+07/12/2034,VIC Typical Summer,0
+08/12/2034,VIC Typical Summer,-1
+04/01/2035,VIC Typical Summer,0
+05/01/2035,VIC Typical Summer,-1
+24/01/2035,VIC Typical Summer,0
+26/01/2035,VIC Typical Summer,-1
+01/03/2035,VIC Typical Summer,0
+02/03/2035,VIC Typical Summer,-1
+01/04/2035,VIC Typical Summer,0
+01/11/2035,VIC Typical Summer,-1
+21/11/2035,VIC Typical Summer,0
+22/11/2035,VIC Typical Summer,-1
+18/12/2035,VIC Typical Summer,0
+19/12/2035,VIC Typical Summer,-1
+20/12/2035,VIC Typical Summer,0
+21/12/2035,VIC Typical Summer,-1
+30/12/2035,VIC Typical Summer,0
+31/12/2035,VIC Typical Summer,-1
+30/01/2036,VIC Typical Summer,0
+01/02/2036,VIC Typical Summer,-1
+01/04/2036,VIC Typical Summer,0
+01/11/2036,VIC Typical Summer,-1
+19/11/2036,VIC Typical Summer,0
+20/11/2036,VIC Typical Summer,-1
+27/11/2036,VIC Typical Summer,0
+28/11/2036,VIC Typical Summer,-1
+11/01/2037,VIC Typical Summer,0
+12/01/2037,VIC Typical Summer,-1
+24/01/2037,VIC Typical Summer,0
+26/01/2037,VIC Typical Summer,-1
+01/04/2037,VIC Typical Summer,0
+01/11/2037,VIC Typical Summer,-1
+30/12/2037,VIC Typical Summer,0
+02/01/2038,VIC Typical Summer,-1
+13/01/2038,VIC Typical Summer,0
+14/01/2038,VIC Typical Summer,-1
+26/01/2038,VIC Typical Summer,0
+27/01/2038,VIC Typical Summer,-1
+01/04/2038,VIC Typical Summer,0
+01/11/2038,VIC Typical Summer,-1
+27/12/2038,VIC Typical Summer,0
+28/12/2038,VIC Typical Summer,-1
+14/01/2039,VIC Typical Summer,0
+15/01/2039,VIC Typical Summer,-1
+17/01/2039,VIC Typical Summer,0
+18/01/2039,VIC Typical Summer,-1
+16/02/2039,VIC Typical Summer,0
+18/02/2039,VIC Typical Summer,-1
+01/04/2039,VIC Typical Summer,0
+01/11/2039,VIC Typical Summer,-1
+04/02/2040,VIC Typical Summer,0
+05/02/2040,VIC Typical Summer,-1
+13/02/2040,VIC Typical Summer,0
+14/02/2040,VIC Typical Summer,-1
+28/02/2040,VIC Typical Summer,0
+29/02/2040,VIC Typical Summer,-1
+09/03/2040,VIC Typical Summer,0
+11/03/2040,VIC Typical Summer,-1
+01/04/2040,VIC Typical Summer,0
+01/11/2040,VIC Typical Summer,-1
+16/12/2040,VIC Typical Summer,0
+17/12/2040,VIC Typical Summer,-1
+05/01/2041,VIC Typical Summer,0
+06/01/2041,VIC Typical Summer,-1
+27/01/2041,VIC Typical Summer,0
+28/01/2041,VIC Typical Summer,-1
+02/02/2041,VIC Typical Summer,0
+04/02/2041,VIC Typical Summer,-1
+01/04/2041,VIC Typical Summer,0
+01/11/2041,VIC Typical Summer,-1
+02/01/2042,VIC Typical Summer,0
+04/01/2042,VIC Typical Summer,-1
+07/01/2042,VIC Typical Summer,0
+08/01/2042,VIC Typical Summer,-1
+06/02/2042,VIC Typical Summer,0
+07/02/2042,VIC Typical Summer,-1
+21/02/2042,VIC Typical Summer,0
+22/02/2042,VIC Typical Summer,-1
+01/04/2042,VIC Typical Summer,0
+01/11/2042,VIC Typical Summer,-1
+31/12/2042,VIC Typical Summer,0
+01/01/2043,VIC Typical Summer,-1
+07/01/2043,VIC Typical Summer,0
+09/01/2043,VIC Typical Summer,-1
+30/01/2043,VIC Typical Summer,0
+31/01/2043,VIC Typical Summer,-1
+01/02/2043,VIC Typical Summer,0
+02/02/2043,VIC Typical Summer,-1
+01/04/2043,VIC Typical Summer,0
+01/11/2043,VIC Typical Summer,-1
+18/11/2043,VIC Typical Summer,0
+19/11/2043,VIC Typical Summer,-1
+02/01/2044,VIC Typical Summer,0
+03/01/2044,VIC Typical Summer,-1
+17/01/2044,VIC Typical Summer,0
+18/01/2044,VIC Typical Summer,-1
+23/01/2044,VIC Typical Summer,0
+24/01/2044,VIC Typical Summer,-1
+25/02/2044,VIC Typical Summer,0
+26/02/2044,VIC Typical Summer,-1
+01/04/2044,VIC Typical Summer,0
+01/11/2044,VIC Typical Summer,-1
+29/11/2044,VIC Typical Summer,0
+30/11/2044,VIC Typical Summer,-1
+23/12/2044,VIC Typical Summer,0
+24/12/2044,VIC Typical Summer,-1
+04/01/2045,VIC Typical Summer,0
+05/01/2045,VIC Typical Summer,-1
+17/01/2045,VIC Typical Summer,0
+18/01/2045,VIC Typical Summer,-1
+06/02/2045,VIC Typical Summer,0
+07/02/2045,VIC Typical Summer,-1
+01/04/2045,VIC Typical Summer,0
+01/11/2045,VIC Typical Summer,-1
+14/01/2046,VIC Typical Summer,0
+18/01/2046,VIC Typical Summer,-1
+28/01/2046,VIC Typical Summer,0
+29/01/2046,VIC Typical Summer,-1
+08/02/2046,VIC Typical Summer,0
+10/02/2046,VIC Typical Summer,-1
+01/04/2046,VIC Typical Summer,0
+01/11/2046,VIC Typical Summer,-1
+02/01/2047,VIC Typical Summer,0
+04/01/2047,VIC Typical Summer,-1
+07/01/2047,VIC Typical Summer,0
+08/01/2047,VIC Typical Summer,-1
+06/02/2047,VIC Typical Summer,0
+07/02/2047,VIC Typical Summer,-1
+21/02/2047,VIC Typical Summer,0
+22/02/2047,VIC Typical Summer,-1
+01/04/2047,VIC Typical Summer,0
+01/11/2047,VIC Typical Summer,-1
+19/12/2047,VIC Typical Summer,0
+20/12/2047,VIC Typical Summer,-1
+31/12/2047,VIC Typical Summer,0
+01/01/2048,VIC Typical Summer,-1
+13/01/2048,VIC Typical Summer,0
+14/01/2048,VIC Typical Summer,-1
+23/02/2048,VIC Typical Summer,0
+24/02/2048,VIC Typical Summer,-1
+08/03/2048,VIC Typical Summer,0
+09/03/2048,VIC Typical Summer,-1
+01/04/2048,VIC Typical Summer,0
+01/11/2048,VIC Typical Summer,-1
+13/12/2048,VIC Typical Summer,0
+14/12/2048,VIC Typical Summer,-1
+25/12/2048,VIC Typical Summer,0
+26/12/2048,VIC Typical Summer,-1
+28/12/2048,VIC Typical Summer,0
+29/12/2048,VIC Typical Summer,-1
+17/01/2049,VIC Typical Summer,0
+18/01/2049,VIC Typical Summer,-1
+23/01/2049,VIC Typical Summer,0
+24/01/2049,VIC Typical Summer,-1
+01/04/2049,VIC Typical Summer,0
+01/11/2049,VIC Typical Summer,-1
+06/01/2050,VIC Typical Summer,0
+07/01/2050,VIC Typical Summer,-1
+18/01/2050,VIC Typical Summer,0
+20/01/2050,VIC Typical Summer,-1
+28/01/2050,VIC Typical Summer,0
+29/01/2050,VIC Typical Summer,-1
+07/02/2050,VIC Typical Summer,0
+08/02/2050,VIC Typical Summer,-1
+01/04/2050,VIC Typical Summer,0
+01/11/2050,VIC Typical Summer,-1
+07/12/2050,VIC Typical Summer,0
+08/12/2050,VIC Typical Summer,-1
+04/01/2051,VIC Typical Summer,0
+05/01/2051,VIC Typical Summer,-1
+24/01/2051,VIC Typical Summer,0
+26/01/2051,VIC Typical Summer,-1
+01/03/2051,VIC Typical Summer,0
+02/03/2051,VIC Typical Summer,-1
+01/04/2051,VIC Typical Summer,0
+01/11/2051,VIC Typical Summer,-1
+21/11/2051,VIC Typical Summer,0
+22/11/2051,VIC Typical Summer,-1
+18/12/2051,VIC Typical Summer,0
+19/12/2051,VIC Typical Summer,-1
+20/12/2051,VIC Typical Summer,0
+21/12/2051,VIC Typical Summer,-1
+30/12/2051,VIC Typical Summer,0
+31/12/2051,VIC Typical Summer,-1
+30/01/2052,VIC Typical Summer,0
+01/02/2052,VIC Typical Summer,-1
+01/04/2052,VIC Typical Summer,0
+01/11/2052,VIC Typical Summer,-1
+19/11/2052,VIC Typical Summer,0
+20/11/2052,VIC Typical Summer,-1
+27/11/2052,VIC Typical Summer,0
+28/11/2052,VIC Typical Summer,-1
+11/01/2053,VIC Typical Summer,0
+12/01/2053,VIC Typical Summer,-1
+24/01/2053,VIC Typical Summer,0
+26/01/2053,VIC Typical Summer,-1
+01/04/2053,VIC Typical Summer,0
+01/11/2053,VIC Typical Summer,-1
+30/12/2053,VIC Typical Summer,0
+02/01/2054,VIC Typical Summer,-1
+13/01/2054,VIC Typical Summer,0
+14/01/2054,VIC Typical Summer,-1
+26/01/2054,VIC Typical Summer,0
+27/01/2054,VIC Typical Summer,-1
+01/04/2054,VIC Typical Summer,0
+01/11/2054,VIC Typical Summer,-1
+27/12/2054,VIC Typical Summer,0
+28/12/2054,VIC Typical Summer,-1
+14/01/2055,VIC Typical Summer,0
+15/01/2055,VIC Typical Summer,-1
+17/01/2055,VIC Typical Summer,0
+18/01/2055,VIC Typical Summer,-1
+16/02/2055,VIC Typical Summer,0
+18/02/2055,VIC Typical Summer,-1
+01/04/2055,VIC Typical Summer,0
+01/11/2055,VIC Typical Summer,-1
+04/02/2056,VIC Typical Summer,0
+05/02/2056,VIC Typical Summer,-1
+13/02/2056,VIC Typical Summer,0
+14/02/2056,VIC Typical Summer,-1
+28/02/2056,VIC Typical Summer,0
+29/02/2056,VIC Typical Summer,-1
+09/03/2056,VIC Typical Summer,0
+11/03/2056,VIC Typical Summer,-1
+01/04/2056,VIC Typical Summer,0
+01/11/2056,VIC Typical Summer,-1
+16/12/2056,VIC Typical Summer,0
+17/12/2056,VIC Typical Summer,-1
+05/01/2057,VIC Typical Summer,0
+06/01/2057,VIC Typical Summer,-1
+27/01/2057,VIC Typical Summer,0
+28/01/2057,VIC Typical Summer,-1
+02/02/2057,VIC Typical Summer,0
+04/02/2057,VIC Typical Summer,-1
+01/04/2057,VIC Typical Summer,0
+01/11/2057,VIC Typical Summer,-1
+02/01/2058,VIC Typical Summer,0
+04/01/2058,VIC Typical Summer,-1
+07/01/2058,VIC Typical Summer,0
+08/01/2058,VIC Typical Summer,-1
+06/02/2058,VIC Typical Summer,0
+07/02/2058,VIC Typical Summer,-1
+21/02/2058,VIC Typical Summer,0
+22/02/2058,VIC Typical Summer,-1
+01/04/2058,VIC Typical Summer,0
+30/06/2021,VIC Winter,-1
+01/11/2021,VIC Winter,0
+01/04/2022,VIC Winter,-1
+01/11/2022,VIC Winter,0
+01/04/2023,VIC Winter,-1
+01/11/2023,VIC Winter,0
+01/04/2024,VIC Winter,-1
+01/11/2024,VIC Winter,0
+01/04/2025,VIC Winter,-1
+01/11/2025,VIC Winter,0
+01/04/2026,VIC Winter,-1
+01/11/2026,VIC Winter,0
+01/04/2027,VIC Winter,-1
+01/11/2027,VIC Winter,0
+01/04/2028,VIC Winter,-1
+01/11/2028,VIC Winter,0
+01/04/2029,VIC Winter,-1
+01/11/2029,VIC Winter,0
+01/04/2030,VIC Winter,-1
+01/11/2030,VIC Winter,0
+01/04/2031,VIC Winter,-1
+01/11/2031,VIC Winter,0
+01/04/2032,VIC Winter,-1
+01/11/2032,VIC Winter,0
+01/04/2033,VIC Winter,-1
+01/11/2033,VIC Winter,0
+01/04/2034,VIC Winter,-1
+01/11/2034,VIC Winter,0
+01/04/2035,VIC Winter,-1
+01/11/2035,VIC Winter,0
+01/04/2036,VIC Winter,-1
+01/11/2036,VIC Winter,0
+01/04/2037,VIC Winter,-1
+01/11/2037,VIC Winter,0
+01/04/2038,VIC Winter,-1
+01/11/2038,VIC Winter,0
+01/04/2039,VIC Winter,-1
+01/11/2039,VIC Winter,0
+01/04/2040,VIC Winter,-1
+01/11/2040,VIC Winter,0
+01/04/2041,VIC Winter,-1
+01/11/2041,VIC Winter,0
+01/04/2042,VIC Winter,-1
+01/11/2042,VIC Winter,0
+01/04/2043,VIC Winter,-1
+01/11/2043,VIC Winter,0
+01/04/2044,VIC Winter,-1
+01/11/2044,VIC Winter,0
+01/04/2045,VIC Winter,-1
+01/11/2045,VIC Winter,0
+01/04/2046,VIC Winter,-1
+01/11/2046,VIC Winter,0
+01/04/2047,VIC Winter,-1
+01/11/2047,VIC Winter,0
+01/04/2048,VIC Winter,-1
+01/11/2048,VIC Winter,0
+01/04/2049,VIC Winter,-1
+01/11/2049,VIC Winter,0
+01/04/2050,VIC Winter,-1
+01/11/2050,VIC Winter,0
+01/04/2051,VIC Winter,-1
+01/11/2051,VIC Winter,0
+01/04/2052,VIC Winter,-1
+01/11/2052,VIC Winter,0
+01/04/2053,VIC Winter,-1
+01/11/2053,VIC Winter,0
+01/04/2054,VIC Winter,-1
+01/11/2054,VIC Winter,0
+01/04/2055,VIC Winter,-1
+01/11/2055,VIC Winter,0
+01/04/2056,VIC Winter,-1
+01/11/2056,VIC Winter,0
+01/04/2057,VIC Winter,-1
+01/11/2057,VIC Winter,0
+01/04/2058,VIC Winter,-1
