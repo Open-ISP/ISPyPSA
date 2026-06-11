@@ -234,6 +234,34 @@ _CONSTRAINT_NAME_PREFIX = "ExportGroup_"
 _EXCLUDED_PARENT_CLASSES = ("Purchaser",)
 _AREA_SUFFIX_PATTERN = re.compile(r" Area\d+$")
 
+# Output columns of the three custom-constraint template tables.
+_CUSTOM_CONSTRAINTS_COLUMNS = ["constraint_id", "direction"]
+_CUSTOM_CONSTRAINTS_LHS_COLUMNS = [
+    "constraint_id",
+    "term_type",
+    "variable_name",
+    "coefficient",
+    "date_from",
+]
+_CUSTOM_CONSTRAINTS_RHS_COLUMNS = ["constraint_id", "timeslice", "rhs", "date_from"]
+
+
+def empty_custom_constraint_tables() -> dict[str, pd.DataFrame]:
+    """Header-only versions of the three custom-constraint template tables.
+
+    Emitted at nem_regions / single_region granularity, where the sub-region
+    nodes, sub-regional flow paths, and REZ-located units the constraints
+    reference are collapsed, leaving nothing to constrain. Emitting "all
+    columns, no rows" tables keeps the templater's output set
+    granularity-invariant, so downstream consumers never need to check for
+    missing tables.
+    """
+    return {
+        "custom_constraints": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_COLUMNS),
+        "custom_constraints_lhs": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_LHS_COLUMNS),
+        "custom_constraints_rhs": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_RHS_COLUMNS),
+    }
+
 
 def template_custom_constraints_from_plexos(
     iasr_tables: dict[str, pd.DataFrame],
