@@ -15,6 +15,7 @@ from ispypsa.data_fetch import (
     read_csvs,
     write_csvs,
 )
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.plotting import (
@@ -483,15 +484,20 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
     ispypsa_tables = read_csvs(input_tables_dir)
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
-    # Create capacity expansion timeseries
-    pypsa_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
-        config,
-        "capacity_expansion",
-        ispypsa_tables,
-        pypsa_tables["generators"],
-        parsed_trace_dir,
-        capacity_expansion_timeseries_location,
-    )
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: revisit once generator
+    # translation lands for the new format. Until then the new-format path
+    # has no generators, so no timeseries inputs are created and snapshots
+    # come from create_pypsa_friendly_inputs itself.
+    if not FEATURE_FLAGS["use_new_table_format"]:
+        # Create capacity expansion timeseries
+        pypsa_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
+            config,
+            "capacity_expansion",
+            ispypsa_tables,
+            pypsa_tables["generators"],
+            parsed_trace_dir,
+            capacity_expansion_timeseries_location,
+        )
 
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
