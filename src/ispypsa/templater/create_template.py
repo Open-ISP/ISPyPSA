@@ -21,6 +21,9 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
+from ispypsa.templater.generators_new_entrant import (
+    _template_generators_new_entrant,
+)
 from ispypsa.templater.geography import _template_network_geography
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
@@ -220,10 +223,6 @@ def create_ispypsa_inputs_template(
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
 
-        # todo: replace with actual generators_new_entrant once that templating
-        # function is written — passing empty placeholder for now so costs_connection
-        # is wired up but produces no VRE rows until generators are templated.
-
         # connection_capacity_non_vre is in manually_extracted_template_tables/ (sourced from
         # ENOR tables 16-17 and confirmed with AEMO) but is needed as an iasr_tables input,
         # not a template output. TODO revisit when more manual tables added and consider
@@ -232,7 +231,13 @@ def create_ispypsa_inputs_template(
             "connection_capacity_non_vre"
         ].copy()
 
-        generators_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
+        # Identity columns only for now (name, technology, resource_type, geo_id,
+        # fuel_type, fuel_price_mapping); cost/property columns are added in later
+        # PRs. Feeds costs_connection but is not yet a written template output.
+        generators_new_entrant = _template_generators_new_entrant(
+            iasr_tables["new_entrants_summary"]
+        )
+        # storage_new_entrant remains defined (empty) for wiring tests
         storage_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
         template["costs_connection"] = _template_connection_costs(
             iasr_tables,

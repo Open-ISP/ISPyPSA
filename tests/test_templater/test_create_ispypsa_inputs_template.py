@@ -226,6 +226,16 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    # Two VRE generators at Q1 (which has a connection cost forecast) so
+    # costs_connection produces rows; an OCGT and a storage row check that
+    # non-VRE pass through and storage is dropped.
+    new_entrants_summary = csv_str_to_df("""
+        IASR__ID__/__DLT__names, Technology__Type,                  Fuel__type, Fuel__cost__mapping, REZ__ID,         Sub-region
+        Q1_WH_Far__North__QLD,   Wind,                              Wind,       Wind,                Q1,              NQ
+        Q1_SAT_Far__North__QLD,  Large__scale__Solar__PV,           Solar,      Solar,               Q1,              NQ
+        NQ__OCGT__Small,         OCGT__(small__GT),                 Gas,        QLD__new__OCGT,      Not__Applicable, NQ
+        NQ__Battery__2hrs,       Battery__Storage__(2hrs__storage), Battery,    Battery,             Not__Applicable, NQ
+    """)
 
     with (
         patch(
@@ -255,6 +265,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "new_entrants_summary": new_entrants_summary,
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -310,10 +321,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    # costs_connection key present with correct columns; currently
-    # generators_new_entrant is placeholder (empty) so no VRE rows are produced
-    # yet (but no errors either).
-    assert costs_connection.empty
+    assert set(costs_connection["geo_id"]) == {"Q1"}
+    assert set(costs_connection["technology"]) == {"Wind", "Large scale Solar PV"}
+    assert len(costs_connection) == 2
 
     # Custom-constraints tables are spliced into the output via
     # template.update(template_custom_constraints_from_plexos(...)). The
@@ -414,6 +424,13 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    new_entrants_summary = csv_str_to_df("""
+        IASR__ID__/__DLT__names, Technology__Type,                  Fuel__type, Fuel__cost__mapping, REZ__ID,         Sub-region
+        Q1_WH_Far__North__QLD,   Wind,                              Wind,       Wind,                Q1,              NQ
+        Q1_SAT_Far__North__QLD,  Large__scale__Solar__PV,           Solar,      Solar,               Q1,              NQ
+        NQ__OCGT__Small,         OCGT__(small__GT),                 Gas,        QLD__new__OCGT,      Not__Applicable, NQ
+        NQ__Battery__2hrs,       Battery__Storage__(2hrs__storage), Battery,    Battery,             Not__Applicable, NQ
+    """)
 
     with (
         patch(
@@ -443,6 +460,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "new_entrants_summary": new_entrants_summary,
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -484,7 +502,11 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    assert costs_connection.empty
+    # REZ geo_ids (Q1) are granularity-invariant, so the two VRE generators at Q1
+    # still produce two connection-cost rows at nem_regions granularity.
+    assert set(costs_connection["geo_id"]) == {"Q1"}
+    assert set(costs_connection["technology"]) == {"Wind", "Large scale Solar PV"}
+    assert len(costs_connection) == 2
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
     # meaningful representation once sub-regions are collapsed, so the templater
@@ -554,6 +576,13 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    new_entrants_summary = csv_str_to_df("""
+        IASR__ID__/__DLT__names, Technology__Type,                  Fuel__type, Fuel__cost__mapping, REZ__ID,         Sub-region
+        Q1_WH_Far__North__QLD,   Wind,                              Wind,       Wind,                Q1,              NQ
+        Q1_SAT_Far__North__QLD,  Large__scale__Solar__PV,           Solar,      Solar,               Q1,              NQ
+        NQ__OCGT__Small,         OCGT__(small__GT),                 Gas,        QLD__new__OCGT,      Not__Applicable, NQ
+        NQ__Battery__2hrs,       Battery__Storage__(2hrs__storage), Battery,    Battery,             Not__Applicable, NQ
+    """)
 
     with (
         patch(
@@ -581,6 +610,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "new_entrants_summary": new_entrants_summary,
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -613,6 +643,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"N3-NEM"}
     # 1 expansion_id x 2 years
     assert len(expansion_costs) == 2
+
     connection_costs = result["costs_connection"]
     assert set(connection_costs.columns) == {
         "geo_id",
@@ -621,7 +652,11 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    assert connection_costs.empty
+    # REZ geo_ids (Q1) are granularity-invariant, so the two VRE generators at Q1
+    # still produce two connection-cost rows at single_region granularity.
+    assert set(connection_costs["geo_id"]) == {"Q1"}
+    assert set(connection_costs["technology"]) == {"Wind", "Large scale Solar PV"}
+    assert len(connection_costs) == 2
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
     # meaningful representation at single_region, so the templater skips them.
