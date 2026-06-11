@@ -7,7 +7,10 @@ from ispypsa.pypsa_build.buses import (
     _add_buses_to_network,
 )
 from ispypsa.pypsa_build.carriers import _add_carriers_to_network
-from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build.custom_constraints import (
+    _add_custom_constraints,
+    _add_custom_constraints_with_temporal_scope,
+)
 from ispypsa.pypsa_build.generators import (
     _add_custom_constraint_generators_to_network,
     _add_generators_to_network,
@@ -70,13 +73,20 @@ def build_pypsa_network(
     )
 
     if "links" in pypsa_friendly_tables.keys():
-        _add_links_to_network(network, pypsa_friendly_tables["links"])
+        _add_links_to_network(
+            network,
+            pypsa_friendly_tables["links"],
+            pypsa_friendly_tables.get("link_timeslice_limits"),
+            pypsa_friendly_tables.get("timeslice_snapshots"),
+        )
 
-    _add_generators_to_network(
-        network,
-        pypsa_friendly_tables["generators"],
-        path_to_pypsa_friendly_timeseries_data,
-    )
+    # Absent under the new table format until generator translation lands.
+    if "generators" in pypsa_friendly_tables.keys():
+        _add_generators_to_network(
+            network,
+            pypsa_friendly_tables["generators"],
+            path_to_pypsa_friendly_timeseries_data,
+        )
 
     if "batteries" in pypsa_friendly_tables.keys():
         _add_batteries_to_network(network, pypsa_friendly_tables["batteries"])
@@ -91,11 +101,22 @@ def build_pypsa_network(
     # The underlying linopy model needs to get built so we can add custom constraints.
     network.optimize.create_model(multi_investment_periods=True)
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: the temporal-scope path
+    # becomes the only path once the old format is deleted; the column check
+    # distinguishes the formats until then.
     if "custom_constraints_rhs" in pypsa_friendly_tables:
-        _add_custom_constraints(
-            network,
-            pypsa_friendly_tables["custom_constraints_rhs"],
-            pypsa_friendly_tables["custom_constraints_lhs"],
-        )
+        if "investment_period" in pypsa_friendly_tables["custom_constraints_rhs"]:
+            _add_custom_constraints_with_temporal_scope(
+                network,
+                pypsa_friendly_tables["custom_constraints_rhs"],
+                pypsa_friendly_tables["custom_constraints_lhs"],
+                pypsa_friendly_tables["timeslice_snapshots"],
+            )
+        else:
+            _add_custom_constraints(
+                network,
+                pypsa_friendly_tables["custom_constraints_rhs"],
+                pypsa_friendly_tables["custom_constraints_lhs"],
+            )
 
     return network
