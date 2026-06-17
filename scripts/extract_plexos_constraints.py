@@ -203,7 +203,7 @@ _KNOWN_PROPERTIES = {
     "Generation Coefficient",  # Battery LHS coefficient
     "Load Coefficient",  # Battery / Node LHS coefficient
     "Flow Coefficient",  # Line LHS coefficient
-    "Installed Capacity Coefficient",  # network-expansion decision variable
+    "Installed Capacity Coefficient",  # constraint relaxation variable
     "RHS",  # System: the constraint bound
     "Sense",  # System: the inequality direction
     "Penalty Price",  # System: solver setting

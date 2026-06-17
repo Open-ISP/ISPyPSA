@@ -48,6 +48,12 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
     }
 )
 
+# Canonical representative timeslice names used across the templater output:
+# ``peak_demand``, ``summer_typical``, ``winter_reference``. Per-region
+# variants (e.g. ``qld_peak_demand``) are formed by prefixing with the
+# lowercased NEM region id.
+_CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
+
 _GENERATOR_PROPERTIES = {
     "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,
     "seasonal_ratings": _ALL_GENERATOR_STORAGE_TYPES,

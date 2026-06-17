@@ -94,6 +94,65 @@ def _duplicate_for_both_directions(limits: pd.DataFrame) -> pd.DataFrame:
     """
 ```
 
+### Module docstrings
+
+A module docstring orients a reader who has never seen the module before. By
+the time they finish it they should know what the module turns into what, the
+path the data takes through it, and the handful of terms the rest of the file
+leans on. Write it in full sentences — not a condensed, telegraphic style — so
+an unfamiliar reader can parse it on the first pass. Keep inline-code markup
+light: these docstrings are read in source, not rendered, so lean on snake_case
+names and quotes rather than wrapping every identifier in backticks.
+
+Use these sections, in order:
+
+1. **Intro (one or two sentences).** What the module does and where it sits in
+   the wider pipeline.
+2. **I/O framing.** The shape of the input and the output, each with a small
+   block of literal example data. This is the whole-module version of the
+   per-function `I/O Example`: the reader sees what goes in and what comes out
+   before reading how. Let the example's header row introduce the column names
+   rather than also listing them in prose; keep only the prose the example
+   can't carry, such as each table's grain ("one row per …").
+3. **Pipeline story.** A high-level, step-by-step narrative of what the module
+   does, in execution order. Keep most steps to a sentence; spend extra words
+   only on the conceptually tricky or opinionated steps, where the "why it's
+   done this way" wouldn't be obvious from the code. Where the story first
+   reaches a term it will reuse, state what happens in plain words and then
+   attach the name ("…, which we call *triggering*"), rather than dropping the
+   bare term in as though it were already defined.
+4. **Keystone vocabulary (only when the module needs it).** Prefer wording
+   clear enough that no term needs a glossary — a reader should rarely have to
+   learn special vocabulary to follow well-written docs, and the best outcome
+   is that this section is empty or absent. Add it only when a term genuinely
+   recurs across the file and its helpers *and* carries a context-specific
+   meaning that inline wording keeps having to re-explain. When that bar is
+   met, pin the term down once here, grounded in the domain model (say what the
+   thing actually is, not just how it's used), so helpers reuse it without
+   redefining it. This section's presence is a deliberate call that the jargon
+   earns its keep — never a slot to fill, and never a reason to coin a term
+   where plain words would do.
+5. **Reference detail.** The hardcoded decisions — translations/mappings,
+   systematic name renames, and the rows that get dropped and why. These are
+   lookups the reader returns to rather than narrative, so they come last.
+
+See `src/ispypsa/templater/custom_constraints_from_plexos.py` for a worked
+example.
+
+### External references
+
+Comments, docstrings, and other in-repo docs must not refer to files that
+aren't checked in — anything under `notes/` is gitignored and any path that
+only lives on one developer's machine is a dead link to everyone else.
+
+When external reasoning needs to be referenced, link to a **GitHub issue**
+on the project instead (e.g. `Open-ISP/ISPyPSA#123`). If the issue doesn't
+exist yet, file it first and use the real number; if that's blocked, use a
+clearly grep-able placeholder like `Open-ISP/ISPyPSA#TBD` and add a task to
+come back and file it.
+
+In-repo paths (`docs/...`, `src/...`, `tests/...`) are fine to reference.
+
 ## Logging
 
 Logging surfaces things a user or operator wants to know during a template/translation

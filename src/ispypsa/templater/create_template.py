@@ -5,6 +5,9 @@ import pandas as pd
 
 from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.templater.connection_and_build_costs import _template_connection_costs
+from ispypsa.templater.custom_constraints_from_plexos import (
+    template_custom_constraints_from_plexos,
+)
 from ispypsa.templater.dynamic_generator_properties import (
     _template_generator_dynamic_properties,
 )
@@ -83,12 +86,25 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_expansion_costs",
 ]
 
+# Custom constraints are templated only at sub_regions granularity (see the gate
+# in create_ispypsa_inputs_template) — coarser granularities collapse the
+# sub-region nodes, sub-regional flow paths and REZ-located units the constraints
+# reference, leaving nothing to constrain. Listed as outputs only at that
+# granularity so the create_ispypsa_inputs task tracks them where they are
+# written and does not expect them where they never are.
+_CUSTOM_CONSTRAINT_OUTPUTS = [
+    "custom_constraints",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+]
+
 
 def create_ispypsa_inputs_template(
     scenario: str,
     regional_granularity: str,
     iasr_tables: dict[str, pd.DataFrame],
     manually_extracted_tables: dict[str, pd.DataFrame],
+    iasr_workbook_version: str,
     filter_to_nem_regions: list[str] | None = None,
     filter_to_isp_sub_regions: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
@@ -116,7 +132,8 @@ def create_ispypsa_inputs_template(
         ... scenario="Step Change",
         ... regional_granularity="sub_regions",
         ... iasr_tables=iasr_tables,
-        ... manually_extracted_tables=manually_extracted_tables
+        ... manually_extracted_tables=manually_extracted_tables,
+        ... iasr_workbook_version="7.5",
         ... )
 
         Write the template tables to a directory as CSVs.
@@ -130,6 +147,9 @@ def create_ispypsa_inputs_template(
             extracted using the `isp_workbook_parser`.
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
+        iasr_workbook_version: the IASR workbook version (e.g. `"7.5"`), used
+            to select the PLEXOS extract directory for the custom-constraints
+            templater.
         filter_to_nem_regions: Optional list of NEM region IDs (e.g., ['NSW', 'VIC'])
             to filter the template to. Cannot be specified together with
             filter_to_isp_sub_regions.
@@ -211,6 +231,18 @@ def create_ispypsa_inputs_template(
             scenario,
             generators_new_entrant,
         )
+        # Custom constraints from PLEXOS are sub-regional export-group limits:
+        # their LHS references sub-region nodes, sub-regional flow paths, and
+        # REZ-located units that only exist as distinct entities at sub_regions
+        # granularity. Once sub-regions are collapsed (nem_regions /
+        # single_region) they have no meaningful representation, so only emit
+        # them for sub_regions.
+        if regional_granularity == "sub_regions":
+            template.update(
+                template_custom_constraints_from_plexos(
+                    iasr_tables, iasr_workbook_version=iasr_workbook_version
+                )
+            )
         return template
 
     template = {}
@@ -304,6 +336,8 @@ def list_templater_output_files(regional_granularity, output_path=None):
     # granularity-specific file removals.
     if FEATURE_FLAGS["use_new_table_format"]:
         files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
+        if regional_granularity == "sub_regions":
+            files += _CUSTOM_CONSTRAINT_OUTPUTS
     else:
         files = _BASE_TEMPLATE_OUTPUTS.copy()
         if regional_granularity in ["sub_regions", "single_region"]:

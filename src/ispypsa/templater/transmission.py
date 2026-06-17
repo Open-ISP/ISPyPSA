@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.mappings import _SINGLE_REGION_ID
+from ispypsa.templater.mappings import _CANONICAL_TIMESLICES, _SINGLE_REGION_ID
 
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}
 
@@ -845,7 +845,6 @@ def _remap_limit_path_ids(
 # --- Augmentation-driven new parallel corridors ---
 
 _NEW_PATH_DIRECTIONS = ("forward", "reverse")
-_NEW_PATH_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 
 
 def _append_new_parallel_paths(
@@ -962,7 +961,7 @@ def _new_parallel_path_rows(
             {"path_id": k, "direction": d, "timeslice": t, "capacity": 0.0}
             for k in new_keys
             for d in _NEW_PATH_DIRECTIONS
-            for t in _NEW_PATH_TIMESLICES
+            for t in _CANONICAL_TIMESLICES
         ],
         columns=["path_id", "direction", "timeslice", "capacity"],
     ).astype({"capacity": "float64"})
