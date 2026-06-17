@@ -1,100 +1,169 @@
 """Template the three ISPyPSA custom-constraint tables from the PLEXOS extract.
 
-The PLEXOS extract under ``src/ispypsa/templater/plexos/<version>/`` is the
-opinionless intermediate produced by ``scripts/extract_plexos_constraints.py``.
-This module translates that into the ISPyPSA custom-constraint shape.
+The PLEXOS extract under src/ispypsa/templater/plexos/<version>/ is the
+opinionless intermediate produced by scripts/extract_plexos_constraints.py.
+This module translates that extract into the custom-constraint shape the rest
+of ISPyPSA consumes.
 
 Inputs (CSVs in the PLEXOS extract dir):
 
-* ``constraints.csv`` -- one row per (constraint, property); only the ``Sense``
-  property is translated. Columns: ``constraint_name``, ``property``, ``value``.
-* ``lhs_terms.csv`` -- one row per LHS term. Columns: ``constraint_name``,
-  ``parent_class``, ``parent_name``, ``property``, ``value``, ``date_from``.
-* ``rhs_values.csv`` -- one row per RHS value. Columns: ``constraint_name``,
-  ``value``, ``date_from``, ``tags``.
+* constraints.csv -- one row per (constraint, property); only the Sense
+  property is translated.
 
-Outputs (keys of the returned dict):
+      constraint_name     property  value
+      ExportGroup_SWQLD1  Sense     -1.0
 
-* ``custom_constraints`` -- ``constraint_id``, ``direction``.
-* ``custom_constraints_lhs`` -- ``constraint_id``, ``term_type``,
-  ``variable_name``, ``coefficient``, ``date_from``.
-* ``custom_constraints_rhs`` -- ``constraint_id``, ``timeslice``, ``rhs``,
-  ``date_from``.
+* lhs_terms.csv -- one row per left-hand-side term.
 
-The LHS table is built in two passes: pass 1 translates the raw PLEXOS LHS
-rows (generators, batteries, lines, nodes) into the ISPyPSA term schema,
-dropping units with no IASR match; pass 2 re-adds the IASR new-entrant
-batteries that PLEXOS scopes to per-constraint variants in a layout we don't
-mirror (Open-ISP/ISPyPSA#110). See ``_inject_iasr_new_entrant_batteries`` for
-the per-location coefficient logic pass 2 applies.
+      constraint_name     parent_class  parent_name      property                         value  date_from
+      ExportGroup_SWQLD1  Generator     KINGASF1         Generation Sent Out Coefficient  0.14
+      ExportGroup_SWQLD1  Battery       Q8 Battery - 2h  Generation Coefficient           0.43
+
+* rhs_values.csv -- one row per right-hand-side value.
+
+      constraint_name     value   date_from  tags
+      ExportGroup_SWQLD1  3000.0             QLD Hot Day
+
+Outputs (keys of the returned dict): each constraint is a linear inequality,
+sum(coefficient * variable) <relation> rhs, and the three tables hold its
+three parts.
+
+* custom_constraints -- one row per constraint, carrying the direction
+  (the <= / = / >= relation):
+
+      constraint_id  direction
+      SWQLD1         <=
+
+* custom_constraints_lhs -- one row per left-hand-side term:
+
+      constraint_id  term_type         variable_name    coefficient  date_from
+      SWQLD1         generator_output  KINGASF1         0.14
+      SWQLD1         storage_output    Q8 Battery - 2h  0.43
+
+* custom_constraints_rhs -- the right-hand-side limit, which can vary by
+  timeslice and over time:
+
+      constraint_id  timeslice        rhs     date_from
+      SWQLD1         qld_peak_demand  3000.0
+
+Pipeline:
+
+The custom_constraints and custom_constraints_rhs tables are direct
+translations -- strip the ExportGroup_ prefix from the constraint name, map
+the PLEXOS sense to a direction symbol, and map each regional RHS tag to a
+timeslice (all three mappings are tabulated in the reference sections below).
+
+The custom_constraints_lhs table is the involved part, and is built in two
+passes:
+
+* Pass 1 translates the raw PLEXOS LHS rows (generators, batteries, lines,
+  nodes) into the ISPyPSA term schema. It maps each row's
+  (parent_class, property) to a term_type, resolves each parent_name
+  to an ISPyPSA variable_name, and drops any row whose unit has no ISPyPSA
+  counterpart. A term that keeps a match *survives* pass 1.
+
+* Pass 2 reconstructs the IASR new-entrant batteries that pass 1 could not
+  keep. PLEXOS scopes its new-entrant batteries into per-constraint variants in
+  a layout ISPyPSA does not mirror (Open-ISP/ISPyPSA#110), so those PLEXOS
+  batteries match no ISPyPSA unit and are dropped in pass 1. Pass 2 puts them
+  back: wherever a new-entrant generator or battery survives pass 1, it injects
+  the IASR new-entrant batteries at that unit's location, copying the
+  coefficients the surviving batteries there carry over time. When a surviving
+  unit brings its location's batteries back like this we say it *triggers* that
+  location, and a battery's coefficients over time are its *profile*.
+  _inject_iasr_new_entrant_batteries carries the detail.
+
+Vocabulary (terms reused throughout the helpers below):
+
+* *term*: one summand on a constraint's left-hand side -- a (term_type,
+  variable_name, coefficient) row in custom_constraints_lhs. The
+  variable is a generator, battery, link, or load, and term_type says which.
+* *date_from*: the date a coefficient (or rhs value) takes effect, applying from
+  then until the next date_from for the same term; a blank date_from
+  applies from the start. A term with two date_from rows is therefore a
+  single value that steps over time -- e.g. 0.78 until 2031-11-30 and then
+  0.00 from 2031-11-30 -- not two competing values.
+* *location*: a unit's REZ ID, or its sub-region when it has no REZ.
+* *survive*: a pass-1 term survives when its PLEXOS unit matched an IASR unit,
+  so it was not dropped and carries through to the LHS output with its PLEXOS
+  coefficient.
+* *trigger*: a surviving new-entrant generator or battery triggers its location.
+  For each triggered location, pass 2 injects a storage_output row for every
+  IASR new-entrant battery there, so battery durations PLEXOS omitted (e.g. the
+  4h battery) are re-added.
+* *profile*: the set of (date_from, coefficient) rows a single battery
+  carries -- its coefficient over time. Pass 2 copies a location's profile from
+  the batteries that survived there onto the durations it re-adds, which is
+  well-defined only when that location's surviving batteries share one profile.
 
 PLEXOS -> ISPyPSA translations applied here:
 
-* ``constraint_name`` -> ``constraint_id``: strip the ``"ExportGroup_"`` prefix.
-* ``sense`` -> ``direction``: ``-1`` => ``"<="``, ``0`` => ``"="``, ``+1`` => ``">="``.
-* ``(parent_class, property)`` -> ``term_type``:
-    - ``Generator`` + ``Generation Sent Out Coefficient`` => ``generator_output``
-    - ``Battery`` + ``Generation Coefficient`` => ``storage_output``
-    - ``Line`` + ``Flow Coefficient`` => ``link_flow``
-    - ``Node`` + ``Load Coefficient`` => ``load``
-* ``parent_name`` -> ``variable_name``: PLEXOS units pass through as-is; only
+* constraint_name -> constraint_id: strip the "ExportGroup_" prefix.
+* sense -> direction: -1 => "<=", 0 => "=", +1 => ">=".
+* (parent_class, property) -> term_type:
+    - Generator + Generation Sent Out Coefficient => generator_output
+    - Battery + Generation Coefficient => storage_output
+    - Line + Flow Coefficient => link_flow
+    - Node + Load Coefficient => load
+* parent_name -> variable_name: PLEXOS units pass through as-is; only
   their names are translated to the ISPyPSA unit names. The name differences
   are all systematic, so matching is deterministic -- no fuzzy matching:
-    - ``Generator`` / ``Battery``: apply the systematic renames below, then
-      match (case-insensitively) against ``IASR ID / DLT names`` in the
+    - Generator / Battery: apply the systematic renames below, then
+      match (case-insensitively) against IASR ID / DLT names in the
       generator summary tables. Terms that still don't match are dropped.
-    - ``Line``: hardcoded line -> path_id table.
-    - ``Node``: PLEXOS node names are already ISPyPSA sub-region codes.
-* RHS ``tags`` -> ``timeslice``: the regional suffix is mapped to the
+    - Line: hardcoded line -> path_id table.
+    - Node: PLEXOS node names are already ISPyPSA sub-region codes.
+* RHS tags -> timeslice: the regional suffix is mapped to the
   ISPyPSA canonical timeslice name and the region prefix is preserved
-  lowercased -- ``"QLD Hot Day"`` => ``"qld_peak_demand"``,
-  ``"VIC Typical Summer"`` => ``"vic_summer_typical"``,
-  ``"TAS Winter"`` => ``"tas_winter_reference"``. The regional weather
+  lowercased -- "QLD Hot Day" => "qld_peak_demand",
+  "VIC Typical Summer" => "vic_summer_typical",
+  "TAS Winter" => "tas_winter_reference". The regional weather
   conditions correspond to distinct time periods (see
-  ``data/timeslice_RefYear4006.csv``), so the prefix is preserved; the
-  suffix uses the codebase-wide ``_CANONICAL_TIMESLICES`` vocabulary.
+  data/timeslice_RefYear4006.csv), so the prefix is preserved; the
+  suffix uses the codebase-wide _CANONICAL_TIMESLICES vocabulary.
 
 Systematic name renames (PLEXOS -> IASR):
 
-* Case only (e.g. ``"North QLD"`` -> ``"North Qld"``) -- handled by the
+* Case only (e.g. "North QLD" -> "North Qld") -- handled by the
   case-insensitive match, no rename rule needed.
-* Prefix rename: ``DN1``/``DN3`` (PLEXOS REZ ids) -> ``DREZ`` (IASR) for
+* Prefix rename: DN1/DN3 (PLEXOS REZ ids) -> DREZ (IASR) for
   both generator and battery names -- a one-to-one naming-style mapping
-  where DN1/DN3 are IASR REZ IDs and ``DREZ`` is just IASR's naming prefix
+  where DN1/DN3 are IASR REZ IDs and DREZ is just IASR's naming prefix
   for batteries inside them. The constraint-scoped battery prefixes
-  (``SWQLD1``, ``SQ1``, ``MN1``, ``NSA1``, ``NET1``, ``SEVIC1``, ``SWV1``)
+  (SWQLD1, SQ1, MN1, NSA1, NET1, SEVIC1, SWV1)
   get no rename -- they're many-to-one mappings onto sub-region batteries
   with unclear semantics, handled by pass 2 instead.
-* Suffix strip: ``" Area<n>"`` -- a small set of PLEXOS unit names carry
-  this suffix (only ``Area1`` appears in the current PLEXOS extract); IASR
-  doesn't carry it. The regex tolerates any ``\\d+`` in case future extracts
+* Suffix strip: " Area<n>" -- a small set of PLEXOS unit names carry
+  this suffix (only Area1 appears in the current PLEXOS extract); IASR
+  doesn't carry it. The regex tolerates any \\d+ in case future extracts
   introduce other Area numbers.
 
 Dropped rows:
 
-* ``Installed Capacity Coefficient`` properties -- PLEXOS constraint
+* Installed Capacity Coefficient properties -- PLEXOS constraint
   relaxation terms (Linear Augmentation / Option generators), not
   operational-constraint LHS terms. [INFO]
-* ``Purchaser`` parent_class -- hydrogen electrolysers, not modelled. [INFO]
-* Battery ``Load Coefficient`` rows -- the negative pair of the
-  ``Generation Coefficient`` row kept as the single ``storage_output``. [INFO]
+* Purchaser parent_class -- hydrogen electrolysers, not modelled. [INFO]
+* Battery Load Coefficient rows -- the negative pair of the
+  Generation Coefficient row kept as the single storage_output. [INFO]
 * Terms whose unit has no ISPyPSA counterpart -- e.g. CER units not yet
   modelled (Open-ISP/ISPyPSA#104), PLEXOS constraint-scoped batteries
   replaced by the pass-2 injection, or plant absent from the IASR tables.
   Dropping loosens the constraint, so this is logged as a WARNING.
 
-``date_to`` is currently always empty in AEMO's PLEXOS files and is dropped
+date_to is currently always empty in AEMO's PLEXOS files and is dropped
 from the output. The templater raises if a future model starts using it.
-``date_from`` is retained so time-varying coefficients survive.
+date_from is retained so time-varying coefficients carry through to the
+output.
 
 TODO: switch the IASR ID lookup to a templated generator-summary table once
 one exists -- matching against the raw table currently also matches DER/CER
 rows that ISPyPSA may not template.
 
-TODO: emitted timeslices are region-prefixed (``qld_peak_demand`` etc.) while
+TODO: emitted timeslices are region-prefixed (qld_peak_demand etc.) while
 the rest of the templater still emits the bare canonical names
-(``peak_demand`` etc.). Downstream consumers (``filter_template``,
-``translator``, ``pypsa_build``) need extending to handle the region-prefixed
+(peak_demand etc.). Downstream consumers (filter_template,
+translator, pypsa_build) need extending to handle the region-prefixed
 timeslice space before custom constraints flow through end-to-end.
 """
 
@@ -109,18 +178,17 @@ import pandas as pd
 
 from .mappings import _CANONICAL_TIMESLICES
 
-# PLEXOS REZ-id prefixes that IASR renamed to ``DREZ``. Applied to the first
-# token of generator names (``DN1_SAT_Dubbo`` -> ``DREZ_SAT_Dubbo``) and to
-# battery names of the form ``"DN1 <location> Battery - <duration>"``
-# (``DN1 Dubbo Battery - 2h`` -> ``DREZ Dubbo Battery - 2h``).
+# PLEXOS REZ-id prefixes that IASR renamed to DREZ. Applied to the first
+# token of generator names (DN1_SAT_Dubbo -> DREZ_SAT_Dubbo) and to
+# battery names of the form "DN1 <location> Battery - <duration>"# (DN1 Dubbo Battery - 2h -> DREZ Dubbo Battery - 2h).
 _GENERATOR_PREFIX_RENAME = {"DN1": "DREZ", "DN3": "DREZ"}
 
 # Battery-name rename. Unlike the (deliberately removed) constraint-scoped
-# battery variants (``SWQLD1 Battery - 2h`` etc., which were many-to-one
+# battery variants (SWQLD1 Battery - 2h etc., which were many-to-one
 # mappings onto sub-region batteries and are now handled by the pass-2
 # injection), the DN1/DN3 -> DREZ rename is one-to-one: it's a naming-style
 # difference for the same physical battery, since DN1/DN3 are the literal
-# IASR REZ IDs and ``DREZ`` is just IASR's naming prefix for batteries inside
+# IASR REZ IDs and DREZ is just IASR's naming prefix for batteries inside
 # them. Keeping it lets pass-1 preserve PLEXOS' time-varying coefficients.
 _BATTERY_PREFIX_RENAME = {"DN1": "DREZ", "DN3": "DREZ"}
 
@@ -153,8 +221,8 @@ _PROPERTY_TO_TERM_TYPE = {
 _SENSE_TO_DIRECTION = {-1: "<=", 0: "=", 1: ">="}
 
 # PLEXOS RHS tag suffix -> ISPyPSA canonical timeslice. The region prefix
-# in the tag (e.g. ``"QLD "``) is preserved separately by ``_tag_to_timeslice``.
-# Values must remain a subset of ``_CANONICAL_TIMESLICES``.
+# in the tag (e.g. "QLD ") is preserved separately by _tag_to_timeslice.
+# Values must remain a subset of _CANONICAL_TIMESLICES.
 _REGIONAL_SUFFIX_TO_CANONICAL = {
     "Hot Day": "peak_demand",
     "Typical Summer": "summer_typical",
@@ -176,19 +244,19 @@ def template_custom_constraints_from_plexos(
 
     Args:
         iasr_tables: parsed IASR tables -- must contain
-            ``existing_committed_anticipated_additional_generator_summary``
-            and ``new_entrants_summary``.
+            existing_committed_anticipated_additional_generator_summary
+            and new_entrants_summary.
         iasr_workbook_version: selects the plexos extract subdirectory under
-            ``src/ispypsa/templater/plexos/`` (e.g. ``"7.5"``). Ignored when
-            ``plexos_extract_dir`` is given.
+            src/ispypsa/templater/plexos/ (e.g. "7.5"). Ignored when
+            plexos_extract_dir is given.
         plexos_extract_dir: optional override for the directory holding the
-            PLEXOS extract CSVs (``constraints.csv``, ``lhs_terms.csv``,
-            ``rhs_values.csv``). Used by tests to inject a fixture; in
+            PLEXOS extract CSVs (constraints.csv, lhs_terms.csv,
+            rhs_values.csv). Used by tests to inject a fixture; in
             production leave unset and the version-based path is used.
 
     Returns:
-        dict with keys ``"custom_constraints"``, ``"custom_constraints_lhs"``,
-        ``"custom_constraints_rhs"``, ready to splice into the templater's
+        dict with keys "custom_constraints", "custom_constraints_lhs",
+        "custom_constraints_rhs", ready to splice into the templater's
         table dict.
     """
     logging.info("Creating a custom-constraints template from the PLEXOS extract")
@@ -225,7 +293,7 @@ def _load_plexos_csv(path: Path) -> pd.DataFrame:
 def _assert_no_date_to(df: pd.DataFrame, label: str) -> None:
     """Raise if any row has a non-empty date_to.
 
-    ``date_to`` is dropped from the templater output. If AEMO starts using it,
+    date_to is dropped from the templater output. If AEMO starts using it,
     we want to fail loud rather than silently lose data.
     """
     if "date_to" in df.columns and df["date_to"].notna().any():
@@ -263,8 +331,8 @@ def _build_custom_constraints(constraints: pd.DataFrame) -> pd.DataFrame:
     """Strip ExportGroup_ prefix from names and map sense to direction symbols.
 
     The PLEXOS constraints extract is long-format with one row per
-    (constraint, property); only the ``Sense`` property is translated --
-    ``Penalty Price`` and ``Include in LT Plan`` are PLEXOS solver hints we
+    (constraint, property); only the Sense property is translated --
+    Penalty Price and Include in LT Plan are PLEXOS solver hints we
     don't model.
 
     I/O Example:
@@ -306,7 +374,7 @@ def _raise_on_unmapped_sense(sense_rows: pd.DataFrame, directions: pd.Series) ->
 
 
 def _strip_constraint_prefix(name: str) -> str:
-    """Remove the ``ExportGroup_`` namespace prefix if present.
+    """Remove the ExportGroup_ namespace prefix if present.
 
     I/O Example:
         "ExportGroup_SWQLD1"   -> "SWQLD1"
@@ -325,8 +393,9 @@ def _build_custom_constraints_lhs(
     iasr_ids: set[str],
     new_entrants: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Filter, fold, and translate the raw LHS rows into ISPyPSA's term schema,
-    then inject IASR new-entrant batteries for triggered REZ/sub-regions.
+    """Filter, collapse the battery Load/Generation pairs, and translate the
+    raw LHS rows into ISPyPSA's term schema, then inject IASR new-entrant
+    batteries for triggered REZ/sub-regions.
 
     I/O Example:
         lhs_terms (abbreviated):
@@ -390,7 +459,7 @@ def _drop_excluded_classes(lhs: pd.DataFrame) -> pd.DataFrame:
 
 
 def _drop_constraint_relaxation_terms(lhs: pd.DataFrame) -> pd.DataFrame:
-    """Drop ``Installed Capacity Coefficient`` rows -- PLEXOS constraint
+    """Drop Installed Capacity Coefficient rows -- PLEXOS constraint
     relaxation terms (Linear Augmentation, named Option, etc.) attached to
     each export constraint, not LHS terms for the operational constraint.
 
@@ -416,9 +485,9 @@ def _drop_constraint_relaxation_terms(lhs: pd.DataFrame) -> pd.DataFrame:
 
 
 def _drop_battery_load_coefficient_rows(lhs: pd.DataFrame) -> pd.DataFrame:
-    """Drop battery ``Load Coefficient`` rows -- they are the negative-magnitude
-    pair of ``Generation Coefficient`` rows that survive as the single
-    ``storage_output`` term.
+    """Drop battery Load Coefficient rows -- they are the negative-magnitude
+    pair of Generation Coefficient rows that survive as the single
+    storage_output term.
 
     Raises if a Load row has no Generation pair for the same (constraint,
     battery): dropping it would silently delete the battery's only LHS term
@@ -479,7 +548,7 @@ def _raise_on_unpaired_battery_load_rows(
 def _add_term_type_column(lhs: pd.DataFrame) -> pd.DataFrame:
     """Map each (parent_class, property) pair to an ISPyPSA term_type string.
 
-    Raises ``ValueError`` if any pair in the input has no mapping defined --
+    Raises ValueError if any pair in the input has no mapping defined --
     this signals a new PLEXOS property the templater needs to learn about.
 
     I/O Example:
@@ -583,13 +652,13 @@ def _rename_generator_name(name: str) -> str:
 
 
 def _rename_battery_name(name: str) -> str:
-    """Apply the DN1/DN3 -> DREZ prefix rename and strip the ``" Area<n>"``
+    """Apply the DN1/DN3 -> DREZ prefix rename and strip the " Area<n>"
     distributed-resource subdivision suffix.
 
-    Constraint-scoped batteries (``SWQLD1 Battery - 2h`` etc.) intentionally
+    Constraint-scoped batteries (SWQLD1 Battery - 2h etc.) intentionally
     have NO rename rule -- they are designed not to match any IASR battery,
-    fall through ``_drop_unresolved_terms``, and are re-supplied by
-    ``_inject_iasr_new_entrant_batteries``.
+    fall through _drop_unresolved_terms, and are re-supplied by
+    _inject_iasr_new_entrant_batteries.
 
     I/O Example:
         "DN1 Dubbo Battery - 2h"               -> "DREZ Dubbo Battery - 2h"
@@ -616,10 +685,10 @@ def _rename_first_token(name: str, delimiter: str, rename_map: dict[str, str]) -
 
 
 def _strip_area_suffix(name: str) -> str:
-    """Strip the ``" Area<n>"`` suffix from a PLEXOS unit name.
+    """Strip the " Area<n>" suffix from a PLEXOS unit name.
 
-    A small set of PLEXOS unit names (e.g. ``"PV CNSW Area1"``) carry an
-    " Area<n>" suffix that IASR doesn't carry; only ``Area1`` is seen in
+    A small set of PLEXOS unit names (e.g. "PV CNSW Area1") carry an
+    " Area<n>" suffix that IASR doesn't carry; only Area1 is seen in
     the current PLEXOS extract. The regex tolerates any digit suffix so
     future Area2/3/... values won't silently slip through unstripped.
 
@@ -699,28 +768,29 @@ def _drop_unresolved_terms(lhs: pd.DataFrame) -> pd.DataFrame:
 def _inject_iasr_new_entrant_batteries(
     lhs: pd.DataFrame, new_entrants: pd.DataFrame
 ) -> pd.DataFrame:
-    """Append a ``storage_output`` row for every IASR new-entrant battery in
+    """Append a storage_output row for every IASR new-entrant battery in
     each REZ/sub-region whose new-entrant units participate in the constraint.
 
-    For each ``generator_output`` or ``storage_output`` term whose
+    For each generator_output or storage_output term whose
     variable_name is a new-entrant IASR ID, look up that unit's location --
-    REZ ID if populated, else Sub-region -- and add ``storage_output`` rows
-    for every new-entrant battery at that same location. Surviving batteries
-    trigger as well as generators so a location that PLEXOS includes via
-    batteries alone still gets its omitted durations (e.g. 4h) re-added.
+    REZ ID if populated, else Sub-region -- and add storage_output rows
+    for every new-entrant battery at that same location. A surviving battery
+    triggers its location just as a surviving generator does, so a location
+    that PLEXOS represents through batteries alone still has its omitted
+    durations (e.g. the 4h battery) re-added.
     Each injected battery copies
-    the coefficient (and time-varying ``date_from`` rows) carried by the
+    the coefficient (and time-varying date_from rows) carried by the
     new-entrant batteries that survived pass 1 at that location: PLEXOS applies
     a per-unit export-loss coefficient and omits the 4h-duration batteries, but
     the new-entrant batteries at a location share one value (e.g. 0.43 at
     SWQLD1's Q8), so re-adding the omitted durations at the siblings'
     coefficient keeps the whole location consistent. Where no new-entrant
     battery survived pass 1 at the location, the coefficient defaults to 1.0
-    with empty ``date_from``.
+    with empty date_from.
 
     Every battery at a triggered location is appended, including any that
     already survived pass 1, so the result can contain a duplicate that
-    ``_dedupe_lhs_terms`` removes downstream.
+    _dedupe_lhs_terms removes downstream.
 
     See Open-ISP/ISPyPSA#110 for the PLEXOS battery layout that motivated
     dropping the pass-1 constraint-scoped variants.
@@ -746,8 +816,8 @@ def _inject_iasr_new_entrant_batteries(
             SWQLD1         storage_output   Q8 Battery - 4h  0.43          # PLEXOS-omitted duration, copies the 2h sibling's coefficient
             NQ1            storage_output   Q1 Battery - 2h  1.0           # no surviving sibling -> default
     """
-    # Generator and battery IASR IDs never collide, so one combined lookup
-    # serves both trigger kinds.
+    # A trigger can be a generator or a battery; their IASR IDs never collide,
+    # so one combined unit -> location lookup serves both.
     unit_to_location = {
         **_generator_to_location(new_entrants),
         **_battery_to_location(new_entrants),
@@ -775,7 +845,7 @@ def _warn_on_default_battery_coefficients(
     """Warn when injected batteries fall back to the default 1.0 coefficient.
 
     Fires for triggered locations that hold new-entrant batteries but have no
-    surviving sibling in ``coefficients`` to copy from, so the injection
+    surviving sibling in coefficients to copy from, so the injection
     defaults to 1.0. On a fractional-loss location that default is likely wrong
     (cf. Open-ISP/ISPyPSA#110), and -- unlike an adopted coefficient -- it isn't
     distinguishable from a correct 1.0 in the output, so the pairs are surfaced
@@ -838,7 +908,7 @@ def _batteries_by_location(new_entrants: pd.DataFrame) -> dict[str, list[str]]:
 
 def _battery_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
     """Build a {battery IASR ID: REZ ID or Sub-region} lookup for new-entrant
-    batteries -- the inverse of ``_batteries_by_location``.
+    batteries -- the inverse of _batteries_by_location.
 
     I/O Example:
         new_entrants (abbreviated):
@@ -855,18 +925,18 @@ def _battery_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
 
 
 def _is_battery_row(new_entrants: pd.DataFrame) -> pd.Series:
-    """Boolean mask selecting battery rows in ``new_entrants_summary``.
+    """Boolean mask selecting battery rows in new_entrants_summary.
 
     Matches any Technology Type that contains the literal substring
-    ``"Batter"`` -- covers both ``"Battery Storage (Xhrs storage)"`` (singular)
-    and ``"Distributed Resources Batteries"`` (plural). Other storage
+    "Batter" -- covers both "Battery Storage (Xhrs storage)" (singular)
+    and "Distributed Resources Batteries" (plural). Other storage
     technologies (pumped hydro, solar thermal) intentionally do not match.
     """
     return new_entrants["Technology Type"].str.contains("Batter", na=False)
 
 
 def _pick_location(row: pd.Series) -> str:
-    """Return ``REZ ID`` when populated, otherwise ``Sub-region``.
+    """Return REZ ID when populated, otherwise Sub-region.
 
     I/O Example:
         {"REZ ID": "Q8",             "Sub-region": "SQ"}  -> "Q8"
@@ -884,11 +954,12 @@ def _triggered_locations_per_constraint(
     """Find the distinct {constraint_id, location} pairs implied by the
     surviving new-entrant generator and battery terms.
 
-    Units whose IASR ID isn't in ``unit_to_location`` (existing / committed /
+    Units whose IASR ID isn't in unit_to_location (existing / committed /
     anticipated plant) don't trigger; only new-entrant units drive the
-    injection. Surviving batteries trigger as well as generators so a location
-    whose generators were all dropped (or that PLEXOS includes via batteries
-    alone) still gets its omitted durations re-added.
+    injection. A surviving battery triggers its location just as a surviving
+    generator does, so a location whose generators were all dropped (or that
+    PLEXOS represents through batteries alone) still has its omitted battery
+    durations re-added.
 
     I/O Example:
         lhs (abbreviated):
@@ -917,34 +988,37 @@ def _triggered_locations_per_constraint(
 def _surviving_battery_coefficients(
     lhs: pd.DataFrame, new_entrants: pd.DataFrame
 ) -> pd.DataFrame:
-    """The (coefficient, date_from) rows carried by the pass-1 new-entrant
-    batteries that survived in each (constraint_id, location).
+    """The coefficient *profile* -- the (date_from, coefficient) rows -- that
+    the pass-1 new-entrant batteries surviving in each (constraint_id, location)
+    carry, returned once per location for pass 2 to copy.
 
     PLEXOS applies a per-unit export-loss coefficient and drops the 4h-duration
-    batteries; the new-entrant batteries at a location share one value (e.g.
-    0.43 at SWQLD1's Q8, though the co-located generators may each differ --
-    0.14/0.43/1.0 there), so pass 2 re-adds those durations by copying this
-    profile rather than defaulting to 1.0. The copy is only well-defined if the
-    siblings agree, so within a (constraint, location) the surviving new-entrant
-    batteries must share one (date_from, coefficient) profile --
-    ``_raise_on_inconsistent_battery_profiles`` enforces it (generators are
-    deliberately not checked: they keep their own per-unit coefficients).
-    Existing-plant batteries carry no new-entrant location and are ignored.
+    batteries, so pass 2 re-adds those dropped durations by copying a surviving
+    battery's profile rather than defaulting to 1.0. That copy needs each
+    (constraint, location) to expose a single profile, which holds because the
+    surviving batteries at a location share one (e.g. 0.43 at SWQLD1's Q8, even
+    though the co-located generators may each differ -- 0.14/0.43/1.0 there). A
+    profile can still span several dates if the coefficient steps over time; the
+    requirement is only that the location's surviving batteries share the same
+    profile as each other, which _raise_on_inconsistent_battery_profiles
+    enforces (generators are deliberately not checked: they keep their own
+    per-unit coefficients). Existing-plant batteries carry no new-entrant
+    location and are ignored.
 
     I/O Example:
         lhs (storage_output rows, abbreviated):
             constraint_id  term_type       variable_name    coefficient  date_from
             SWQLD1         storage_output  Q8 Battery - 2h  0.43
             SWQLD1         storage_output  Q8 Battery - 8h  0.43
-            WNV1           storage_output  V7 Battery - 2h  0.78
-            WNV1           storage_output  V7 Battery - 2h  0.00         2031-11-30
+            WNV1           storage_output  V7 Battery - 2h  0.78                     # 0.78 until 2031-11-30 ...
+            WNV1           storage_output  V7 Battery - 2h  0.00         2031-11-30  # ... then 0.00 -- one battery's stepped profile, not a conflict
             SWQLD1         storage_output  Tarong BESS      0.14         # existing -> no location, ignored
 
         returns:
             constraint_id  location  coefficient  date_from
             SWQLD1         Q8        0.43
             WNV1           V7        0.78
-            WNV1           V7        0.00         2031-11-30
+            WNV1           V7        0.00         2031-11-30              # V7's two-date profile passes through intact
     """
     battery_location = _battery_to_location(new_entrants)
     surviving = lhs[lhs["term_type"] == "storage_output"].copy()
@@ -957,18 +1031,21 @@ def _surviving_battery_coefficients(
 
 
 def _raise_on_inconsistent_battery_profiles(surviving: pd.DataFrame) -> None:
-    """Raise unless the surviving new-entrant batteries within each
-    (constraint_id, location) carry identical (date_from, coefficient) profiles.
+    """Raise unless, within each (constraint_id, location), every surviving
+    new-entrant battery carries the same profile as the others.
 
-    Pass 2 copies the location's one profile onto the PLEXOS-omitted batteries
-    (e.g. the 4h duration), which is only well-defined if the siblings it
-    copies from agree -- both on the coefficient at each date AND on which
-    dates exist. Comparing whole profiles catches both failure modes: siblings
-    disagreeing at a shared date, and a time-varying sibling whose extra
-    date_from rows would otherwise be grafted onto its constant siblings
-    silently (the injected extra-date rows survive ``_dedupe_lhs_terms``
-    because nothing matches their date_from). Siblings do agree across the
-    current 7.5 extract; this guards future extracts.
+    A battery's profile is its whole set of (date_from, coefficient) rows, so
+    this allows a battery to be time-varying (several dates) as long as the
+    other batteries at the location vary the same way -- what is disallowed is
+    the batteries disagreeing, not time-variation itself. Pass 2 copies one of
+    these profiles onto the PLEXOS-omitted durations (e.g. the 4h battery), so
+    they must all agree for the copied profile to be unambiguous. Comparing
+    whole profiles catches both ways they could disagree: a coefficient that
+    differs at a shared date, and one battery carrying an extra date the others
+    lack (its extra-date rows would otherwise be grafted onto the others
+    silently, since _dedupe_lhs_terms keeps them -- nothing matches their
+    date_from). The batteries do agree across the current 7.5 extract; this
+    guards future extracts.
     """
     if surviving.empty:
         return
@@ -1012,11 +1089,11 @@ def _battery_rows_for_triggers(
     batteries_by_location: dict[str, list[str]],
     coefficients: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build the ``storage_output`` rows to inject for each (constraint_id,
+    """Build the storage_output rows to inject for each (constraint_id,
     location) pair, weighted by the location's surviving-battery coefficients.
 
     Each triggered location's batteries are emitted once per (coefficient,
-    date_from) row in ``coefficients`` for that location; locations with no
+    date_from) row in coefficients for that location; locations with no
     surviving new-entrant battery fall back to a single row at coefficient 1.0
     with empty date_from. The left merge keeps the np.nan null flavour the
     pass-1 rows carry (read from CSV), avoiding a mixed-null date_from column
@@ -1042,8 +1119,8 @@ def _battery_rows_for_triggers(
             SWQLD1         storage_output  Q8 Battery - 4h  0.43
             NQ1            storage_output  Q1 Battery - 2h  1.0           # Q1 has no profile -> default
     """
-    # Short-circuit the empty case: an empty ``triggered`` carries a float64
-    # ``location`` column, which would raise on the object-keyed merge below.
+    # Short-circuit the empty case: an empty triggered carries a float64
+    # location column, which would raise on the object-keyed merge below.
     if triggered.empty:
         return pd.DataFrame(
             columns=[
@@ -1096,9 +1173,9 @@ def _dedupe_lhs_terms(lhs: pd.DataFrame) -> pd.DataFrame:
     appear twice at the same date_from. The first occurrence is kept --
     pass-1 rows come first and carry the coefficient from PLEXOS.
 
-    ``date_from`` is part of the key because PLEXOS carries time-varying
+    date_from is part of the key because PLEXOS carries time-varying
     coefficients as multiple rows for the same (constraint, term, unit) with
-    different ``date_from`` -- those legitimately co-exist and must not be
+    different date_from -- those legitimately co-exist and must not be
     collapsed.
     """
     before = len(lhs)

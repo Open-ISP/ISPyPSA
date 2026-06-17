@@ -1040,7 +1040,7 @@ def test_battery_rows_for_triggers_copies_location_profile(csv_str_to_df):
     result = _battery_rows_for_triggers(triggered, batteries_by_location, coefficients)
 
     # Both Q8 batteries inherit 0.43; the V7 battery is emitted once per profile
-    # row (0.78 always, 0.0 from 2031-11-30); Q1's battery defaults to 1.0.
+    # row (0.78 until 2031-11-30, then 0.0 from 2031-11-30); Q1's defaults to 1.0.
     expected = csv_str_to_df("""
         constraint_id,  term_type,       variable_name,    coefficient,  date_from
         SWQLD1,         storage_output,  Q8 Battery - 2h,  0.43,
