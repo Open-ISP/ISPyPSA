@@ -366,7 +366,7 @@ def test_rez_name_to_id_mapping_empty_input():
     pd.testing.assert_series_equal(result, expected)
 
 
-def test_looks_like_financial_year_matches_only_canonical_format():
+def test_looks_like_financial_year_matches_only_canonical_formats():
     assert _looks_like_financial_year("2024-25") is True
     assert _looks_like_financial_year("2025-26") is True
     assert _looks_like_financial_year("2024-2025") is False

@@ -206,14 +206,21 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         REZ / Constraint ID,  Option,    2024-25,  2025-26
         N3,                   Option 1,  750000,   760000
     """)
-
     connection_cost_forecast_wind_and_solar = csv_str_to_df("""
-        REZ__ID,  Scenario,     2024-25
-        Q1,       Step__Change, 73000000
+        REZ ID,  Scenario,     2024-25,    2025-26
+        Q1,       Step Change, 73000000,   74000000
     """)
     connection_costs_for_wind_and_solar = csv_str_to_df("""
-        REZ__ID,  Connection__capacity__(MVA)
+        REZ ID,  Connection capacity (MVA)
         Q1,       400
+    """)
+    connection_cost_forecast_other = csv_str_to_df("""
+        Generator Type,            Region,  Scenario,      2024-25,    2025-26
+        Battery Storage (4h),     NSW,     Step Change,  20000000,   22000000
+    """)
+    connection_capacity_non_vre = csv_str_to_df("""
+        Region,  Generator Type,         Connection capacity (MVA)
+        NSW,     Battery Storage (4h),  400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
@@ -246,9 +253,15 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
                 "connection_cost_forecast_wind_and_solar": connection_cost_forecast_wind_and_solar,
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
+                "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
-            manually_extracted_tables={},
+            # connection_capacity_non_vre is popped out of manually_extracted_tables
+            # into iasr_tables by create_template; supplied so the
+            # wiring runs. Output stays empty: generators/storage are placeholder-empty.
+            manually_extracted_tables={
+                "connection_capacity_non_vre": connection_capacity_non_vre,
+            },
             iasr_workbook_version="ignored-by-patch",
         )
 
@@ -382,12 +395,20 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         N3,                   Option 1,  750000,   760000
     """)
     connection_cost_forecast_wind_and_solar = csv_str_to_df("""
-        REZ__ID,    Scenario,       2024-25
-        Q1,         Step__Change,   73000000
+        REZ ID,  Scenario,     2024-25,    2025-26
+        Q1,       Step Change, 73000000,   74000000
     """)
     connection_costs_for_wind_and_solar = csv_str_to_df("""
-        REZ__ID,    Connection__capacity__(MVA)
-        Q1,         400
+        REZ ID,  Connection capacity (MVA)
+        Q1,       400
+    """)
+    connection_cost_forecast_other = csv_str_to_df("""
+        Generator Type,            Region,  Scenario,      2024-25,    2025-26
+        Battery Storage (4h),     NSW,     Step Change,  20000000,   22000000
+    """)
+    connection_capacity_non_vre = csv_str_to_df("""
+        Region,  Generator Type,         Connection capacity (MVA)
+        NSW,     Battery Storage (4h),  400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
@@ -420,9 +441,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
                 "connection_cost_forecast_wind_and_solar": connection_cost_forecast_wind_and_solar,
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
+                "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
-            manually_extracted_tables={},
+            manually_extracted_tables={
+                "connection_capacity_non_vre": connection_capacity_non_vre,
+            },
             iasr_workbook_version="ignored-by-patch",
         )
 
@@ -511,12 +535,20 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         N3,                   Option 1,  750000,   760000
     """)
     connection_cost_forecast_wind_and_solar = csv_str_to_df("""
-        REZ__ID,    Scenario,       2024-25
-        Q1,         Step__Change,   73000000
+        REZ ID,  Scenario,     2024-25,    2025-26
+        Q1,       Step Change, 73000000,   74000000
     """)
     connection_costs_for_wind_and_solar = csv_str_to_df("""
-        REZ__ID,    Connection__capacity__(MVA)
-        Q1,         400
+        REZ ID,  Connection capacity (MVA)
+        Q1,       400
+    """)
+    connection_cost_forecast_other = csv_str_to_df("""
+        Generator Type,            Region,  Scenario,      2024-25,    2025-26
+        Battery Storage (4h),     NSW,     Step Change,  20000000,   22000000
+    """)
+    connection_capacity_non_vre = csv_str_to_df("""
+        Region,  Generator Type,         Connection capacity (MVA)
+        NSW,     Battery Storage (4h),  400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
@@ -547,9 +579,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "rez_augmentation_costs_step_change_NSW": rez_aug_costs_nsw,
                 "connection_cost_forecast_wind_and_solar": connection_cost_forecast_wind_and_solar,
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
+                "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
             },
-            manually_extracted_tables={},
+            manually_extracted_tables={
+                "connection_capacity_non_vre": connection_capacity_non_vre,
+            },
             iasr_workbook_version="ignored-by-patch",
         )
 
