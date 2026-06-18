@@ -3,10 +3,15 @@ required: true
 unique:
   - [geo_id]
 description: >
-  Unified table of all spatial entities in the network model:
-  NEM subregions, NEM regions, and renewable energy zones (REZs).
+  Unified table of all spatial entities in the network model.
+
+  Contains NEM subregions, NEM regions, and renewable energy zones (REZs).
   Subregion and region entries are for spatial rollups and results formatting
   only.
+
+  Source tables:
+    - `sub_regional_reference_nodes`
+    - `renewable_energy_zones`
 columns:
   geo_id:
     type: string
@@ -29,6 +34,9 @@ columns:
     type: string
     required: false
     description: >
-      ISP sub-region the geography belongs to. Only present when
-      regional_granularity is "sub_regions"; the column is omitted entirely for
-      "nem_regions" and "single_region". For subregion entries, equals geo_id.
+      ISP sub-region the geography belongs to. For subregion entries, equals
+      geo_id.
+
+      If absent:
+      The template was built with regional_granularity "nem_regions" or
+      "single_region"; the column is only present for "sub_regions".

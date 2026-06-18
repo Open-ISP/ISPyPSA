@@ -3,11 +3,24 @@ required: false
 unique:
   - [expansion_id, year]
 description: >
-  Time-varying annualised expansion costs for network elements, covering both
-  physical transmission paths and group constraints.
-  Merges flow path and REZ transmission expansion costs into a single long-format
-  table.
-  If this table is absent, network expansion is treated as free.
+  Time-varying annualised expansion costs for network elements.
+
+  Covers both physical transmission paths and group constraints, merging flow
+  path and REZ transmission expansion costs into a single long-format table.
+
+  Source tables:
+    - `flow_path_augmentation_costs_<scenario>_<flow_path>`
+    - `rez_augmentation_costs_<scenario>_<state>`
+    - `flow_path_augmentation_options_<flow_path>`
+    - `rez_augmentation_options_<state>`
+
+  Source notes:
+  Costs are taken from the cost trajectory of the least-cost augmentation
+  option selected by the `templater`; the options tables provide the capacity
+  increase used to express costs per MW.
+
+  If absent:
+  Network expansion is treated as free.
 columns:
   expansion_id:
     type: string
@@ -16,13 +29,14 @@ columns:
       - network_expansion_options: expansion_id
     description: Identifier for the expandable network element.
   year:
-    type: integer
+    type: int
     required: true
-    description: Financial year the cost applies to.
+    description: Year the cost applies to.
   cost:
     type: float
     required: true
     units: $/MW
+    gte: 0.0
     description: >
       Annualised expansion cost, expressed per MW of the maximum directional
       capacity: total option cost divided by max(forward, reverse) of the

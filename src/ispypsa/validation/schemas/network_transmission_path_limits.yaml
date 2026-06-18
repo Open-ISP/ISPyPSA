@@ -7,10 +7,21 @@ custom_validation:
       For NaN timeslice rows, at most one row is permitted per path_id and
       direction combination.
 description: >
-  Static transmission capacity limits for each path by direction and timeslice.
-  Sourced from flow_path_transfer_capability and interconnector_transfer_capability
-  in the IASR workbook.
-  If this table is absent, no transmission capacity limits are enforced.
+  Transmission capacity limits for each path, by direction and optionally by
+  demand condition (timeslice).
+
+  A limit with no timeslice applies to all demand conditions; a limit with a
+  timeslice applies to that condition only. The schema permits either form for
+  any path. In the default IASR data, flow-path limits vary by demand condition
+  while REZ-to-subregion connection limits are static, but that reflects the
+  source tables rather than a schema rule.
+
+  Source tables:
+    - `flow_path_transfer_capability`
+    - `initial_transmission_limits`
+
+  If absent:
+  No transmission capacity limits are enforced.
 columns:
   path_id:
     type: string
@@ -30,11 +41,16 @@ columns:
       - timeslices: timeslice_id
     description: >
       Demand condition the limit applies to.
-      If absent, capacity is treated as a static limit applying to all conditions.
+
+      If absent (or empty):
+      Capacity is treated as a static limit applying to all conditions.
   capacity:
     type: float
     required: false
     units: MW
+    gte: 0.0
     description: >
-      Transfer capability limits.
-      NaN indicates a constraint-modelled path with no explicit physical limit.
+      Transfer capability limit.
+
+      If absent (or empty):
+      The path is constraint-modelled with no explicit physical limit.
