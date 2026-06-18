@@ -1,8 +1,10 @@
 import warnings
 
 import pandas as pd
+import pytest
 
 from ispypsa.templater.transmission import (
+    _add_region_to_timeslices,
     _append_new_parallel_paths,
     _collapse_paths_with_no_limits,
     _new_parallel_path_rows,
@@ -688,3 +690,107 @@ def test_append_new_parallel_paths_no_new_keys_is_a_silent_noop(csv_str_to_df):
     # enforced by the warning-as-error above, not by an equality check against
     # the csv_str_to_df-parsed input frame.
     pd.testing.assert_frame_equal(result_limits, limits, check_dtype=False)
+
+
+# --- _add_region_to_timeslices ---
+
+
+def test_add_region_to_timeslices(csv_str_to_df):
+    # Mirrors the docstring I/O example: forward takes the destination region's
+    # prefix, reverse the origin's. NNSW-SQ is cross-region (asymmetric); Q1-NQ is
+    # a REZ whose endpoints share a region (symmetric); SA-VIC is collapsed
+    # (NaN timeslice) and must pass through untouched.
+    limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,       capacity
+        NNSW-SQ,  forward,    peak_demand,     950
+        NNSW-SQ,  reverse,    peak_demand,     1450
+        Q1-NQ,    forward,    summer_typical,  750
+        Q1-NQ,    reverse,    summer_typical,  750
+        SA-VIC,   ,           ,
+    """)
+    paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to
+        NNSW-SQ,  NNSW,      SQ
+        Q1-NQ,    Q1,        NQ
+        SA-VIC,   SA,        VIC
+    """)
+    region_lookup = {
+        "NNSW": "NSW",
+        "SQ": "QLD",
+        "Q1": "QLD",
+        "NQ": "QLD",
+        "SA": "SA",
+        "VIC": "VIC",
+    }
+
+    result = _add_region_to_timeslices(limits, paths, region_lookup)
+
+    expected = csv_str_to_df("""
+        path_id,  direction,  timeslice,           capacity
+        NNSW-SQ,  forward,    qld_peak_demand,     950
+        NNSW-SQ,  reverse,    nsw_peak_demand,     1450
+        Q1-NQ,    forward,    qld_summer_typical,  750
+        Q1-NQ,    reverse,    qld_summer_typical,  750
+        SA-VIC,   ,           ,
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        expected.sort_values(["path_id", "direction", "timeslice"]).reset_index(
+            drop=True
+        ),
+        check_exact=False,
+        check_dtype=False,
+    )
+
+
+def test_add_region_to_timeslices_all_rows_collapsed(csv_str_to_df):
+    # Every limit row is collapsed (NaN timeslice), so no row is tagged and the
+    # function early-returns. The real path rows must survive untouched and the
+    # geo_from/geo_to columns added by the merge must be dropped (4-col shape).
+    limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        A-B,      ,           ,
+        C-D,      ,           ,
+    """)
+    paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to
+        A-B,      A,         B
+        C-D,      C,         D
+    """)
+    region_lookup = {"A": "NSW", "B": "QLD", "C": "VIC", "D": "SA"}
+
+    result = _add_region_to_timeslices(limits, paths, region_lookup)
+
+    expected = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        A-B,      ,           ,
+        C-D,      ,           ,
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("path_id").reset_index(drop=True),
+        expected.sort_values("path_id").reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_add_region_to_timeslices_raises_on_missing_geo(csv_str_to_df):
+    # MN and SA are endpoints of a path but absent from region_lookup, so their
+    # region prefix would be NaN — the function must fail loud instead.
+    limits = csv_str_to_df("""
+        path_id,  direction,  timeslice,    capacity
+        CQ-NQ,    forward,    peak_demand,  1200
+    """)
+    paths = csv_str_to_df("""
+        path_id,  geo_from,  geo_to
+        CQ-NQ,    CQ,        NQ
+        MN-SA,    MN,        SA
+    """)
+    region_lookup = {"CQ": "QLD", "NQ": "QLD"}
+
+    with pytest.raises(
+        ValueError,
+        match=r"Path geos missing from sub_regional_geography: \['MN', 'SA'\]",
+    ):
+        _add_region_to_timeslices(limits, paths, region_lookup)
