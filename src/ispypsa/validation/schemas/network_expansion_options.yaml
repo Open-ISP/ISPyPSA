@@ -39,17 +39,17 @@ columns:
     required: true
     allowed_values: [forward, reverse, constraint_relaxation]
     description: >
-      Aspect of the network this row's capacity describes. ``forward`` and
-      ``reverse`` apply to physical paths; ``constraint_relaxation`` applies
-      to group constraints.
+      Which direction or constraint relaxation this row's ``allowed_expansion``
+      applies to. ``forward`` and ``reverse`` are the two directions of a
+      physical path; ``constraint_relaxation`` is the single relaxation of a
+      group constraint.
   allowed_expansion:
     type: float
     required: true
     units: MW
     gte: 0.0
     description: >
-      Capacity increase provided by the selected expansion option for this
-      expansion_type.
+      Maximum capacity increase provided by the selected expansion option.
   expansion_option:
     type: string
     required: false

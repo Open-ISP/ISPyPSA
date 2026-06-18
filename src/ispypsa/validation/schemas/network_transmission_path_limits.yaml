@@ -7,10 +7,14 @@ custom_validation:
       For NaN timeslice rows, at most one row is permitted per path_id and
       direction combination.
 description: >
-  Static transmission capacity limits for each path by direction and timeslice.
+  Transmission capacity limits for each path, by direction and optionally by
+  demand condition (timeslice).
 
-  Flow path limits vary by demand condition (timeslice); REZ-to-subregion
-  connection limits are static.
+  A limit with no timeslice applies to all demand conditions; a limit with a
+  timeslice applies to that condition only. The schema permits either form for
+  any path. In the default IASR data, flow-path limits vary by demand condition
+  while REZ-to-subregion connection limits are static, but that reflects the
+  source tables rather than a schema rule.
 
   Source tables:
     - `flow_path_transfer_capability`

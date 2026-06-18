@@ -14,8 +14,9 @@ description: >
     - `flow_path_augmentation_options_<flow_path>`
 
   Source notes:
-  Augmentation options for corridors with no existing path (new parallel
-  corridors) are appended as zero-capacity paths by the `templater`.
+  Where augmentation options exist for a corridor with no existing path (a new
+  parallel corridor), the `templater` appends a zero-capacity base path so the
+  expansion option has a physical path to expand.
 
   If absent:
   The model is constructed with no transmission paths. Geographies with no
