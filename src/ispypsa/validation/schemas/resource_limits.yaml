@@ -4,9 +4,15 @@ unique:
   - [geo_id, resource_type, limit_type]
 description: >
   Resource and land use limits for geographies in the network model.
+
   Each row represents a limit on a specific resource type within a geography.
   Geographies with no rows in this table have no resource limits applied.
-  If this table is absent, the model is constructed without resource limits.
+
+  Source tables:
+    - `initial_build_limits`
+
+  If absent:
+  The model is constructed without resource limits.
 columns:
   geo_id:
     type: string
@@ -30,14 +36,16 @@ columns:
     type: float
     required: true
     units: MW
+    gte: 0.0
     description: Limit value.
   resource_limit_penalty:
     type: float
     required: false
     units: $/MW
+    gte: 0.0
     description: >
-      Annualised penalty applied if a limit is exceeded.
-      NaN means no violation is allowed (hard cap).
-      0.0 means there is effectively no limit — generation can exceed the
-      limit at zero cost.
-      If this column is absent, all limits are treated as hard caps.
+      Annualised penalty applied if a limit is exceeded. 0.0 means there is
+      effectively no limit — generation can exceed the limit at zero cost.
+
+      If absent (or empty):
+      The limit is treated as a hard cap; no violation is allowed.

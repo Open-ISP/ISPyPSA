@@ -4,10 +4,25 @@ unique:
   - [expansion_id, expansion_type]
 description: >
   Defines the selected expansion option and allowed capacity increase for
-  expandable network elements. Covers both physical transmission paths and
-  group constraints that can be relaxed through expansion. Physical paths
-  emit two rows (forward and reverse); constraint groups emit one
-  constraint_relaxation row.
+  expandable network elements.
+
+  Covers both physical transmission paths and group constraints that can be
+  relaxed through expansion. Physical paths emit two rows (forward and
+  reverse); constraint groups emit one constraint_relaxation row.
+
+  Source tables:
+    - `flow_path_augmentation_options_<flow_path>`
+    - `rez_augmentation_options_<state>`
+    - `flow_path_augmentation_costs_<scenario>_<flow_path>`
+    - `rez_augmentation_costs_<scenario>_<state>`
+
+  Source notes:
+  The `templater` selects the least-cost augmentation option for each network
+  element, so the cost tables determine which option's capacity increase
+  appears here.
+
+  If absent:
+  No network elements can be expanded by the model.
 columns:
   expansion_id:
     type: string
@@ -24,15 +39,22 @@ columns:
     required: true
     allowed_values: [forward, reverse, constraint_relaxation]
     description: >
-      Aspect of the network this row's capacity describes. ``forward`` and
-      ``reverse`` apply to physical paths; ``constraint_relaxation`` applies
-      to group constraints.
+      Which direction or constraint relaxation this row's ``allowed_expansion``
+      applies to. ``forward`` and ``reverse`` are the two directions of a
+      physical path; ``constraint_relaxation`` is the single relaxation of a
+      group constraint.
   allowed_expansion:
     type: float
     required: true
     units: MW
-    description: Capacity increase provided by the selected expansion option for this expansion_type.
+    gte: 0.0
+    description: >
+      Maximum capacity increase provided by the selected expansion option.
   expansion_option:
     type: string
     required: false
-    description: Name of the selected augmentation option, retained for traceability.
+    description: >
+      Name of the selected augmentation option, retained for traceability.
+
+      If absent (or empty):
+      No effect on the model; the column is informational only.
