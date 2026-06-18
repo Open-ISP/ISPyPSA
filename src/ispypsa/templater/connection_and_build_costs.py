@@ -76,7 +76,7 @@ def _template_connection_costs(
     Returns:
         One row per (geo_id, technology, year). connection_cost and
         system_strength_cost are in $/MW; system_strength_cost is 0.0 for
-        non-IBR technologies and offshore wind.
+        non-IBR technologies and solar thermal.
 
     I/O Example:
         Inputs (abbreviated; regional_granularity="nem_regions"):
