@@ -226,10 +226,11 @@ def create_ispypsa_inputs_template(
 
         # connection_capacity_non_vre is in manually_extracted_template_tables/ (sourced from
         # ENOR tables 16-17 and confirmed with AEMO) but is needed as an iasr_tables input,
-        # not a template output.
-        iasr_tables["connection_capacity_non_vre"] = manually_extracted_tables.pop(
+        # not a template output. TODO revisit when more manual tables added and consider
+        # reading direct from disk in templater functions vs. dict as input here.
+        iasr_tables["connection_capacity_non_vre"] = manually_extracted_tables[
             "connection_capacity_non_vre"
-        )
+        ].copy()
 
         generators_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
         storage_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
