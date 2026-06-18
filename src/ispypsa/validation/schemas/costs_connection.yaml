@@ -1,0 +1,73 @@
+table: costs_connection
+required: false
+unique:
+  - [geo_id, technology, year]
+description: >
+  Connection costs and system security costs for new entrant generators and storage.
+
+  Contains additional costs for grid connection and, where applicable, system
+  strength requirements for inverter-based resources.
+
+  Source tables:
+    - `connection_cost_forecast_wind_and_solar`
+    - `connection_cost_forecast_other`
+    - `connection_costs_for_wind_and_solar`
+    - `connection_costs_other`
+    - `efficient_level_of_system_strength_cost`
+
+  If absent:
+  No additional connection or system security costs apply to new entrant build costs.
+columns:
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - network_geography: geo_id
+    description: >
+      Network geography identifier where the connection cost applies.
+
+      Source notes:
+      If costs are given by region in source data, separate rows for each geo_id in
+      the region are created by the `templater` with the same cost applied across each.
+  technology:
+    type: string
+    required: true
+    allowed_values_from:
+      - costs_new_entrant_build: technology
+    description: >
+      Standardised technology name mapping to new entrant technologies.
+  year:
+    type: int
+    required: true
+    description: Year in which this cost applies.
+  connection_cost:
+    type: float
+    required: false
+    units: $/MW
+    gte: 0.0
+    nan_fill: 0.0
+    description: >
+      Additional cost in AUD for new build reflecting transmission infrastructure required
+      for grid connection.
+
+      Used in calculating the total capital cost of new entrant technologies.
+
+      If absent (or empty):
+      No additional connection cost applies for the corresponding technology, geo_id
+      and build year.
+  system_strength_cost:
+    type: float
+    required: false
+    units: $/MW
+    gte: 0.0
+    nan_fill: 0.0
+    description: >
+      Additional cost in AUD for inverter-based resources to meet efficient levels of
+      system strength.
+
+      Used in calculating the total capital cost for some new entrant technologies.
+      Per IASR, "This cost is a blend of remediation with synchronous condenser
+      and grid forming batteries" (IASR workbook v7.5, 'Power System Security' sheet).
+
+      If absent (or empty):
+      Only the `connection_cost` value is added to new entrant build costs.

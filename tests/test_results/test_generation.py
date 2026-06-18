@@ -195,13 +195,13 @@ def test_extract_generation_expansion_results(csv_str_to_df):
     # - gen2: new generator (build_year 2030, lifetime 25 -> closure 2055)
     # - custom_gen: should be filtered out (bus_for_custom_constraint_gens)
     generators_csv = """
-    Generator,    bus,                             carrier,  isp_technology_type,  build_year,  lifetime,  p_nom_opt
+    name,         bus,                             carrier,  isp_technology_type,  build_year,  lifetime,  p_nom_opt
     gen1,         NSW1,                            Gas,      Gas - CCGT,           2025,        10,        500.0
     gen2,         VIC1,                            Solar,    Solar - Fixed,        2030,        25,        200.0
     gen3,         NSW1,                            Wind,     Wind - Onshore,       2025,        30,        100.0
     custom_gen,   bus_for_custom_constraint_gens,  dummy,    Dummy,                2025,        10,        0.0
     """
-    generators = csv_str_to_df(generators_csv).set_index("Generator")
+    generators = csv_str_to_df(generators_csv).set_index("name")
 
     # 2. Mock Network with empty storage units
     network = Mock()
@@ -236,18 +236,18 @@ def test_extract_generation_expansion_results_with_storage(csv_str_to_df):
 
     # 1. Setup Generator Data
     generators_csv = """
-    Generator,    bus,   carrier,  isp_technology_type,  build_year,  lifetime,  p_nom_opt
+    name,         bus,   carrier,  isp_technology_type,  build_year,  lifetime,  p_nom_opt
     gen1,         NSW1,  Gas,      Gas - CCGT,           2025,        10,        500.0
     """
-    generators = csv_str_to_df(generators_csv).set_index("Generator")
+    generators = csv_str_to_df(generators_csv).set_index("name")
 
     # 2. Setup Storage Unit Data
     storage_csv = """
-    StorageUnit,  bus,   carrier,  build_year,  lifetime,  p_nom_opt
+    name,         bus,   carrier,  build_year,  lifetime,  p_nom_opt
     battery1,     NSW1,  Battery,  2030,        20,        100.0
     battery2,     VIC1,  Battery,  2035,        15,        200.0
     """
-    storage_units = csv_str_to_df(storage_csv).set_index("StorageUnit")
+    storage_units = csv_str_to_df(storage_csv).set_index("name")
 
     # 3. Mock Network
     network = Mock()

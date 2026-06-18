@@ -265,9 +265,7 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
 
     # Check that nominal generator capacities are as expected - relationally!
     generators = (
-        network.generators.reset_index()
-        .loc[:, ["Generator", "p_nom_opt"]]
-        .set_index("Generator")
+        network.generators.reset_index().loc[:, ["name", "p_nom_opt"]].set_index("name")
     )
     solar_capacity = generators.at["large_scale_solar_pv_q6_sat_2026", "p_nom_opt"]
     wind_medium_capacity = generators.at["wind_q6_wm_2026", "p_nom_opt"]

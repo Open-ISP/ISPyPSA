@@ -20,6 +20,8 @@ _NEM_REGION_IDS = pd.Series(
     name="nem_region_id_mapping",
 )
 
+_SINGLE_REGION_ID = "NEM"
+
 _NEM_SUB_REGION_IDS = pd.Series(
     {
         "Northern Queensland": "NQ",
@@ -45,6 +47,12 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
         "flow_path": ["Terranora", "Murraylink", "Basslink"],
     }
 )
+
+# Canonical representative timeslice names used across the templater output:
+# ``peak_demand``, ``summer_typical``, ``winter_reference``. Per-region
+# variants (e.g. ``qld_peak_demand``) are formed by prefixing with the
+# lowercased NEM region id.
+_CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 
 _GENERATOR_PROPERTIES = {
     "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,

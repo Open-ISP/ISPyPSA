@@ -16,8 +16,7 @@ columns:
     type: string
     required: true
     allowed_values_from:
-      table: network_transmission_paths
-      column: path_id
+      - network_transmission_paths: path_id
     description: Transmission path identifier.
   direction:
     type: string
@@ -28,8 +27,7 @@ columns:
     type: string
     required: false
     allowed_values_from:
-      table: timeslices
-      column: timeslice_id
+      - timeslices: timeslice_id
     description: >
       Demand condition the limit applies to.
       If absent, capacity is treated as a static limit applying to all conditions.

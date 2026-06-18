@@ -150,6 +150,7 @@ run using either ISPyPSA CLI or API.
         config.network.nodes.regional_granularity,
         iasr_tables,
         manually_extracted_tables,
+        config.iasr_workbook_version,
         config.filter_by_nem_regions,
         config.filter_by_isp_sub_regions,
     )

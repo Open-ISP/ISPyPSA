@@ -396,3 +396,79 @@ def test_expand_then_operate():
             atol=1e-5,
             err_msg="Total generation doesn't match demand",
         )
+
+
+def test_update_timeseries_with_matching_snapshots(csv_str_to_df):
+    """Test that update_network_timeseries works when operational snapshots match
+    capacity expansion snapshots (same values). This triggers a pandas bug where
+    DataFrame.reindex() on a MultiIndex loses the .name attribute when old and new
+    index values are identical, which breaks pypsa 1.0's xarray model builder.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_dir = Path(tmpdir)
+
+        solar_dir = temp_dir / "solar_traces"
+        wind_dir = temp_dir / "wind_traces"
+        demand_dir = temp_dir / "demand_traces"
+        solar_dir.mkdir()
+        wind_dir.mkdir()
+        demand_dir.mkdir()
+
+        # Use the SAME snapshots for both capacity expansion and operational phases
+        shared_snapshots_csv = """
+        investment_periods,  snapshots,            generators,  objective,  stores
+        2025,                2025-01-01 12:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 18:00:00,  1.0,         1.0,        1.0
+        """
+        shared_snapshots = csv_str_to_df(shared_snapshots_csv)
+        shared_snapshots["snapshots"] = pd.to_datetime(shared_snapshots["snapshots"])
+
+        buses_csv = """
+        name
+        bus1
+        """
+        buses = csv_str_to_df(buses_csv)
+
+        generators_csv = """
+        name,  carrier,  bus,   p_nom,  p_nom_extendable,  p_nom_max,  capital_cost,  marginal_cost
+        gas,   Gas,      bus1,  200,    False,              200,        0,             50
+        """
+        generators = csv_str_to_df(generators_csv)
+
+        investment_period_weights_csv = """
+        period,  years,  objective
+        2025,    1,      1
+        """
+        investment_period_weights = csv_str_to_df(investment_period_weights_csv)
+
+        pypsa_friendly_inputs = {
+            "snapshots": shared_snapshots,
+            "buses": buses,
+            "generators": generators,
+            "investment_period_weights": investment_period_weights,
+            "custom_constraints_lhs": pd.DataFrame(),
+            "custom_constraints_rhs": pd.DataFrame(),
+            "custom_constraints_generators": pd.DataFrame(),
+        }
+
+        # Create demand time series file
+        demand_csv = """
+        investment_periods,  snapshots,            p_set
+        2025,                2025-01-01 12:00:00,  100
+        2025,                2025-01-01 18:00:00,  100
+        """
+        demand = csv_str_to_df(demand_csv)
+        demand["snapshots"] = pd.to_datetime(demand["snapshots"])
+        demand.to_parquet(demand_dir / "bus1.parquet")
+
+        # Build and solve capacity expansion
+        network = build_pypsa_network(pypsa_friendly_inputs, temp_dir)
+        network.optimize.solve_model(solver_name="highs")
+
+        # Update with the SAME snapshots — this triggers the pandas reindex bug
+        update_network_timeseries(
+            network, pypsa_friendly_inputs, shared_snapshots.copy(), temp_dir
+        )
+
+        # Verify the model was built successfully (no xarray dimension error)
+        assert network.model is not None

@@ -9,22 +9,23 @@ authors = [
 ]
 dependencies = [
     "pandas>=2.2.2,<3.0.0",
-    "pypsa==0.34.1",
+    "pypsa>=1.0.0,<2.0.0",
     "pyyaml>=6.0.2",
     "doit>=0.36.0",
     "xmltodict>=0.13.0",
     "thefuzz>=0.22.1",
     "pyarrow>=18.0.0",
     "isp-trace-parser>=2.0.3",
-    "isp-workbook-parser>=2.6.0",
+    "isp-workbook-parser>=2.8.0",
     "requests>=2.32.3",
     "tqdm>=4.67.1",
     "pygal>=3.0.5",
     "plotly>=6.5.0",
     "numpy>=2.0.0",
+    "shapely>=2.1.0",
 ]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 
 [project.scripts]
 ispypsa = "ispypsa.cli.cli:main"
@@ -53,6 +54,7 @@ dev = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.18",
     "mkdocstrings[python]>=0.29.0",
+    "plexosdb>=1.3.4",
 ]
 
 [tool.hatch.metadata]
@@ -80,6 +82,7 @@ select = [
 [tool.hatch.build]
 include = [
     "src/ispypsa/**/*.py",
+    "src/ispypsa/**/*.yaml",
     "src/ispypsa/data_fetch/manifests/**/*.txt",
     "src/ispypsa/templater/manually_extracted_template_tables/**/*.csv",
 ]

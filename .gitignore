@@ -162,7 +162,7 @@ cython_debug/
 .idea/
 scratch.py
 scratch/
-data/
+/data/
 
 # Lockfiles
 .~lock*.xlsx#
@@ -175,6 +175,10 @@ ispypsa_runs/**/*.nc
 ispypsa_runs/**/*.yaml
 *.html
 data/*
+
+# Local-only scratch / investigation notes. Anything that needs to live in
+# the repo permanently should go under docs/, src/, or tests/ instead.
+notes/
 
 
 # ignore doit database

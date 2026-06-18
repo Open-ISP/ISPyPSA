@@ -1,0 +1,67 @@
+table: costs_fuel_prices
+# note: this table is required to calculate SRMC. Possible to make this optional in
+# future and/or design in more flexibility around dynamic vs. static SRMC calculation
+# - but I'm getting blocked on how to implement this at the moment with some
+# complexity around VRE vs non-VRE data requirements and how validation will
+# be applied (to make some decisions around how conditional requirements can
+# work) - basically needs more thought/discussion so for now I'm making all
+# columns/tables needed to calculate SRMC (dynamic) required.
+required: true
+unique:
+  - [fuel_type, fuel_price_mapping, year]
+description: >
+  Fuel prices by year for generation and storage units.
+
+  Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
+
+  Source tables:
+    - `coal_fuel_price`
+    - `biomass_fuel_price`
+    - `gas_and_liquid_fuel_prices_consultant_scenario_mapping`
+    - `gas_prices_existing_generators`
+    - `gas_prices_new_entrants`
+    - `liquid_fuel_prices`
+    - `gpg_secondary_fuel_prices` # maybe
+    - `hydrogen_prices`
+    - `biomethane_prices`
+
+  Source notes:
+  The consultant scenario mapping table is used to map between specified ISP
+  scenario names and the gas, liquid fuel, hydrogen and biomenthane price scenario
+  names. This is new in the 2026 ISP (IASR v7.5).
+
+  Rows are also added by the `templater` for VRE fuels (Wind, Solar) with a price
+  of $0.0 for all years.
+columns:
+  fuel_type:
+    type: string
+    required: true
+    description: >
+      Fuel type for which the price applies.
+
+      There are some fuel types (e.g., Biomethane) that are not used directly by any
+      generators in the model, but are used to blend with other fuels to calculate
+      final fuel costs.
+  fuel_price_mapping:
+    type: string
+    required: true
+    description: >
+      Identifier mapping to specific assets or sets of new entrant assets.
+
+      For most existing and planned generation, maps to specific power stations.
+      For new entrants, maps to technology/location groups.
+
+      Source notes:
+      For purely 'blending' fuels (e.g. Biomethane) and VRE fuel types (Wind, Solar),
+      that don't map to a specific generator, technology, or location this column is
+      filled by the `templater` with the corresponding `fuel_type` value.
+  year:
+    type: int
+    required: true
+    description: Year for which the price applies.
+  price:
+    type: float
+    required: true
+    units: $/GJ
+    gte: 0.0
+    description: Fuel price in AUD per gigajoule.

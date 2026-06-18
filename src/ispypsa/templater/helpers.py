@@ -123,12 +123,95 @@ def _one_to_one_priority_based_fuzzy_matching(
 def _log_fuzzy_match(
     original_series: pd.Series, matched_series: pd.Series, task_desc: str
 ) -> None:
-    """Log any fuzzy matches at the INFO level"""
+    """Log any fuzzy matches at the INFO level — one line per distinct mapping.
+
+    Callers may pass series with the same (original, match) pair repeated across
+    rows (e.g. one cost row per year for the same option name). Dedup so each
+    name-matching decision appears exactly once in the log, regardless of how many
+    rows shared it. Sorted for stable order across runs.
+    """
     if any(diff := matched_series != original_series):
-        originals = original_series[diff]
-        matches = matched_series[diff]
-        for original, match in zip(originals, matches):
+        pairs = sorted(set(zip(original_series[diff], matched_series[diff])))
+        for original, match in pairs:
             logging.info(f"'{original}' matched to '{match}' whilst {task_desc}")
+
+
+def _best_fuzzy_match(value: str, choices: Iterable[str], threshold: int) -> str | None:
+    """Returns the highest-scoring match from choices if score >= threshold, else None.
+
+    I/O Example:
+        _best_fuzzy_match("Step Chaneg", ["Step Change", "Slower Growth"], 85)
+        → "Step Change"   # fuzz.ratio ~89, above threshold
+
+        _best_fuzzy_match("Hmm", ["Step Change", "Slower Growth"], 85)
+        → None            # best score well below threshold
+    """
+    # NOTE https://github.com/Open-ISP/ISPyPSA/issues/106 (short strings)
+    best_choice, best_score = max(
+        ((c, fuzz.ratio(value, c)) for c in choices),
+        key=lambda x: x[1],
+    )
+    return best_choice if best_score >= threshold else None
+
+
+def _fuzzy_map_to_canonical(
+    name_series: pd.Series,
+    choices: Iterable[str],
+    task_desc: str,
+    threshold: int = 85,
+) -> pd.Series:
+    """Maps each value in name_series to the closest match in choices (many-to-one).
+
+    Unlike _fuzzy_match_names, choices are not consumed — multiple input values can
+    map to the same canonical name. Successful fuzzy corrections are logged at INFO
+    via _log_fuzzy_match. Any remaining values scoring below ``threshold`` after
+    matching raises a ValueError.
+
+    Args:
+        name_series: Series of names to map.
+        choices: Canonical names to match against.
+        task_desc: Description included in log messages.
+        threshold: Minimum fuzz.ratio score (0–100) to accept a replacement. Default 85.
+
+    Returns:
+        Series with values replaced by the closest match where score >= threshold.
+
+    Raises:
+        ValueError: if any unmatched values remain - values that aren't able to be
+        canonicalised (but are expected to be) flag potential inconsistencies across
+        datasets.
+
+    I/O Examples:
+        name_series:    ["Step Change", "Step Chaneg", "Step Change"]
+        choices:        ["Step Change", "Slower Growth"]
+        task_desc:      "canonicalising scenarios"
+        threshold:      85
+
+        returns:      ["Step Change", "Step Change", "Step Change"]
+        # "Step Chaneg" corrected → INFO logged
+
+        name_series:    ["Wind", "Wind", "Solar PV", "Solar pv", "the sun"]
+        choices:        ["Wind", "Solar PV"]
+        task_desc:      "fixing technologies"
+        threshold:      85
+
+        raises:
+            ValueError: "Could not fuzzy match to a canonical value
+                        whilst fixing technologies: ['the sun']"
+    """
+    canonical = set(choices)
+    match_dict = {
+        v: _best_fuzzy_match(v, canonical, threshold) for v in name_series.unique()
+    }
+    matched = name_series.map(
+        lambda v: match_dict[v] if match_dict[v] is not None else v
+    )
+    _log_fuzzy_match(name_series, matched, task_desc)
+    unmatched = sorted(k for k, v in match_dict.items() if v is None)
+    if unmatched:
+        msg = f"Could not fuzzy match to a canonical value whilst {task_desc}: {unmatched}"
+        raise ValueError(msg)
+    return matched
 
 
 def _snakecase_string(string: str) -> str:
@@ -218,6 +301,25 @@ def _add_units_to_financial_year_columns(
         for col in columns
     ]
     return cols
+
+
+def _looks_like_financial_year(col: str) -> bool:
+    """True if column name matches a financial year pattern like '2024-25'."""
+    return bool(re.match(r"^\d{4}-\d{2}$", str(col)))
+
+
+def _financial_year_string_to_end_year_int(fy_string: str) -> int:
+    """Converts an IASR financial-year string like '2024-25' to its ending year (2025).
+
+    Adds 1 to the start year (rather than parsing the two-digit end) to avoid
+    century-crossover ambiguity, mirroring
+    :func:`ispypsa.translator.helpers._get_financial_year_int_from_string`.
+
+    I/O Example:
+        "2024-25" -> 2025
+        "2099-00" -> 2100
+    """
+    return int(fy_string.split("-")[0]) + 1
 
 
 def _convert_financial_year_columns_to_float(df: pd.DataFrame) -> pd.DataFrame:

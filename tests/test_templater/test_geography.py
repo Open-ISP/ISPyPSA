@@ -15,7 +15,7 @@ def test_extract_subregion_id_with_comma_in_name():
     pd.testing.assert_series_equal(result, expected)
 
 
-def test_template_network_geography(csv_str_to_df):
+def test_template_network_geography_sub_regions(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,  ISP sub-region,                        Sub-regional reference node
         Queensland,  Northern Queensland (NQ),              Ross 275 kV
@@ -28,6 +28,10 @@ def test_template_network_geography(csv_str_to_df):
         N3,   Central-West Orana, NSW,         CNSW
     """)
 
+    result = _template_network_geography(
+        sub_regional_reference_nodes, renewable_energy_zones, "sub_regions"
+    )
+
     expected = csv_str_to_df("""
         geo_id,  geo_type,   region_id,  subregion_id
         NQ,      subregion,  QLD,        NQ
@@ -35,11 +39,65 @@ def test_template_network_geography(csv_str_to_df):
         Q1,      rez,        QLD,        NQ
         N3,      rez,        NSW,        CNSW
     """)
-
-    result = _template_network_geography(
-        sub_regional_reference_nodes, renewable_energy_zones
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
     )
 
+
+def test_template_network_geography_nem_regions(csv_str_to_df):
+    sub_regional_reference_nodes = csv_str_to_df("""
+        NEM region,  ISP sub-region,                        Sub-regional reference node
+        Queensland,  Northern Queensland (NQ),              Ross 275 kV
+        Queensland,  Central Queensland (CQ),               Stanwell 275 kV
+        New South Wales,  Central New South Wales (CNSW),   Wellington 330 kV
+    """)
+
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,              NEM region,  ISP sub-region
+        Q1,   Far North QLD,     QLD,         NQ
+        N3,   Central-West Orana, NSW,         CNSW
+    """)
+
+    result = _template_network_geography(
+        sub_regional_reference_nodes, renewable_energy_zones, "nem_regions"
+    )
+
+    expected = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        QLD,     region,     QLD
+        NSW,     region,     NSW
+        Q1,      rez,        QLD
+        N3,      rez,        NSW
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+    )
+
+
+def test_template_network_geography_single_region(csv_str_to_df):
+    sub_regional_reference_nodes = csv_str_to_df("""
+        NEM region,  ISP sub-region,            Sub-regional reference node
+        Queensland,  Northern Queensland (NQ),  Ross 275 kV
+    """)
+
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,              NEM region,  ISP sub-region
+        Q1,   Far North QLD,     QLD,         NQ
+        N3,   Central-West Orana, NSW,         CNSW
+    """)
+
+    result = _template_network_geography(
+        sub_regional_reference_nodes, renewable_energy_zones, "single_region"
+    )
+
+    expected = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        NEM,     region,     NEM
+        Q1,      rez,        NEM
+        N3,      rez,        NEM
+    """)
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected.reset_index(drop=True),

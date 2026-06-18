@@ -1,1 +1,2 @@
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: remove this flag entry.
 use_new_table_format: false
