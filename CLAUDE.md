@@ -336,3 +336,26 @@ uv run pre-commit run --all-files             # Run linters
 - Before staging, list the files you intend to commit and confirm with the user.
   Local-only edits (dev configs, feature flag flips, experiment artefacts) often
   sit alongside the real change and should not be swept into the commit.
+
+### Pull request descriptions
+
+The description orients the reviewer. After reading the opening, and before opening any
+file, they should know what the change is and what to expect from the diff.
+
+- **Lead with the story, not the mechanics.** Open with why the change exists and what it
+  does conceptually — the problem, the decision, the shape of the fix. Leave the
+  helper-by-helper detail to the code.
+- **Include a directory-tree diagram** of where the key changes live, with a short arrow
+  note against each path, so the reviewer sees the lay of the land before diving in.
+- **Flag the design choices a reviewer would otherwise have to reverse-engineer** — the
+  non-obvious "why it's done this way", not a changelog of every edit.
+- **Drop sections with nothing distinctive to say.** A "Testing" section that only says
+  "ran the tests" is noise; omit it. Include what's specific to this change.
+- **Cut detail that doesn't earn its place.** Test-fixture tweaks, incidental renames and
+  the like belong in the diff, not the orientation.
+- **State relationships accurately, without overstating.** Describe what the change actually
+  does; don't reach for a stronger claim than is true.
+
+Tone: concise, direct, conversational; British/Australian English; understated rather than
+effusive — no hyperbole. Don't anthropomorphise the PR: "this change adds X" / "X now does
+Y", not "this PR teaches X".

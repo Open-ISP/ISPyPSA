@@ -36,9 +36,11 @@ def _template_network_transmission(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Creates the network_transmission_paths and network_transmission_path_limits tables.
 
-    Sub-regional paths and limits are built first; then if a coarser granularity
-    is requested, the result is aggregated to that level. Finally, augmentation
-    keys without an existing path (new parallel corridors) are appended.
+    Sub-regional paths and limits are built first, then each limit's timeslice is
+    prefixed with the NEM region whose demand condition sets it (see
+    ``_add_region_to_timeslices`` and Open-ISP/ISPyPSA#109). If a coarser
+    granularity is requested, the result is aggregated to that level. Finally,
+    augmentation keys without an existing path (new parallel corridors) are appended.
 
     Args:
         flow_path_transfer_capability: IASR flow path transfer capability table.
@@ -46,8 +48,9 @@ def _template_network_transmission(
             for REZ transmission network limits.
         renewable_energy_zones: IASR renewable energy zones table.
         sub_regional_geography: the sub_regional ``network_geography`` table —
-            its geo_id -> region_id mapping is used to identify cross-region
-            flow paths when aggregating to a coarser granularity.
+            its geo_id -> region_id mapping (covering sub-regions and REZs) drives
+            both the timeslice region prefix and the cross-region flow-path
+            identification used when aggregating to a coarser granularity.
         regional_granularity: one of "sub_regions", "nem_regions", or
             "single_region".
         flow_path_options: granularity-filtered dict of flow-path augmentation
@@ -61,7 +64,10 @@ def _template_network_transmission(
 
     I/O Example:
         Real IASR column names are in ``_FLOW_PATH_COLUMN_RENAMES`` and
-        ``_REZ_COLUMN_RENAMES``; abbreviated names are used here.
+        ``_REZ_COLUMN_RENAMES``; abbreviated names are used here. Timeslices are
+        region-prefixed: the forward limit carries the destination region's demand
+        condition, the reverse limit the origin region's (see
+        ``_add_region_to_timeslices``).
 
         Inputs:
 
@@ -90,13 +96,16 @@ def _template_network_transmission(
                 Q1-NQ     Q1        NQ      AC
                 N1-CNSW   N1        CNSW    AC
 
-            returns limits:
-                path_id   direction  timeslice    capacity
-                CQ-NQ     forward    peak_demand  1200          # flow path with values: 6 rows
-                NNSW-SQ   forward    peak_demand  950           # flow path with values: 6 rows
-                Q1-NQ     forward    peak_demand  750           # REZ with values: 6 rows, symmetric
-                MN-SA     (NaN)      (NaN)        (NaN)         # all-blank flow path -> collapsed
-                N1-CNSW   (NaN)      (NaN)        (NaN)         # REZ absent from limits -> collapsed
+            returns limits (one forward + one reverse row shown per path; 6 rows each):
+                path_id   direction  timeslice            capacity
+                CQ-NQ     forward    qld_peak_demand      1200      # into NQ (QLD)
+                CQ-NQ     reverse    qld_peak_demand      1440      # into CQ (QLD): intra-region
+                NNSW-SQ   forward    qld_peak_demand      950       # into SQ (QLD)
+                NNSW-SQ   reverse    nsw_peak_demand      1450      # into NNSW (NSW)
+                Q1-NQ     forward    qld_peak_demand      750       # REZ in QLD, symmetric
+                Q1-NQ     reverse    qld_peak_demand      750
+                MN-SA     (NaN)      (NaN)                (NaN)     # all-blank flow path -> collapsed
+                N1-CNSW   (NaN)      (NaN)                (NaN)     # REZ absent from limits -> collapsed
 
         regional_granularity = "nem_regions":
 
@@ -107,11 +116,12 @@ def _template_network_transmission(
                 N1-NSW    N1        NSW     AC                  # REZ geo_to retargeted
                 # CQ-NQ dropped (intra-QLD)
 
-            returns limits:
-                path_id   direction  timeslice    capacity
-                NSW-QLD   forward    peak_demand  950
-                Q1-QLD    forward    peak_demand  750
-                N1-NSW    (NaN)      (NaN)        (NaN)         # collapsed row preserved
+            returns limits (prefixes ride through the path-id re-keying unchanged):
+                path_id   direction  timeslice            capacity
+                NSW-QLD   forward    qld_peak_demand      950
+                NSW-QLD   reverse    nsw_peak_demand      1450
+                Q1-QLD    forward    qld_peak_demand      750
+                N1-NSW    (NaN)      (NaN)                (NaN)    # collapsed row preserved
 
         regional_granularity = "single_region":
 
@@ -121,10 +131,10 @@ def _template_network_transmission(
                 N1-NEM   N1        NEM     AC
                 # All inter-subregional flow paths dropped; only REZ paths remain.
 
-            returns limits:
-                path_id  direction  timeslice    capacity
-                Q1-NEM   forward    peak_demand  750
-                N1-NEM   (NaN)      (NaN)        (NaN)
+            returns limits (REZ keeps its real region prefix despite geo_to -> NEM):
+                path_id  direction  timeslice            capacity
+                Q1-NEM   forward    qld_peak_demand      750
+                N1-NEM   (NaN)      (NaN)                (NaN)
 
         When ``flow_path_options`` contains keys without a matching path_id (e.g.
         ``CNSW-SNW`` when only ``CNSW-SNW_NTH``/``_STH`` exist), those corridors are
@@ -142,14 +152,18 @@ def _template_network_transmission(
     paths = pd.concat([flow_paths, rez_paths], ignore_index=True)
     limits = pd.concat([flow_limits, rez_limits], ignore_index=True)
     limits = _collapse_paths_with_no_limits(limits)
+    region_lookup = _build_geo_region_lookup(sub_regional_geography)
+    limits = _add_region_to_timeslices(limits, paths, region_lookup)
     paths, limits = _aggregate_to_granularity(
         paths,
         limits,
         regional_granularity,
         renewable_energy_zones,
-        sub_regional_geography,
+        region_lookup,
     )
-    return _append_new_parallel_paths(paths, limits, flow_path_options or {})
+    return _append_new_parallel_paths(
+        paths, limits, flow_path_options or {}, region_lookup
+    )
 
 
 def _aggregate_to_granularity(
@@ -157,7 +171,7 @@ def _aggregate_to_granularity(
     limits: pd.DataFrame,
     regional_granularity: str,
     renewable_energy_zones: pd.DataFrame,
-    sub_regional_geography: pd.DataFrame,
+    region_lookup: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Dispatches to the appropriate aggregation step for the chosen granularity."""
     if regional_granularity == "sub_regions":
@@ -166,11 +180,98 @@ def _aggregate_to_granularity(
     if regional_granularity == "single_region":
         return _aggregate_to_single_region(paths, limits, rez_ids)
     if regional_granularity == "nem_regions":
-        region_lookup = dict(
-            zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
-        )
         return _aggregate_to_nem_regions(paths, limits, region_lookup, rez_ids)
     raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
+
+
+# --- Region-prefixed timeslices ---
+
+
+def _build_geo_region_lookup(sub_regional_geography: pd.DataFrame) -> dict[str, str]:
+    """Maps every geo (sub-region, REZ, or NEM region) to its NEM region id.
+
+    ``sub_regional_geography`` already lists both sub-regions and REZs against their
+    ``region_id``. NEM regions are added as identities so that geos which are
+    already regions — after granularity aggregation, or on new parallel corridors —
+    resolve to themselves.
+
+    I/O Example:
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            NQ      subregion  QLD
+            CNSW    subregion  NSW
+            Q1      rez        QLD
+
+        returns:
+            {"NQ": "QLD", "CNSW": "NSW", "Q1": "QLD", "QLD": "QLD", "NSW": "NSW"}
+    """
+    lookup = dict(
+        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+    )
+    for region in set(sub_regional_geography["region_id"]):
+        lookup[region] = region
+    return lookup
+
+
+def _add_region_to_timeslices(
+    limits: pd.DataFrame,
+    paths: pd.DataFrame,
+    region_lookup: dict[str, str],
+) -> pd.DataFrame:
+    """Prefixes each timeslice with the NEM region whose demand condition sets it.
+
+    PLEXOS tags a path's forward (geo_from -> geo_to) limit with the *destination*
+    region's demand condition and its reverse limit with the *origin* region's — the
+    receiving region's load is what tightens the limit (Open-ISP/ISPyPSA#109). The
+    region id is lowercased and prefixed onto the canonical timeslice so the value
+    matches the custom-constraints vocabulary (``qld_peak_demand`` etc.). Collapsed
+    rows (NaN timeslice) are left untouched.
+
+    Applied at the sub-regional level, before any granularity aggregation, so that a
+    REZ — whose forward and reverse endpoints sit in the same region — stays
+    symmetric even when single_region later retargets its geo_to to ``NEM``.
+
+    I/O Example:
+        limits:
+            path_id  direction  timeslice         capacity
+            NNSW-SQ  forward    peak_demand       950        # into SQ (QLD)
+            NNSW-SQ  reverse    peak_demand       1450       # into NNSW (NSW)
+            Q1-NQ    reverse    summer_typical    750        # REZ Q1 in QLD
+            SA-VIC   (NaN)      (NaN)             (NaN)      # collapsed: untouched
+
+        paths:
+            path_id  geo_from  geo_to
+            NNSW-SQ  NNSW      SQ
+            Q1-NQ    Q1        NQ
+            SA-VIC   SA        VIC
+
+        region_lookup: {"NNSW": "NSW", "SQ": "QLD", "Q1": "QLD", "NQ": "QLD", ...}
+
+        returns:
+            path_id  direction  timeslice            capacity
+            NNSW-SQ  forward    qld_peak_demand      950
+            NNSW-SQ  reverse    nsw_peak_demand      1450
+            Q1-NQ    reverse    qld_summer_typical   750
+            SA-VIC   (NaN)      (NaN)                (NaN)
+
+        Raises ValueError if any path geo is absent from ``region_lookup`` (every
+        endpoint must resolve to a region, else its prefix would be NaN).
+    """
+    _assert_geos_have_regions(paths, region_lookup)
+    merged = limits.merge(
+        paths[["path_id", "geo_from", "geo_to"]], on="path_id", how="left"
+    )
+    tagged = merged["timeslice"].notna()
+    if not tagged.any():
+        return merged[["path_id", "direction", "timeslice", "capacity"]]
+    endpoint = merged["geo_to"].where(
+        merged["direction"] == "forward", merged["geo_from"]
+    )
+    lower_region = {geo: region.lower() for geo, region in region_lookup.items()}
+    merged.loc[tagged, "timeslice"] = (
+        endpoint[tagged].map(lower_region) + "_" + merged.loc[tagged, "timeslice"]
+    )
+    return merged[["path_id", "direction", "timeslice", "capacity"]]
 
 
 # --- Flow path extraction ---
@@ -566,12 +667,12 @@ def _aggregate_to_nem_regions(
                 Q1-NQ              Q1        NQ      AC        # REZ, geo_to retargeted
                 N1-CNSW            N1        CNSW    AC        # REZ, geo_to retargeted
 
-            limits:
-                path_id   direction  timeslice    capacity
-                CQ-NQ     forward    peak_demand  1200
-                NNSW-SQ   forward    peak_demand  950
-                Q1-NQ     forward    peak_demand  750
-                N1-CNSW   (NaN)      (NaN)        (NaN)
+            limits (already region-prefixed by ``_add_region_to_timeslices``):
+                path_id   direction  timeslice        capacity
+                CQ-NQ     forward    qld_peak_demand  1200
+                NNSW-SQ   forward    qld_peak_demand  950
+                Q1-NQ     forward    qld_peak_demand  750
+                N1-CNSW   (NaN)      (NaN)            (NaN)
 
             region_lookup:
                 {"NQ": "QLD", "CQ": "QLD", "NNSW": "NSW", "SQ": "QLD",
@@ -587,18 +688,17 @@ def _aggregate_to_nem_regions(
             Q1-QLD             Q1        QLD     AC
             N1-NSW             N1        NSW     AC
 
-        returns limits:
-            path_id  direction  timeslice    capacity
-            NSW-QLD  forward    peak_demand  950             # CQ-NQ row dropped
-            Q1-QLD   forward    peak_demand  750
-            N1-NSW   (NaN)      (NaN)        (NaN)           # collapsed row preserved through rename
+        returns limits (path_ids re-keyed; the timeslice prefix is untouched):
+            path_id  direction  timeslice        capacity
+            NSW-QLD  forward    qld_peak_demand  950             # CQ-NQ row dropped
+            Q1-QLD   forward    qld_peak_demand  750
+            N1-NSW   (NaN)      (NaN)            (NaN)           # collapsed row preserved through rename
 
-        Raises ValueError if any flow-path or REZ-path geo is missing from
-        ``region_lookup`` (every geo must map to a real region).
+        Geo resolution is already validated upstream by ``_add_region_to_timeslices``
+        (run before aggregation), so every geo here is known to map to a region.
     """
     flow_paths = paths[~paths["geo_from"].isin(rez_ids)]
     rez_paths = paths[paths["geo_from"].isin(rez_ids)]
-    _validate_geos_have_regions(flow_paths, rez_paths, region_lookup)
     flow_paths = _filter_to_cross_region_flow_paths(flow_paths, region_lookup)
     new_flow_paths, flow_renames = _remap_flow_paths_to_regions(
         flow_paths, region_lookup
@@ -629,10 +729,10 @@ def _aggregate_to_single_region(
                 Q1-NQ     Q1        NQ      AC          # REZ -> retargeted
                 N1-CNSW   N1        CNSW    AC          # REZ -> retargeted
 
-            limits:
-                path_id  direction  timeslice    capacity
-                CQ-NQ    forward    peak_demand  1200
-                Q1-NQ    forward    peak_demand  750
+            limits (already region-prefixed by ``_add_region_to_timeslices``):
+                path_id  direction  timeslice        capacity
+                CQ-NQ    forward    qld_peak_demand  1200
+                Q1-NQ    forward    qld_peak_demand  750
 
             rez_ids:
                 {"Q1", "N1"}
@@ -642,9 +742,9 @@ def _aggregate_to_single_region(
             Q1-NEM   Q1        NEM     AC
             N1-NEM   N1        NEM     AC
 
-        returns limits:
-            path_id  direction  timeslice    capacity
-            Q1-NEM   forward    peak_demand  750            # CQ-NQ row dropped
+        returns limits (REZ keeps its own qld prefix though geo_to is now NEM):
+            path_id  direction  timeslice        capacity
+            Q1-NEM   forward    qld_peak_demand  750            # CQ-NQ row dropped
     """
     rez_paths = paths[paths["geo_from"].isin(rez_ids)]
     new_rez_paths, rename_map = _remap_rez_paths(rez_paths, _SINGLE_REGION_ID)
@@ -652,25 +752,22 @@ def _aggregate_to_single_region(
     return new_rez_paths, new_limits
 
 
-def _validate_geos_have_regions(
-    flow_paths: pd.DataFrame,
-    rez_paths: pd.DataFrame,
+def _assert_geos_have_regions(
+    paths: pd.DataFrame,
     region_lookup: dict[str, str],
 ) -> None:
-    """Raises ValueError if any path geo is absent from ``region_lookup``.
+    """Raises ValueError if any path endpoint is absent from ``region_lookup``.
 
-    Every flow-path endpoint and every REZ ``geo_to`` (the parent sub-region)
-    must map to a NEM region. If a geo is missing, downstream mapping would
-    silently produce NaN and corrupt the output path IDs.
+    Every ``geo_from`` and ``geo_to`` — sub-region, REZ id, or already-aggregated
+    region — must resolve to a NEM region, because the timeslice region prefix and
+    the cross-region path re-keying both look the endpoint up. A missing geo would
+    otherwise produce a NaN prefix or corrupt the output path IDs silently.
 
     I/O Example:
-        flow_paths:
+        paths:
             path_id  geo_from  geo_to
             CQ-NQ    CQ        NQ
             MN-SA    MN        SA            # MN, SA missing from region_lookup
-
-        rez_paths:
-            path_id  geo_from  geo_to
             Q1-NQ    Q1        NQ
 
         region_lookup:
@@ -679,9 +776,7 @@ def _validate_geos_have_regions(
         raises:
             ValueError: Path geos missing from sub_regional_geography: ['MN', 'SA']
     """
-    geos = pd.concat(
-        [flow_paths["geo_from"], flow_paths["geo_to"], rez_paths["geo_to"]]
-    ).unique()
+    geos = pd.concat([paths["geo_from"], paths["geo_to"]]).unique()
     missing = sorted(set(geos) - set(region_lookup.keys()))
     if missing:
         raise ValueError(f"Path geos missing from sub_regional_geography: {missing}")
@@ -824,18 +919,18 @@ def _remap_limit_path_ids(
         Inputs:
 
             limits:
-                path_id  direction  timeslice    capacity
-                CQ-NQ    forward    peak_demand  1200          # not in rename_map -> dropped
-                NNSW-SQ  forward    peak_demand  950
-                Q1-NQ    forward    peak_demand  750
+                path_id  direction  timeslice        capacity
+                CQ-NQ    forward    qld_peak_demand  1200          # not in rename_map -> dropped
+                NNSW-SQ  forward    qld_peak_demand  950
+                Q1-NQ    forward    qld_peak_demand  750
 
             rename_map:
                 {"NNSW-SQ": "NSW-QLD", "Q1-NQ": "Q1-QLD"}
 
         returns:
-            path_id  direction  timeslice    capacity
-            NSW-QLD  forward    peak_demand  950
-            Q1-QLD   forward    peak_demand  750
+            path_id  direction  timeslice        capacity
+            NSW-QLD  forward    qld_peak_demand  950
+            Q1-QLD   forward    qld_peak_demand  750
     """
     kept = limits[limits["path_id"].isin(rename_map.keys())].copy()
     kept["path_id"] = kept["path_id"].map(rename_map)
@@ -851,6 +946,7 @@ def _append_new_parallel_paths(
     paths: pd.DataFrame,
     limits: pd.DataFrame,
     flow_path_options: dict[str, pd.DataFrame],
+    region_lookup: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Appends topology + limit rows for augmentation corridors not already in the path table.
 
@@ -889,10 +985,10 @@ def _append_new_parallel_paths(
             CNSW-SNW_NTH    CNSW      SNW     AC
             CNSW-SNW_STH    CNSW      SNW     AC
 
-        limits (existing siblings, abbreviated):
-            path_id         direction  timeslice    capacity
-            CNSW-SNW_NTH    forward    peak_demand  900
-            CNSW-SNW_STH    forward    peak_demand  800
+        limits (existing siblings, abbreviated; timeslices already region-prefixed):
+            path_id         direction  timeslice        capacity
+            CNSW-SNW_NTH    forward    nsw_peak_demand  900
+            CNSW-SNW_STH    forward    nsw_peak_demand  800
 
         flow_path_options keys: {"CNSW-SNW"}   # un-suffixed corridor
 
@@ -902,19 +998,20 @@ def _append_new_parallel_paths(
             CNSW-SNW_STH    CNSW      SNW     AC
             CNSW-SNW        CNSW      SNW     AC
 
-        returns limits (six explicit-zero rows appended for CNSW-SNW: 2 directions x 3 timeslices):
-            path_id         direction  timeslice         capacity
-            CNSW-SNW_NTH    forward    peak_demand       900
-            CNSW-SNW_STH    forward    peak_demand       800
-            CNSW-SNW        forward    peak_demand       0
-            CNSW-SNW        forward    summer_typical    0
-            CNSW-SNW        forward    winter_reference  0
-            CNSW-SNW        reverse    peak_demand       0
-            CNSW-SNW        reverse    summer_typical    0
-            CNSW-SNW        reverse    winter_reference  0
+        returns limits (six explicit-zero rows appended for CNSW-SNW: 2 directions x 3 timeslices.
+        CNSW and SNW are both NSW, so all six carry the nsw prefix):
+            path_id         direction  timeslice             capacity
+            CNSW-SNW_NTH    forward    nsw_peak_demand       900
+            CNSW-SNW_STH    forward    nsw_peak_demand       800
+            CNSW-SNW        forward    nsw_peak_demand       0
+            CNSW-SNW        forward    nsw_summer_typical    0
+            CNSW-SNW        forward    nsw_winter_reference  0
+            CNSW-SNW        reverse    nsw_peak_demand       0
+            CNSW-SNW        reverse    nsw_summer_typical    0
+            CNSW-SNW        reverse    nsw_winter_reference  0
     """
     new_paths, new_limits = _new_parallel_path_rows(
-        flow_path_options, set(paths["path_id"])
+        flow_path_options, set(paths["path_id"]), region_lookup
     )
     paths = pd.concat([paths, new_paths], ignore_index=True)
     limits = pd.concat([limits, new_limits], ignore_index=True)
@@ -924,25 +1021,29 @@ def _append_new_parallel_paths(
 def _new_parallel_path_rows(
     flow_path_options: dict[str, pd.DataFrame],
     existing_path_ids: set[str],
+    region_lookup: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Builds topology + zero-capacity limit rows for augmentation keys without an existing path.
 
     Limits are explicit zeros (not NaN) because these paths physically don't exist
     yet — NaN in this schema means "translator applies default capacity", which
-    would let the model dispatch flow on a Link that hasn't been built.
+    would let the model dispatch flow on a Link that hasn't been built. Timeslices
+    are region-prefixed by ``_add_region_to_timeslices`` so the new corridor matches
+    the rest of the limits table.
 
     I/O Example:
         flow_path_options keys: {"CQ-NQ", "CNSW-SNW"}
         existing_path_ids: {"CQ-NQ", "CNSW-SNW_NTH", "CNSW-SNW_STH"}
+        region_lookup: {"CNSW": "NSW", "SNW": "NSW", ...}
 
         returns:
             paths:
                 path_id    geo_from  geo_to  carrier
                 CNSW-SNW   CNSW      SNW     AC
-            limits (6 rows: 2 directions x 3 timeslices, all 0 MW):
-                path_id    direction  timeslice         capacity
-                CNSW-SNW   forward    peak_demand       0
-                CNSW-SNW   forward    summer_typical    0
+            limits (6 rows: 2 directions x 3 timeslices, all 0 MW, nsw-prefixed):
+                path_id    direction  timeslice            capacity
+                CNSW-SNW   forward    nsw_peak_demand      0
+                CNSW-SNW   forward    nsw_summer_typical   0
                 ... etc
     """
     new_keys = sorted(set(flow_path_options.keys()) - existing_path_ids)
@@ -965,6 +1066,7 @@ def _new_parallel_path_rows(
         ],
         columns=["path_id", "direction", "timeslice", "capacity"],
     ).astype({"capacity": "float64"})
+    limits = _add_region_to_timeslices(limits, paths, region_lookup)
     return paths, limits
 
 
