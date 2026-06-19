@@ -2,6 +2,25 @@ table: timeslices
 required: false
 unique:
   - [timeslice_id, reference_year, start_month_day]
+custom_validation:
+  - name: no_overlapping_windows_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice_id prefix before the first underscore)
+      and reference_year, no two windows may cover the same day. Windows are
+      compared as expanded [start, end) day ranges, not raw month-day strings:
+      an end_month_day at or before its start wraps into the following calendar
+      year (e.g. 11-20 to 03-20), and winter windows run past 30 June into the
+      next financial year (04-01 to 10-01).
+  - name: windows_cover_full_year_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice_id prefix before the first underscore)
+      and reference_year, the windows must cover every day of the year, leaving
+      no day with no active timeslice. Together with
+      no_overlapping_windows_per_region_and_reference_year this makes the
+      windows an exact partition of the year: sorted by start, each window ends
+      where the next begins and the last wraps to the first. A region need not
+      use all three timeslice types (e.g. tas has no peak_demand) as long as the
+      windows it does have tile the year.
 description: >
   Month-day windows during which each demand-condition timeslice is active,
   one pattern per reference (weather) year.

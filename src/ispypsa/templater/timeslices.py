@@ -55,11 +55,25 @@ def _template_timeslices(
     start in and labelled with that year's reference year from
     reference_year_sequence (extended cyclically past its last row, matching
     AEMO's repeating sequence). Every occurrence of a reference year must
-    carry an identical pattern; the first occurrence is kept.
+    carry an identical pattern; the first occurrence is kept. The retained
+    patterns must partition each reference year's calendar exactly — no day
+    left uncovered, none covered twice.
 
     Windows starting before the sequence's first planning year are dropped
     (the early calendar years precede AEMO's documented sequence), as are
     windows still open when the calendar ends (a horizon artifact).
+
+    Each window is labelled by the financial year it starts in, so a window
+    crossing the 1 July boundary keeps its start year's reference year even
+    though its end falls in the next. That stays sound only because the
+    weather-varying timeslices (peak, summer) never cross the boundary, so they
+    sit wholly within one reference year, while the one that does — winter — is
+    a fixed seasonal frame identical across reference years, so which reference
+    year "owns" its end never changes the decoded pattern. Both facts are
+    checked by _raise_unless_only_winter_crosses_financial_year and
+    _raise_unless_winter_is_constant_per_region (run on the templated table; see
+    test_shipped_calendar_decodes), not here, so the focused decoder tests can
+    use minimal data.
 
     I/O Example:
         timeslice_calendar:
@@ -91,7 +105,9 @@ def _template_timeslices(
         windows.merge(sequence, on="planning_year")
     )
     _raise_on_inconsistent_reference_year_patterns(patterns)
-    return _keep_first_occurrence_per_reference_year(patterns)
+    timeslices = _keep_first_occurrence_per_reference_year(patterns)
+    _raise_unless_windows_tile_the_year(timeslices)
+    return timeslices
 
 
 def _parse_calendar_events(calendar: pd.DataFrame) -> pd.DataFrame:
@@ -294,3 +310,109 @@ def _keep_first_occurrence_per_reference_year(patterns: pd.DataFrame) -> pd.Data
     deduped = patterns[patterns["planning_year"] == first_occurrence]
     deduped = deduped.drop(columns="planning_year")
     return deduped.sort_values(_TIMESLICE_COLUMNS).reset_index(drop=True)
+
+
+def _raise_unless_windows_tile_the_year(timeslices: pd.DataFrame) -> None:
+    """Raise unless, within every region and reference year, the windows tile
+    the year exactly — no day left uncovered and none covered twice. A gap there
+    would let a snapshot fall in no timeslice (silently taking a base limit); an
+    overlap would let it fall in two. The region is the timeslice_id prefix
+    before the first underscore.
+    """
+    # add a region column from the timeslice_id prefix (nsw_peak_demand -> nsw)
+    # to group by, so each region's windows are checked for tiling independently
+    tagged = timeslices.assign(region=timeslices["timeslice_id"].str.split("_").str[0])
+    not_tiling = sorted(
+        (region, int(year))
+        for (region, year), windows in tagged.groupby(["region", "reference_year"])
+        if not _windows_tile_the_year(windows)
+    )
+    if not_tiling:
+        raise ValueError(
+            f"Timeslice windows must tile each region and reference year's "
+            f"calendar exactly (no gaps, no overlaps). Offending "
+            f"region/reference-year pairs: {not_tiling}"
+        )
+
+
+def _windows_tile_the_year(windows: pd.DataFrame) -> bool:
+    """True if the [start_month_day, end_month_day) windows form a gap-free,
+    overlap-free cycle: sorted by start, each window ends where the next begins,
+    and the last ends where the first begins. No day arithmetic needed — a gap
+    or an overlap shows up as an end that does not meet the following start.
+
+    I/O Example:
+        starts 04-01, 11-01 / ends 11-01, 04-01 -> True   # two halves meet and wrap
+        starts 04-01, 11-01 / ends 10-01, 04-01 -> False  # gap from 10-01 to 11-01
+        starts 04-01, 11-01 / ends 12-01, 04-01 -> False  # overlap from 11-01 to 12-01
+    """
+    ordered = windows.sort_values("start_month_day")
+    starts = list(ordered["start_month_day"])
+    ends = list(ordered["end_month_day"])
+    # rotate starts left by one so each window's end lines up with the next
+    # window's start; the last window's "next" wraps round to the first
+    next_starts = starts[1:] + starts[:1]
+    return ends == next_starts
+
+
+def _raise_unless_only_winter_crosses_financial_year(timeslices: pd.DataFrame) -> None:
+    """Raise if any non-winter window spans 1 July (the financial-year boundary).
+
+    The decode labels each window by the financial year it starts in, so a
+    window crossing the boundary keeps its start year's reference year even
+    though its end falls in the next. That only stays sound if the
+    weather-varying timeslices (peak, summer) never cross — they must sit wholly
+    within one reference year. Winter, the fixed seasonal frame, may cross; this
+    is the assumption documented on _template_timeslices.
+    """
+    spans_july = timeslices.apply(
+        lambda row: _window_spans_july_first(
+            row["start_month_day"], row["end_month_day"]
+        ),
+        axis=1,
+    )
+    is_winter = timeslices["timeslice_id"].str.endswith("_winter_reference")
+    crossing = sorted(timeslices.loc[spans_july & ~is_winter, "timeslice_id"].unique())
+    if crossing:
+        raise ValueError(
+            f"Only winter_reference windows may cross the 1 July financial-year "
+            f"boundary (weather-varying timeslices must stay within one reference "
+            f"year); these cross it: {crossing}"
+        )
+
+
+def _window_spans_july_first(start_month_day: str, end_month_day: str) -> bool:
+    """True if the [start, end) month-day window is active across 1 July. The
+    month-day strings compare chronologically.
+
+    I/O Example:
+        '04-01', '11-01' -> True    # April to November spans 1 July
+        '11-20', '03-20' -> False   # November to March (wraps) does not
+    """
+    if end_month_day > start_month_day:  # window does not wrap past year-end
+        return start_month_day <= "07-01" < end_month_day
+    return "07-01" >= start_month_day or "07-01" < end_month_day  # wraps past year-end
+
+
+def _raise_unless_winter_is_constant_per_region(timeslices: pd.DataFrame) -> None:
+    """Raise if winter_reference is not the same window in every reference year
+    of a region.
+
+    Winter is the seasonal frame that crosses the financial-year boundary; the
+    decode is only blur-free because that crossing window is identical across
+    reference years, so which reference year owns its end never changes its
+    value. This is the assumption documented on _template_timeslices.
+    """
+    winter = timeslices[timeslices["timeslice_id"].str.endswith("_winter_reference")]
+    winter = winter.assign(region=winter["timeslice_id"].str.split("_").str[0])
+    varying = sorted(
+        region
+        for region, group in winter.groupby("region")
+        if group[["start_month_day", "end_month_day"]].drop_duplicates().shape[0] > 1
+    )
+    if varying:
+        raise ValueError(
+            f"winter_reference must be the same window in every reference year "
+            f"(it is the fixed frame the per-reference-year decode relies on); it "
+            f"varies in regions: {varying}"
+        )
