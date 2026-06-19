@@ -21,9 +21,6 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
-from ispypsa.templater.generators_new_entrant import (
-    _template_generators_new_entrant,
-)
 from ispypsa.templater.geography import _template_network_geography
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
@@ -32,6 +29,10 @@ from ispypsa.templater.network_expansion import (
     _extract_rez_options_from_iasr,
     _filter_flow_path_augmentations_to_granularity,
     _template_network_expansion,
+)
+from ispypsa.templater.new_entrants import (
+    _template_generators_new_entrant,
+    _template_storage_new_entrant,
 )
 from ispypsa.templater.nodes import (
     _template_regions,
@@ -231,14 +232,13 @@ def create_ispypsa_inputs_template(
             "connection_capacity_non_vre"
         ].copy()
 
-        # Identity columns only for now (name, technology, resource_type, geo_id,
-        # fuel_type, fuel_price_mapping); cost/property columns are added in later
-        # PRs. Feeds costs_connection but is not yet a written template output.
+        # Identity columns only for now - not yet a templater output
         generators_new_entrant = _template_generators_new_entrant(
             iasr_tables["new_entrants_summary"]
         )
-        # storage_new_entrant remains defined (empty) for wiring tests
-        storage_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
+        storage_new_entrant = _template_storage_new_entrant(
+            iasr_tables["new_entrants_summary"]
+        )
         template["costs_connection"] = _template_connection_costs(
             iasr_tables,
             scenario,
