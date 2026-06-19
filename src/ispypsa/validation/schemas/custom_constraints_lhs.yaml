@@ -1,11 +1,7 @@
 table: custom_constraints_lhs
 required: false
-custom_validation:
-  - name: no_duplicate_constraint_term_date
-    description: >
-      No two rows may have the same constraint_id, term_type, variable_name,
-      and date_from value. For NaN date_from rows, at most one row is
-      permitted per (constraint_id, term_type, variable_name) combination.
+unique:
+  - [constraint_id, term_type, variable_name, date_from]
 description: >
   Left-hand-side terms of the custom constraints: one row per (constraint,
   model variable) coefficient.
@@ -33,12 +29,12 @@ columns:
   term_type:
     type: string
     required: true
-    allowed_values: [generator_output, storage_output, link_flow, load]
+    allowed_values: [generator_output, generator_capacity, storage_output, link_flow, load]
     description: >
       Model variable type the term applies to: a generator's dispatch, a
-      battery's discharge, a transmission path's flow, or a node's load
-      consumption (load terms are not yet modelled and are skipped, with a
-      log line, when constraints are applied).
+      generator's installed capacity, a battery's discharge, a transmission
+      path's flow, or a node's load consumption (load terms are not yet
+      modelled and are skipped, with a log line, when constraints are applied).
   variable_name:
     type: string
     required: true

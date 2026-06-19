@@ -1,20 +1,17 @@
 table: network_transmission_path_limits
 required: false
-custom_validation:
-  - name: no_duplicate_path_direction_timeslice
-    description: >
-      No two rows may have the same path_id, direction, and timeslice value.
-      For NaN timeslice rows, at most one row is permitted per path_id and
-      direction combination.
+unique:
+  - [path_id, direction, timeslice]
 description: >
   Transmission capacity limits for each path, by direction and optionally by
   demand condition (timeslice).
 
-  A limit with no timeslice applies to all demand conditions; a limit with a
-  timeslice applies to that condition only. The schema permits either form for
-  any path. In the default IASR data, flow-path limits vary by demand condition
-  while REZ-to-subregion connection limits are static, but that reflects the
-  source tables rather than a schema rule.
+  A limit with a timeslice applies to that demand condition only; a limit with
+  no timeslice is a fallback for the conditions no per-timeslice limit covers
+  (see the timeslice column). A path may carry either or both. In the default
+  IASR data, flow-path limits vary by demand condition while REZ-to-subregion
+  connection limits are static, but that reflects the source tables rather than
+  a schema rule.
 
   Source tables:
     - `flow_path_transfer_capability`
@@ -40,10 +37,15 @@ columns:
     allowed_values_from:
       - timeslices: timeslice_id
     description: >
-      Demand condition the limit applies to.
+      Demand condition the limit applies to: the limit binds only at snapshots
+      inside the timeslice's active windows.
 
       If absent (or empty):
-      Capacity is treated as a static limit applying to all conditions.
+      The limit is a fallback for this path_id and direction, applying at
+      snapshots not covered by any non-NaN timeslice row for the same path_id
+      and direction. A path_id and direction may carry both a no-timeslice row
+      and per-timeslice rows; where a per-timeslice row covers a snapshot its
+      limit takes precedence, and the no-timeslice limit fills the remainder.
   capacity:
     type: float
     required: false
