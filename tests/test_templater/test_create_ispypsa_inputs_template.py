@@ -515,6 +515,17 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"NSW-QLD", "N3-NSW"}
     # 2 expansion_ids x 2 years
     assert len(expansion_costs) == 4
+
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert set(timeslices.columns) == {
+        "timeslice_id",
+        "reference_year",
+        "start_month_day",
+        "end_month_day",
+    }
+    assert len(timeslices) == 2
+
     costs_connection = result["costs_connection"]
     assert set(costs_connection.columns) == {
         "geo_id",
@@ -675,15 +686,26 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"N3-NEM"}
     # 1 expansion_id x 2 years
     assert len(expansion_costs) == 2
-    connection_costs = result["costs_connection"]
-    assert set(connection_costs.columns) == {
+
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert set(timeslices.columns) == {
+        "timeslice_id",
+        "reference_year",
+        "start_month_day",
+        "end_month_day",
+    }
+    assert len(timeslices) == 2
+
+    costs_connection = result["costs_connection"]
+    assert set(costs_connection.columns) == {
         "geo_id",
         "technology",
         "year",
         "connection_cost",
         "system_strength_cost",
     }
-    assert connection_costs.empty
+    assert costs_connection.empty
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
     # meaningful representation at single_region, so the templater emits them
@@ -691,10 +713,20 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # that gate into a clean assertion failure instead of a PLEXOS-extract
     # disk read.
     mock_template_custom_constraints.assert_not_called()
-    for table in [
-        "custom_constraints",
-        "custom_constraints_lhs",
-        "custom_constraints_rhs",
-    ]:
-        assert result[table].empty
-        assert len(result[table].columns) > 0
+    assert set(result["custom_constraints"].columns) == {"constraint_id", "direction"}
+    assert result["custom_constraints"].empty
+    assert set(result["custom_constraints_lhs"].columns) == {
+        "constraint_id",
+        "term_type",
+        "variable_name",
+        "coefficient",
+        "date_from",
+    }
+    assert result["custom_constraints_lhs"].empty
+    assert set(result["custom_constraints_rhs"].columns) == {
+        "constraint_id",
+        "timeslice",
+        "rhs",
+        "date_from",
+    }
+    assert result["custom_constraints_rhs"].empty
