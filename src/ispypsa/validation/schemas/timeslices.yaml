@@ -1,0 +1,94 @@
+table: timeslices
+required: false
+unique:
+  - [timeslice_id, reference_year, start_month_day]
+custom_validation:
+  - name: no_overlapping_windows_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice_id prefix before the first underscore)
+      and reference_year, no two windows may cover the same day. Windows are
+      compared as expanded [start, end) day ranges, not raw month-day strings:
+      an end_month_day at or before its start wraps into the following calendar
+      year (e.g. 11-20 to 03-20), and winter windows run past 30 June into the
+      next financial year (04-01 to 10-01).
+  - name: windows_cover_full_year_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice_id prefix before the first underscore)
+      and reference_year, the windows must cover every day of the year, leaving
+      no day with no active timeslice. Together with
+      no_overlapping_windows_per_region_and_reference_year this makes the
+      windows an exact partition of the year: sorted by start, each window ends
+      where the next begins and the last wraps to the first. A region need not
+      use all three timeslice types (e.g. tas has no peak_demand) as long as the
+      windows it does have tile the year.
+description: >
+  Month-day windows during which each demand-condition timeslice is active,
+  one pattern per reference (weather) year.
+
+  One row per active window. The translator re-sequences the patterns to the
+  configured reference_year_cycle — each model financial year gets the
+  windows of the reference year assigned to it, the same assignment used for
+  demand and VRE traces — to build time-varying transmission path limits and
+  to restrict custom constraints to the snapshots their RHS values apply to.
+
+  Source tables:
+    - `timeslice_RefYear5000` (PLEXOS data package extract)
+    - `reference_year_sequence` (manually extracted)
+
+  Source notes:
+  The calendar is AEMO's Draft 2026 ISP timeslice trace
+  (timeslice_RefYear5000.csv), which marks windows on absolute dates across
+  the model horizon following AEMO's rolling reference-year sequence. The
+  templater decodes it into one pattern per reference year using the
+  sequence documented in Table 1 of the Draft 2026 ISP Market Model
+  Instructions (transcribed as the manually extracted
+  reference_year_sequence table), validating that every occurrence of a
+  reference year carries an identical pattern. A timeslice in the canonical
+  vocabulary may have no windows at all (e.g. tas_peak_demand never
+  activates in the Draft 2026 ISP calendar), in which case limits or RHS
+  values tagged with it are never active.
+
+  If absent:
+  No timeslice is ever active: timeslice-tagged transmission path limits and
+  custom-constraint RHS values never apply to any snapshot.
+columns:
+  timeslice_id:
+    type: string
+    required: true
+    allowed_values: [
+      qld_peak_demand, qld_summer_typical, qld_winter_reference,
+      nsw_peak_demand, nsw_summer_typical, nsw_winter_reference,
+      vic_peak_demand, vic_summer_typical, vic_winter_reference,
+      sa_peak_demand, sa_summer_typical, sa_winter_reference,
+      tas_peak_demand, tas_summer_typical, tas_winter_reference,
+    ]
+    description: >
+      Region-prefixed canonical timeslice the window belongs to. Within a
+      region and reference year, windows of the three timeslices never
+      overlap.
+  reference_year:
+    type: int
+    required: true
+    description: >
+      Reference (weather) year the window pattern belongs to, in financial
+      year-ending convention (2015 means FY2014-15) — the same convention as
+      the reference_year_cycle model configuration and the trace data parsed
+      by isp-trace-parser.
+  start_month_day:
+    type: string
+    required: true
+    format: "%m-%d"
+    description: >
+      First day of the window (inclusive), e.g. "11-18". Windows belong to
+      the financial year they start in: months July-December fall in the
+      financial year's first calendar year, January-June in its second.
+  end_month_day:
+    type: string
+    required: true
+    format: "%m-%d"
+    description: >
+      Day the window ends (exclusive), interpreted as its first occurrence
+      after the start — "11-18" to "03-20" wraps into the next calendar
+      year, and winter's "04-01" to "10-01" extends past 30 June into the
+      next financial year. "02-29" boundaries (from leap reference years)
+      are clamped to "02-28" when expanded into non-leap model years.
