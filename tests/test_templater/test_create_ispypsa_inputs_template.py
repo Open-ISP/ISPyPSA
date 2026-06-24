@@ -23,7 +23,7 @@ _FP_AUG_OPTION_COLS = [
 ]
 
 
-def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
+def _stub_custom_constraints_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """Identifiable, non-empty stand-in for ``template_custom_constraints_from_plexos``.
 
     Has known row counts (1 constraint, 2 LHS terms, 1 RHS row). The sub_regions
@@ -34,48 +34,44 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
     per-module tests in ``test_custom_constraints_from_plexos.py``.
     """
     return {
-        "custom_constraints": pd.DataFrame(
-            {"constraint_id": ["SWQLD1"], "direction": ["<="]}
-        ),
-        "custom_constraints_lhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1", "SWQLD1"],
-                "term_type": ["generator_output", "storage_output"],
-                "variable_name": ["BW01", "Q8 Battery - 2h"],
-                "coefficient": [0.5, 1.0],
-                "date_from": [pd.NA, pd.NA],
-            }
-        ),
-        "custom_constraints_rhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1"],
-                "timeslice": ["qld_winter_reference"],
-                "rhs": [3000.0],
-                "date_from": [pd.NA],
-            }
-        ),
+        "custom_constraints": csv_str_to_df("""
+            constraint_id,  direction
+            SWQLD1,         <=
+        """),
+        "custom_constraints_lhs": csv_str_to_df("""
+            constraint_id,  term_type,         variable_name,    coefficient,  date_from
+            SWQLD1,         generator_output,  BW01,             0.5,
+            SWQLD1,         storage_output,    Q8 Battery - 2h,  1.0,
+        """),
+        "custom_constraints_rhs": csv_str_to_df("""
+            constraint_id,  timeslice,             rhs,     date_from
+            SWQLD1,         qld_winter_reference,  3000.0,
+        """),
     }
 
 
-def _stub_timeslice_calendar() -> pd.DataFrame:
+def _stub_timeslice_calendar(csv_str_to_df) -> pd.DataFrame:
     """Minimal raw timeslice calendar: two windows that tile planning year
     FY2026 — a hot-day peak and a winter window that wraps back to it, so the
     decoded windows leave no day uncovered (the tiling invariant the templater
     enforces). Patched in place of the packaged PLEXOS calendar; full decode
     behaviour is covered by the per-module tests in ``test_timeslices.py``.
     """
-    return pd.DataFrame(
-        {
-            "DATETIME": ["18/11/2025", "20/11/2025", "20/11/2025", "18/11/2026"],
-            "NAME": ["NSW Hot Day", "NSW Hot Day", "NSW Winter", "NSW Winter"],
-            "TIMESLICE": [-1, 0, -1, 0],
-        }
-    )
+    return csv_str_to_df("""
+        DATETIME,    NAME,         TIMESLICE
+        18/11/2025,  NSW Hot Day,  -1
+        20/11/2025,  NSW Hot Day,  0
+        20/11/2025,  NSW Winter,   -1
+        18/11/2026,  NSW Winter,   0
+    """)
 
 
-def _stub_reference_year_sequence() -> pd.DataFrame:
+def _stub_reference_year_sequence(csv_str_to_df) -> pd.DataFrame:
     """Assigns the stub calendar's single planning year a reference year."""
-    return pd.DataFrame({"planning_year": [2026], "reference_year": [2015]})
+    return csv_str_to_df("""
+        planning_year,  reference_year
+        2026,           2015
+    """)
 
 
 def test_list_templater_output_files_granularity_invariant():
@@ -256,11 +252,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ),
         patch(
             "ispypsa.templater.create_template.load_timeslice_calendar",
-            return_value=_stub_timeslice_calendar(),
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
         ),
     ):
         result = create_ispypsa_inputs_template(
@@ -287,7 +283,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             # wiring runs. Output stays empty: generators/storage are placeholder-empty.
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
-                "reference_year_sequence": _stub_reference_year_sequence(),
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
@@ -460,11 +456,11 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
         patch(
             "ispypsa.templater.create_template.load_timeslice_calendar",
-            return_value=_stub_timeslice_calendar(),
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
         ),
     ):
         result = create_ispypsa_inputs_template(
@@ -488,7 +484,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
-                "reference_year_sequence": _stub_reference_year_sequence(),
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
@@ -623,11 +619,11 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
         patch(
             "ispypsa.templater.create_template.load_timeslice_calendar",
-            return_value=_stub_timeslice_calendar(),
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
         ),
     ):
         result = create_ispypsa_inputs_template(
@@ -649,7 +645,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
-                "reference_year_sequence": _stub_reference_year_sequence(),
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
