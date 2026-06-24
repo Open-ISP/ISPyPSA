@@ -57,6 +57,50 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
     }
 
 
+# NOTE: temporary while new entrants not yet fully wired into templater -
+# input tables defined here for brevity until then.
+def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """Per-technology property tables the new_entrant templater merges.
+
+    Covers the generator technologies used across the new-format fixtures below
+    (Wind, Large scale Solar PV, OCGT (small GT)) so the property merges resolve.
+    Detailed merge behaviour is covered in test_new_entrants.py; here they just
+    need to be present for the wiring to run.
+    """
+    return {
+        "fixed_opex_new_entrants": csv_str_to_df("""
+            Technology Type,        Base value ($/kW/year)),  Unit
+            Wind,                   20.0,                     $
+            Large scale Solar PV,   15.0,                     $
+            OCGT (small GT),        17.0,                     $
+        """),
+        "variable_opex_new_entrants": csv_str_to_df("""
+            Generator,              Base value
+            Wind,                   0.0
+            Large scale Solar PV,   0.0
+            OCGT (small GT),        16.4
+        """),
+        "lead_time_and_project_life": csv_str_to_df("""
+            Technology,             Economic life (years),  Technical life (years)
+            Wind,                   25,                     30
+            Large scale Solar PV,   25,                     30
+            OCGT (small GT),        25,                     40
+        """),
+        "heat_rates_new_entrants": csv_str_to_df("""
+            Technology,             Heat rate (GJ/MWh)
+            Wind,                   0.0
+            Large scale Solar PV,   0.0
+            OCGT (small GT),        10.6
+        """),
+        "gpg_min_stable_level_new_entrants": csv_str_to_df("""
+            Technology,             Min Stable Level (% of nameplate)
+            Wind,                   0.0
+            Large scale Solar PV,   0.0
+            OCGT (small GT),        50.0
+        """),
+    }
+
+
 def test_list_templater_output_files_includes_custom_constraints_only_at_sub_regions():
     """Custom-constraint tables are declared as task outputs only at sub_regions.
 
@@ -266,6 +310,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
+                **_new_entrant_property_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -460,6 +505,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
+                **_new_entrant_property_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -613,6 +659,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
+                **_new_entrant_property_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,

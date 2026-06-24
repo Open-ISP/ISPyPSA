@@ -1,0 +1,22 @@
+Technology,Min Stable Level (% of nameplate)
+OCGT (small GT),50.0
+OCGT (large GT),50.0
+CCGT,46.0
+CCGT with CCS,46.0
+Biomass,40.0
+Large scale Solar PV,0.0
+Solar Thermal (16hrs storage),20.0
+Battery storage (1hr storage),0.0
+Battery storage (2hrs storage),0.0
+Battery storage (4hrs storage),0.0
+Battery storage (8hrs storage),0.0
+Wind,0.0
+Wind - offshore (fixed),0.0
+Wind - offshore (floating),0.0
+Pumped Hydro (10hrs storage),40.0
+Pumped Hydro (24hrs storage),40.0
+Pumped Hydro (48hrs storage),40.0
+Distributed Resources Solar,0.0
+Distributed Resources Batteries,0.0
+Alkaline Electrolyser,10.0
+BOTN - Cethana,40.0

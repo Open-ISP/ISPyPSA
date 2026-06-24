@@ -9,7 +9,7 @@ import pandas as pd
 
 from ispypsa.templater.helpers import (
     _financial_year_string_to_end_year_int,
-    _fuzzy_map_to_canonical,
+    _fuzzy_map_to_allowed_values,
     _looks_like_financial_year,
     _where_any_substring_appears,
 )
@@ -443,7 +443,7 @@ def _canonicalise_non_vre_technologies(
             # BOTN - Cethana row dropped (listed in ``_NON_VRE_EXCLUDED_TECHNOLOGIES``)
     """
     # NOTE: an only-VRE canonical set (non-empty, but no non-VRE techs) still raises
-    # via _fuzzy_map_to_canonical when the forecast has non-VRE rows.
+    # via _fuzzy_map_to_allowed_values when the forecast has non-VRE rows.
     # Intentional (for now) — kinda related to https://github.com/Open-ISP/ISPyPSA/discussions/103 and the final role(s) of validator.
     if not canonical_technologies:
         return pd.DataFrame(columns=df.columns).astype(df.dtypes)
@@ -452,7 +452,7 @@ def _canonicalise_non_vre_technologies(
         df["technology"], _NON_VRE_EXCLUDED_TECHNOLOGIES
     )
     result = df.loc[~excluded].copy()
-    result["technology"] = _fuzzy_map_to_canonical(
+    result["technology"] = _fuzzy_map_to_allowed_values(
         result["technology"],
         canonical_technologies,
         task_desc="canonicalising non-VRE connection cost `technology` values",
@@ -913,7 +913,7 @@ def _filter_table_by_isp_scenario(
             NSW         100         150
     """
     table = table.copy()
-    table[scenario_col_name] = _fuzzy_map_to_canonical(
+    table[scenario_col_name] = _fuzzy_map_to_allowed_values(
         table[scenario_col_name],
         _ISP_SCENARIOS_NEW,
         task_desc=f"filtering {table_desc} table by ISP scenario",

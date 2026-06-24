@@ -53,6 +53,11 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "efficient_level_of_system_strength_cost",
             "existing_committed_anticipated_additional_generator_summary",
             "new_entrants_summary",
+            "fixed_opex_new_entrants",
+            "variable_opex_new_entrants",
+            "lead_time_and_project_life",
+            "heat_rates_new_entrants",
+            "gpg_min_stable_level_new_entrants",
         ] + augmentation
 
     else:

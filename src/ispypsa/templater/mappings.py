@@ -314,6 +314,56 @@ lookup information that can be used to retrieve values.
         for opex mapping to rename columns in the table.
 """
 
+# - New-format (flag: use_new_table_format=True) per-technology property merge maps -
+
+_GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
+    "fom": dict(
+        table="fixed_opex_new_entrants",
+        technology_col="Technology Type",
+        # NOTE: literal double ")" — parsed directly from the v7.5 IASR workbook
+        value_col="Base value ($/kW/year))",
+        scale=1000.0,
+    ),
+    "vom": dict(
+        table="variable_opex_new_entrants",
+        technology_col="Generator",
+        value_col="Base value",
+    ),
+    "lifetime_technical": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Technical life (years)",
+    ),
+    "lifetime_economic": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Economic life (years)",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_new_entrants",
+        technology_col="Technology",
+        value_col="Heat rate (GJ/MWh)",
+    ),
+    "minimum_stable_level": dict(
+        table="gpg_min_stable_level_new_entrants",
+        technology_col="Technology",
+        value_col="Min Stable Level (% of nameplate)",
+    ),
+}
+"""
+New entrant generator property columns (keys) mapped to the IASR table and columns
+that contain property values and the technology for which the values apply.
+
+Consumed by ``ispypsa.templater.new_entrants`` via ``_merge_technology_property``.
+
+    `table`: IASR table name holding the named property (key)
+    `technology_col`: column in the IASR table that contains the 'technology' string.
+        This is the column used to merge on (after mapping to canonical values).
+    `value_col`: column holding the value to merge in
+    `scale`: amount by which to multiply the value (default 1.0), used for unit
+        conversions. e.g. 1000 for $/kW → $/MW
+"""
+
 _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
         table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_BATTERY_TYPES],
