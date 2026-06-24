@@ -1,0 +1,28 @@
+table: custom_constraints
+required: false
+unique:
+  - [constraint_id]
+description: >
+  Catalogue of custom (group) constraints and the sense of each constraint's
+  inequality.
+
+  Each constraint's terms live in `custom_constraints_lhs` and its limit
+  values in `custom_constraints_rhs`; this table defines the constraint
+  itself.
+
+  Source tables:
+    - PLEXOS model extract (`constraints.csv`), via the custom-constraints
+      templater.
+
+  If absent:
+  No custom constraints are applied to the model.
+columns:
+  constraint_id:
+    type: string
+    required: true
+    description: Unique identifier for the constraint (e.g. SWQLD1).
+  direction:
+    type: string
+    required: true
+    allowed_values: ["<=", ">=", "="]
+    description: Sense of the constraint inequality, applied as lhs <direction> rhs.

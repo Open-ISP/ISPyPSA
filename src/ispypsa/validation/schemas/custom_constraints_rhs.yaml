@@ -1,0 +1,51 @@
+table: custom_constraints_rhs
+required: false
+unique:
+  - [constraint_id, timeslice, date_from]
+description: >
+  Right-hand-side limit values of the custom constraints, by timeslice.
+
+  Source tables:
+    - PLEXOS model extract (`rhs_values.csv`), via the custom-constraints
+      templater.
+
+  If absent:
+  Constraints have no limit values, so no custom constraints bind.
+columns:
+  constraint_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - custom_constraints: constraint_id
+    description: Constraint the limit value belongs to.
+  timeslice:
+    type: string
+    required: false
+    allowed_values_from:
+      - timeslices: timeslice_id
+    description: >
+      Demand condition the limit applies to: the constraint binds only at
+      snapshots inside the timeslice's active windows.
+
+      If absent (or empty):
+      The limit is a fallback for this constraint_id, applying at snapshots not
+      covered by any non-NaN timeslice row for the same constraint_id. A
+      constraint may carry both a no-timeslice row and per-timeslice rows; where
+      a per-timeslice row covers a snapshot its limit takes precedence, and the
+      no-timeslice limit fills the remainder. A constraint with per-timeslice
+      rows but no no-timeslice row does not bind outside those timeslices.
+  rhs:
+    type: float
+    required: true
+    description: Limit value the constraint's LHS is compared against.
+  date_from:
+    type: date
+    required: false
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date this row's limit takes effect. For each investment period, the
+      limit active at the period's start applies for the whole period.
+
+      If absent (or empty):
+      The limit applies from the start of the model horizon (until another
+      row's date_from supersedes it).
