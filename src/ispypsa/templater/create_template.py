@@ -6,6 +6,7 @@ import pandas as pd
 from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.templater.connection_and_build_costs import _template_connection_costs
 from ispypsa.templater.custom_constraints_from_plexos import (
+    empty_custom_constraint_tables,
     template_custom_constraints_from_plexos,
 )
 from ispypsa.templater.dynamic_generator_properties import (
@@ -44,6 +45,10 @@ from ispypsa.templater.static_new_generator_properties import (
     _template_new_generators_static_properties,
 )
 from ispypsa.templater.storage import _template_battery_properties
+from ispypsa.templater.timeslices import (
+    _template_timeslices,
+    load_timeslice_calendar,
+)
 from ispypsa.templater.transmission import _template_network_transmission
 
 _BASE_TEMPLATE_OUTPUTS = [
@@ -74,8 +79,9 @@ _BASE_TEMPLATE_OUTPUTS = [
 ]
 
 # Outputs from the new-format templater branch. Granularity-invariant: the
-# same five tables are emitted for sub_regions, nem_regions, and single_region
-# (only their contents differ).
+# same tables are emitted for sub_regions, nem_regions, and single_region
+# (only their contents differ — the custom-constraint tables are header-only
+# at coarser granularities).
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
 # delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
@@ -84,15 +90,8 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_limits",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
-]
-
-# Custom constraints are templated only at sub_regions granularity (see the gate
-# in create_ispypsa_inputs_template) — coarser granularities collapse the
-# sub-region nodes, sub-regional flow paths and REZ-located units the constraints
-# reference, leaving nothing to constrain. Listed as outputs only at that
-# granularity so the create_ispypsa_inputs task tracks them where they are
-# written and does not expect them where they never are.
-_CUSTOM_CONSTRAINT_OUTPUTS = [
+    "timeslices",
+    "costs_connection",
     "custom_constraints",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
@@ -219,6 +218,10 @@ def create_ispypsa_inputs_template(
         )
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
+        template["timeslices"] = _template_timeslices(
+            load_timeslice_calendar(iasr_workbook_version),
+            manually_extracted_tables["reference_year_sequence"],
+        )
 
         # todo: replace with actual generators_new_entrant once that templating
         # function is written — passing empty placeholder for now so costs_connection
@@ -242,18 +245,15 @@ def create_ispypsa_inputs_template(
             storage_new_entrant,
             sub_regional_geography,
         )
-        # Custom constraints from PLEXOS are sub-regional export-group limits:
-        # their LHS references sub-region nodes, sub-regional flow paths, and
-        # REZ-located units that only exist as distinct entities at sub_regions
-        # granularity. Once sub-regions are collapsed (nem_regions /
-        # single_region) they have no meaningful representation, so only emit
-        # them for sub_regions.
+
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(
                     iasr_tables, iasr_workbook_version=iasr_workbook_version
                 )
             )
+        else:
+            template.update(empty_custom_constraint_tables())
         return template
 
     template = {}
@@ -347,8 +347,6 @@ def list_templater_output_files(regional_granularity, output_path=None):
     # granularity-specific file removals.
     if FEATURE_FLAGS["use_new_table_format"]:
         files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
-        if regional_granularity == "sub_regions":
-            files += _CUSTOM_CONSTRAINT_OUTPUTS
     else:
         files = _BASE_TEMPLATE_OUTPUTS.copy()
         if regional_granularity in ["sub_regions", "single_region"]:

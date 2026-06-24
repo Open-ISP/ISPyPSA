@@ -23,7 +23,7 @@ _FP_AUG_OPTION_COLS = [
 ]
 
 
-def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
+def _stub_custom_constraints_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """Identifiable, non-empty stand-in for ``template_custom_constraints_from_plexos``.
 
     Has known row counts (1 constraint, 2 LHS terms, 1 RHS row). The sub_regions
@@ -34,44 +34,54 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
     per-module tests in ``test_custom_constraints_from_plexos.py``.
     """
     return {
-        "custom_constraints": pd.DataFrame(
-            {"constraint_id": ["SWQLD1"], "direction": ["<="]}
-        ),
-        "custom_constraints_lhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1", "SWQLD1"],
-                "term_type": ["generator_output", "storage_output"],
-                "variable_name": ["BW01", "Q8 Battery - 2h"],
-                "coefficient": [0.5, 1.0],
-                "date_from": [pd.NA, pd.NA],
-            }
-        ),
-        "custom_constraints_rhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1"],
-                "timeslice": ["qld_winter_reference"],
-                "rhs": [3000.0],
-                "date_from": [pd.NA],
-            }
-        ),
+        "custom_constraints": csv_str_to_df("""
+            constraint_id,  direction
+            SWQLD1,         <=
+        """),
+        "custom_constraints_lhs": csv_str_to_df("""
+            constraint_id,  term_type,         variable_name,    coefficient,  date_from
+            SWQLD1,         generator_output,  BW01,             0.5,
+            SWQLD1,         storage_output,    Q8 Battery - 2h,  1.0,
+        """),
+        "custom_constraints_rhs": csv_str_to_df("""
+            constraint_id,  timeslice,             rhs,     date_from
+            SWQLD1,         qld_winter_reference,  3000.0,
+        """),
     }
 
 
-def test_list_templater_output_files_includes_custom_constraints_only_at_sub_regions():
-    """Custom-constraint tables are declared as task outputs only at sub_regions.
-
-    They are templated (and written) only at sub_regions, so they must appear in
-    the output-file list there — otherwise the create_ispypsa_inputs task leaves
-    files it writes untracked — and must be absent at nem_regions /
-    single_region, where declaring them would make the task expect files that are
-    never written.
+def _stub_timeslice_calendar(csv_str_to_df) -> pd.DataFrame:
+    """Minimal raw timeslice calendar: two windows that tile planning year
+    FY2026 — a hot-day peak and a winter window that wraps back to it, so the
+    decoded windows leave no day uncovered (the tiling invariant the templater
+    enforces). Patched in place of the packaged PLEXOS calendar; full decode
+    behaviour is covered by the per-module tests in ``test_timeslices.py``.
     """
-    custom_constraint_files = {
-        "custom_constraints",
-        "custom_constraints_lhs",
-        "custom_constraints_rhs",
-    }
+    return csv_str_to_df("""
+        DATETIME,    NAME,         TIMESLICE
+        18/11/2025,  NSW Hot Day,  -1
+        20/11/2025,  NSW Hot Day,  0
+        20/11/2025,  NSW Winter,   -1
+        18/11/2026,  NSW Winter,   0
+    """)
 
+
+def _stub_reference_year_sequence(csv_str_to_df) -> pd.DataFrame:
+    """Assigns the stub calendar's single planning year a reference year."""
+    return csv_str_to_df("""
+        planning_year,  reference_year
+        2026,           2015
+    """)
+
+
+def test_list_templater_output_files_granularity_invariant():
+    """The new-format templater declares the same output set at every granularity.
+
+    The custom-constraint tables are header-only at nem_regions /
+    single_region but still written, so the create_ispypsa_inputs task must
+    track them everywhere — a granularity-dependent list would leave written
+    files untracked or expect files that are never written.
+    """
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
         {"use_new_table_format": True},
@@ -80,9 +90,14 @@ def test_list_templater_output_files_includes_custom_constraints_only_at_sub_reg
         nem_regions = set(list_templater_output_files("nem_regions"))
         single_region = set(list_templater_output_files("single_region"))
 
-    assert custom_constraint_files <= sub_regions
-    assert custom_constraint_files.isdisjoint(nem_regions)
-    assert custom_constraint_files.isdisjoint(single_region)
+    assert sub_regions == nem_regions == single_region
+    assert {
+        "custom_constraints",
+        "custom_constraints_lhs",
+        "custom_constraints_rhs",
+        "timeslices",
+        "costs_connection",
+    } <= sub_regions
 
 
 def test_create_ispypsa_inputs_template_sub_regions(
@@ -237,7 +252,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
+        ),
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
         ),
     ):
         result = create_ispypsa_inputs_template(
@@ -264,6 +283,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             # wiring runs. Output stays empty: generators/storage are placeholder-empty.
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
@@ -303,6 +323,17 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert set(expansion_costs.columns) == {"expansion_id", "year", "cost"}
     # 3 expansion_ids x 2 years
     assert len(expansion_costs) == 6
+
+    timeslices = result["timeslices"]
+    assert set(timeslices.columns) == {
+        "timeslice_id",
+        "reference_year",
+        "start_month_day",
+        "end_month_day",
+    }
+    # The stub calendar's two windows decode into two tiling window patterns
+    # (nsw_peak_demand and nsw_winter_reference) for FY2026's reference year.
+    assert len(timeslices) == 2
 
     assert "costs_connection" in result
     costs_connection = result["costs_connection"]
@@ -425,8 +456,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
+        ),
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -449,6 +484,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
@@ -479,6 +515,17 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"NSW-QLD", "N3-NSW"}
     # 2 expansion_ids x 2 years
     assert len(expansion_costs) == 4
+
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert set(timeslices.columns) == {
+        "timeslice_id",
+        "reference_year",
+        "start_month_day",
+        "end_month_day",
+    }
+    assert len(timeslices) == 2
+
     costs_connection = result["costs_connection"]
     assert set(costs_connection.columns) == {
         "geo_id",
@@ -490,13 +537,28 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert costs_connection.empty
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation once sub-regions are collapsed, so the templater
-    # skips them at nem_regions granularity. The mock turns a regression in that
-    # gate into a clean assertion failure instead of a PLEXOS-extract disk read.
+    # meaningful representation once sub-regions are collapsed, so at
+    # nem_regions the templater emits them header-only instead of templating
+    # them. The mock turns a regression in that gate into a clean assertion
+    # failure instead of a PLEXOS-extract disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert "custom_constraints" not in result
-    assert "custom_constraints_lhs" not in result
-    assert "custom_constraints_rhs" not in result
+    assert set(result["custom_constraints"].columns) == {"constraint_id", "direction"}
+    assert result["custom_constraints"].empty
+    assert set(result["custom_constraints_lhs"].columns) == {
+        "constraint_id",
+        "term_type",
+        "variable_name",
+        "coefficient",
+        "date_from",
+    }
+    assert result["custom_constraints_lhs"].empty
+    assert set(result["custom_constraints_rhs"].columns) == {
+        "constraint_id",
+        "timeslice",
+        "rhs",
+        "date_from",
+    }
+    assert result["custom_constraints_rhs"].empty
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -568,8 +630,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
+        ),
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -590,6 +656,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
@@ -619,21 +686,47 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"N3-NEM"}
     # 1 expansion_id x 2 years
     assert len(expansion_costs) == 2
-    connection_costs = result["costs_connection"]
-    assert set(connection_costs.columns) == {
+
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert set(timeslices.columns) == {
+        "timeslice_id",
+        "reference_year",
+        "start_month_day",
+        "end_month_day",
+    }
+    assert len(timeslices) == 2
+
+    costs_connection = result["costs_connection"]
+    assert set(costs_connection.columns) == {
         "geo_id",
         "technology",
         "year",
         "connection_cost",
         "system_strength_cost",
     }
-    assert connection_costs.empty
+    assert costs_connection.empty
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation at single_region, so the templater skips them.
-    # The mock turns a regression in that gate into a clean assertion failure
-    # instead of a PLEXOS-extract disk read.
+    # meaningful representation at single_region, so the templater emits them
+    # header-only instead of templating them. The mock turns a regression in
+    # that gate into a clean assertion failure instead of a PLEXOS-extract
+    # disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert "custom_constraints" not in result
-    assert "custom_constraints_lhs" not in result
-    assert "custom_constraints_rhs" not in result
+    assert set(result["custom_constraints"].columns) == {"constraint_id", "direction"}
+    assert result["custom_constraints"].empty
+    assert set(result["custom_constraints_lhs"].columns) == {
+        "constraint_id",
+        "term_type",
+        "variable_name",
+        "coefficient",
+        "date_from",
+    }
+    assert result["custom_constraints_lhs"].empty
+    assert set(result["custom_constraints_rhs"].columns) == {
+        "constraint_id",
+        "timeslice",
+        "rhs",
+        "date_from",
+    }
+    assert result["custom_constraints_rhs"].empty
