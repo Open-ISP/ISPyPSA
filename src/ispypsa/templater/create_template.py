@@ -245,13 +245,7 @@ def create_ispypsa_inputs_template(
             storage_new_entrant,
             sub_regional_geography,
         )
-        # Custom constraints from PLEXOS are sub-regional export-group limits:
-        # their LHS references sub-region nodes, sub-regional flow paths, and
-        # REZ-located units that only exist as distinct entities at sub_regions
-        # granularity. Once sub-regions are collapsed (nem_regions /
-        # single_region) they have no meaningful representation, so the tables
-        # are emitted header-only ("all columns, no rows") there, keeping the
-        # output set granularity-invariant.
+
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(
