@@ -384,6 +384,51 @@ def _strip_all_text_after_numeric_value(
     return series
 
 
+def _pick_location(row: pd.Series) -> str:
+    """Return a technology's REZ ID when populated, otherwise Sub-region.
+
+    I/O Example:
+        {"REZ ID": "Q8",             "Sub-region": "SQ"}  -> "Q8"
+        {"REZ ID": "Not Applicable", "Sub-region": "SQ"}  -> "SQ"
+    """
+    rez_id = row["REZ ID"]
+    if pd.notna(rez_id) and rez_id != "Not Applicable":
+        return rez_id
+    return row["Sub-region"]
+
+
+def _is_battery_row(
+    df: pd.DataFrame, col_to_check: str = "Technology Type"
+) -> pd.Series:
+    """Boolean mask selecting battery technology rows in ``df``.
+
+    Matches any ``col_to_check`` row that contains the literal substring
+    "Batter" -- covers both "Battery Storage (Xhrs storage)" (singular)
+    and "Distributed Resources Batteries" (plural). Other storage
+    technologies (pumped hydro, solar thermal) intentionally do not match.
+    """
+    return df[col_to_check].str.contains("Batter", na=False)
+
+
+def _is_pumped_hydro_row(
+    df: pd.DataFrame, col_to_check: str = "Technology Type"
+) -> pd.Series:
+    """Boolean mask selecting pumped hydro technology rows in ``df``.
+
+    Matches any ``col_to_check`` row that contains the literal substring
+    "Pumped Hydro" -- covering all durations. Other storage technologies
+    (batteries, solar thermal) intentionally do not match.
+    """
+    return df[col_to_check].str.contains("Pumped Hydro", na=False)
+
+
+def _is_storage_row(
+    df: pd.DataFrame, col_to_check: str = "Technology Type"
+) -> pd.Series:
+    """Wrapper that returns union of ``_is_battery_row`` and ``_is_pumped_hydro_row``."""
+    return _is_battery_row(df, col_to_check) | _is_pumped_hydro_row(df, col_to_check)
+
+
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:
     """
     Standardises capitalisation of "storage" in a pandas Series.

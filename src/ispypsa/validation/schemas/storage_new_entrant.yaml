@@ -32,14 +32,6 @@ columns:
     type: string
     required: true
     description: Unique identifier for the storage unit (e.g. IASR ID or full name).
-  power_station:
-    type: string
-    required: true
-    description: >
-      Power station name grouping storage units together.
-
-      For new entrant storage units, this is always the same as the `name` field
-      (i.e, no grouping is performed). Keeping for consistency with existing storage tables.
   technology:
     type: string
     required: true

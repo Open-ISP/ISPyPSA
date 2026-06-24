@@ -2,8 +2,12 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
+    _is_battery_row,
+    _is_pumped_hydro_row,
+    _is_storage_row,
     _looks_like_financial_year,
     _manual_remove_footnotes_from_generator_names,
+    _pick_location,
     _rez_name_to_id_mapping,
     _snakecase_string,
     _standardise_storage_capitalisation,
@@ -373,3 +377,78 @@ def test_looks_like_financial_year_matches_only_canonical_formats():
     assert _looks_like_financial_year("24-25") is False
     assert _looks_like_financial_year("Status") is False
     assert _looks_like_financial_year("Flow path") is False
+
+
+# --- _pick_location ---
+
+
+@pytest.mark.parametrize(
+    "rez_id, sub_region, expected",
+    [
+        ("Q8", "SQ", "Q8"),  # REZ ID populated -> REZ ID
+        ("Not Applicable", "SQ", "SQ"),  # 'Not Applicable' -> Sub-region
+        (None, "SQ", "SQ"),  # NaN/None -> Sub-region
+    ],
+)
+def test_pick_location(rez_id, sub_region, expected):
+    row = pd.Series({"REZ ID": rez_id, "Sub-region": sub_region})
+    assert _pick_location(row) == expected
+
+
+# --- _is_battery_row ---
+
+
+def test_is_battery_row(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,    Technology Type
+        Q1 Battery - 2h,        Battery Storage (2hrs storage)
+        NQ Battery - Dist,      Distributed Resources Batteries
+        Q1 Wind,                Wind
+        N1 Pumped Hydro - 24h,  Pumped Hydro (24hrs storage)
+        Q1 Solar Thermal,       Solar Thermal (16hrs storage)
+    """)
+
+    result = _is_battery_row(new_entrants)
+
+    # Battery + Distributed Resources Batteries match; others (incl. pumped
+    # hydro and solar thermal storage) do not.
+    assert list(result) == [True, True, False, False, False]
+
+
+# --- _is_pumped_hydro_row ---
+
+
+def test_is_pumped_hydro_row(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,    Technology Type
+        Q1 Battery - 2h,        Battery Storage (2hrs storage)
+        NQ Battery - Dist,      Distributed Resources Batteries
+        Q1 Wind,                Wind
+        N1 Pumped Hydro - 24h,  Pumped Hydro (24hrs storage)
+        Q1 Solar Thermal,       Solar Thermal (16hrs storage)
+    """)
+
+    result = _is_pumped_hydro_row(new_entrants)
+
+    # Pumped Hydro resources match; Batter* and other storage do not.
+    assert list(result) == [False, False, False, True, False]
+
+
+# --- _is_storage_row ---
+
+
+def test_is_storage_row(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        IASR ID / DLT names,    Technology
+        Q1 Battery - 2h,        Battery Storage (2hrs storage)
+        NQ Battery - Dist,      Distributed Resources Batteries
+        Q1 Wind,                Wind
+        N1 Pumped Hydro - 24h,  Pumped Hydro (24hrs storage)
+        Q1 Solar Thermal,       Solar Thermal (16hrs storage)
+    """)
+
+    result = _is_storage_row(new_entrants, col_to_check="Technology")
+
+    # Battery,  Distributed Resources Batteries and Pumped Hydro all match.
+    # Solar thermal still does not.
+    assert list(result) == [True, True, False, True, False]

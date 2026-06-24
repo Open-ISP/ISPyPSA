@@ -30,6 +30,10 @@ from ispypsa.templater.network_expansion import (
     _filter_flow_path_augmentations_to_granularity,
     _template_network_expansion,
 )
+from ispypsa.templater.new_entrants import (
+    _template_generators_new_entrant,
+    _template_storage_new_entrant,
+)
 from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
@@ -220,10 +224,6 @@ def create_ispypsa_inputs_template(
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
 
-        # todo: replace with actual generators_new_entrant once that templating
-        # function is written — passing empty placeholder for now so costs_connection
-        # is wired up but produces no VRE rows until generators are templated.
-
         # connection_capacity_non_vre is in manually_extracted_template_tables/ (sourced from
         # ENOR tables 16-17 and confirmed with AEMO) but is needed as an iasr_tables input,
         # not a template output. TODO revisit when more manual tables added and consider
@@ -232,8 +232,13 @@ def create_ispypsa_inputs_template(
             "connection_capacity_non_vre"
         ].copy()
 
-        generators_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
-        storage_new_entrant = pd.DataFrame(columns=["geo_id", "technology"])
+        # Identity columns only for now - not yet a templater output
+        generators_new_entrant = _template_generators_new_entrant(
+            iasr_tables["new_entrants_summary"]
+        )
+        storage_new_entrant = _template_storage_new_entrant(
+            iasr_tables["new_entrants_summary"]
+        )
         template["costs_connection"] = _template_connection_costs(
             iasr_tables,
             scenario,
