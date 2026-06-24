@@ -8,12 +8,16 @@ from isp_trace_parser import construct_reference_year_mapping
 from ispypsa.config import (
     ModelConfig,
 )
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
     _translate_nem_regions_to_buses,
     _translate_rezs_to_buses,
     create_pypsa_friendly_bus_demand_timeseries,
+)
+from ispypsa.translator.constraints import (
+    _translate_custom_constraints_from_network_tables,
 )
 from ispypsa.translator.custom_constraints import (
     _append_if_not_empty,
@@ -29,6 +33,10 @@ from ispypsa.translator.generators import (
 )
 from ispypsa.translator.helpers import convert_to_numeric_if_possible
 from ispypsa.translator.links import _translate_flow_paths_to_links
+from ispypsa.translator.network import (
+    _translate_network_geography_to_buses,
+    _translate_network_to_links,
+)
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_links,
 )
@@ -43,6 +51,10 @@ from ispypsa.translator.storage import (
 )
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
+from ispypsa.translator.timeslices import (
+    _create_timeslice_snapshot_mapping,
+    _log_referenced_timeslices_without_snapshots,
+)
 
 _BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
@@ -51,6 +63,26 @@ _BASE_TRANSLATOR_OUTPUTS = [
     "links",
     "generators",
     "batteries",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+    "custom_constraints_generators",
+]
+
+# Outputs of the new-format translator path. Generators and batteries are
+# absent because the new-format templater doesn't produce generator/battery
+# tables yet; link_timeslice_limits and timeslice_snapshots carry the
+# time-varying transmission limits and the snapshot-restriction of custom
+# constraints.
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TRANSLATOR_OUTPUTS
+# and delete _BASE_TRANSLATOR_OUTPUTS above (reinstating generators and
+# batteries once generator translation lands for the new format).
+_NEW_FORMAT_TRANSLATOR_OUTPUTS = [
+    "snapshots",
+    "investment_period_weights",
+    "buses",
+    "links",
+    "link_timeslice_limits",
+    "timeslice_snapshots",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "custom_constraints_generators",
@@ -90,6 +122,11 @@ def create_pypsa_friendly_inputs(
     Returns: dictionary of dataframes in the `PyPSA` friendly format. (add link to
         pypsa friendly format table docs)
     """
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: inline the new-format
+    # function here and delete the legacy body below.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        return _create_pypsa_friendly_inputs_from_network_tables(config, ispypsa_tables)
+
     pypsa_inputs = {}
 
     pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
@@ -204,6 +241,57 @@ def create_pypsa_friendly_inputs(
         )
     )
 
+    return pypsa_inputs
+
+
+def _create_pypsa_friendly_inputs_from_network_tables(
+    config: ModelConfig, ispypsa_tables: dict[str, pd.DataFrame]
+) -> dict[str, pd.DataFrame]:
+    """Creates the PyPSA friendly tables from the new-format network tables.
+
+    Covers the network and custom-constraint functionality only: the
+    new-format templater doesn't produce generator/battery tables yet, so no
+    generators or batteries (and none of their timeseries) are created.
+    Snapshots are created here directly from the temporal config — snapshot
+    aggregation methods that need demand/generator traces (e.g.
+    named_representative_weeks) aren't available until generator translation
+    lands.
+
+    Args:
+        config: `ISPyPSA` `ispypsa.config.ModelConfig` object.
+        ispypsa_tables: dictionary of dataframes providing the new-format
+            `ISPyPSA` input tables.
+
+    Returns: dictionary of dataframes in the `PyPSA` friendly format, with
+        the tables listed in _NEW_FORMAT_TRANSLATOR_OUTPUTS.
+    """
+    pypsa_inputs = {}
+    snapshots = create_pypsa_friendly_snapshots(config, "capacity_expansion")
+    pypsa_inputs["snapshots"] = _add_snapshot_weightings(
+        snapshots, config.temporal.capacity_expansion.resolution_min
+    )
+    pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
+        config.temporal.capacity_expansion.investment_periods,
+        config.temporal.range.end_year,
+        config.discount_rate,
+    )
+    pypsa_inputs["buses"] = _translate_network_geography_to_buses(
+        ispypsa_tables["network_geography"], config.network.nodes.rezs
+    )
+    links, link_timeslice_limits = _translate_network_to_links(ispypsa_tables, config)
+    pypsa_inputs["links"] = links
+    pypsa_inputs["link_timeslice_limits"] = link_timeslice_limits
+    pypsa_inputs["timeslice_snapshots"] = _create_timeslice_snapshot_mapping(
+        ispypsa_tables["timeslices"], snapshots, config
+    )
+    pypsa_inputs.update(
+        _translate_custom_constraints_from_network_tables(ispypsa_tables, links, config)
+    )
+    _log_referenced_timeslices_without_snapshots(
+        pypsa_inputs["timeslice_snapshots"],
+        pypsa_inputs["link_timeslice_limits"],
+        pypsa_inputs["custom_constraints_rhs"],
+    )
     return pypsa_inputs
 
 
@@ -392,6 +480,13 @@ def list_timeseries_files(
         KeyError: If required ISPyPSA tables are missing
         ValueError: If required columns are missing from tables
     """
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: revisit once generator
+    # translation lands for the new format. Until then the new-format path
+    # produces no timeseries files — there are no generators to build traces
+    # for, and demand traces need the generator-era timeseries machinery.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        return []
+
     files = []
 
     # Validate required tables exist
@@ -516,7 +611,11 @@ def _filter_and_save_timeseries(
 
 
 def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
-    files = _BASE_TRANSLATOR_OUTPUTS
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the legacy list.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        files = _NEW_FORMAT_TRANSLATOR_OUTPUTS
+    else:
+        files = _BASE_TRANSLATOR_OUTPUTS
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files

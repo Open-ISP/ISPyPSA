@@ -71,13 +71,15 @@ _NEW_FORMAT_OUTPUTS = [
     "network_transmission_path_limits",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
+    "timeslices",
     "costs_connection",
 ]
 
 # Custom constraints are templated only at sub_regions (coarser granularities
-# collapse the entities they reference). Detailed content lives in
-# test_custom_constraints_from_plexos.py; here we check the CLI writes them at
-# sub_regions and omits them otherwise.
+# collapse the entities they reference) but written at every granularity —
+# header-only at nem_regions / single_region. Detailed content lives in
+# test_custom_constraints_from_plexos.py; here we check the CLI writes them
+# populated at sub_regions and empty otherwise.
 _CUSTOM_CONSTRAINT_OUTPUTS = [
     "custom_constraints",
     "custom_constraints_lhs",
@@ -286,6 +288,15 @@ _EXPECTED_EXPANSION_COST_ROWS_75 = {
     "single_region": 1209,
 }
 
+# Per-reference-year window patterns decoded from the shipped RefYear5000
+# calendar and reference_year_sequence (drift-detection;
+# granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
+# activates in the calendar, so tas_peak_demand has no windows. 15 reference
+# years: 2011 to 2025 in year-ending convention.
+_NUM_TIMESLICE_PATTERN_ROWS_75 = 678
+_NUM_TIMESLICE_IDS_75 = 14
+_NUM_REFERENCE_YEARS_75 = 15
+
 
 @pytest.mark.parametrize("granularity", ["sub_regions", "nem_regions", "single_region"])
 def test_create_ispypsa_inputs_new_format(
@@ -355,18 +366,25 @@ def test_create_ispypsa_inputs_new_format(
     assert set(costs["expansion_id"]) == set(options["expansion_id"])
     assert len(costs) == _EXPECTED_EXPANSION_COST_ROWS_75[granularity]
 
-    # custom_constraints — written only at sub_regions. Detailed content is
-    # covered by test_custom_constraints_from_plexos.py; here we assert the CLI
-    # emits the three tables at sub_regions with no orphan LHS/RHS rows, and
-    # omits them entirely at coarser granularities.
+    # timeslices — per-reference-year patterns decoded from the shipped
+    # RefYear5000 calendar, identical at every granularity.
+    timeslices = pd.read_csv(output_dir / "timeslices.csv")
+    assert len(timeslices) == _NUM_TIMESLICE_PATTERN_ROWS_75
+    assert timeslices["timeslice_id"].nunique() == _NUM_TIMESLICE_IDS_75
+    assert timeslices["reference_year"].nunique() == _NUM_REFERENCE_YEARS_75
+
+    # custom_constraints — templated only at sub_regions but written at every
+    # granularity (header-only at coarser ones). Detailed content is covered
+    # by test_custom_constraints_from_plexos.py; here we assert the CLI emits
+    # the three tables populated at sub_regions with no orphan LHS/RHS rows,
+    # and empty otherwise.
+    verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
+    constraints = pd.read_csv(output_dir / "custom_constraints.csv")
+    lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
+    rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
     if granularity == "sub_regions":
-        verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
-        constraints = pd.read_csv(output_dir / "custom_constraints.csv")
-        lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
-        rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
         constraint_ids = set(constraints["constraint_id"])
         assert set(lhs["constraint_id"]) <= constraint_ids
         assert set(rhs["constraint_id"]) <= constraint_ids
     else:
-        for name in _CUSTOM_CONSTRAINT_OUTPUTS:
-            assert not (output_dir / f"{name}.csv").exists()
+        assert constraints.empty and lhs.empty and rhs.empty
