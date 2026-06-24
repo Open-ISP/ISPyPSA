@@ -297,6 +297,18 @@ _NUM_TIMESLICE_PATTERN_ROWS_75 = 678
 _NUM_TIMESLICE_IDS_75 = 14
 _NUM_REFERENCE_YEARS_75 = 15
 
+# Custom constraints extracted from the PLEXOS model — one ISPyPSA constraint
+# per entry in CONSTRAINT_NAMES in scripts/extract_plexos_constraints.py (the
+# authoritative set: 14 export-group limits + 1 GPG constraint). All survive
+# templating at sub_regions; coarser granularities collapse the sub-regional
+# entities they reference, so the tables are emitted header-only there.
+_NUM_CUSTOM_CONSTRAINTS_75 = 15
+
+# Drift-detection: total LHS coefficient rows across all constraints. No clean
+# formula — it is the per-constraint participant count in the PLEXOS model.
+# Refresh by rerunning the test and pasting the failure value here.
+_NUM_CUSTOM_CONSTRAINT_LHS_ROWS_75 = 1023
+
 
 @pytest.mark.parametrize("granularity", ["sub_regions", "nem_regions", "single_region"])
 def test_create_ispypsa_inputs_new_format(
@@ -374,15 +386,22 @@ def test_create_ispypsa_inputs_new_format(
     assert timeslices["reference_year"].nunique() == _NUM_REFERENCE_YEARS_75
 
     # custom_constraints — templated only at sub_regions but written at every
-    # granularity (header-only at coarser ones). Detailed content is covered
-    # by test_custom_constraints_from_plexos.py; here we assert the CLI emits
-    # the three tables populated at sub_regions with no orphan LHS/RHS rows,
-    # and empty otherwise.
+    # granularity (header-only at coarser ones). Detailed content is covered by
+    # test_custom_constraints_from_plexos.py; here we pin the populated output's
+    # size (constraint count + LHS rows) and check no orphan LHS/RHS rows.
+    # Empty at coarser granularities.
     verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
     constraints = pd.read_csv(output_dir / "custom_constraints.csv")
     lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
     rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
     if granularity == "sub_regions":
+        # One ISPyPSA constraint per PLEXOS constraint extracted (the
+        # CONSTRAINT_NAMES set in scripts/extract_plexos_constraints.py), plus a
+        # drift-detection count for the LHS coefficient rows.
+        assert constraints["constraint_id"].nunique() == _NUM_CUSTOM_CONSTRAINTS_75
+        assert len(constraints) == _NUM_CUSTOM_CONSTRAINTS_75
+        assert len(lhs) == _NUM_CUSTOM_CONSTRAINT_LHS_ROWS_75
+        # No orphan LHS/RHS rows — every term and limit belongs to a constraint.
         constraint_ids = set(constraints["constraint_id"])
         assert set(lhs["constraint_id"]) <= constraint_ids
         assert set(rhs["constraint_id"]) <= constraint_ids
