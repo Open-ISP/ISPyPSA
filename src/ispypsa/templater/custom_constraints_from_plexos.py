@@ -234,7 +234,10 @@ _CONSTRAINT_NAME_PREFIX = "ExportGroup_"
 _EXCLUDED_PARENT_CLASSES = ("Purchaser",)
 _AREA_SUFFIX_PATTERN = re.compile(r" Area\d+$")
 
-# Output columns of the three custom-constraint template tables.
+# Output columns of the three custom-constraint template tables. Both the
+# populated builders below and empty_custom_constraint_tables() project onto
+# these, so the header-only tables emitted at coarse granularities carry
+# exactly the same columns as the populated sub_regions tables.
 _CUSTOM_CONSTRAINTS_COLUMNS = ["constraint_id", "direction"]
 _CUSTOM_CONSTRAINTS_LHS_COLUMNS = [
     "constraint_id",
@@ -386,7 +389,7 @@ def _build_custom_constraints(constraints: pd.DataFrame) -> pd.DataFrame:
             ),
             "direction": directions,
         }
-    ).reset_index(drop=True)
+    )[_CUSTOM_CONSTRAINTS_COLUMNS].reset_index(drop=True)
 
 
 def _raise_on_unmapped_sense(sense_rows: pd.DataFrame, directions: pd.Series) -> None:
@@ -455,9 +458,7 @@ def _build_custom_constraints_lhs(
     lhs = _drop_unresolved_terms(lhs)
     lhs = lhs.rename(columns={"value": "coefficient"})
     lhs["constraint_id"] = lhs["constraint_name"].map(_strip_constraint_prefix)
-    lhs = lhs[
-        ["constraint_id", "term_type", "variable_name", "coefficient", "date_from"]
-    ]
+    lhs = lhs[_CUSTOM_CONSTRAINTS_LHS_COLUMNS]
     lhs = _inject_iasr_new_entrant_batteries(lhs, new_entrants)
     lhs = _dedupe_lhs_terms(lhs)
     return lhs.reset_index(drop=True)
@@ -1150,15 +1151,7 @@ def _battery_rows_for_triggers(
     # Short-circuit the empty case: an empty triggered carries a float64
     # location column, which would raise on the object-keyed merge below.
     if triggered.empty:
-        return pd.DataFrame(
-            columns=[
-                "constraint_id",
-                "term_type",
-                "variable_name",
-                "coefficient",
-                "date_from",
-            ]
-        )
+        return pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_LHS_COLUMNS)
     # Inner merge: expand each triggered (constraint_id, location) into one row
     # per new-entrant battery at that location. Triggered locations that hold no
     # batteries (location absent from batteries_by_location) drop out here.
@@ -1173,9 +1166,7 @@ def _battery_rows_for_triggers(
     )
     rows["coefficient"] = rows["coefficient"].fillna(1.0)
     rows["term_type"] = "storage_output"
-    return rows[
-        ["constraint_id", "term_type", "variable_name", "coefficient", "date_from"]
-    ].reset_index(drop=True)
+    return rows[_CUSTOM_CONSTRAINTS_LHS_COLUMNS].reset_index(drop=True)
 
 
 def _log_injected_batteries(injected: pd.DataFrame) -> None:
@@ -1256,9 +1247,7 @@ def _build_custom_constraints_rhs(rhs_values: pd.DataFrame) -> pd.DataFrame:
     rhs["constraint_id"] = rhs["constraint_name"].map(_strip_constraint_prefix)
     rhs["timeslice"] = rhs["tags"].map(_tag_to_timeslice)
     rhs = rhs.rename(columns={"value": "rhs"})
-    return rhs[["constraint_id", "timeslice", "rhs", "date_from"]].reset_index(
-        drop=True
-    )
+    return rhs[_CUSTOM_CONSTRAINTS_RHS_COLUMNS].reset_index(drop=True)
 
 
 def _tag_to_timeslice(tag: str) -> str:

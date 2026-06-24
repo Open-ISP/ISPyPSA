@@ -406,4 +406,6 @@ def test_create_ispypsa_inputs_new_format(
         assert set(lhs["constraint_id"]) <= constraint_ids
         assert set(rhs["constraint_id"]) <= constraint_ids
     else:
-        assert constraints.empty and lhs.empty and rhs.empty
+        assert constraints.empty
+        assert lhs.empty
+        assert rhs.empty
