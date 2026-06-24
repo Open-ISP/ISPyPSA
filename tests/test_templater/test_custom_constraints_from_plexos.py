@@ -31,12 +31,10 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _generator_to_location,
     _iasr_id_choices,
     _inject_iasr_new_entrant_batteries,
-    _is_battery_row,
     _line_variable_name,
     _location_battery_pairs,
     _log_injected_batteries,
     _match_unit_name,
-    _pick_location,
     _plexos_extract_dir,
     _rename_battery_name,
     _rename_first_token,
@@ -828,42 +826,6 @@ def test_build_custom_constraints_rhs_maps_to_region_prefixed_canonical_timeslic
         NET1,           tas_winter_reference,  1200.0,
     """)
     pd.testing.assert_frame_equal(result, expected)
-
-
-# --- _is_battery_row ---
-
-
-def test_is_battery_row(csv_str_to_df):
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Technology Type
-        Q1 Battery - 2h,       Battery Storage (2hrs storage)
-        NQ Battery - Dist,     Distributed Resources Batteries
-        Q1 Wind,                 Wind
-        N1 Pumped Hydro - 24h,Pumped Hydro (24hrs storage)
-        Q1 Solar Thermal,       Solar Thermal (16hrs storage)
-    """)
-
-    result = _is_battery_row(new_entrants)
-
-    # Battery + Distributed Resources Batteries match; others (incl. pumped
-    # hydro and solar thermal storage) do not.
-    assert list(result) == [True, True, False, False, False]
-
-
-# --- _pick_location ---
-
-
-@pytest.mark.parametrize(
-    "rez_id, sub_region, expected",
-    [
-        ("Q8", "SQ", "Q8"),  # REZ ID populated -> REZ ID
-        ("Not Applicable", "SQ", "SQ"),  # 'Not Applicable' -> Sub-region
-        (None, "SQ", "SQ"),  # NaN/None -> Sub-region
-    ],
-)
-def test_pick_location(rez_id, sub_region, expected):
-    row = pd.Series({"REZ ID": rez_id, "Sub-region": sub_region})
-    assert _pick_location(row) == expected
 
 
 # --- _generator_to_location ---

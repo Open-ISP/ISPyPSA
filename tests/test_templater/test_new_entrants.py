@@ -5,7 +5,6 @@ from ispypsa.templater.new_entrants import (
     _GENERATOR_IDENTITY_COLUMNS,
     _STORAGE_IDENTITY_COLUMNS,
     _add_resource_type,
-    _filter_to_technology_group,
     _set_geo_id,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -55,82 +54,16 @@ def test_template_storage_new_entrant(csv_str_to_df):
     assert len(result) == 3
 
 
-# --- _filter_to_technology_group ---
-
-
-def test_filter_to_technology_group(csv_str_to_df):
-    # test core split/filter function returns both groups correctly
-    new_entrants_summary = csv_str_to_df("""
-        Technology Type,                    REZ ID
-        Wind,                               N3
-        Large scale Solar PV,               N3
-        Battery Storage (2hrs storage),     N3
-        Distributed Resources Batteries,    Not Applicable
-        Pumped Hydro (24hrs storage),       Not Applicable
-        OCGT (small GT),                    Not Applicable
-    """)
-
-    # All storage variants (batteries, distributed batteries, pumped hydro) are
-    # dropped; generation rows pass through unchanged with other columns intact.
-    generators = _filter_to_technology_group(new_entrants_summary, "generators")
-
-    expected_gens = csv_str_to_df("""
-        Technology Type,        REZ ID
-        Wind,                   N3
-        Large scale Solar PV,   N3
-        OCGT (small GT),        Not Applicable
-    """)
-    pd.testing.assert_frame_equal(generators, expected_gens)
-
-    # Only storage variants (batteries, distributed batteries, pumped hydro) are
-    # kept - unchanged, with other columns intact.
-    storage = _filter_to_technology_group(new_entrants_summary, "storage")
-
-    expected_storage = csv_str_to_df("""
-        Technology Type,                    REZ ID
-        Battery Storage (2hrs storage),     N3
-        Distributed Resources Batteries,    Not Applicable
-        Pumped Hydro (24hrs storage),       Not Applicable
-    """)
-    pd.testing.assert_frame_equal(storage, expected_storage)
-
-
-def test_filter_to_technology_group_raises_unknown_group(csv_str_to_df, caplog):
-    # Raises on non-permitted 'group' arg (not "generators" or "storage")
-    new_entrants_summary = csv_str_to_df("""
-        Technology Type,                    REZ ID
-        Wind,                               N3
-        Pumped Hydro (24hrs storage),       Not Applicable
-    """)
-
-    with pytest.raises(ValueError, match="group must be 'generators' or 'storage'"):
-        _filter_to_technology_group(new_entrants_summary, "computers")
-
-
-def test_filter_to_technology_group_empty_input(csv_str_to_df):
-    # Empty input (all columns, no rows) returns an empty frame, no errors.
-    new_entrants_summary = pd.DataFrame(columns=["Technology Type", "REZ ID"])
-
-    result = _filter_to_technology_group(new_entrants_summary, "storage")
-
-    expected = csv_str_to_df("""
-        Technology Type, REZ ID
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
 # --- _set_geo_id ---
 
 
 def test_set_geo_id(csv_str_to_df):
-    # REZ-located rows take their REZ ID (incl. Non-REZ N0/V0); thermal, pumped hydro
-    # and distributed rows ("Not Applicable") fall back to their Sub-region.
+    # Check that the wrapper adds 'geo_id' column, correctly applying ``_pick_location``
+    # and not impacting existing columns.
     new_entrants = csv_str_to_df("""
         technology,                     REZ ID,         Sub-region
         Wind,                           N3,             CNSW
-        Large scale Solar PV,           N0,             CNSW
         OCGT (small GT),                Not Applicable, NQ
-        Pumped Hydro (24hrs storage),   Not Applicable, SNW
     """)
 
     result = _set_geo_id(new_entrants)
@@ -138,15 +71,13 @@ def test_set_geo_id(csv_str_to_df):
     expected = csv_str_to_df("""
         technology,                     REZ ID,         Sub-region, geo_id
         Wind,                           N3,             CNSW,       N3
-        Large scale Solar PV,           N0,             CNSW,       N0
         OCGT (small GT),                Not Applicable, NQ,         NQ
-        Pumped Hydro (24hrs storage),   Not Applicable, SNW,        SNW
     """)
     pd.testing.assert_frame_equal(result, expected)
 
 
 def test_set_geo_id_empty_input(csv_str_to_df):
-    # Empty input still returns the geo_id column (all columns, no rows).
+    # Empty input still returns the added geo_id column
     new_entrants = pd.DataFrame(columns=["technology", "REZ ID", "Sub-region"])
 
     result = _set_geo_id(new_entrants)

@@ -18,7 +18,10 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.helpers import _where_any_substring_appears
+from ispypsa.templater.helpers import (
+    _is_storage_row,
+    _pick_location,
+)
 
 _GENERATOR_IDENTITY_COLUMNS = [
     "name",
@@ -35,8 +38,6 @@ _STORAGE_IDENTITY_COLUMNS = [
     "geo_id",
     "fuel_type",
 ]
-
-_STORAGE_TECHNOLOGY_STRINGS = ["battery", "batteries", "pumped hydro"]
 
 # Source (IASR new_entrants_summary) column names → schema output column names.
 _SUMMARY_COLUMN_RENAMES = {
@@ -57,8 +58,8 @@ _RESOURCE_QUALITY_CODE_TO_TYPE = {
     "CST": "solar",
 }
 
-# Extraction pattern for the resource-quality code embedded between underscores in
-# a VRE IASR ID, e.g. "WFX" in "N10_WFX_Hunter Coast".
+# Regex extracting the resource-quality code embedded between underscores in a VRE                                                                                                                                                  # IASR ID, e.g. "WFX" in "N10_WFX_Hunter Coast". Derived from the code map, it
+# expands to "_(WFX|WFL|SAT|...)_" — one capture group over the known codes                                                                                                                                                      # sorted longest-first so a short code can't shadow a longer one it prefixes.
 _RESOURCE_CODE_PATTERN = "_({})_".format(
     "|".join(sorted(_RESOURCE_QUALITY_CODE_TO_TYPE, key=len, reverse=True))
 )
@@ -91,7 +92,7 @@ def _template_generators_new_entrant(
 
     """
     logging.info("Creating a template for new entrant generators")
-    gens = _filter_to_technology_group(new_entrants_summary, "generators")
+    gens = new_entrants_summary[~_is_storage_row(new_entrants_summary)].copy()
     gens = gens.rename(columns=_SUMMARY_COLUMN_RENAMES)
     gens = _set_geo_id(gens)
     gens = _add_resource_type(gens)
@@ -119,7 +120,7 @@ def _template_storage_new_entrant(
         N3 Battery  Battery (2hrs)  N3      Battery
     """
     logging.info("Creating a template for new entrant storage")
-    storage = _filter_to_technology_group(new_entrants_summary, "storage")
+    storage = new_entrants_summary[_is_storage_row(new_entrants_summary)].copy()
     storage = storage.rename(columns=_SUMMARY_COLUMN_RENAMES)
     storage = _set_geo_id(storage)
     return storage[_STORAGE_IDENTITY_COLUMNS]
@@ -128,74 +129,13 @@ def _template_storage_new_entrant(
 # --- shared helpers ---
 
 
-def _filter_to_technology_group(
-    new_entrants_summary: pd.DataFrame, group: str
-) -> pd.DataFrame:
-    """Returns the summary rows for one technology group: generators or storage.
-
-    Storage rows are those whose "Technology Type" contains a
-    ``_STORAGE_TECHNOLOGY_STRINGS`` substring (battery, pumped hydro), matched
-    case-insensitively; generators are every other row. The two groups partition
-    the summary, so this single predicate is the only place the generator/storage
-    boundary is defined.
-
-    Args:
-        new_entrants_summary: the IASR ``new_entrants_summary`` table
-        group: "generators" or "storage".
-
-    I/O Example:
-        new_entrants_summary:
-            Technology Type                  REZ ID
-            Wind                             N3
-            Battery Storage (2hrs storage)   N3
-            Pumped Hydro (24hrs storage)     Not Applicable
-            OCGT (small GT)                  Not Applicable
-
-        group="generators" returns:
-            Technology Type                  REZ ID
-            Wind                             N3
-            OCGT (small GT)                  Not Applicable
-
-        group="storage" returns:
-            Technology Type                  REZ ID
-            Battery Storage (2hrs storage)   N3
-            Pumped Hydro (24hrs storage)     Not Applicable
-    """
-    is_storage = _where_any_substring_appears(
-        new_entrants_summary["Technology Type"], _STORAGE_TECHNOLOGY_STRINGS
-    )
-    if group == "storage":
-        return new_entrants_summary.loc[is_storage].reset_index(drop=True)
-    if group == "generators":
-        return new_entrants_summary.loc[~is_storage].reset_index(drop=True)
-    raise ValueError(
-        "Filtering new entrants table to technology group: "
-        f"group must be 'generators' or 'storage', got {group!r}"
-    )
-
-
 def _set_geo_id(new_entrants: pd.DataFrame) -> pd.DataFrame:
-    """Sets ``geo_id`` from the row's REZ ID, falling back to its Sub-region.
+    """Adds 'geo_id' column to new_entrants containing REZ ID with Sub-region fallback.
 
-    I/O Example:
-        new_entrants:
-            technology                       REZ ID           Sub-region
-            Wind                             N3               CNSW
-            Large scale Solar PV             N0               CNSW       # Non-REZ: kept as-is
-            OCGT (small GT)                  Not Applicable   NQ
-            Pumped Hydro (24hrs storage)     Not Applicable   SNW
-
-        returns (adds geo_id):
-            technology                       REZ ID           Sub-region  geo_id
-            Wind                             N3               CNSW        N3
-            Large scale Solar PV             N0               CNSW        N0
-            OCGT (small GT)                  Not Applicable   NQ          NQ
-            Pumped Hydro (24hrs storage)     Not Applicable   SNW         SNW
+    Applies ``_pick_location`` helper to each row of the new_entrants table to
+    set their 'geo_id'. Simple wrapper for readability.
     """
-    new_entrants = new_entrants.copy()
-    new_entrants["geo_id"] = new_entrants["REZ ID"].where(
-        new_entrants["REZ ID"] != "Not Applicable", new_entrants["Sub-region"]
-    )
+    new_entrants["geo_id"] = new_entrants.apply(_pick_location, axis=1)
     return new_entrants
 
 
