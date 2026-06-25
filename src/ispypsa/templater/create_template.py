@@ -234,9 +234,7 @@ def create_ispypsa_inputs_template(
 
         # Not yet a templater output - fed into connection cost templating below.
         generators_new_entrant = _template_generators_new_entrant(iasr_tables)
-        storage_new_entrant = _template_storage_new_entrant(
-            iasr_tables["new_entrants_summary"]
-        )
+        storage_new_entrant = _template_storage_new_entrant(iasr_tables)
         template["costs_connection"] = _template_connection_costs(
             iasr_tables,
             scenario,

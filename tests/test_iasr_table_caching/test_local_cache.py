@@ -35,6 +35,9 @@ def test_build_required_tables_new_format():
     assert "lead_time_and_project_life" in result
     assert "heat_rates_new_entrants" in result
     assert "gpg_min_stable_level_new_entrants" in result
+    # Storage property tables merged into the new entrant storage template
+    assert "battery_properties" in result
+    assert "pumped_hydro_new_entrant_properties" in result
 
 
 def test_build_required_tables_old_format():

@@ -1,0 +1,9 @@
+Technology,Maximum power_MW,Energy capacity_Hours,Charge efficiency_%,Discharge efficiency_%,Allowable max state of charge_%,Allowable min state of charge_%,Round trip efficiency_%,Annual degradation_%
+Battery storage (1hr storage),1,1.0,92.0,92.0,100,0,84,1.8
+Battery storage (2hrs storage),1,2.0,92.0,92.0,100,0,84,1.8
+Battery storage (4hrs storage),1,4.0,92.5,92.5,100,0,85,1.4
+Battery storage (8hrs storage),1,8.0,93.0,93.0,100,0,85,1.2
+Compressed air,1,8.0,81.0,81.0,100,0,0,0.0
+Distributed Resources Batteries,1,2.0,92.0,92.0,100,0,84,1.8
+VPP (aggregated ESS) - Coordinated CER,1,2.2,92.2,92.2,85,0,85,1.6
+VPP (aggregated ESS) - V2G,1,2.2,92.0,92.0,85,0,85,1.6
