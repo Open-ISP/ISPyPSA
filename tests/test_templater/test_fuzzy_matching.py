@@ -3,7 +3,7 @@ import pytest
 
 from ispypsa.templater.helpers import (
     _best_fuzzy_match,
-    _fuzzy_map_to_canonical,
+    _fuzzy_map_to_allowed_values,
     _fuzzy_match_names,
 )
 
@@ -244,13 +244,13 @@ def test_best_fuzzy_match_picks_highest_scoring_choice():
     assert result == "Step Change"
 
 
-# ── _fuzzy_map_to_canonical ──────────────────────────────────────────────────
+# ── _fuzzy_map_to_allowed_values ──────────────────────────────────────────────────
 
 
-def test_fuzzy_map_to_canonical_corrects_typo_and_logs_info(caplog):
+def test_fuzzy_map_to_allowed_values_corrects_typo_and_logs_info(caplog):
     series = pd.Series(["Step Chaneg"])
     with caplog.at_level("INFO"):
-        result = _fuzzy_map_to_canonical(
+        result = _fuzzy_map_to_allowed_values(
             series, ["Step Change", "Slower Growth"], "testing correction"
         )
     expected = pd.Series(["Step Change"])
@@ -260,10 +260,10 @@ def test_fuzzy_map_to_canonical_corrects_typo_and_logs_info(caplog):
     ) in caplog.text
 
 
-def test_fuzzy_map_to_canonical_exact_match_no_info_log(caplog):
+def test_fuzzy_map_to_allowed_values_exact_match_no_info_log(caplog):
     series = pd.Series(["Step Change"])
     with caplog.at_level("INFO"):
-        result = _fuzzy_map_to_canonical(
+        result = _fuzzy_map_to_allowed_values(
             series, ["Step Change", "Slower Growth"], "testing exact"
         )
     expected = pd.Series(["Step Change"])
@@ -271,18 +271,18 @@ def test_fuzzy_map_to_canonical_exact_match_no_info_log(caplog):
     assert "matched to" not in caplog.text
 
 
-def test_fuzzy_map_to_canonical_unmatched_raises_error():
+def test_fuzzy_map_to_allowed_values_unmatched_raises_error():
     series = pd.Series(["Wind", "the sun", "Solar PV"])
-    msg = r"Could not fuzzy match to a canonical value whilst testing unmatched: \['the sun'\]"
+    msg = r"Could not fuzzy match to an allowed value whilst testing unmatched: \['the sun'\]"
     with pytest.raises(ValueError, match=msg):
-        _fuzzy_map_to_canonical(
+        _fuzzy_map_to_allowed_values(
             series, ["Wind", "Solar PV"], "testing unmatched", threshold=85
         )
 
 
-def test_fuzzy_map_to_canonical_empty_series():
+def test_fuzzy_map_to_allowed_values_empty_series():
     series = pd.Series([], dtype=object)
-    result = _fuzzy_map_to_canonical(
+    result = _fuzzy_map_to_allowed_values(
         series, ["Step Change", "Slower Growth"], "testing empty"
     )
     expected = pd.Series([], dtype=object)

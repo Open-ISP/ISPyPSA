@@ -314,6 +314,113 @@ lookup information that can be used to retrieve values.
         for opex mapping to rename columns in the table.
 """
 
+# - New-format (flag: use_new_table_format=True) per-technology property merge maps -
+
+# Property entries shared by new entrant generators and storage: each looked up by
+# technology from the same IASR table for both.
+_COMMON_NEW_ENTRANT_PROPERTY_MAP = {
+    "fom": dict(
+        table="fixed_opex_new_entrants",
+        technology_col="Technology Type",
+        # NOTE: literal double ")" — parsed directly from the v7.5 IASR workbook
+        value_col="Base value ($/kW/year))",
+        scale=1000.0,
+    ),
+    "lifetime_technical": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Technical life (years)",
+    ),
+    "lifetime_economic": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Economic life (years)",
+    ),
+    "minimum_stable_level": dict(
+        table="gpg_min_stable_level_new_entrants",
+        technology_col="Technology",
+        value_col="Min Stable Level (% of nameplate)",
+    ),
+}
+
+_GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
+    **_COMMON_NEW_ENTRANT_PROPERTY_MAP,
+    "vom": dict(
+        table="variable_opex_new_entrants",
+        technology_col="Generator",
+        value_col="Base value",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_new_entrants",
+        technology_col="Technology",
+        value_col="Heat rate (GJ/MWh)",
+    ),
+}
+
+_STORAGE_BATTERY_PROPERTY_MAP = {
+    "storage_hours": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Energy capacity_Hours",
+    ),
+    "efficiency_charge": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Charge efficiency_%",
+    ),
+    "efficiency_discharge": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Discharge efficiency_%",
+    ),
+    "soc_max": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Allowable max state of charge_%",
+    ),
+    "soc_min": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Allowable min state of charge_%",
+    ),
+    "degradation_annual": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Annual degradation_%",
+    ),
+}
+
+# PHES properties are keyed by "Power Station / Technology" — usually the technology, but
+# 'BOTN - Cethana' carries its own row.
+_STORAGE_PHES_PROPERTY_MAP = {
+    "storage_hours": dict(
+        table="pumped_hydro_new_entrant_properties",
+        technology_col="Power Station / Technology",
+        value_col="Storage capacity (hours)",
+    ),
+    "round_trip_efficiency": dict(
+        table="pumped_hydro_new_entrant_properties",
+        technology_col="Power Station / Technology",
+        value_col="Pumping efficiency (%)",
+    ),
+}
+"""
+New entrant property columns (keys) mapped to the IASR table and columns that contain
+property values and the technology for which the values apply. Consumed by
+``ispypsa.templater.new_entrants`` via ``_merge_properties``.
+
+    `table`: IASR table name holding the named property (key)
+    `technology_col`: column in the IASR table that contains the 'technology' string.
+        This is the column used to merge on (after mapping to canonical values).
+    `value_col`: column holding the value to merge in
+    `scale`: amount by which to multiply the value (default 1.0), used for unit
+        conversions. e.g. 1000 for $/kW → $/MW
+
+``_COMMON_...`` holds the entries shared by generators and storage; the generator and
+battery maps spread it / sit alongside it, and the storage orchestrator merges it onto
+the combined battery + PHES rows.
+"""
+
 _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
         table=[f"maximum_capacity_{gen_type}" for gen_type in _ECAA_BATTERY_TYPES],
