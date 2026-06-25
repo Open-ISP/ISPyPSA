@@ -304,8 +304,7 @@ def test_merge_battery_properties_empty(csv_str_to_df):
 
 def test_merge_phes_properties(csv_str_to_df):
     # storage_hours is merged by name-or-technology key; charge/discharge efficiency are
-    # derived from the single round-trip pumping efficiency. The named station (BOTN) picks
-    # up its own 20h/80% row, the generic PHES its technology's 24h/76% row.
+    # derived from the single round-trip pumping efficiency.
     phes = csv_str_to_df("""
         name,                  technology
         NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
