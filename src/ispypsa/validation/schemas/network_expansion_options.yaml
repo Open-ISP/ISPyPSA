@@ -4,7 +4,16 @@ unique:
   - [expansion_id, expansion_type]
 description: >
   Defines the selected expansion option and allowed capacity increase for
-  expandable network elements.
+  expandable network elements, looked up per element and expansion type.
+
+  The key columns — expansion_id and expansion_type — identify the combination an
+  option applies to. Either may be left empty to act as a wildcard: an empty
+  expansion_id is a table-wide default across all elements, and an empty
+  expansion_type applies to forward, reverse and constraint_relaxation alike.
+  Where several rows match, the most specific (fewest empty keys) wins; the
+  custom_validation rule requires that resolution to be unambiguous. Unlike the
+  limits and costs tables there is no coverage requirement — expansion is
+  optional.
 
   Covers both physical transmission paths and group constraints that can be
   relaxed through expansion. Physical paths emit two rows (forward and
@@ -23,10 +32,26 @@ description: >
 
   If absent:
   No network elements can be expanded by the model.
+custom_validation:
+  - name: expansion_options_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. (The combination and
+      wildcard model is described in the table description; this generalises
+      timeslices.no_overlapping_windows.)
+  - name: expansion_options_pair_forward_and_reverse
+    description: >
+      Forward and reverse for an element must come from one option, so each
+      expansion_id (blank included) that defines one direction must define the
+      other with the same expansion_option. A blank expansion_type covers both
+      directions in one row and satisfies this alone; constraint_relaxation has no
+      direction and stands alone. This keeps an element's resolved forward and
+      reverse tied to the same option, so the single cost keyed on expansion_id
+      applies to a coherent pair.
 columns:
   expansion_id:
     type: string
-    required: true
+    required: false
     allowed_values_from:
       - network_transmission_paths: path_id
       - custom_constraints_rhs: constraint_id
@@ -34,15 +59,23 @@ columns:
       Identifier for the expandable network element. Maps to path_id in
       network_transmission_paths for physical paths, or to constraint_id
       in custom_constraints_rhs for group constraints.
+
+      If absent (or empty):
+      Wildcard — applies to every expandable element no more specific row covers
+      (a system-wide default option).
   expansion_type:
     type: string
-    required: true
+    required: false
     allowed_values: [forward, reverse, constraint_relaxation]
     description: >
       Which direction or constraint relaxation this row's ``allowed_expansion``
       applies to. ``forward`` and ``reverse`` are the two directions of a
       physical path; ``constraint_relaxation`` is the single relaxation of a
       group constraint.
+
+      If absent (or empty):
+      Wildcard — applies to forward, reverse and constraint_relaxation alike for
+      any combination no more specific row covers.
   allowed_expansion:
     type: float
     required: true

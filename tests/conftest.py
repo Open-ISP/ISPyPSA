@@ -333,7 +333,7 @@ def sample_model_config():
             annuitisation_lifetime=25,
             transmission_expansion=True,
             rez_transmission_expansion=True,
-            rez_to_sub_region_transmission_default_limit=1000000.0,
+            transmission_default_limit=1000000.0,
         ),
         unserved_energy=UnservedEnergyConfig(cost=10000, max_per_node=10000),
     )

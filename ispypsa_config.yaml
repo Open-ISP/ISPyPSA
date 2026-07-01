@@ -83,9 +83,9 @@ network:
     # Whether Renewable Energy Zones (REZs) are modelled as distinct nodes
     # Only discrete_nodes implemented
     rezs: discrete_nodes
-  # Line capacity limit for rez to node connections that have their limit's modelled
-  # through custom constraint (MW).
-  rez_to_sub_region_transmission_default_limit: 1e5
+  # Default transmission capacity limit (MW) for a path with no explicit limit in
+  # the inputs (e.g. REZ connections whose limit is modelled via custom constraints).
+  transmission_default_limit: 1e5
 
 
 # ===== Temporal =======================================================================

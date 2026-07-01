@@ -1,3 +1,4 @@
+import logging
 import re
 
 import pandas as pd
@@ -154,3 +155,106 @@ def convert_to_numeric_if_possible(df: pd.DataFrame, cols: list[str]) -> pd.Data
         df = df.drop(columns=["temp_col"])
 
     return df
+
+
+def _resolve_wildcards(
+    table: pd.DataFrame,
+    allowed_values: dict[str, list],
+    value_columns: list[str],
+    expected_drops: tuple[str, ...] = (),
+) -> pd.DataFrame:
+    """Expand a sparse "wildcard" table into one row per concrete key combination.
+
+    A key column may be left blank (NaN) to act as a wildcard that applies to
+    every value of that column. ``allowed_values`` lists, for each wildcardable
+    column, the concrete values it may take — the schema's allowed_values /
+    allowed_values_from, resolved to actual values. Each blank cell in those
+    columns is fanned out to every allowed value; a filled cell survives only if
+    it is itself an allowed value, so a row carrying an out-of-set value drops
+    out. Drops are logged at INFO unless the column is named in
+    ``expected_drops`` — for those, dropping is the caller's designed selection
+    (e.g. keeping only investment-period years), not data loss worth surfacing.
+    Key columns absent from ``allowed_values`` (e.g. timeslice) ride along
+    unchanged.
+
+    Once the blanks are filled in, several rows can land on the same key — a
+    specific row and a wildcard one. The row that used the fewest wildcards (the
+    most specific) wins; callers rely on the schema's *_resolve_unambiguously
+    rule to guarantee there is never a tie.
+
+    I/O Example:
+        table (a blank cell is a wildcard):
+            path_id  direction  timeslice  capacity
+            CQ-NQ    forward    peak       1200
+                                           500       # all keys blank: a global default
+            N1-CNSW                                  # blank direction and capacity
+
+        allowed_values = {"path_id": ["CQ-NQ", "N1-CNSW"],
+                          "direction": ["forward", "reverse"]}
+        value_columns = ["capacity"]
+
+        returns:
+            path_id  direction  timeslice  capacity
+            CQ-NQ    forward    peak       1200      # specific row, untouched
+            CQ-NQ    forward               500       # global default fills the gaps...
+            CQ-NQ    reverse               500
+            N1-CNSW  forward               NaN       # ...but N1-CNSW's own blank-capacity
+            N1-CNSW  reverse               NaN       #   row is more specific, so it wins
+    """
+    key_columns = [c for c in table.columns if c not in value_columns]
+    work = table.copy()
+    # Count each row's wildcards now, before the blanks are filled in, so that
+    # after expansion we can keep the row that used the fewest wildcards wherever
+    # rows land on the same key.
+    work["_wildcards"] = sum(work[c].isna().astype(int) for c in allowed_values)
+    # Resolve one wildcardable column per pass; each pass fills that column in.
+    for column, values in allowed_values.items():
+        work = _expand_column(work, column, values, column not in expected_drops)
+    # Most specific (fewest wildcards) wins where rows now share a key.
+    most_specific_first = work.sort_values("_wildcards", kind="stable")
+    resolved = most_specific_first.drop_duplicates(key_columns, keep="first")
+    return resolved.loc[:, list(table.columns)].reset_index(drop=True)
+
+
+def _expand_column(
+    table: pd.DataFrame, column: str, allowed_values: list, log_drops: bool
+) -> pd.DataFrame:
+    """Resolve a single wildcardable column of a wildcard table.
+
+    Splits the rows on whether ``column`` is blank, then recombines: a filled
+    cell is kept only if its value is allowed, while each blank (wildcard) cell is
+    cross-joined with the allowed values so it fans out to one row per value.
+    Splitting first is the trick that keeps any blank out of the merge key (a NaN
+    key would not match itself in a merge). Out-of-set filled cells drop out,
+    logged only when ``log_drops`` is set (see _resolve_wildcards).
+
+    I/O Example:
+        table:                      column = "direction"
+            path_id  direction      allowed_values = ["forward", "reverse"]
+            CQ-NQ    forward
+            N1-CNSW                  # blank: a wildcard
+
+        returns:
+            path_id  direction
+            CQ-NQ    forward         # filled and allowed: kept as-is
+            N1-CNSW  forward         # blank: fanned out to every allowed value
+            N1-CNSW  reverse
+    """
+    is_wildcard = table[column].isna()
+    if log_drops:
+        _log_dropped_values(table.loc[~is_wildcard, column], allowed_values, column)
+    # A filled cell survives only if its value is one of the allowed values...
+    concrete = table[~is_wildcard & table[column].isin(allowed_values)]
+    # ...and a blank cell fans out to one row per allowed value (a cross join).
+    allowed_frame = pd.DataFrame({column: allowed_values})
+    expanded = table[is_wildcard].drop(columns=column).merge(allowed_frame, how="cross")
+    return pd.concat([concrete, expanded], ignore_index=True)
+
+
+def _log_dropped_values(values: pd.Series, allowed_values: list, column: str) -> None:
+    """Log, once, any filled values dropped for falling outside the allowed set."""
+    # tolist() converts numpy scalars to native types so the message reads
+    # "[2025]" rather than "[np.int64(2025)]".
+    dropped = sorted(set(values.dropna().tolist()) - set(allowed_values))
+    if dropped:
+        logging.info(f"Dropped rows whose {column} is not an allowed value: {dropped}")
