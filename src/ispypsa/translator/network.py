@@ -101,10 +101,10 @@ def _translate_network_to_links(
         paths,
         config.network.transmission_default_limit,
     )
-    static_limits = _extract_max_capacities(limits)
+    max_capacities = _extract_max_capacities(limits)
     existing_links = _build_existing_links(
         paths,
-        static_limits,
+        max_capacities,
         rez_ids,
         config.temporal.range.start_year,
     )
@@ -207,8 +207,8 @@ def _resolve_path_limits(
 
 
 def _extract_max_capacities(limits: pd.DataFrame) -> pd.DataFrame:
-    """Reduces the limits to one static capacity per path and direction: the
-    maximum across every row for that direction.
+    """Reduces the limits to one capacity per path and direction: the maximum
+    across every row for that direction.
 
     Named timeslices and any timeslice = NaN fallback row are pooled — the max
     has to include the fallback because at this stage we don't yet know which
@@ -236,7 +236,7 @@ def _extract_max_capacities(limits: pd.DataFrame) -> pd.DataFrame:
 
 def _build_existing_links(
     paths: pd.DataFrame,
-    static_limits: pd.DataFrame,
+    max_capacities: pd.DataFrame,
     rez_ids: set[str],
     start_year: int,
 ) -> pd.DataFrame:
@@ -248,7 +248,7 @@ def _build_existing_links(
             CQ-NQ    CQ        NQ      AC
             N1-CNSW  N1        CNSW    AC      # REZ path, no limit data
 
-        static_limits:
+        max_capacities:
             path_id  direction  capacity
             CQ-NQ    forward    1400
             CQ-NQ    reverse    1910
@@ -263,7 +263,7 @@ def _build_existing_links(
     links = paths.rename(
         columns={"path_id": "isp_name", "geo_from": "bus0", "geo_to": "bus1"}
     )
-    links = _add_p_nom(links, static_limits)
+    links = _add_p_nom(links, max_capacities)
     links["name"] = links["isp_name"] + "_existing"
     links["isp_type"] = np.where(links["bus0"].isin(rez_ids), "rez", "flow_path")
     links["build_year"] = start_year - 1
@@ -276,8 +276,8 @@ def _build_existing_links(
     return links
 
 
-def _add_p_nom(links: pd.DataFrame, static_limits: pd.DataFrame) -> pd.DataFrame:
-    """Sets p_nom to the larger of the forward and reverse static capacities.
+def _add_p_nom(links: pd.DataFrame, max_capacities: pd.DataFrame) -> pd.DataFrame:
+    """Sets p_nom to the larger of the forward and reverse maximum capacities.
 
     Taking the max of both directions keeps every per-unit limit in [-1, 1]. The
     link's reverse limit is not set here — it is carried per snapshot in
@@ -291,7 +291,7 @@ def _add_p_nom(links: pd.DataFrame, static_limits: pd.DataFrame) -> pd.DataFrame
             CQ-NQ
             PAR-NEW     # new parallel corridor, zero capacity
 
-        static_limits:
+        max_capacities:
             path_id  direction  capacity
             CQ-NQ    forward    1400
             CQ-NQ    reverse    1910
@@ -303,7 +303,7 @@ def _add_p_nom(links: pd.DataFrame, static_limits: pd.DataFrame) -> pd.DataFrame
             CQ-NQ     1910   # max(1400, 1910)
             PAR-NEW   0
     """
-    directions = static_limits.pivot(
+    directions = max_capacities.pivot(
         index="path_id", columns="direction", values="capacity"
     ).reindex(columns=["forward", "reverse"])
     links = links.merge(directions, left_on="isp_name", right_index=True, how="left")
