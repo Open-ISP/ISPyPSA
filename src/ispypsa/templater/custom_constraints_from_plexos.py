@@ -176,6 +176,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .helpers import _is_battery_row, _pick_location
 from .mappings import _CANONICAL_TIMESLICES
 
 # PLEXOS REZ-id prefixes that IASR renamed to DREZ. Applied to the first
@@ -922,30 +923,6 @@ def _battery_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
     batteries = new_entrants[_is_battery_row(new_entrants)].copy()
     locations = batteries.apply(_pick_location, axis=1)
     return dict(zip(batteries["IASR ID / DLT names"], locations))
-
-
-def _is_battery_row(new_entrants: pd.DataFrame) -> pd.Series:
-    """Boolean mask selecting battery rows in new_entrants_summary.
-
-    Matches any Technology Type that contains the literal substring
-    "Batter" -- covers both "Battery Storage (Xhrs storage)" (singular)
-    and "Distributed Resources Batteries" (plural). Other storage
-    technologies (pumped hydro, solar thermal) intentionally do not match.
-    """
-    return new_entrants["Technology Type"].str.contains("Batter", na=False)
-
-
-def _pick_location(row: pd.Series) -> str:
-    """Return REZ ID when populated, otherwise Sub-region.
-
-    I/O Example:
-        {"REZ ID": "Q8",             "Sub-region": "SQ"}  -> "Q8"
-        {"REZ ID": "Not Applicable", "Sub-region": "SQ"}  -> "SQ"
-    """
-    rez_id = row["REZ ID"]
-    if pd.notna(rez_id) and rez_id != "Not Applicable":
-        return rez_id
-    return row["Sub-region"]
 
 
 def _triggered_locations_per_constraint(
