@@ -413,19 +413,45 @@ def test_translate_network_to_links_rez_expansion_disabled(
     ]
 
 
-def test_translate_network_to_links_rezs_attached_to_parent_node(
+def test_translate_network_to_links_all_expansion_disabled(
     csv_str_to_df, sample_model_config
+):
+    """With both expansion flags off no element is enabled, so the populated
+    options and costs tables resolve against an empty allowed set and no
+    expansion links are built."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    sample_model_config.network.transmission_expansion = False
+    sample_model_config.network.rez_transmission_expansion = False
+
+    links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
+
+    assert sorted(links["name"]) == [
+        "CQ-NQ_existing",
+        "N1-CNSW_existing",
+        "Q1-NQ_existing",
+    ]
+
+
+def test_translate_network_to_links_rezs_attached_to_parent_node(
+    csv_str_to_df, sample_model_config, caplog
 ):
     ispypsa_tables = _network_tables(csv_str_to_df)
     sample_model_config.network.nodes.rezs = "attached_to_parent_node"
 
-    links, link_timeslice_limits = _translate_network_to_links(
-        ispypsa_tables, sample_model_config
-    )
+    with caplog.at_level("INFO"):
+        links, link_timeslice_limits = _translate_network_to_links(
+            ispypsa_tables, sample_model_config
+        )
 
     # REZ paths (and their expansion links and timeslice limits) are dropped.
     assert sorted(links["name"]) == ["CQ-NQ_existing", "CQ-NQ_exp_2026"]
     assert set(link_timeslice_limits["name"]) == {"CQ-NQ_existing"}
+    # The REZ paths' limit rows fall outside the modelled paths and the drop is
+    # logged — the same log a typo'd path_id would produce.
+    assert (
+        "Dropped rows whose path_id is not an allowed value: ['N1-CNSW', 'Q1-NQ']"
+        in caplog.text
+    )
 
 
 def test_translate_network_to_links_zero_capacity_parallel_path(
@@ -478,6 +504,45 @@ def test_translate_network_to_links_empty_expansion_tables(
     """)
     ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
         expansion_id,  year,  cost
+    """)
+
+    links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
+
+    assert sorted(links["name"]) == [
+        "CQ-NQ_existing",
+        "N1-CNSW_existing",
+        "Q1-NQ_existing",
+    ]
+
+
+def test_translate_network_to_links_options_populated_costs_empty(
+    csv_str_to_df, sample_model_config
+):
+    """A populated options table with no matching costs is invalid per the
+    schema (costs_cover_every_element_and_investment_period), but until schema
+    validation lands it silently produces no expansion links."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+    """)
+
+    links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
+
+    assert sorted(links["name"]) == [
+        "CQ-NQ_existing",
+        "N1-CNSW_existing",
+        "Q1-NQ_existing",
+    ]
+
+
+def test_translate_network_to_links_options_empty_costs_populated(
+    csv_str_to_df, sample_model_config
+):
+    """Costs without options mean no element is expandable, so no expansion
+    links are built."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
     """)
 
     links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
@@ -613,6 +678,89 @@ def test_translate_network_to_links_static_cost_across_investment_periods(
         check_dtype=False,
         rtol=1e-5,
     )
+
+
+def test_translate_network_to_links_year_override_beats_static_cost(
+    csv_str_to_df, sample_model_config
+):
+    """A concrete-year cost row overrides the blank-year static row for that
+    investment period; the static row still fills the other periods."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_paths"] = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+        CQ-NQ,    CQ,        NQ,      AC
+    """)
+    ispypsa_tables["network_transmission_path_limits"] = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        CQ-NQ,    forward,    ,           1000
+        CQ-NQ,    reverse,    ,           1000
+    """)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+        CQ-NQ,         ,                500,                Opt
+    """)
+    ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+        CQ-NQ,         ,      1000000
+        CQ-NQ,         2028,  1200000
+    """)
+
+    links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
+
+    expansion = links[links["p_nom_extendable"]].sort_values("name")
+    expected = csv_str_to_df(f"""
+        isp_name,  name,            carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,                       p_nom_extendable,  isp_type
+        CQ-NQ,     CQ-NQ_exp_2026,  AC,       CQ,    NQ,    0.0,    -1.0,      1.0,       2026,        inf,       {1000000 * _ANNUITY_PER_DOLLAR},   True,              flow_path
+        CQ-NQ,     CQ-NQ_exp_2028,  AC,       CQ,    NQ,    0.0,    -1.0,      1.0,       2028,        inf,       {1200000 * _ANNUITY_PER_DOLLAR},   True,              flow_path
+    """)
+    pd.testing.assert_frame_equal(
+        expansion.reset_index(drop=True),
+        expected.sort_values("name").reset_index(drop=True),
+        check_dtype=False,
+        rtol=1e-5,
+    )
+
+
+def test_translate_network_to_links_expansion_id_wildcard_default_cost(
+    csv_str_to_df, sample_model_config
+):
+    """A blank expansion_id cost row is a table-wide default: an element with no
+    cost rows of its own (Q1-NQ) inherits it, while CQ-NQ keeps its own cost. It
+    also fans out to enabled elements with no expansion options (N1-CNSW), which
+    still build no expansion link."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+        CQ-NQ,         2026,  1000000
+        ,              2026,  500000
+    """)
+
+    links, _ = _translate_network_to_links(ispypsa_tables, sample_model_config)
+
+    expansion = links[links["p_nom_extendable"]].sort_values("name")
+    expected = csv_str_to_df(f"""
+        isp_name,  name,            carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,                       p_nom_extendable,  isp_type
+        CQ-NQ,     CQ-NQ_exp_2026,  AC,       CQ,    NQ,    0.0,    -0.9,      1.0,       2026,        inf,       {1000000 * _ANNUITY_PER_DOLLAR},   True,              flow_path
+        Q1-NQ,     Q1-NQ_exp_2026,  AC,       Q1,    NQ,    0.0,    -1.0,      1.0,       2026,        inf,       {500000 * _ANNUITY_PER_DOLLAR},    True,              rez
+    """)
+    pd.testing.assert_frame_equal(
+        expansion.reset_index(drop=True),
+        expected.sort_values("name").reset_index(drop=True),
+        check_dtype=False,
+        rtol=1e-5,
+    )
+
+
+def test_translate_network_to_links_raises_for_calendar_years(
+    csv_str_to_df, sample_model_config
+):
+    """Expansion-cost years are financial-year ending labels; calendar years are
+    not implemented."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    sample_model_config.temporal.year_type = "calendar"
+
+    with pytest.raises(NotImplementedError, match="year_type: calendar"):
+        _translate_network_to_links(ispypsa_tables, sample_model_config)
 
 
 def test_translate_network_to_links_expansion_type_wildcard(
