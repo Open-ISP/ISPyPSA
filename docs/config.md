@@ -213,10 +213,10 @@ Examples:
 
 ```rezs: discrete_nodes```
 
-### network.rez_to_sub_region_transmission_default_limit
+### network.transmission_default_limit
 
-Link capacity limit for rez to node connections that have their limit's modelled
-through custom constraint (MW).
+Default transmission capacity limit (MW) applied to a path with no explicit limit
+in the inputs.
 
 The export limits for some REZs are modelled via custom constraints which
 incorporate multiple transmission line flows and/or generator dispatch levels. For these
@@ -226,7 +226,7 @@ export limit.
 
 Examples:
 
-```rez_to_sub_region_transmission_default_limit: 1e5```
+```transmission_default_limit: 1e5```
 
 ## Temporal
 

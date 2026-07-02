@@ -75,7 +75,7 @@ both directions of flow:
 `renewable_energy_zones` is used to set power flow limit.
 - TODO: Implement time varying export limits making use of the peak demand and
 winter limits provided in the IASR workbook.
-- If a NA or blank value is provided then the `rez_to_sub_region_transmission_default_limit`
+- If a NA or blank value is provided then the `transmission_default_limit`
 from the config file is used to set the limit. This is typically set to high value (1e5). Using
 the default limit is done for REZs where [custom contraints](#custom-constraints) are used to
 model REZ export limits, such that the static limit will not influence the optimisation.

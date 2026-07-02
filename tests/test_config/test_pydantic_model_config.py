@@ -71,7 +71,7 @@ def get_valid_config():
                 "regional_granularity": "sub_regions",
                 "rezs": "discrete_nodes",
             },
-            "rez_to_sub_region_transmission_default_limit": 1e6,
+            "transmission_default_limit": 1e6,
         },
         "temporal": {
             "year_type": "fy",
@@ -167,7 +167,7 @@ def invalid_rez_transmission_expansion(config):
 
 
 def invalid_rez_transmission_limit(config):
-    config["network"]["rez_to_sub_region_transmission_default_limit"] = "help"
+    config["network"]["transmission_default_limit"] = "help"
     return config, ValidationError
 
 

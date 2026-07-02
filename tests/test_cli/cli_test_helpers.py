@@ -146,7 +146,7 @@ def build_mock_config(
             "nodes": {"regional_granularity": granularity, "rezs": "discrete_nodes"},
             "transmission_expansion_limit_override": None,
             "rez_connection_expansion_limit_override": None,
-            "rez_to_sub_region_transmission_default_limit": 1e6,
+            "transmission_default_limit": 1e6,
         },
         "temporal": {
             "year_type": "fy",
@@ -329,7 +329,7 @@ def create_config_with_granularity(tmp_path, mock_workbook_file, granularity):
             "nodes": {"regional_granularity": granularity, "rezs": "discrete_nodes"},
             "transmission_expansion_limit_override": None,
             "rez_connection_expansion_limit_override": None,
-            "rez_to_sub_region_transmission_default_limit": 1e6,
+            "transmission_default_limit": 1e6,
         },
         "temporal": {
             "year_type": "fy",
