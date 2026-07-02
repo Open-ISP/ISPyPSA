@@ -63,7 +63,7 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
                 "regional_granularity": "sub_regions",
                 "rezs": "discrete_nodes",
             },
-            "rez_to_sub_region_transmission_default_limit": 1e5,
+            "transmission_default_limit": 1e5,
         },
         "temporal": {
             "year_type": "fy",

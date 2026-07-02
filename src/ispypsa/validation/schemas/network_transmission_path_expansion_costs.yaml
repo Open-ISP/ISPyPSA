@@ -3,7 +3,15 @@ required: false
 unique:
   - [expansion_id, year]
 description: >
-  Time-varying annualised expansion costs for network elements.
+  Time-varying annualised expansion costs for network elements, looked up per
+  expandable element and investment period.
+
+  The key columns — expansion_id and year — identify the combination a cost
+  applies to. Either may be left empty to act as a wildcard: an empty year is a
+  static cost across all investment periods, and an empty expansion_id is a
+  table-wide default across all elements. Where several rows match, the most
+  specific (fewest empty keys) wins; the custom_validation rules require that
+  resolution to be both unambiguous and complete.
 
   Covers both physical transmission paths and group constraints, merging flow
   path and REZ transmission expansion costs into a single long-format table.
@@ -20,26 +28,54 @@ description: >
   increase used to express costs per MW.
 
   If absent:
-  Network expansion is treated as free.
+  No network elements are expandable; a populated options table requires matching
+  costs (see custom_validation).
+custom_validation:
+  - name: costs_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. (The combination and
+      wildcard model is described in the table description; this generalises
+      timeslices.no_overlapping_windows.)
+  - name: costs_cover_every_element_and_investment_period
+    description: >
+      Coverage spans every expandable element (an expansion_id present in
+      network_expansion_options once its own wildcards resolve) and every
+      model-config investment period; a single row with both keys empty covers it
+      all.
 columns:
   expansion_id:
     type: string
-    required: true
+    required: false
     allowed_values_from:
       - network_expansion_options: expansion_id
-    description: Identifier for the expandable network element.
+    description: >
+      Identifier for the expandable network element.
+
+      If absent (or empty):
+      Wildcard — applies to every expandable element no more specific row covers
+      (a table-wide default).
   year:
     type: int
-    required: true
-    description: Year the cost applies to.
+    required: false
+    description: >
+      Investment period (financial-year ending year) the cost applies to.
+
+      If absent (or empty):
+      Wildcard — a static cost applied to every investment period the element has
+      no explicit year row for.
   cost:
     type: float
-    required: true
+    required: false
     units: $/MW
     gte: 0.0
+    nan_fill: 0.0
     description: >
       Annualised expansion cost, expressed per MW of the maximum directional
       capacity: total option cost divided by max(forward, reverse) of the
       selected option's allowed_expansion. For symmetric options (forward ==
       reverse) this is unambiguous; for asymmetric options the divisor is
       whichever direction has the larger capacity increase.
+
+      If absent (or empty):
+      The expansion is free (equivalent to a cost of 0).
