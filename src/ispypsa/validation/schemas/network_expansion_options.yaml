@@ -87,7 +87,12 @@ columns:
     type: string
     required: false
     description: >
-      Name of the selected augmentation option, retained for traceability.
+      Name of the selected augmentation option. Not read as model data, but it
+      ties an element's directions together: the
+      expansion_options_pair_forward_and_reverse rule requires an expansion_id's
+      forward and reverse rows to carry the same expansion_option, so directions
+      labelled from different options are rejected.
 
       If absent (or empty):
-      No effect on the model; the column is informational only.
+      No option name is recorded. A blank still participates in the pairing
+      rule, pairing only with another blank.

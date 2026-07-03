@@ -9,12 +9,22 @@ must treat them differently.
 
 The three sparse input tables (limits, expansion options, expansion costs) may
 use blank key cells as wildcards; each is first put through _resolve_wildcards
-(see translator/helpers.py) to expand those wildcards to concrete rows.
+(see translator/helpers.py) to expand those wildcards to concrete rows. Rows
+the configuration deliberately excludes (unmodelled REZ paths, disabled
+expansions, non-investment-period years) are filtered out before resolution,
+logged at INFO. For the limits table a path_id unknown to the paths table
+survives that filtering, so _resolve_wildcards raises on it as bad input data.
+The options and costs filters cannot make that distinction — an expansion_id
+outside the enabled set may be a disabled element, a constraint group or a
+typo — so anything outside the enabled elements or investment periods is
+filtered and logged rather than raised on.
 
 _translate_network_to_links is the pipeline orchestrator and reads as the
 step-by-step story; each helper's docstring carries an I/O example, and inline
 comments mark the non-obvious modelling choices.
 """
+
+import logging
 
 import numpy as np
 import pandas as pd
@@ -96,15 +106,19 @@ def _translate_network_to_links(
     paths = _drop_rez_paths_if_not_modelled(
         ispypsa_tables["network_transmission_paths"], rez_ids, config.network.nodes.rezs
     )
-    limits = _resolve_path_limits(
+    limits = _drop_limits_for_unmodelled_paths(
         ispypsa_tables["network_transmission_path_limits"],
+        ispypsa_tables["network_transmission_paths"],
+        paths,
+    )
+    limits = _resolve_path_limits(
+        limits,
         paths,
         config.network.transmission_default_limit,
     )
-    max_capacities = _extract_max_capacities(limits)
     existing_links = _build_existing_links(
         paths,
-        max_capacities,
+        limits,
         rez_ids,
         config.temporal.range.start_year,
     )
@@ -124,7 +138,6 @@ def _translate_network_to_links(
         ispypsa_tables["network_transmission_path_expansion_costs"],
         enabled_ids,
         config.temporal.capacity_expansion.investment_periods,
-        config.temporal.year_type,
         config.wacc,
         config.network.annuitisation_lifetime,
     )
@@ -166,6 +179,44 @@ def _drop_rez_paths_if_not_modelled(
     return paths[~paths["geo_from"].isin(rez_ids)]
 
 
+def _drop_limits_for_unmodelled_paths(
+    limits: pd.DataFrame, all_paths: pd.DataFrame, modelled_paths: pd.DataFrame
+) -> pd.DataFrame:
+    """Drops limit rows for paths configured out of the model.
+
+    REZ-to-parent paths leave the modelled set when REZs are attached to their
+    parent nodes (see _drop_rez_paths_if_not_modelled); their limit rows are
+    config-driven selection, filtered out here (logged at INFO) before wildcard
+    resolution. Only
+    rows naming a known-but-unmodelled path drop: blank (wildcard) path_ids ride
+    through, and a path_id unknown to the paths table survives to
+    _resolve_wildcards, which raises on it.
+
+    I/O Example:
+        all_paths:     path_id in {CQ-NQ, Q1-NQ}
+        modelled_paths: path_id in {CQ-NQ}
+
+        limits:
+            path_id  direction  timeslice  capacity
+            CQ-NQ    forward               1400
+            Q1-NQ    forward               750    # known but unmodelled: dropped
+                                           500    # blank: a wildcard, kept
+
+        returns:
+            path_id  direction  timeslice  capacity
+            CQ-NQ    forward               1400
+                                           500
+    """
+    unmodelled = set(all_paths["path_id"]) - set(modelled_paths["path_id"])
+    dropped = limits["path_id"].isin(unmodelled)
+    if dropped.any():
+        logging.info(
+            f"Filtered limit rows for paths configured out of the model: "
+            f"{sorted(set(limits.loc[dropped, 'path_id']))}"
+        )
+    return limits[~dropped]
+
+
 def _resolve_path_limits(
     limits: pd.DataFrame, paths: pd.DataFrame, default_limit: float
 ) -> pd.DataFrame:
@@ -173,9 +224,11 @@ def _resolve_path_limits(
     and timeslice, then fills empty capacities with the system default.
 
     Blank path_id, direction or capacity cells are wildcards (see the
-    network_transmission_path_limits schema). _resolve_wildcards expands the
-    path_id and direction wildcards against the modelled paths and the two
-    directions; timeslice rides along, so a blank-timeslice row stays the
+    network_transmission_path_limits schema). The limits arrive already filtered
+    to the modelled paths (see _drop_limits_for_unmodelled_paths), so
+    _resolve_wildcards expands the path_id and direction wildcards against the
+    modelled paths and the two directions, raising on any unknown path_id or
+    direction; timeslice rides along, so a blank-timeslice row stays the
     snapshot-level fallback that pypsa_build applies later. A blank capacity then
     takes the configured transmission default — the nan_fill the schema declares
     for the capacity column — which is how a no-data path (a single all-wildcard
@@ -206,37 +259,9 @@ def _resolve_path_limits(
     return limits
 
 
-def _extract_max_capacities(limits: pd.DataFrame) -> pd.DataFrame:
-    """Reduces the limits to one capacity per path and direction: the maximum
-    across every row for that direction.
-
-    Named timeslices and any timeslice = NaN fallback row are pooled — the max
-    has to include the fallback because at this stage we don't yet know which
-    snapshots it will cover. The larger of the two directions becomes the link's
-    p_nom downstream, so every per-unit limit lands in [-1, 1]. No-data paths
-    arrive already defaulted (see _resolve_path_limits), so they contribute a
-    forward and reverse max at the default limit like any other path.
-
-    I/O Example:
-        limits:
-            path_id  direction  timeslice             capacity
-            CQ-NQ    forward    qld_peak_demand       1200
-            CQ-NQ    forward    ,                     1400   # NaN-timeslice fallback
-            CQ-NQ    reverse    qld_winter_reference  1910
-
-        returns:
-            path_id  direction  capacity
-            CQ-NQ    forward    1400   # fallback exceeds the named row
-            CQ-NQ    reverse    1910
-    """
-    # Max pools the named timeslices with the NaN fallback; the fallback has to be
-    # in the max because we don't yet know which snapshots it will cover.
-    return limits.groupby(["path_id", "direction"], as_index=False)["capacity"].max()
-
-
 def _build_existing_links(
     paths: pd.DataFrame,
-    max_capacities: pd.DataFrame,
+    limits: pd.DataFrame,
     rez_ids: set[str],
     start_year: int,
 ) -> pd.DataFrame:
@@ -248,12 +273,12 @@ def _build_existing_links(
             CQ-NQ    CQ        NQ      AC
             N1-CNSW  N1        CNSW    AC      # REZ path, no limit data
 
-        max_capacities:
-            path_id  direction  capacity
-            CQ-NQ    forward    1400
-            CQ-NQ    reverse    1910
-            N1-CNSW  forward    100000   # defaulted upstream
-            N1-CNSW  reverse    100000
+        limits:
+            path_id  direction  timeslice  capacity
+            CQ-NQ    forward               1400
+            CQ-NQ    reverse               1910
+            N1-CNSW  forward               100000   # defaulted upstream
+            N1-CNSW  reverse               100000
 
         returns (abridged):
             isp_name  name              bus0  bus1  p_nom   p_min_pu  isp_type
@@ -263,7 +288,7 @@ def _build_existing_links(
     links = paths.rename(
         columns={"path_id": "isp_name", "geo_from": "bus0", "geo_to": "bus1"}
     )
-    links = _add_p_nom(links, max_capacities)
+    links = _add_p_nom(links, limits)
     links["name"] = links["isp_name"] + "_existing"
     links["isp_type"] = np.where(links["bus0"].isin(rez_ids), "rez", "flow_path")
     links["build_year"] = start_year - 1
@@ -276,14 +301,19 @@ def _build_existing_links(
     return links
 
 
-def _add_p_nom(links: pd.DataFrame, max_capacities: pd.DataFrame) -> pd.DataFrame:
-    """Sets p_nom to the larger of the forward and reverse maximum capacities.
+def _add_p_nom(links: pd.DataFrame, limits: pd.DataFrame) -> pd.DataFrame:
+    """Sets p_nom to the largest capacity across every limit row of the path.
 
-    Taking the max of both directions keeps every per-unit limit in [-1, 1]. The
-    link's reverse limit is not set here — it is carried per snapshot in
-    link_timeslice_limits (a named timeslice or the timeslice = NaN fallback),
-    which under the coverage contract (Open-ISP/ISPyPSA#123) sets p_min_pu on
-    every snapshot, leaving the link's static p_min_pu at its inert default.
+    Both directions and all timeslices pool into one max: the timeslice = NaN
+    fallback has to be included because at this stage we don't yet know which
+    snapshots it will cover, and taking the larger direction keeps every
+    per-unit limit in [-1, 1]. The link's reverse limit is not set here — it is
+    carried per snapshot in link_timeslice_limits (a named timeslice or the
+    timeslice = NaN fallback), which under the coverage contract
+    (Open-ISP/ISPyPSA#123) sets p_min_pu on every snapshot, leaving the link's
+    static p_min_pu at its inert default. No-data paths arrive already
+    defaulted (see _resolve_path_limits), so they get the default limit like
+    any other path.
 
     I/O Example:
         links:
@@ -291,26 +321,25 @@ def _add_p_nom(links: pd.DataFrame, max_capacities: pd.DataFrame) -> pd.DataFram
             CQ-NQ
             PAR-NEW     # new parallel corridor, zero capacity
 
-        max_capacities:
-            path_id  direction  capacity
-            CQ-NQ    forward    1400
-            CQ-NQ    reverse    1910
-            PAR-NEW  forward    0
-            PAR-NEW  reverse    0
+        limits:
+            path_id  direction  timeslice        capacity
+            CQ-NQ    forward    qld_peak_demand  1200
+            CQ-NQ    forward                     1400   # NaN-timeslice fallback
+            CQ-NQ    reverse                     1910
+            PAR-NEW  forward                     0
+            PAR-NEW  reverse                     0
 
         returns:
             isp_name  p_nom
-            CQ-NQ     1910   # max(1400, 1910)
+            CQ-NQ     1910   # the reverse row is the largest
             PAR-NEW   0
     """
-    directions = max_capacities.pivot(
-        index="path_id", columns="direction", values="capacity"
-    ).reindex(columns=["forward", "reverse"])
-    links = links.merge(directions, left_on="isp_name", right_index=True, how="left")
-    # Larger of the two directions; dividing each limit by it keeps every per-unit
-    # value in [-1, 1].
-    links["p_nom"] = links[["forward", "reverse"]].max(axis=1)
-    return links.drop(columns=["forward", "reverse"])
+    max_capacity = (
+        limits.groupby("path_id", as_index=False)["capacity"]
+        .max()
+        .rename(columns={"path_id": "isp_name", "capacity": "p_nom"})
+    )
+    return links.merge(max_capacity, on="isp_name", how="left")
 
 
 def _translate_timeslice_limits_to_pu(
@@ -369,8 +398,9 @@ def _enabled_expansion_element_ids(
 
     ``transmission_expansion`` gates flow paths between (sub)regions;
     ``rez_transmission_expansion`` gates REZ connection paths. The result is the
-    allowed expansion_id set the options and costs are resolved against, so an
-    option or cost for a disabled or non-modelled element drops out there.
+    enabled expansion_id set the options and costs tables are filtered to (see
+    _keep_rows_for_enabled_elements) and then resolved against, so an option or
+    cost for a disabled or non-modelled element drops out before resolution.
 
     I/O Example:
         existing_links:
@@ -401,10 +431,9 @@ def _resolve_expansion_options(
     expansion_type covers both directions of one element in a single (symmetric)
     row. constraint_relaxation rows are not physical paths — they are set aside
     first and become relaxation generators in ispypsa.translator.constraints.
-    _resolve_wildcards then expands the blanks against the enabled elements and
-    the two physical directions; an option for a disabled or non-modelled element
-    falls outside the allowed values and drops out (config-driven selection, so
-    not logged as a drop).
+    Options for disabled or non-modelled elements are config-driven selection,
+    filtered out next (logged at INFO). _resolve_wildcards then expands the
+    blanks against the enabled elements and the two physical directions.
 
     Each element's forward and reverse must form a coherent pair from one option
     (the schema's expansion_options_pair_forward_and_reverse rule);
@@ -432,8 +461,9 @@ def _resolve_expansion_options(
     """
     # constraint_relaxation options are routed to ispypsa.translator.constraints,
     # not dropped, so they are set aside before wildcard resolution (which would
-    # otherwise log them as dropped rows).
+    # otherwise raise on them).
     options = options[options["expansion_type"] != "constraint_relaxation"]
+    options = _keep_rows_for_enabled_elements(options, enabled_ids)
     allowed_values = {
         "expansion_id": enabled_ids,
         "expansion_type": ["forward", "reverse"],
@@ -442,11 +472,45 @@ def _resolve_expansion_options(
         options,
         allowed_values,
         ["allowed_expansion", "expansion_option"],
-        expected_drops=("expansion_id",),
     )
     _check_both_directions_defined(options)
     _check_forward_reverse_share_an_option(options)
     return options
+
+
+def _keep_rows_for_enabled_elements(
+    table: pd.DataFrame, enabled_ids: list[str]
+) -> pd.DataFrame:
+    """Keeps rows whose expansion_id is an enabled element or blank (a wildcard).
+
+    Selecting the enabled elements is config-driven, so it happens before
+    wildcard resolution rather than inside it. Rows for disabled or non-modelled
+    elements drop out here, as do rows for constraint groups (their expansion_ids
+    are constraint_ids, routed to ispypsa.translator.constraints instead). The
+    filtered ids are logged at INFO — a typo'd expansion_id is indistinguishable
+    from these designed drops, so the log line is its only trace.
+
+    I/O Example:
+        table:                                enabled_ids = ["CQ-NQ"]
+            expansion_id  year  cost
+            CQ-NQ         2026  1000000
+            Q1-NQ         2026  500000    # disabled element: dropped
+            SWQLD1        2026  400000    # constraint group: dropped
+                          2026  900000    # blank: a wildcard, kept
+
+        returns:
+            expansion_id  year  cost
+            CQ-NQ         2026  1000000
+                          2026  900000
+    """
+    ids = table["expansion_id"]
+    keep = ids.isna() | ids.isin(enabled_ids)
+    if not keep.all():
+        logging.info(
+            f"Filtered rows whose expansion_id is not an enabled expansion "
+            f"element: {sorted(set(ids[~keep]))}"
+        )
+    return table[keep]
 
 
 def _check_both_directions_defined(options: pd.DataFrame) -> None:
@@ -479,14 +543,20 @@ def _check_forward_reverse_share_an_option(options: pd.DataFrame) -> None:
     the single cost keyed on expansion_id applies to a coherent pair. Wildcard
     resolution resolves the two directions independently, so a malformed input
     could pair a forward from one option with a reverse from another; this guard
-    catches that. The schema's expansion_options_pair_forward_and_reverse rule is
-    the upstream enforcement — this stands in until schema validation lands.
+    catches that. A blank expansion_option counts as its own label (nunique with
+    dropna=False), so an unlabelled direction only pairs with another unlabelled
+    one — nunique's default NaN-dropping would otherwise let a blank/named
+    mismatch through. The schema's expansion_options_pair_forward_and_reverse
+    rule is the upstream enforcement — this stands in until schema validation
+    lands.
 
     I/O Example:
         options with CQ-NQ forward from "BigLine" and CQ-NQ reverse from "Default"
         -> raises (the two directions disagree on the option).
     """
-    options_per_element = options.groupby("expansion_id")["expansion_option"].nunique()
+    options_per_element = options.groupby("expansion_id")["expansion_option"].nunique(
+        dropna=False
+    )
     mismatched = sorted(options_per_element[options_per_element > 1].index)
     if mismatched:
         raise ValueError(
@@ -526,7 +596,6 @@ def _prepare_expansion_costs(
     expansion_costs: pd.DataFrame,
     enabled_ids: list[str],
     investment_periods: list[int],
-    year_type: str,
     wacc: float,
     asset_lifetime: int,
 ) -> pd.DataFrame:
@@ -536,14 +605,16 @@ def _prepare_expansion_costs(
     Blank expansion_id or year cells are wildcards (see the
     network_transmission_path_expansion_costs schema): an empty expansion_id is a
     table-wide default cost, an empty year a static cost across the investment
-    periods. _resolve_wildcards expands them against the enabled elements and the
-    investment periods, which drops any cost for a disabled element, a constraint
-    group (routed to ispypsa.translator.constraints) or a year outside the
-    investment periods — all designed selection, so none of it is logged as a
-    drop. A blank cost then resolves to free — the
-    nan_fill the schema declares for the cost column. The year column holds
-    financial-year ending years as ints, matching the investment period labels
-    used with year_type="fy".
+    periods. Costs for disabled elements, constraint groups (routed to
+    ispypsa.translator.constraints) and years outside the investment periods are
+    all designed selection, filtered out first (logged at INFO). _resolve_wildcards
+    then expands the blanks against the enabled elements and the investment
+    periods. A blank cost then resolves to free — the nan_fill the schema
+    declares for the cost column. Year values are labels matched against the
+    config's investment periods as ints — no financial vs calendar year
+    interpretation happens here; the config's year_type decides what span of
+    time the labels denote, so the table just has to label years the same way
+    the config does (templated tables carry financial-year ending years).
 
     I/O Example (a blank year is a static cost across the investment periods):
         expansion_costs:
@@ -559,25 +630,50 @@ def _prepare_expansion_costs(
             CQ-NQ         2026  annuitise(1000)   # the static row fills 2026
             CQ-NQ         2028  annuitise(1200)   # the 2028 override beats the static row
     """
-    if year_type != "fy":
-        raise NotImplementedError(
-            f"Network expansion costs are not implemented for year_type: {year_type}"
-        )
+    costs = _keep_rows_for_enabled_elements(expansion_costs, enabled_ids)
+    costs = _keep_rows_for_investment_period_years(costs, investment_periods)
     allowed_values = {"expansion_id": enabled_ids, "year": investment_periods}
-    costs = _resolve_wildcards(
-        expansion_costs,
-        allowed_values,
-        ["cost"],
-        expected_drops=("expansion_id", "year"),
-    )
+    costs = _resolve_wildcards(costs, allowed_values, ["cost"])
     # Every surviving year is now an investment period; cast so expansion link
     # names read e.g. CQ-NQ_exp_2026 rather than CQ-NQ_exp_2026.0.
     costs["year"] = costs["year"].astype("int64")
     costs["cost"] = costs["cost"].fillna(0.0)
-    costs["capital_cost"] = costs["cost"].apply(
-        lambda cost: _annuitised_investment_costs(cost, wacc, asset_lifetime)
+    costs["capital_cost"] = _annuitised_investment_costs(
+        costs["cost"], wacc, asset_lifetime
     )
     return costs.loc[:, ["expansion_id", "year", "capital_cost"]]
+
+
+def _keep_rows_for_investment_period_years(
+    costs: pd.DataFrame, investment_periods: list[int]
+) -> pd.DataFrame:
+    """Keeps cost rows whose year is an investment period or blank (a wildcard).
+
+    The costs table spans the IASR horizon while the model only prices the
+    configured investment periods, so selecting those years is config-driven and
+    happens before wildcard resolution rather than inside it. The filtered years
+    are logged at INFO.
+
+    I/O Example:
+        costs:                          investment_periods = [2026, 2028]
+            expansion_id  year  cost
+            CQ-NQ         2025  900000    # not an investment period: dropped
+            CQ-NQ         2026  1000000
+            CQ-NQ               800000    # blank: a wildcard, kept
+
+        returns:
+            expansion_id  year  cost
+            CQ-NQ         2026  1000000
+            CQ-NQ               800000
+    """
+    years = costs["year"]
+    keep = years.isna() | years.isin(investment_periods)
+    if not keep.all():
+        logging.info(
+            f"Filtered expansion cost rows for years outside the investment "
+            f"periods: {sorted(int(year) for year in set(years[~keep]))}"
+        )
+    return costs[keep]
 
 
 def _build_expansion_links(

@@ -144,50 +144,25 @@ def test_resolve_wildcards_keeps_the_most_specific_row(csv_str_to_df):
     )
 
 
-def test_resolve_wildcards_drops_and_logs_out_of_allowed_values(csv_str_to_df, caplog):
-    """A filled value outside the allowed set drops out, and the drop is logged."""
+def test_resolve_wildcards_raises_on_out_of_allowed_values(csv_str_to_df):
+    """A filled value outside the allowed set is bad input data — callers filter
+    designed selections out before resolving — so resolution halts the run. The
+    validation layer will catch this class of input upstream once it lands (the
+    allowed values mirror the schemas' allowed_values / allowed_values_from);
+    the raise stays on as the resolver's backstop invariant."""
     table = csv_str_to_df("""
         expansion_id,  year,  cost
         CQ-NQ,         2026,  100
         CQ-NQ,         2025,  90
     """)
 
-    with caplog.at_level("INFO"):
-        result = _resolve_wildcards(
+    with pytest.raises(
+        ValueError,
+        match=r"year contains values outside the allowed set: \[2025\]",
+    ):
+        _resolve_wildcards(
             table, {"expansion_id": ["CQ-NQ"], "year": [2026, 2028]}, ["cost"]
         )
-
-    expected = csv_str_to_df("""
-        expansion_id,  year,  cost
-        CQ-NQ,         2026,  100
-    """)
-    assert_frame_equal(result, expected, check_dtype=False)
-    assert "Dropped rows whose year is not an allowed value: [2025]" in caplog.text
-
-
-def test_resolve_wildcards_expected_drops_are_not_logged(csv_str_to_df, caplog):
-    """A drop from a column named in expected_drops is the caller's designed
-    selection, so no log line is emitted."""
-    table = csv_str_to_df("""
-        expansion_id,  year,  cost
-        CQ-NQ,         2026,  100
-        CQ-NQ,         2025,  90
-    """)
-
-    with caplog.at_level("INFO"):
-        result = _resolve_wildcards(
-            table,
-            {"expansion_id": ["CQ-NQ"], "year": [2026, 2028]},
-            ["cost"],
-            expected_drops=("year",),
-        )
-
-    expected = csv_str_to_df("""
-        expansion_id,  year,  cost
-        CQ-NQ,         2026,  100
-    """)
-    assert_frame_equal(result, expected, check_dtype=False)
-    assert "Dropped rows" not in caplog.text
 
 
 def test_resolve_wildcards_empty(csv_str_to_df):

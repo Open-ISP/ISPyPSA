@@ -1,4 +1,3 @@
-import logging
 import re
 
 import pandas as pd
@@ -161,7 +160,6 @@ def _resolve_wildcards(
     table: pd.DataFrame,
     allowed_values: dict[str, list],
     value_columns: list[str],
-    expected_drops: tuple[str, ...] = (),
 ) -> pd.DataFrame:
     """Expand a sparse "wildcard" table into one row per concrete key combination.
 
@@ -169,13 +167,12 @@ def _resolve_wildcards(
     every value of that column. ``allowed_values`` lists, for each wildcardable
     column, the concrete values it may take — the schema's allowed_values /
     allowed_values_from, resolved to actual values. Each blank cell in those
-    columns is fanned out to every allowed value; a filled cell survives only if
-    it is itself an allowed value, so a row carrying an out-of-set value drops
-    out. Drops are logged at INFO unless the column is named in
-    ``expected_drops`` — for those, dropping is the caller's designed selection
-    (e.g. keeping only investment-period years), not data loss worth surfacing.
-    Key columns absent from ``allowed_values`` (e.g. timeslice) ride along
-    unchanged.
+    columns is fanned out to every allowed value; a filled cell must itself be
+    an allowed value — anything else raises. Callers filter their designed
+    selections (e.g. costs for disabled elements or non-investment-period
+    years) out before calling, so an out-of-set value reaching this point is
+    bad input data, not selection. Key columns absent from ``allowed_values``
+    (e.g. timeslice) ride along unchanged.
 
     Once the blanks are filled in, several rows can land on the same key — a
     specific row and a wildcard one. The row that used the fewest wildcards (the
@@ -209,7 +206,7 @@ def _resolve_wildcards(
     work["_wildcards"] = sum(work[c].isna().astype(int) for c in allowed_values)
     # Resolve one wildcardable column per pass; each pass fills that column in.
     for column, values in allowed_values.items():
-        work = _expand_column(work, column, values, column not in expected_drops)
+        work = _expand_column(work, column, values)
     # Most specific (fewest wildcards) wins where rows now share a key.
     most_specific_first = work.sort_values("_wildcards", kind="stable")
     resolved = most_specific_first.drop_duplicates(key_columns, keep="first")
@@ -217,16 +214,15 @@ def _resolve_wildcards(
 
 
 def _expand_column(
-    table: pd.DataFrame, column: str, allowed_values: list, log_drops: bool
+    table: pd.DataFrame, column: str, allowed_values: list
 ) -> pd.DataFrame:
     """Resolve a single wildcardable column of a wildcard table.
 
     Splits the rows on whether ``column`` is blank, then recombines: a filled
-    cell is kept only if its value is allowed, while each blank (wildcard) cell is
-    cross-joined with the allowed values so it fans out to one row per value.
-    Splitting first is the trick that keeps any blank out of the merge key (a NaN
-    key would not match itself in a merge). Out-of-set filled cells drop out,
-    logged only when ``log_drops`` is set (see _resolve_wildcards).
+    cell is kept as-is (after checking its value is allowed), while each blank
+    (wildcard) cell is cross-joined with the allowed values so it fans out to
+    one row per value. Splitting first is the trick that keeps any blank out of
+    the merge key (a NaN key would not match itself in a merge).
 
     I/O Example:
         table:                      column = "direction"
@@ -241,20 +237,33 @@ def _expand_column(
             N1-CNSW  reverse
     """
     is_wildcard = table[column].isna()
-    if log_drops:
-        _log_dropped_values(table.loc[~is_wildcard, column], allowed_values, column)
-    # A filled cell survives only if its value is one of the allowed values...
-    concrete = table[~is_wildcard & table[column].isin(allowed_values)]
+    _raise_on_disallowed_values(table.loc[~is_wildcard, column], allowed_values, column)
+    # Every filled cell is now known to be allowed, so it is kept as-is...
+    concrete = table[~is_wildcard]
     # ...and a blank cell fans out to one row per allowed value (a cross join).
     allowed_frame = pd.DataFrame({column: allowed_values})
     expanded = table[is_wildcard].drop(columns=column).merge(allowed_frame, how="cross")
     return pd.concat([concrete, expanded], ignore_index=True)
 
 
-def _log_dropped_values(values: pd.Series, allowed_values: list, column: str) -> None:
-    """Log, once, any filled values dropped for falling outside the allowed set."""
+def _raise_on_disallowed_values(
+    values: pd.Series, allowed_values: list, column: str
+) -> None:
+    """Raises if any filled value falls outside the allowed set.
+
+    Callers filter every designed drop out before resolving wildcards, so a
+    disallowed value reaching this point is bad input data or a bug — the run
+    halts rather than silently dropping the rows.
+
+    I/O Example:
+        values = [2026, 2025], allowed_values = [2026, 2028], column = "year"
+        -> raises ValueError naming year and [2025]
+    """
     # tolist() converts numpy scalars to native types so the message reads
     # "[2025]" rather than "[np.int64(2025)]".
-    dropped = sorted(set(values.dropna().tolist()) - set(allowed_values))
-    if dropped:
-        logging.info(f"Dropped rows whose {column} is not an allowed value: {dropped}")
+    disallowed = sorted(set(values.dropna().tolist()) - set(allowed_values))
+    if disallowed:
+        raise ValueError(
+            f"Cannot resolve wildcards: {column} contains values outside the "
+            f"allowed set: {disallowed}"
+        )
