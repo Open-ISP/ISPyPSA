@@ -7,13 +7,13 @@ from ispypsa.templater.new_entrants import (
     _STORAGE_IDENTITY_COLUMNS,
     _STORAGE_PROPERTY_COLUMNS,
     _add_resource_type,
-    _assert_botn_cethana_values_match_technology,
+    _assert_botn_technology_expected,
     _assert_property_table_attrs,
     _derive_phes_symmetric_efficiency,
-    _merge_battery_properties,
     _merge_phes_properties,
     _merge_technology_keyed_property,
-    _phes_lookup_key,
+    _normalise_phes_botn_key,
+    _override_botn_technology,
     _set_geo_id,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -219,7 +219,6 @@ def test_merge_technology_property(csv_str_to_df):
         "Base value",
         "fom",
         scale=1000.0,
-        key_col="technology",
     )
 
     expected = csv_str_to_df("""
@@ -255,56 +254,13 @@ def test_merge_technology_property_empty_new_entrants(csv_str_to_df):
     )
 
 
-# --- _merge_battery_properties ---
-
-
-def test_merge_battery_properties(csv_str_to_df):
-    # Every battery property is looked up by technology from battery_properties, with the
-    # summary's capitalisation ("Battery Storage") fuzzy-matched to the table's spelling.
-    batteries = csv_str_to_df("""
-        name,             technology
-        NQ Battery - 2h,  Battery Storage (2hrs storage)
-    """)
-    iasr_tables = {
-        "battery_properties": csv_str_to_df("""
-            Technology,                     Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
-            Battery storage (2hrs storage), 2.0,                   92.0,                92.0,                   100,                             0,                               1.8
-        """)
-    }
-
-    result = _merge_battery_properties(batteries, iasr_tables)
-
-    expected = csv_str_to_df("""
-        name,             technology,                     storage_hours, efficiency_charge, efficiency_discharge, soc_max, soc_min, degradation_annual
-        NQ Battery - 2h,  Battery Storage (2hrs storage), 2.0,           92.0,              92.0,                 100.0,   0.0,     1.8
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_merge_battery_properties_empty(csv_str_to_df):
-    # No battery rows -> returns empty with the battery property columns added.
-    batteries = pd.DataFrame(columns=["name", "technology"])
-    iasr_tables = {
-        "battery_properties": csv_str_to_df("""
-            Technology,                     Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
-            Battery storage (2hrs storage), 2.0,                   92.0,                92.0,                   100,                             0,                               1.8
-        """)
-    }
-
-    result = _merge_battery_properties(batteries, iasr_tables)
-
-    expected = csv_str_to_df("""
-        name, technology, storage_hours, efficiency_charge, efficiency_discharge, soc_max, soc_min, degradation_annual
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# --- _merge_phes_properties / _phes_lookup_key / _derive_phes_symmetric_efficiency ---
+# --- _merge_phes_properties / _override_botn_technology / _derive_phes_symmetric_efficiency ---
 
 
 def test_merge_phes_properties(csv_str_to_df):
-    # storage_hours is merged by name-or-technology key; charge/discharge efficiency are
-    # derived from the single round-trip pumping efficiency.
+    # storage_hours is merged by technology after BOTN's technology is overridden to its own
+    # name and the pumped-hydro table's BOTN key normalised to match; charge/discharge
+    # efficiency are derived from the single round-trip pumping efficiency.
     phes = csv_str_to_df("""
         name,                  technology
         NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
@@ -321,28 +277,58 @@ def test_merge_phes_properties(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name,                  technology,                    phes_key,                      storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
-        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  Pumped Hydro (24hrs storage),  24.0,          64.0,                  80.0,              80.0
-        BOTN - Cethana - 20h,  Pumped Hydro (24hrs storage),  BOTN - Cethana - 20h,          20.0,          81.0,                  90.0,              90.0
+        name,                  technology,                    storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  24.0,          64.0,                  80.0,              80.0
+        BOTN - Cethana - 20h,  BOTN - Cethana,                20.0,          81.0,                  90.0,              90.0
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
 
 
-def test_phes_lookup_key(csv_str_to_df):
-    # Named stations (present in ``_BOTN_CETHANA_DETAILS``) keys on name - only
-    # 'BOTN - Cethana - 20h' at v7.5; generic rows key on technology.
+def test_override_botn_technology(csv_str_to_df):
+    # BOTN's row takes its own name as 'technology'; other PHES rows are untouched.
     phes = csv_str_to_df("""
         name,                  technology
         NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
         BOTN - Cethana - 20h,  Pumped Hydro (24hrs storage)
     """)
 
-    result = _phes_lookup_key(phes)
+    result = _override_botn_technology(phes)
 
     expected = pd.Series(
-        ["Pumped Hydro (24hrs storage)", "BOTN - Cethana - 20h"], name="name"
+        ["Pumped Hydro (24hrs storage)", "BOTN - Cethana"], name="technology"
     )
     pd.testing.assert_series_equal(result, expected)
+
+
+def test_override_botn_technology_no_botn_row(csv_str_to_df):
+    # BOTN absent (e.g. a scenario without it) -> technology returned unchanged, no raise.
+    phes = csv_str_to_df("""
+        name,                  technology
+        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
+    """)
+
+    result = _override_botn_technology(phes)
+
+    expected = pd.Series(["Pumped Hydro (24hrs storage)"], name="technology")
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_assert_botn_technology_expected_raises_on_unexpected_value(csv_str_to_df):
+    # BOTN's summary 'technology' isn't the expected value -> raise before overriding,
+    # flagging a new_entrants_summary change the override would otherwise mishandle.
+    phes = csv_str_to_df("""
+        name,                  technology
+        BOTN - Cethana - 20h,  Pumped Hydro (48hrs storage)
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"'BOTN - Cethana' technology should be 'Pumped Hydro \(24hrs storage\)': "
+            r"got \['Pumped Hydro \(48hrs storage\)'\]"
+        ),
+    ):
+        _assert_botn_technology_expected(phes)
 
 
 def test_derive_phes_symmetric_efficiency(csv_str_to_df):
@@ -375,60 +361,39 @@ def test_merge_phes_properties_empty(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name, technology, phes_key, storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
+        name, technology, storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-# --- _assert_botn_cethana_values_match_technology ---
+# --- _normalise_phes_botn_key ---
 
 
-def _botn_common_tables(csv_str_to_df, botn_fom="75.0"):
-    """The common tables the BOTN guard checks, with BOTN keyed by its bare name
-    alongside its 'Pumped Hydro (24hrs storage)' archetype. ``botn_fom`` lets a test make
-    BOTN's fom diverge from the matching technology's (75.0)."""
-    return {
-        "fixed_opex_new_entrants": csv_str_to_df(f"""
-            Technology Type,               Base value ($/kW/year)),  Unit
-            Pumped Hydro (24hrs storage),  75.0,                     $
-            BOTN - Cethana,                {botn_fom},               $
-        """),
-        "lead_time_and_project_life": csv_str_to_df("""
-            Technology,                    Economic life (years),  Technical life (years)
-            Pumped Hydro (24hrs storage),  40,                     90
-            BOTN - Cethana,                40,                     90
-        """),
-        "gpg_min_stable_level_new_entrants": csv_str_to_df("""
-            Technology,                    Min Stable Level (% of nameplate)
-            Pumped Hydro (24hrs storage),  40.0
-            BOTN - Cethana,                40.0
-        """),
-    }
+def test_normalise_phes_botn_key(csv_str_to_df):
+    # The pumped-hydro table's full BOTN spelling is renamed to the bare name so it matches
+    # the overridden 'technology'; the shared iasr_tables dict is not mutated.
+    pumped_hydro = csv_str_to_df("""
+        Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
+        Pumped Hydro (24hrs storage),  24,                       76
+        BOTN - Cethana - 20h,          20,                       81
+    """)
+    iasr_tables = {"pumped_hydro_new_entrant_properties": pumped_hydro}
+    before = pumped_hydro.copy()
 
+    result = _normalise_phes_botn_key(iasr_tables)
 
-def test_assert_botn_cethana_values_match_technology_passes_when_matching(
-    csv_str_to_df,
-):
-    # BOTN's values equal its technology's across every common table -> no raise.
-    iasr_tables = _botn_common_tables(csv_str_to_df)
-    _assert_botn_cethana_values_match_technology(iasr_tables)
-
-
-def test_assert_botn_cethana_values_match_technology_raises_on_divergence(
-    csv_str_to_df,
-):
-    # BOTN's fom no longer matches the technology's -> raise, naming the property and table.
-    iasr_tables = _botn_common_tables(csv_str_to_df, botn_fom="99.0")
-
-    with pytest.raises(
-        ValueError,
-        match=(
-            r"'BOTN - Cethana' diverges from its technology "
-            r"'Pumped Hydro \(24hrs storage\)' for 'Base value \(\$\/kW\/year\)\)' "
-            r"in 'fixed_opex_new_entrants'"
-        ),
-    ):
-        _assert_botn_cethana_values_match_technology(iasr_tables)
+    expected = csv_str_to_df("""
+        Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
+        Pumped Hydro (24hrs storage),  24,                       76
+        BOTN - Cethana,                20,                       81
+    """)
+    pd.testing.assert_frame_equal(
+        result["pumped_hydro_new_entrant_properties"], expected
+    )
+    # the shared dict's table is left untouched
+    pd.testing.assert_frame_equal(
+        iasr_tables["pumped_hydro_new_entrant_properties"], before
+    )
 
 
 # --- _set_geo_id ---
