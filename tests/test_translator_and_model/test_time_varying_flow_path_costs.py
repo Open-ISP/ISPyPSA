@@ -58,7 +58,7 @@ def test_link_expansion_economic_timing(csv_str_to_df, tmp_path, monkeypatch):
                 "regional_granularity": "sub_regions",
                 "rezs": "attached_to_parent_node",
             },
-            "rez_to_sub_region_transmission_default_limit": 1e5,
+            "transmission_default_limit": 1e5,
         },
         "temporal": {
             "year_type": "fy",

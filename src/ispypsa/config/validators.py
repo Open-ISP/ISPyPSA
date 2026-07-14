@@ -44,7 +44,7 @@ class NetworkConfig(BaseModel):
     annuitisation_lifetime: int
     transmission_expansion: bool
     rez_transmission_expansion: bool
-    rez_to_sub_region_transmission_default_limit: float
+    transmission_default_limit: float
 
 
 class TemporalAggregationConfig(BaseModel):

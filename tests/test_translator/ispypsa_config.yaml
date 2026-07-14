@@ -58,9 +58,9 @@ network:
     #   "discrete_nodes": REZs are added as network nodes to model REZ transmission limits
     #   "attached_to_parent_node": REZ resources are attached to their parent node (sub-region or NEM region)
     rezs: discrete_nodes
-  # Line capacity limit for rez to node connections that have their limit's modelled
-  # through custom constraint (MW).
-  rez_to_sub_region_transmission_default_limit: 1e5
+  # Default transmission capacity limit (MW) for a path with no explicit limit in
+  # the inputs (e.g. REZ connections whose limit is modelled via custom constraints).
+  transmission_default_limit: 1e5
 temporal:
   year_type: fy
   range:
