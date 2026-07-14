@@ -187,7 +187,7 @@ def _drop_limits_for_unmodelled_paths(
     REZ-to-parent paths leave the modelled set when REZs are attached to their
     parent nodes (see _drop_rez_paths_if_not_modelled); their limit rows are
     a config-driven selection, filtered out here (logged at INFO) before wildcard
-    resolution. Only rows naming a known-but-unmodelled path drop: blank (wildcard) 
+    resolution. Only rows naming a known-but-unmodelled path drop: blank (wildcard)
     path_ids ride through, and a path_id unknown to the paths table survives to
     _resolve_wildcards, which raises on it.
 
