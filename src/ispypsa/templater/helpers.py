@@ -154,7 +154,7 @@ def _best_fuzzy_match(value: str, choices: Iterable[str], threshold: int) -> str
     return best_choice if best_score >= threshold else None
 
 
-def _fuzzy_map_to_canonical(
+def _fuzzy_map_to_allowed_values(
     name_series: pd.Series,
     choices: Iterable[str],
     task_desc: str,
@@ -163,13 +163,13 @@ def _fuzzy_map_to_canonical(
     """Maps each value in name_series to the closest match in choices (many-to-one).
 
     Unlike _fuzzy_match_names, choices are not consumed — multiple input values can
-    map to the same canonical name. Successful fuzzy corrections are logged at INFO
+    map to the same allowed value. Successful fuzzy corrections are logged at INFO
     via _log_fuzzy_match. Any remaining values scoring below ``threshold`` after
     matching raises a ValueError.
 
     Args:
         name_series: Series of names to map.
-        choices: Canonical names to match against.
+        choices: Allowed values to match against.
         task_desc: Description included in log messages.
         threshold: Minimum fuzz.ratio score (0–100) to accept a replacement. Default 85.
 
@@ -177,9 +177,8 @@ def _fuzzy_map_to_canonical(
         Series with values replaced by the closest match where score >= threshold.
 
     Raises:
-        ValueError: if any unmatched values remain - values that aren't able to be
-        canonicalised (but are expected to be) flag potential inconsistencies across
-        datasets.
+        ValueError: if any values in ``name_series`` do not have a match scoring
+            above ``threshold`` in ``choices``.
 
     I/O Examples:
         name_series:    ["Step Change", "Step Chaneg", "Step Change"]
@@ -201,15 +200,18 @@ def _fuzzy_map_to_canonical(
     """
     canonical = set(choices)
     match_dict = {
-        v: _best_fuzzy_match(v, canonical, threshold) for v in name_series.unique()
+        name: _best_fuzzy_match(name, canonical, threshold)
+        for name in name_series.unique()
     }
     matched = name_series.map(
-        lambda v: match_dict[v] if match_dict[v] is not None else v
+        lambda name: match_dict[name] if match_dict[name] is not None else name
     )
     _log_fuzzy_match(name_series, matched, task_desc)
-    unmatched = sorted(k for k, v in match_dict.items() if v is None)
+    unmatched = sorted(name for name, match in match_dict.items() if match is None)
     if unmatched:
-        msg = f"Could not fuzzy match to a canonical value whilst {task_desc}: {unmatched}"
+        msg = (
+            f"Could not fuzzy match to an allowed value whilst {task_desc}: {unmatched}"
+        )
         raise ValueError(msg)
     return matched
 

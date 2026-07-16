@@ -43,6 +43,11 @@ columns:
       Used as the canonical technology type across the model to standardise
       spellings and group results by technology. Any technology present in this
       table must have a build cost defined.
+
+      The named, site-specific project 'BOTN - Cethana' is an opinionated exception:
+      it carries its own name here rather than its generic 'Pumped Hydro (24hrs storage)'
+      archetype, so it draws its own published costs and properties and groups as its own
+      technology. See Open-ISP/ISPyPSA#127.
   geo_id:
     type: string
     required: true

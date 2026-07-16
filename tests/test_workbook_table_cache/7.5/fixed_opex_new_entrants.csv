@@ -1,0 +1,22 @@
+Technology Type,Base value ($/kW/year)),Unit
+OCGT (small GT),17.6858344,$
+OCGT (large GT),14.3234078,$
+CCGT,15.3030124,$
+CCGT with CCS,22.9545186,$
+Biomass,187.4537555,$
+Large scale Solar PV,12.2196,$
+Solar Thermal (16hrs storage),124.3211921,$
+Battery storage (1hr storage),9.1647,$
+Battery storage (2hrs storage),13.54339,$
+Battery storage (4hrs storage),21.58796,$
+Battery storage (8hrs storage),37.98259,$
+Wind,28.512400000000003,$
+Wind - offshore (fixed),177.7676859,$
+Wind - offshore (floating),251.8225351,$
+Pumped Hydro (10hrs storage),96.7385,$
+Pumped Hydro (24hrs storage),74.84505,$
+Pumped Hydro (48hrs storage),85.5372,$
+Distributed Resources Solar,12.2196,$
+Distributed Resources Batteries,11.85301,$
+Alkaline Electrolyser,50.10036,$
+BOTN - Cethana,74.84505,$

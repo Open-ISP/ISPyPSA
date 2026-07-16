@@ -1,0 +1,22 @@
+Generator,Base value
+OCGT (small GT),16.39463
+OCGT (large GT),8.24823
+CCGT,4.17503
+CCGT with CCS,8.1464
+Biomass,10.93654
+Large scale Solar PV,0.0
+Solar Thermal (16hrs storage),0.0
+Battery storage (1hr storage),0.0
+Battery storage (2hrs storage),0.0
+Battery storage (4hrs storage),0.0
+Battery storage (8hrs storage),0.0
+Wind,0.0
+Wind - offshore (fixed),0.0
+Wind - offshore (floating),0.0
+Pumped Hydro (10hrs storage),0.0
+Pumped Hydro (24hrs storage),0.0
+Pumped Hydro (48hrs storage),0.0
+Distributed Resources Solar,0.0
+Distributed Resources Batteries,0.0
+Alkaline Electrolyser,0.0
+BOTN - Cethana,0.0
