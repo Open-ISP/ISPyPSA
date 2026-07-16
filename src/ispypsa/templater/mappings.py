@@ -9,6 +9,10 @@ from .lists import (
     _ISP_SCENARIOS,
 )
 
+# ============================================================================
+# Shared across the old- and new-format templaters
+# ============================================================================
+
 _NEM_REGION_IDS = pd.Series(
     {
         "Queensland": "QLD",
@@ -20,7 +24,12 @@ _NEM_REGION_IDS = pd.Series(
     name="nem_region_id_mapping",
 )
 
-_SINGLE_REGION_ID = "NEM"
+# ============================================================================
+# Old format (default; flag: use_new_table_format=False)
+#
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: once the flag is retired, delete
+# this section (will no longer be used at that point)
+# ============================================================================
 
 _NEM_SUB_REGION_IDS = pd.Series(
     {
@@ -48,12 +57,6 @@ _HVDC_FLOW_PATHS = pd.DataFrame(
     }
 )
 
-# Canonical representative timeslice names used across the templater output:
-# ``peak_demand``, ``summer_typical``, ``winter_reference``. Per-region
-# variants (e.g. ``qld_peak_demand``) are formed by prefixing with the
-# lowercased NEM region id.
-_CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
-
 _GENERATOR_PROPERTIES = {
     "maximum_capacity": _ALL_GENERATOR_STORAGE_TYPES,
     "seasonal_ratings": _ALL_GENERATOR_STORAGE_TYPES,
@@ -72,6 +75,14 @@ _GENERATOR_PROPERTIES = {
     "coal_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
     "gas_prices": list(map(_snakecase_string, _ISP_SCENARIOS)),
 }
+
+"""
+_NEW_COLUMN_MAPPING dicts define new/additional columns to be added to the corresponding
+ECAA or new entrant generator summary tables. Keys are the name of the column to be added
+(corresponding to the table/column name of the data being added) and values are the name
+of the column in the existing summary table that holds the required data mapping for merging
+in the new column.
+"""
 
 _ECAA_GENERATOR_NEW_COLUMN_MAPPING = {
     "partial_outage_derating_factor_%": "forced_outage_rate_partial_outage_%_of_time",
@@ -113,12 +124,20 @@ _NEW_STORAGE_NEW_COLUMN_MAPPING = {
     "isp_resource_type": "storage_name",
 }
 
-"""
-_NEW_COLUMN_MAPPING dicts define new/additional columns to be added to the corresponding
-ECAA or new entrant generator summary tables. Keys are the name of the column to be added
-(corresponding to the table/column name of the data being added) and values are the name
-of the column in the existing summary table that holds the required data mapping for merging
-in the new column.
+""""
+Existing, committed, anticipated and additional summary table columns mapped to
+corresponding IASR tables and lookup information that can be used to retrieve values.
+
+    `table`: IASR table name or a list of table names.
+    `table_lookup`: Column in the table that acts as a key for merging into the summary
+    `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
+        alternative to  "Generator" in the additional projects table. If a lookup value
+        is NA in the `table_lookup` column, it will be replaced by a lookup value from
+        this list in the order specified.
+    `table_value`: Column in the table that corresponds to the data to be merged in
+    `alternative_values`: As for `alternative_lookups`, but for the data values in the
+        table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
+    `new_col_name`: The name that will be used to rename the column in the summary table
 """
 
 _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
@@ -194,9 +213,10 @@ _ECAA_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         generator_status="Existing",
     ),
 }
-""""
-Existing, committed, anticipated and additional summary table columns mapped to
-corresponding IASR tables and lookup information that can be used to retrieve values.
+
+"""
+New entrant generators summary table columns mapped to corresponding IASR table and
+lookup information that can be used to retrieve values.
 
     `table`: IASR table name or a list of table names.
     `table_lookup`: Column in the table that acts as a key for merging into the summary
@@ -206,8 +226,11 @@ corresponding IASR tables and lookup information that can be used to retrieve va
         this list in the order specified.
     `table_value`: Column in the table that corresponds to the data to be merged in
     `alternative_values`: As for `alternative_lookups`, but for the data values in the
-        table, e.g. "MLF - Generation" instead of "MLF" in the additional projects table
+        table
     `new_col_name`: The name that will be used to rename the column in the summary table
+    `table_col_prefix`: The string that is present at the start of each column name
+        in the table as a result of row merging in isp-workbook-parser, to be used
+        for opex mapping to rename columns in the table.
 """
 
 _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
@@ -295,131 +318,6 @@ _NEW_GENERATOR_STATIC_PROPERTY_TABLE_MAP = {
         table_value="Total lead time (years)",
     ),
 }
-"""
-New entrant generators summary table columns mapped to corresponding IASR table and
-lookup information that can be used to retrieve values.
-
-    `table`: IASR table name or a list of table names.
-    `table_lookup`: Column in the table that acts as a key for merging into the summary
-    `alternative_lookups`: A list of alternative key columns, e.g. "Project" as an
-        alternative to  "Generator" in the additional projects table. If a lookup value
-        is NA in the `table_lookup` column, it will be replaced by a lookup value from
-        this list in the order specified.
-    `table_value`: Column in the table that corresponds to the data to be merged in
-    `alternative_values`: As for `alternative_lookups`, but for the data values in the
-        table
-    `new_col_name`: The name that will be used to rename the column in the summary table
-    `table_col_prefix`: The string that is present at the start of each column name
-        in the table as a result of row merging in isp-workbook-parser, to be used
-        for opex mapping to rename columns in the table.
-"""
-
-# - New-format (flag: use_new_table_format=True) per-technology property merge maps -
-
-# Property entries shared by new entrant generators and storage: each looked up by
-# technology from the same IASR table for both.
-_COMMON_NEW_ENTRANT_PROPERTY_MAP = {
-    "fom": dict(
-        table="fixed_opex_new_entrants",
-        technology_col="Technology Type",
-        # NOTE: literal double ")" — parsed directly from the v7.5 IASR workbook
-        value_col="Base value ($/kW/year))",
-        scale=1000.0,
-    ),
-    "lifetime_technical": dict(
-        table="lead_time_and_project_life",
-        technology_col="Technology",
-        value_col="Technical life (years)",
-    ),
-    "lifetime_economic": dict(
-        table="lead_time_and_project_life",
-        technology_col="Technology",
-        value_col="Economic life (years)",
-    ),
-    "minimum_stable_level": dict(
-        table="gpg_min_stable_level_new_entrants",
-        technology_col="Technology",
-        value_col="Min Stable Level (% of nameplate)",
-    ),
-}
-
-_GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
-    **_COMMON_NEW_ENTRANT_PROPERTY_MAP,
-    "vom": dict(
-        table="variable_opex_new_entrants",
-        technology_col="Generator",
-        value_col="Base value",
-    ),
-    "heat_rate": dict(
-        table="heat_rates_new_entrants",
-        technology_col="Technology",
-        value_col="Heat rate (GJ/MWh)",
-    ),
-}
-
-_STORAGE_BATTERY_PROPERTY_MAP = {
-    "storage_hours": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Energy capacity_Hours",
-    ),
-    "efficiency_charge": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Charge efficiency_%",
-    ),
-    "efficiency_discharge": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Discharge efficiency_%",
-    ),
-    "soc_max": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Allowable max state of charge_%",
-    ),
-    "soc_min": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Allowable min state of charge_%",
-    ),
-    "degradation_annual": dict(
-        table="battery_properties",
-        technology_col="Technology",
-        value_col="Annual degradation_%",
-    ),
-}
-
-# PHES properties are keyed by "Power Station / Technology" — usually the technology, but
-# 'BOTN - Cethana' carries its own row.
-_STORAGE_PHES_PROPERTY_MAP = {
-    "storage_hours": dict(
-        table="pumped_hydro_new_entrant_properties",
-        technology_col="Power Station / Technology",
-        value_col="Storage capacity (hours)",
-    ),
-    "round_trip_efficiency": dict(
-        table="pumped_hydro_new_entrant_properties",
-        technology_col="Power Station / Technology",
-        value_col="Pumping efficiency (%)",
-    ),
-}
-"""
-New entrant property columns (keys) mapped to the IASR table and columns that contain
-property values and the technology for which the values apply. Consumed by
-``ispypsa.templater.new_entrants`` via ``_merge_properties``.
-
-    `table`: IASR table name holding the named property (key)
-    `technology_col`: column in the IASR table that contains the 'technology' string.
-        This is the column used to merge on (after mapping to canonical values).
-    `value_col`: column holding the value to merge in
-    `scale`: amount by which to multiply the value (default 1.0), used for unit
-        conversions. e.g. 1000 for $/kW → $/MW
-
-``_COMMON_...`` holds the entries shared by generators and storage; the generator and
-battery maps spread it / sit alongside it, and the storage orchestrator merges it onto
-the combined battery + PHES rows.
-"""
 
 _ECAA_STORAGE_STATIC_PROPERTY_TABLE_MAP = {
     "maximum_capacity_mw": dict(
@@ -751,4 +649,118 @@ _VRE_RESOURCE_QUALITY_AND_TECH_CODES = {
     "Wind - offshore (floating)": "WFL",
     "Large scale Solar PV": "SAT",
     "Solar Thermal (15hrs storage)": "CST",
+}
+
+# ============================================================================
+# New format (flag: use_new_table_format=True)
+# ============================================================================
+
+_SINGLE_REGION_ID = "NEM"
+
+# Canonical representative timeslice names used across the templater output:
+# ``peak_demand``, ``summer_typical``, ``winter_reference``. Per-region
+# variants (e.g. ``qld_peak_demand``) are formed by prefixing with the
+# lowercased NEM region id.
+_CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
+
+"""
+New entrant property columns (keys) mapped to the IASR table and columns that contain
+property values and the technology for which the values apply. Consumed by
+``ispypsa.templater.new_entrants`` via ``_merge_properties``.
+
+    `table`: IASR table name holding the named property (key)
+    `technology_col`: column in the IASR table that contains the 'technology' string.
+        This is the column used to merge on (after mapping to canonical values).
+    `value_col`: column holding the value to merge in
+    `scale`: amount by which to multiply the value (default 1.0), used for unit
+        conversions. e.g. 1000 for $/kW → $/MW
+
+``_COMMON_...`` holds the entries shared by generators and storage; the generator and
+battery maps spread it / sit alongside it, and the storage orchestrator merges it onto
+the combined battery + PHES rows.
+"""
+
+_COMMON_NEW_ENTRANT_PROPERTY_MAP = {
+    "fom": dict(
+        table="fixed_opex_new_entrants",
+        technology_col="Technology Type",
+        # NOTE: literal double ")" — parsed directly from the v7.5 IASR workbook
+        value_col="Base value ($/kW/year))",
+        scale=1000.0,
+    ),
+    "lifetime_technical": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Technical life (years)",
+    ),
+    "lifetime_economic": dict(
+        table="lead_time_and_project_life",
+        technology_col="Technology",
+        value_col="Economic life (years)",
+    ),
+    "minimum_stable_level": dict(
+        table="gpg_min_stable_level_new_entrants",
+        technology_col="Technology",
+        value_col="Min Stable Level (% of nameplate)",
+    ),
+}
+
+_GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
+    **_COMMON_NEW_ENTRANT_PROPERTY_MAP,
+    "vom": dict(
+        table="variable_opex_new_entrants",
+        technology_col="Generator",
+        value_col="Base value",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_new_entrants",
+        technology_col="Technology",
+        value_col="Heat rate (GJ/MWh)",
+    ),
+}
+
+_STORAGE_BATTERY_PROPERTY_MAP = {
+    "storage_hours": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Energy capacity_Hours",
+    ),
+    "efficiency_charge": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Charge efficiency_%",
+    ),
+    "efficiency_discharge": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Discharge efficiency_%",
+    ),
+    "soc_max": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Allowable max state of charge_%",
+    ),
+    "soc_min": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Allowable min state of charge_%",
+    ),
+    "degradation_annual": dict(
+        table="battery_properties",
+        technology_col="Technology",
+        value_col="Annual degradation_%",
+    ),
+}
+
+_STORAGE_PHES_PROPERTY_MAP = {
+    "storage_hours": dict(
+        table="pumped_hydro_new_entrant_properties",
+        technology_col="Power Station / Technology",
+        value_col="Storage capacity (hours)",
+    ),
+    "round_trip_efficiency": dict(
+        table="pumped_hydro_new_entrant_properties",
+        technology_col="Power Station / Technology",
+        value_col="Pumping efficiency (%)",
+    ),
 }
