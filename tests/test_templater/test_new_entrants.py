@@ -10,8 +10,9 @@ from ispypsa.templater.new_entrants import (
     _assert_botn_technology_expected,
     _assert_property_table_attrs,
     _derive_phes_symmetric_efficiency,
+    _group_by_source_key,
     _merge_phes_properties,
-    _merge_technology_keyed_property,
+    _merge_properties,
     _normalise_phes_botn_key,
     _override_botn_technology,
     _set_geo_id,
@@ -143,115 +144,165 @@ def test_assert_property_table_attrs_valid_table(csv_str_to_df):
         Wind,        20.0
     """)
     attrs = {
-        "table": "fixed_opex_new_entrants",
-        "technology_col": "Technology",
-        "value_col": "Base value",
-        "scale": 1000.0,
+        "fom": {
+            "table": "fixed_opex_new_entrants",
+            "technology_col": "Technology",
+            "value_col": "Base value",
+            "scale": 1000.0,
+        }
     }
     # should not raise
-    _assert_property_table_attrs(table, attrs, "fom")
+    _assert_property_table_attrs(table, "fixed_opex_new_entrants", attrs)
 
 
 def test_assert_property_table_attrs_raises_missing_columns(csv_str_to_df):
     # Table is missing technology_col - raised message names the source table,
-    # and the missing columns - including the 'Base Value' column with different
-    # capitalisation to expected 'Base value'.
+    # and the missing columns - including the 'Storage Hours' column with different
+    # capitalisation to expected 'Storage hours'.
+    # Two properties share the source table - both missing columns are reported
+    # together in one raise.
     table = csv_str_to_df("""
-        Base Value
-        20.0
+        Technology,    Storage Hours
+        Battery (2h),  2
     """)
     attrs = {
-        "table": "heat_rate",
-        "technology_col": "Technology",
-        "value_col": "Base value",
-        "scale": 1.0,
+        "storage_hours": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Storage hours",
+        },
+        "degradation_annual": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Variable value",
+        },
     }
 
     with pytest.raises(
         ValueError,
-        match=r"'heat_rate' table missing required columns: \['Base value', 'Technology'\]",
+        match=r"'battery_properties' table missing required columns: "
+        r"\['Storage hours', 'Variable value'\]",
     ):
-        _assert_property_table_attrs(table, attrs, "fom")
+        _assert_property_table_attrs(table, "battery_properties", attrs)
 
 
 def test_assert_property_table_attrs_raises_empty_table():
-    # Table has both required columns but no rows - raise
+    # Table has both required columns but no rows - raise, naming every property
+    # sourced from the table.
     table = pd.DataFrame(columns=["Technology", "Base value"])
     attrs = {
-        "table": "fixed_opex_new_entrants",
-        "technology_col": "Technology",
-        "value_col": "Base value",
-        "scale": 1000.0,
+        "fom": {
+            "table": "fixed_opex_new_entrants",
+            "technology_col": "Technology",
+            "value_col": "Base value",
+            "scale": 1000.0,
+        }
     }
 
     with pytest.raises(
         ValueError,
-        match="'fixed_opex_new_entrants' table is empty - cannot merge property 'fom'",
+        match=r"'fixed_opex_new_entrants' table is empty - cannot merge properties '\['fom'\]'",
     ):
-        _assert_property_table_attrs(table, attrs, "fom")
+        _assert_property_table_attrs(table, "fixed_opex_new_entrants", attrs)
 
 
-# --- _merge_technology_property ---
+# --- _group_by_source_key ---
 
 
-def test_merge_technology_property(csv_str_to_df):
-    # Looks up one value per technology, fuzzy-matching spelling differences
-    # and applying the scale. Duplicate technologies all receive the value;
-    # canon spelling is kept. NaN property values are retained untouched.
+def test_group_by_source_key():
+    # Two properties sharing a (table, technology_col) source are grouped together,
+    # each keeping its original attrs dict unchanged; two properties from the same
+    # table but with different technology_cols are independent.
+    property_map = {
+        "storage_hours": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Energy capacity_Hours",
+        },
+        "efficiency_charge": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Charge efficiency_%",
+        },
+        "lifetime_technical": {
+            "table": "lead_time_and_project_life",
+            "technology_col": "Technology",
+            "value_col": "Technical life (years)",
+        },
+        "different_tech_col": {
+            "table": "lead_time_and_project_life",
+            "technology_col": "Alternate Technology",
+            "value_col": "Test",
+        },
+    }
+
+    result = _group_by_source_key(property_map)
+
+    expected = {
+        ("battery_properties", "Technology"): {
+            "storage_hours": property_map["storage_hours"],
+            "efficiency_charge": property_map["efficiency_charge"],
+        },
+        ("lead_time_and_project_life", "Technology"): {
+            "lifetime_technical": property_map["lifetime_technical"],
+        },
+        ("lead_time_and_project_life", "Alternate Technology"): {
+            "different_tech_col": property_map["different_tech_col"]
+        },
+    }
+    assert result == expected
+
+
+# --- _merge_properties ---
+
+
+def test_merge_properties(csv_str_to_df, caplog):
+    # storage_hours and efficiency_charge both come from battery_properties/Technology
+    # (as in _STORAGE_BATTERY_PROPERTY_MAP): both are merged correctly in one pass,
+    # NaN property values are retained untouched, and - because they share a source
+    # table - the fuzzy match against it runs once, so a corrected technology name is
+    # logged once, not once per property sourced from that table.
     new_entrants = csv_str_to_df("""
-        name,   technology
-        A,      Wind
-        B,      Battery Storage (2hrs storage)
-        C,      Wind
-        D,      CCGT
+        name,             technology
+        NQ Battery - 2h,  battery storage (2hrs storage)
+        NQ CCGT,          CCGT
     """)
-    property_table = csv_str_to_df("""
-        Technology,                     Base value
-        Wind,                           20.0
-        Battery storage (2hrs storage), 17.0
-        CCGT,                           NaN
-    """)
+    property_map = {
+        "storage_hours": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Energy capacity_Hours",
+        },
+        "efficiency_charge": {
+            "table": "battery_properties",
+            "technology_col": "Technology",
+            "value_col": "Charge efficiency_%",
+        },
+    }
+    iasr_tables = {
+        "battery_properties": csv_str_to_df("""
+            Technology,                      Energy capacity_Hours, Charge efficiency_%
+            Battery Storage (2hrs storage),  2.0,                   92.0
+            CCGT,                            ,
+        """),
+    }
 
-    result = _merge_technology_keyed_property(
-        new_entrants,
-        property_table,
-        "Technology",
-        "Base value",
-        "fom",
-        scale=1000.0,
-    )
+    with caplog.at_level("INFO"):
+        result = _merge_properties(new_entrants, iasr_tables, property_map)
 
     expected = csv_str_to_df("""
-        name,   technology,                     fom
-        A,      Wind,                           20000.0
-        B,      Battery Storage (2hrs storage), 17000.0
-        C,      Wind,                           20000.0
-        D,      CCGT,                           NaN
+        name,             technology,                      storage_hours, efficiency_charge
+        NQ Battery - 2h,  battery storage (2hrs storage),  2.0,           92.0
+        NQ CCGT,          CCGT,                            ,
     """)
     pd.testing.assert_frame_equal(result, expected)
 
-
-def test_merge_technology_property_empty_new_entrants(csv_str_to_df):
-    # Test that empty new_entrants df returns with new column added (empty)
-    new_entrants = csv_str_to_df("""
-        name,   technology
-    """)
-    property_table = csv_str_to_df("""
-        Technology,                     Base value
-        Wind,                           20.0
-        Battery storage (2hrs storage), 17.0
-        CCGT,                           NaN
-    """)
-
-    expected_result = pd.DataFrame(columns=["name", "technology", "fom"])
-    result = _merge_technology_keyed_property(
-        new_entrants, property_table, "Technology", "Base value", "fom", 1000.0
+    msg = (
+        "'battery storage (2hrs storage)' matched to "
+        "'Battery Storage (2hrs storage)' whilst merging new entrant properties "
+        "from 'battery_properties'"
     )
-    pd.testing.assert_frame_equal(
-        result,
-        expected_result,
-        check_dtype=False,
-    )
+    assert caplog.messages.count(msg) == 1
 
 
 # --- _merge_phes_properties / _override_botn_technology / _derive_phes_symmetric_efficiency ---

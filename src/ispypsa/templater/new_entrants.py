@@ -222,9 +222,10 @@ def _merge_properties(
 ) -> pd.DataFrame:
     """Merges every property in ``property_map`` onto ``new_entrants``.
 
-    For each (new column, attrs) entry: validates the source IASR table, then looks up
-    one numeric value per row via ``_merge_technology_keyed_property``, matched on each
-    row's 'technology'.
+    Groups properties by their source (table, technology_col) — see
+    ``_group_by_source_key`` — so a table that contributes several properties (e.g.
+    ``battery_properties`` feeds six) is validated and fuzzy-matched against
+    ``new_entrants``' 'technology' once per property map.
 
     I/O Example (property_map = _STORAGE_BATTERY_PROPERTY_MAP, abbreviated):
         new_entrants:
@@ -232,111 +233,130 @@ def _merge_properties(
             NQ Battery - 2h  Battery Storage (2hrs storage)
 
         returns (adds one column per map key):
-            name             technology                     storage_hours  efficiency_charge  ...
-            NQ Battery - 2h  Battery Storage (2hrs storage)  2.0           92.0               ...
+            name             technology                      storage_hours  efficiency_charge  ...
+            NQ Battery - 2h  Battery Storage (2hrs storage)   2.0            92.0               ...
     """
-    for new_col, attrs in property_map.items():
-        _assert_property_table_attrs(
-            table=iasr_tables[attrs["table"]], attrs=attrs, property_name=new_col
+    new_entrants = new_entrants.copy()
+    for (table_name, technology_col), props in _group_by_source_key(
+        property_map
+    ).items():
+        table = iasr_tables[table_name]
+        _assert_property_table_attrs(table, table_name, props)
+        matched_technology = _fuzzy_map_to_allowed_values(
+            new_entrants["technology"],
+            table[technology_col],
+            task_desc=f"merging new entrant properties from '{table_name}'",
         )
-        new_entrants = _merge_technology_keyed_property(
-            new_entrants,
-            iasr_tables[attrs["table"]],
-            technology_col=attrs["technology_col"],
-            value_col=attrs["value_col"],
-            new_col=new_col,
-            scale=attrs.get("scale", 1.0),
-        )
+        for new_col, attrs in props.items():
+            property_values = _get_property_value_map(table, attrs)
+            new_entrants[new_col] = matched_technology.map(property_values)
     return new_entrants
 
 
-def _merge_technology_keyed_property(
-    new_entrants: pd.DataFrame,
-    property_table: pd.DataFrame,
-    technology_col: str,
-    value_col: str,
-    new_col: str,
-    scale: float = 1.0,
-) -> pd.DataFrame:
-    """Adds ``new_col``: one numeric property value per row, looked up by technology.
-
-    The property table holds a single value per technology (``value_col`` keyed by
-    ``technology_col``). Each ``new_entrants`` row is matched on its 'technology' —
-    fuzzy-matched to the property table's key to manage typos/capitalisation differences
-    before lookup. The matched values are optionally rescaled (e.g. ``scale=1000`` to
-    convert $/kW → $/MW). NaN property values are retained untouched.
-
-    Raises if a key value has no match in the property table.
+def _group_by_source_key(property_map: dict[str, dict]) -> dict[tuple[str, str], dict]:
+    """Groups a property map's entries by their source (table, technology_col).
 
     I/O Example:
-        new_entrants:
-            name  technology
-            A     Wind
-            B     CCGT
-            C     Wind
+        property_map:
+            storage_hours:
+                {table: battery_properties, technology_col: Technology, value_col: Energy capacity_Hours}
+            efficiency_charge:
+                {table: battery_properties, technology_col: Technology, value_col: Charge efficiency_%}
+            lifetime_technical:
+                {table: lead_time_and_project_life, technology_col: Technology, value_col: Technical life (years)}
 
-        property_table:
-            Technology       Base value
-            Wind             2.0
-            CCGT             5.0
-
-        technology_col: "Technology"
-        value_col: "Base value"
-        new_col: "fom"
-        scale: 1000.0           # $/kW -> $/MW scaling
-
-        returns (new col "fom"):
-            name  technology  fom
-            A     Wind        2000.0
-            B     CCGT        5000.0
-            C     Wind        2000.0
+        returns:
+            (battery_properties, Technology): {
+                storage_hours: { ... },
+                efficiency_charge: { ... },
+            }
+            (lead_time_and_project_life, Technology): {
+                lifetime_technical: { ... },
+            }
+            where { ... } indicates contents remain unchanged from inputs.
     """
-    values_by_technology = pd.to_numeric(
-        property_table.set_index(technology_col)[value_col], errors="coerce"
+    groups = {}
+    for property_name, attrs in property_map.items():
+        source_key = (attrs["table"], attrs["technology_col"])
+        groups.setdefault(source_key, {})[property_name] = attrs
+    return groups
+
+
+def _get_property_value_map(
+    table: pd.DataFrame, attrs: dict[str, str | float]
+) -> pd.Series:
+    """Returns one property's value, keyed by technology and scaled.
+
+    Raises:
+        ValueError: if ``value_col`` contains anything ``pd.to_numeric`` can't parse,
+            e.g. a stray typo in the IASR table.
+
+    I/O Example:
+        table:
+            Technology  Base value
+            Wind        2.0
+            CCGT        5.0
+
+        attrs: {technology_col: Technology, value_col: Base value, scale: 1000.0}
+
+        returns (indexed by Technology):
+            Wind    2000.0
+            CCGT    5000.0
+    """
+    value_map = pd.to_numeric(
+        table.set_index(attrs["technology_col"])[attrs["value_col"]], errors="raise"
     )
-    values_by_technology *= scale
-    matched_technology_name = _fuzzy_map_to_allowed_values(
-        new_entrants["technology"],
-        values_by_technology.index,
-        task_desc=f"merging new entrant '{new_col}' by technology",
-    )
-    new_entrants = new_entrants.copy()
-    new_entrants[new_col] = matched_technology_name.map(values_by_technology)
-    return new_entrants
+    value_map *= float(attrs.get("scale", 1.0))
+    return value_map
 
 
 def _assert_property_table_attrs(
-    table: pd.DataFrame, attrs: dict[str, str | float], property_name: str
+    table: pd.DataFrame, table_name: str, attrs: dict[str, dict]
 ) -> None:
-    """Asserts that a property table has the required columns and isn't empty.
+    """Asserts a property table has all required columns and isn't empty.
 
     Guards against two ways a property table can silently break the downstream
-    merge: missing required columns, or has no rows. Failing this assertion flags
-    a change in input IASR table structure that needs to be addressed.
+    merge: missing required columns, or has no rows. Checks every property sourced
+    from ``table`` at once (``attrs`` is one ``_group_by_source_key`` group), so a
+    single table failure is reported once, naming every property it would have fed.
 
     Args:
-        table: the property table to validate, e.g.
-            ``iasr_tables["fixed_opex_new_entrants"]``.
-        attrs: this property's entry from a property map (e.g.
-            ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP["fom"]``), giving the source
-            table's name plus its ``technology_col``/``value_col``.
-        property_name: the schema column name being merged (e.g. "fom"); used only
-            to name the property in the "table is empty" error.
+        table: the property table to validate, e.g. ``iasr_tables["battery_properties"]``.
+        table_name: ``table``'s IASR table name, used only to name it in error messages.
+        attrs: every property sourced from ``table``, keyed by property name — each
+            value is that property's entry from a property map (e.g.
+            ``_STORAGE_BATTERY_PROPERTY_MAP["storage_hours"]``).
 
     Raises:
-        ValueError: if ``table`` is missing ``technology_col`` and/or ``value_col``,
-            or if ``table`` has no rows.
+        ValueError: if ``table`` is missing any property's ``technology_col``/
+            ``value_col``, or if ``table`` has no rows.
+
+    I/O Example:
+        table:
+            Technology  Base value  Extra Column
+            Wind        2.0         unused_info
+
+        table_name: "fixed_opex_new_entrants"
+        attrs: {
+            fom: {table: fixed_opex_new_entrants, technology_col: Technology, value_col: Base value}
+        }
+
+        # No ValueError raised: table has rows, both expected columns (Technology,
+        # Base value) present.
     """
-    missing_cols = set([attrs["technology_col"], attrs["value_col"]]) - set(
-        table.columns
-    )
+    required_cols = {
+        d[col_name]
+        for col_name in ["value_col", "technology_col"]
+        for d in attrs.values()
+    }
+    missing_cols = required_cols - set(table.columns)
     if missing_cols:
         raise ValueError(
-            f"'{attrs['table']}' table missing required columns: {sorted(missing_cols)}"
+            f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
         )
     if table.empty:
         raise ValueError(
-            f"'{attrs['table']}' table is empty - cannot merge property '{property_name}'"
+            f"'{table_name}' table is empty - cannot merge properties '{sorted(attrs.keys())}'"
         )
 
 
