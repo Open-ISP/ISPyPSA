@@ -116,6 +116,20 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Pumped Hydro (24hrs storage),  24,                       76
             BOTN - Cethana - 20h,          20,                       80
         """),
+        "technology_specific_lcfs": csv_str_to_df("""
+            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Pumped Hydro (24hrs storage), BOTN - Cethana
+            Q1,                 Far North QLD,          1.05,           1.08,                 Not Applicable,  Not Applicable,               Not Applicable
+            CNSW,               Subregional Ref Node,   Not Applicable, Not Applicable,       1.04,            Not Applicable,               Not Applicable
+            SNW,                Subregional Ref Node,   Not Applicable, Not Applicable,       1.00,            Not Applicable,               Not Applicable
+            TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,       Not Applicable,  1.0469,                       100
+        """),
+        "locational_cost_factors": csv_str_to_df("""
+            Cost zone / REZ ID, O&M costs 3
+            Q1,                 122.0
+            CNSW,               110.0
+            SNW,                100.0
+            TAS,                100.0
+        """),
     }
 
 
@@ -292,12 +306,12 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
+        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
     """)
 
     with (
@@ -488,12 +502,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
+        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
     """)
 
     with (
@@ -645,12 +659,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
+        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
     """)
 
     with (

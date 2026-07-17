@@ -8,13 +8,18 @@ from ispypsa.templater.new_entrants import (
     _STORAGE_PROPERTY_COLUMNS,
     _add_resource_type,
     _assert_botn_technology_expected,
-    _assert_property_table_attrs,
+    _assert_build_cost_zone_matches_geo_id,
+    _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _group_by_source_key,
+    _merge_lcf_build,
+    _merge_lcf_om,
     _merge_phes_properties,
     _merge_properties,
     _normalise_phes_botn_key,
     _override_botn_technology,
+    _required_property_columns,
+    _reshape_technology_specific_lcfs,
     _set_geo_id,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -28,10 +33,10 @@ def test_template_generators_new_entrant(csv_str_to_df):
     # and the identity + property columns are produced, one row per generating unit.
     # Detailed content is covered by the per-helper tests.
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,  Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region
-        Q1_WH_Far North QLD,  Wind,                           Wind,       Wind,               Q1,             NQ
-        NQ OCGT Small,        OCGT (small GT),                Gas,        QLD new OCGT,       Not Applicable, NQ
-        NQ Battery 2hrs,      Battery Storage (2hrs storage), Battery,    Battery,            Not Applicable, NQ
+        IASR ID / DLT names,  Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,  Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
+        NQ OCGT Small,        OCGT (small GT),                Gas,        QLD new OCGT,       Not Applicable, NQ,         NQ
+        NQ Battery 2hrs,      Battery Storage (2hrs storage), Battery,    Battery,            Not Applicable, NQ,         NQ
     """)
     iasr_tables = {
         "new_entrants_summary": new_entrants_summary,
@@ -59,6 +64,16 @@ def test_template_generators_new_entrant(csv_str_to_df):
             Technology,       Min Stable Level (% of nameplate)
             Wind,             0.0
             OCGT (small GT),  50.0
+        """),
+        "technology_specific_lcfs": csv_str_to_df("""
+            Cost zone / REZ ID, REZ name / Description, Wind,           OCGT (small GT)
+            Q1,                 Far North QLD,          1.05,           Not Applicable
+            NQ,                 Subregional Ref Node,   Not Applicable, 1.08
+        """),
+        "locational_cost_factors": csv_str_to_df("""
+            Cost zone / REZ ID, O&M costs 3
+            Q1,                 122.0
+            NQ,                 115.0
         """),
     }
 
@@ -106,6 +121,16 @@ def _storage_property_tables(csv_str_to_df):
             Pumped Hydro (24hrs storage),    40.0
             BOTN - Cethana,                  40.0
         """),
+        "technology_specific_lcfs": csv_str_to_df("""
+            Cost zone / REZ ID, REZ name / Description, Battery storage (2hrs storage), Distributed Resources Batteries, BOTN - Cethana
+            N3,                 Central-West Orana,     1.04,                           Not Applicable,                  Not Applicable
+            NQ,                 Subregional Ref Node,   Not Applicable,                 1.06,                            100
+        """),
+        "locational_cost_factors": csv_str_to_df("""
+            Cost zone / REZ ID, O&M costs 3
+            N3,                 119.0
+            NQ,                 115.0
+        """),
     }
 
 
@@ -115,12 +140,12 @@ def test_template_storage_new_entrant(csv_str_to_df):
     # storage unit (battery + PHES) is returned. Detailed content is covered by the
     # per-helper tests.
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,            Technology Type,                 Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region
-        Q1_WH_Far North QLD,            Wind,                            Wind,       Wind,               Q1,             NQ
-        NQ OCGT Small,                  OCGT (small GT),                 Gas,        QLD new OCGT,       Not Applicable, NQ
-        NQ Battery 2hrs,                Battery Storage (2hrs storage),  Battery,    Battery,            N3,             NQ
-        NQ Battery - Distributed,       Distributed Resources Batteries, Battery,    Battery,            Not Applicable, NQ
-        BOTN - Cethana - 20h,           Pumped Hydro (24hrs storage),    Water,      Hydro,              Not Applicable, NQ
+        IASR ID / DLT names,            Technology Type,                 Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,            Wind,                            Wind,       Wind,               Q1,             NQ,         Q1
+        NQ OCGT Small,                  OCGT (small GT),                 Gas,        QLD new OCGT,       Not Applicable, NQ,         NQ
+        NQ Battery 2hrs,                Battery Storage (2hrs storage),  Battery,    Battery,            N3,             NQ,         N3
+        NQ Battery - Distributed,       Distributed Resources Batteries, Battery,    Battery,            Not Applicable, NQ,         NQ
+        BOTN - Cethana - 20h,           Pumped Hydro (24hrs storage),    Water,      Hydro,              Not Applicable, NQ,         NQ
     """)
     iasr_tables = {
         "new_entrants_summary": new_entrants_summary,
@@ -134,38 +159,13 @@ def test_template_storage_new_entrant(csv_str_to_df):
     assert len(result) == 3
 
 
-# --- _assert_property_table_attrs ---
+# --- _required_property_columns ---
 
 
-def test_assert_property_table_attrs_valid_table(csv_str_to_df):
-    # Table has both required columns and at least one row - no error raised.
-    table = csv_str_to_df("""
-        Technology,  Base value
-        Wind,        20.0
-    """)
-    attrs = {
-        "fom": {
-            "table": "fixed_opex_new_entrants",
-            "technology_col": "Technology",
-            "value_col": "Base value",
-            "scale": 1000.0,
-        }
-    }
-    # should not raise
-    _assert_property_table_attrs(table, "fixed_opex_new_entrants", attrs)
-
-
-def test_assert_property_table_attrs_raises_missing_columns(csv_str_to_df):
-    # Table is missing technology_col - raised message names the source table,
-    # and the missing columns - including the 'Storage Hours' column with different
-    # capitalisation to expected 'Storage hours'.
-    # Two properties share the source table - both missing columns are reported
-    # together in one raise.
-    table = csv_str_to_df("""
-        Technology,    Storage Hours
-        Battery (2h),  2
-    """)
-    attrs = {
+def test_required_property_columns():
+    # Two properties sharing a source - both properties' value_col/technology_col
+    # are collected into one set.
+    props = {
         "storage_hours": {
             "table": "battery_properties",
             "technology_col": "Technology",
@@ -178,32 +178,58 @@ def test_assert_property_table_attrs_raises_missing_columns(csv_str_to_df):
         },
     }
 
+    result = _required_property_columns(props)
+
+    assert result == {"Technology", "Storage hours", "Variable value"}
+
+
+# --- _assert_table_valid ---
+
+
+def test_assert_table_valid_passes(csv_str_to_df):
+    # Table has both required columns and at least one row - no error raised.
+    table = csv_str_to_df("""
+        Technology,  Base value
+        Wind,        20.0
+    """)
+    # should not raise
+    _assert_table_valid(
+        table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
+    )
+
+
+def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
+    # Table is missing a required column -> raise, naming the table and the column.
+    table = csv_str_to_df("""
+        Technology,  Base value
+        Wind,        20.0
+    """)
+
     with pytest.raises(
         ValueError,
-        match=r"'battery_properties' table missing required columns: "
-        r"\['Storage hours', 'Variable value'\]",
+        match=r"'fixed_opex_new_entrants' table missing required columns: "
+        r"\['Storage hours'\]",
     ):
-        _assert_property_table_attrs(table, "battery_properties", attrs)
+        _assert_table_valid(
+            table,
+            "fixed_opex_new_entrants",
+            {"Technology", "Storage hours"},
+            "'fom'",
+        )
 
 
-def test_assert_property_table_attrs_raises_empty_table():
-    # Table has both required columns but no rows - raise, naming every property
-    # sourced from the table.
+def test_assert_table_valid_raises_empty_table():
+    # Table has both required columns but no rows -> raise, naming what would
+    # have been merged.
     table = pd.DataFrame(columns=["Technology", "Base value"])
-    attrs = {
-        "fom": {
-            "table": "fixed_opex_new_entrants",
-            "technology_col": "Technology",
-            "value_col": "Base value",
-            "scale": 1000.0,
-        }
-    }
 
     with pytest.raises(
         ValueError,
-        match=r"'fixed_opex_new_entrants' table is empty - cannot merge properties '\['fom'\]'",
+        match=r"'fixed_opex_new_entrants' table is empty - cannot merge 'fom'",
     ):
-        _assert_property_table_attrs(table, "fixed_opex_new_entrants", attrs)
+        _assert_table_valid(
+            table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
+        )
 
 
 # --- _group_by_source_key ---
@@ -303,6 +329,28 @@ def test_merge_properties(csv_str_to_df, caplog):
         "from 'battery_properties'"
     )
     assert caplog.messages.count(msg) == 1
+
+
+def test_merge_properties_raises_on_invalid_source_table(csv_str_to_df):
+    # Regression: confirms the source table is actually validated before merging.
+    # Exact raise behaviour is covered by _assert_table_valid's own tests.
+    new_entrants = csv_str_to_df("""
+        name,     technology
+        SQ CCGT,  CCGT
+    """)
+    property_map = {
+        "fom": {
+            "table": "fixed_opex_new_entrants",
+            "technology_col": "Technology",
+            "value_col": "Base value",
+        }
+    }
+    iasr_tables = {
+        "fixed_opex_new_entrants": pd.DataFrame(columns=["Technology", "Base value"]),
+    }
+
+    with pytest.raises(ValueError):
+        _merge_properties(new_entrants, iasr_tables, property_map)
 
 
 # --- _merge_phes_properties / _override_botn_technology / _derive_phes_symmetric_efficiency ---
@@ -522,3 +570,181 @@ def test_add_resource_type_empty_input():
 
     expected = pd.DataFrame(columns=["name", "technology", "resource_type"])
     pd.testing.assert_frame_equal(result, expected)
+
+
+# --- _assert_build_cost_zone_matches_geo_id (LCF) ---
+
+
+def test_assert_build_cost_zone_matches_geo_id(csv_str_to_df):
+    # geo_id equals 'Regional build cost zone' for every row -> no raise.
+    # Includes existing 'known typo' (NSA -> CSA) which should be explicitly handled.
+    new_entrants = csv_str_to_df("""
+        geo_id, Regional build cost zone
+        Q1,     Q1
+        NQ,     NQ
+        NSA,    CSA
+    """)
+    _assert_build_cost_zone_matches_geo_id(new_entrants)
+
+
+def test_assert_build_cost_zone_matches_geo_id_raises(csv_str_to_df):
+    # An unexpected (geo_id, cost zone) split that isn't the known typo -> raise.
+    new_entrants = csv_str_to_df("""
+        geo_id, Regional build cost zone
+        NSA,    CSA
+        Q1,     Q2
+        Test,
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Unexpected divergence between geo_id and 'Regional build cost zone' in "
+            r"new_entrants_summary: \[\('Q1', 'Q2'\), \('Test', nan\)\]"
+        ),
+    ):
+        _assert_build_cost_zone_matches_geo_id(new_entrants)
+
+
+# --- _reshape_technology_specific_lcfs (LCF) ---
+
+
+def test_reshape_technology_specific_lcfs(csv_str_to_df):
+    # Wide -> long: factors become percentages (x100), the bespoke BOTN column (already a
+    # percentage) is left unscaled, and "Not Applicable" cells are dropped.
+    technology_specific_lcfs = csv_str_to_df("""
+        Cost zone / REZ ID, REZ name / Description, Wind,           BOTN - Cethana
+        Q1,                 Far North QLD,          1.05,           Not Applicable
+        TAS,                Subregional Ref Node,   Not Applicable, 100
+    """)
+
+    result = _reshape_technology_specific_lcfs(technology_specific_lcfs)
+
+    expected = csv_str_to_df("""
+        geo_id, lcf_technology, lcf_build
+        Q1,     Wind,           105.0
+        TAS,    BOTN - Cethana, 100.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("geo_id").reset_index(drop=True),
+        expected.sort_values("geo_id").reset_index(drop=True),
+    )
+
+
+def test_reshape_technology_specific_lcfs_raises_on_invalid_table():
+    # Regression: confirms the table is actually validated before reshaping.
+    # Exact raise behaviour is covered by _assert_table_valid's own tests.
+    technology_specific_lcfs = pd.DataFrame(
+        columns=["Cost zone / REZ ID", "REZ name / Description", "Wind"]
+    )
+
+    with pytest.raises(ValueError):
+        _reshape_technology_specific_lcfs(technology_specific_lcfs)
+
+
+# --- _merge_lcf_build (LCF) ---
+
+
+def test_merge_lcf_build(csv_str_to_df):
+    # lcf_build is looked up by (geo_id, technology), with the technology fuzzy-matched to
+    # the lcf table's column spelling ("OCGT (Small GT)") and factors converted to percentages.
+    # BOTN's 'technology' arrives already overridden to its own name.
+    new_entrants = csv_str_to_df("""
+        name,                  technology,        geo_id
+        Q1_WH_Far North QLD,   Wind,              Q1
+        NQ OCGT Small,         OCGT (small GT),   NQ
+        BOTN - Cethana - 20h,  BOTN - Cethana,    TAS
+    """)
+    technology_specific_lcfs = csv_str_to_df("""
+        Cost zone / REZ ID, REZ name / Description, Wind,           OCGT (Small GT), Pumped Hydro (24hrs storage), BOTN - Cethana
+        Q1,                 Far North QLD,          1.05,           Not Applicable,  Not Applicable,               Not Applicable
+        NQ,                 Subregional Ref Node,   Not Applicable, 1.08,            Not Applicable,               Not Applicable
+        TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,  1.0469,                       100
+    """)
+
+    result = _merge_lcf_build(new_entrants, technology_specific_lcfs)
+
+    expected = csv_str_to_df("""
+        name,                  technology,        geo_id, lcf_build
+        Q1_WH_Far North QLD,   Wind,              Q1,     105.0
+        NQ OCGT Small,         OCGT (small GT),   NQ,     108.0
+        BOTN - Cethana - 20h,  BOTN - Cethana,    TAS,    100.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("name").reset_index(drop=True),
+        expected.sort_values("name").reset_index(drop=True),
+    )
+
+
+def test_merge_lcf_build_empty(csv_str_to_df):
+    # No new_entrant rows -> returns empty with the lcf_build column added.
+    new_entrants = pd.DataFrame(columns=["name", "technology", "geo_id"])
+    technology_specific_lcfs = csv_str_to_df("""
+        Cost zone / REZ ID, REZ name / Description, Wind
+        Q1,                 Far North QLD,          1.05
+    """)
+
+    result = _merge_lcf_build(new_entrants, technology_specific_lcfs)
+
+    expected = csv_str_to_df("""
+        name, technology, geo_id, lcf_build
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+# --- _merge_lcf_om (LCF) ---
+
+
+def test_merge_lcf_om(csv_str_to_df):
+    # lcf_om is a single per-zone value (technology-independent) looked up by geo_id,
+    # already a percentage so taken as-is.
+    new_entrants = csv_str_to_df("""
+        name,                 geo_id
+        Q1_WH_Far North QLD,  Q1
+        NQ OCGT Small,        NQ
+    """)
+    locational_cost_factors = csv_str_to_df("""
+        Cost zone / REZ ID, Equipment and installation costs, O&M costs 3
+        Q1,                 110.0,                            122.27
+        NQ,                 105.0,                            114.997
+    """)
+
+    result = _merge_lcf_om(new_entrants, locational_cost_factors)
+
+    expected = csv_str_to_df("""
+        name,                 geo_id, lcf_om
+        Q1_WH_Far North QLD,  Q1,     122.27
+        NQ OCGT Small,        NQ,     114.997
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_merge_lcf_om_empty(csv_str_to_df):
+    # No rows -> returns empty with the lcf_om column added.
+    new_entrants = pd.DataFrame(columns=["name", "geo_id"])
+    locational_cost_factors = csv_str_to_df("""
+        Cost zone / REZ ID, O&M costs 3
+        Q1,                 122.27
+    """)
+
+    result = _merge_lcf_om(new_entrants, locational_cost_factors)
+
+    expected = csv_str_to_df("""
+        name, geo_id, lcf_om
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+def test_merge_lcf_om_raises_on_invalid_source_table(csv_str_to_df):
+    # Regression: confirms the source table is actually validated before merging.
+    # Exact raise behaviour is covered by _assert_table_valid's own tests.
+    new_entrants = csv_str_to_df("""
+        name,                 geo_id
+        Q1_WH_Far North QLD,  Q1
+    """)
+    locational_cost_factors = pd.DataFrame(
+        columns=["Cost zone / REZ ID", "O&M costs 3"]
+    )
+
+    with pytest.raises(ValueError):
+        _merge_lcf_om(new_entrants, locational_cost_factors)

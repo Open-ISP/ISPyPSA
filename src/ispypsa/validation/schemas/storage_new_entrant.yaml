@@ -22,8 +22,7 @@ description: >
     - `gpg_min_stable_level_new_entrants`
     - `lead_time_and_project_life`
     - `locational_cost_factors`
-    - `locational_cost_pumped_hydro_factors`
-    - `technology_cost_breakdown_ratios`
+    - `technology_specific_lcfs`
 
   If absent:
   Only existing or planned storage will be modelled.

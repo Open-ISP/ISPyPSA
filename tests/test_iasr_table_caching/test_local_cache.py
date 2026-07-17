@@ -38,6 +38,9 @@ def test_build_required_tables_new_format():
     # Storage property tables merged into the new entrant storage template
     assert "battery_properties" in result
     assert "pumped_hydro_new_entrant_properties" in result
+    # Locational cost factor tables feed lcf_build / lcf_om in both new entrant templates
+    assert "technology_specific_lcfs" in result
+    assert "locational_cost_factors" in result
 
 
 def test_build_required_tables_old_format():
