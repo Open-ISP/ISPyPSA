@@ -9,7 +9,9 @@ from ispypsa.templater.new_entrants import (
     _add_resource_type,
     _assert_botn_technology_expected,
     _assert_build_cost_zone_matches_geo_id,
+    _assert_no_unexpected_duplicate_options,
     _assert_table_valid,
+    _collapse_geo_id_to_granularity,
     _derive_phes_symmetric_efficiency,
     _group_by_source_key,
     _merge_lcf_build,
@@ -27,16 +29,24 @@ from ispypsa.templater.new_entrants import (
 
 # --- orchestrators ---
 
+# A stand-in for tests where sub_regional_geography's content doesn't matter - e.g.
+# regional_granularity="sub_regions" is a no-op in the collapse step, so it's never
+# read at all; or the frame being collapsed is itself empty, so nothing ever gets
+# looked up in it. See _collapse_geo_id_to_granularity.
+_UNUSED_SUB_REGIONAL_GEOGRAPHY = pd.DataFrame(
+    columns=["geo_id", "geo_type", "region_id"]
+)
+
 
 def test_template_generators_new_entrant(csv_str_to_df):
     # Wiring check only (per-helper behaviour is covered below): storage is dropped,
     # and the identity + property columns are produced, one row per generating unit.
     # Detailed content is covered by the per-helper tests.
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,  Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,  Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
-        NQ OCGT Small,        OCGT (small GT),                Gas,        QLD new OCGT,       Not Applicable, NQ,         NQ
-        NQ Battery 2hrs,      Battery Storage (2hrs storage), Battery,    Battery,            Not Applicable, NQ,         NQ
+        IASR ID / DLT names,  Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,  Wind,                           Wind,       Q1,             NQ,         Q1
+        NQ OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
+        NQ Battery 2hrs,      Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
     """)
     iasr_tables = {
         "new_entrants_summary": new_entrants_summary,
@@ -77,7 +87,9 @@ def test_template_generators_new_entrant(csv_str_to_df):
         """),
     }
 
-    result = _template_generators_new_entrant(iasr_tables)
+    result = _template_generators_new_entrant(
+        iasr_tables, "sub_regions", _UNUSED_SUB_REGIONAL_GEOGRAPHY
+    )
 
     # storage row dropped -> 2 gen rows; identity + property columns produced in order
     assert (
@@ -140,19 +152,21 @@ def test_template_storage_new_entrant(csv_str_to_df):
     # storage unit (battery + PHES) is returned. Detailed content is covered by the
     # per-helper tests.
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,            Technology Type,                 Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,            Wind,                            Wind,       Wind,               Q1,             NQ,         Q1
-        NQ OCGT Small,                  OCGT (small GT),                 Gas,        QLD new OCGT,       Not Applicable, NQ,         NQ
-        NQ Battery 2hrs,                Battery Storage (2hrs storage),  Battery,    Battery,            N3,             NQ,         N3
-        NQ Battery - Distributed,       Distributed Resources Batteries, Battery,    Battery,            Not Applicable, NQ,         NQ
-        BOTN - Cethana - 20h,           Pumped Hydro (24hrs storage),    Water,      Hydro,              Not Applicable, NQ,         NQ
+        IASR ID / DLT names,            Technology Type,                 Fuel type,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,            Wind,                            Wind,       Q1,             NQ,         Q1
+        NQ OCGT Small,                  OCGT (small GT),                 Gas,        Not Applicable, NQ,         NQ
+        NQ Battery 2hrs,                Battery Storage (2hrs storage),  Battery,    N3,             NQ,         N3
+        NQ Battery - Distributed,       Distributed Resources Batteries, Battery,    Not Applicable, NQ,         NQ
+        BOTN - Cethana - 20h,           Pumped Hydro (24hrs storage),    Water,      Not Applicable, NQ,         NQ
     """)
     iasr_tables = {
         "new_entrants_summary": new_entrants_summary,
         **_storage_property_tables(csv_str_to_df),
     }
 
-    result = _template_storage_new_entrant(iasr_tables)
+    result = _template_storage_new_entrant(
+        iasr_tables, "sub_regions", _UNUSED_SUB_REGIONAL_GEOGRAPHY
+    )
 
     # generator rows dropped -> 3 of 5 rows survive; identity + property columns in order
     assert list(result.columns) == _STORAGE_IDENTITY_COLUMNS + _STORAGE_PROPERTY_COLUMNS
@@ -527,6 +541,184 @@ def test_set_geo_id_empty_input(csv_str_to_df):
         technology, REZ ID, Sub-region, geo_id
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+# --- _collapse_geo_id_to_granularity ---
+
+
+def test_collapse_geo_id_to_granularity_sub_regions_is_noop(csv_str_to_df):
+    # sub_regions is already the finest granularity - returned as-is.
+    new_entrants = csv_str_to_df("""
+        name,            technology, geo_id, value
+        CNSW OCGT Small, OCGT,       CNSW,   104.0
+        Q1_WH,           Wind,       Q1,     999.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        Q1,         rez,            QLD
+    """)
+
+    result = _collapse_geo_id_to_granularity(
+        new_entrants,
+        "sub_regions",
+        sub_regional_geography,
+        ["technology"],
+        ["value"],
+    )
+
+    pd.testing.assert_frame_equal(result, new_entrants)
+
+
+def test_collapse_geo_id_to_granularity_averages_across_sub_regions(csv_str_to_df):
+    # NSW's average must be the plain mean of its two sub-regions' values (102.0),
+    # each counted once. The REZ row (Q1) is untouched by the collapse regardless
+    # of granularity. BOTN - Cethana retains original name.
+    new_entrants = csv_str_to_df("""
+        name,                   technology,     geo_id, value
+        CNSW OCGT Small,        OCGT,           CNSW,   104.0
+        SNW OCGT Small,         OCGT,           SNW,    100.0
+        Q1_WH,                  Wind,           Q1,     999.0
+        BOTN - Cethana - 20h,   BOTN - Cethana, TAS,    100.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        SNW,        subregion,      NSW
+        Q1,         rez,            QLD
+        TAS,        subregion,      TAS
+    """)
+
+    result = _collapse_geo_id_to_granularity(
+        new_entrants,
+        "nem_regions",
+        sub_regional_geography,
+        ["technology"],
+        ["value"],
+    )
+
+    expected = csv_str_to_df("""
+        name,                   technology,     geo_id, value
+        Q1_WH,                  Wind,           Q1,     999.0
+        NSW OCGT,               OCGT,           NSW,    102.0
+        BOTN - Cethana - 20h,   BOTN - Cethana, TAS,    100.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("technology").reset_index(drop=True),
+        expected.sort_values("technology").reset_index(drop=True),
+    )
+
+
+def test_collapse_geo_id_to_granularity_drops_known_duplicate_before_averaging(
+    csv_str_to_df,
+):
+    # CNSW has a known duplicate build option ("WOO OCGT Small", alongside "CNSW
+    # OCGT Small" - see _KNOWN_DUPLICATE_SUBREGION_OPTIONS)
+    new_entrants = csv_str_to_df("""
+        name,            technology, geo_id, value
+        CNSW OCGT Small, OCGT,       CNSW,   104.0
+        WOO OCGT Small,  OCGT,       CNSW,   104.0
+        SNW OCGT Small,  OCGT,       SNW,    100.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        SNW,        subregion,      NSW
+    """)
+
+    result = _collapse_geo_id_to_granularity(
+        new_entrants,
+        "nem_regions",
+        sub_regional_geography,
+        ["technology"],
+        ["value"],
+    )
+
+    expected = csv_str_to_df("""
+        name,     technology, geo_id, value
+        NSW OCGT, OCGT,       NSW,    102.0
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_collapse_geo_id_to_granularity_raises_on_unexpected_duplicate(csv_str_to_df):
+    # Two DIFFERENTLY-named rows sharing (technology, geo_id) that ISN'T the known
+    # WOO case must raise rather than silently skew the average.
+    new_entrants = csv_str_to_df("""
+        name,             technology, geo_id, value
+        CNSW OCGT Small,  OCGT,       CNSW,   104.0
+        ANOTHER OCGT,     OCGT,       CNSW,   200.0
+        SNW OCGT Small,   OCGT,       SNW,    100.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        SNW,        subregion,      NSW
+    """)
+
+    with pytest.raises(ValueError, match="Unexpected duplicate"):
+        _collapse_geo_id_to_granularity(
+            new_entrants,
+            "nem_regions",
+            sub_regional_geography,
+            ["technology"],
+            ["value"],
+        )
+
+
+def test_collapse_geo_id_to_granularity_single_region_maps_to_nem(csv_str_to_df):
+    # Sub-regions in different NEM regions (NSW, TAS) all collapse to geo_id="NEM".
+    # BOTN keeps name but geo_id still set to "NEM".
+    new_entrants = csv_str_to_df("""
+        name,                   technology,     geo_id, value
+        CNSW OCGT Small,        OCGT,           CNSW,   104.0
+        TAS OCGT Small,         OCGT,           TAS,    108.0
+        BOTN - Cethana - 20h,   BOTN - Cethana, TAS,    100.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        TAS,        subregion,      TAS
+    """)
+
+    result = _collapse_geo_id_to_granularity(
+        new_entrants,
+        "single_region",
+        sub_regional_geography,
+        ["technology"],
+        ["value"],
+    )
+
+    expected = csv_str_to_df("""
+        name,                   technology,     geo_id, value
+        NEM OCGT,               OCGT,           NEM,    106.0
+        BOTN - Cethana - 20h,   BOTN - Cethana, NEM,    100.0
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values("name").reset_index(drop=True),
+        expected.sort_values("name").reset_index(drop=True),
+    )
+
+
+def test_collapse_geo_id_to_granularity_empty_input(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        name,   technology,     geo_id,     value
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,       region_id
+        CNSW,       subregion,      NSW
+        Q1,         rez,            QLD
+    """)
+
+    result = _collapse_geo_id_to_granularity(
+        new_entrants,
+        "nem_regions",
+        sub_regional_geography,
+        ["technology"],
+        ["value"],
+    )
+
+    pd.testing.assert_frame_equal(result, new_entrants)
 
 
 # --- _add_resource_type (generator-specific) ---

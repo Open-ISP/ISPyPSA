@@ -190,7 +190,7 @@ notes/
 .vscode/
 .DS_Store
 # ignore claude stuff
-.claude/settings.local.json
+.claude/
 CLAUDE.local.md
 
 # ignore all pypsa output files

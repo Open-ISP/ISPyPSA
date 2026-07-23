@@ -21,7 +21,10 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
-from ispypsa.templater.geography import _template_network_geography
+from ispypsa.templater.geography import (
+    _build_geo_region_lookup,
+    _template_network_geography,
+)
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
     _extract_flow_path_options_from_iasr,
@@ -78,7 +81,7 @@ _BASE_TEMPLATE_OUTPUTS = [
 ]
 
 # Outputs from the new-format templater branch. Granularity-invariant: the
-# same five tables are emitted for sub_regions, nem_regions, and single_region
+# same tables are emitted for sub_regions, nem_regions, and single_region
 # (only their contents differ).
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
 # delete _BASE_TEMPLATE_OUTPUTS above.
@@ -88,6 +91,9 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_limits",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
+    "costs_connection",
+    "generators_new_entrant",
+    "storage_new_entrant",
 ]
 
 # Custom constraints are templated only at sub_regions granularity (see the gate
@@ -190,9 +196,7 @@ def create_ispypsa_inputs_template(
                 iasr_tables["renewable_energy_zones"],
                 regional_granularity,
             )
-        region_lookup = dict(
-            zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
-        )
+        region_lookup = _build_geo_region_lookup(sub_regional_geography)
         flow_path_options = _filter_flow_path_augmentations_to_granularity(
             _extract_flow_path_options_from_iasr(iasr_tables),
             regional_granularity,
@@ -232,15 +236,18 @@ def create_ispypsa_inputs_template(
             "connection_capacity_non_vre"
         ].copy()
 
-        # Not yet a templater output - fed into connection cost templating below.
-        generators_new_entrant = _template_generators_new_entrant(iasr_tables)
-        storage_new_entrant = _template_storage_new_entrant(iasr_tables)
+        template["generators_new_entrant"] = _template_generators_new_entrant(
+            iasr_tables, regional_granularity, sub_regional_geography
+        )
+        template["storage_new_entrant"] = _template_storage_new_entrant(
+            iasr_tables, regional_granularity, sub_regional_geography
+        )
         template["costs_connection"] = _template_connection_costs(
             iasr_tables,
             scenario,
             regional_granularity,
-            generators_new_entrant,
-            storage_new_entrant,
+            template["generators_new_entrant"],
+            template["storage_new_entrant"],
             sub_regional_geography,
         )
         # Custom constraints from PLEXOS are sub-regional export-group limits:
