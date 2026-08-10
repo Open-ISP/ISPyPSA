@@ -431,6 +431,29 @@ def _is_storage_row(
     return _is_battery_row(df, col_to_check) | _is_pumped_hydro_row(df, col_to_check)
 
 
+def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
+    """Splits the round-trip 'round_trip_efficiency' (%) into charge and discharge legs.
+
+    The IASR PHES tables give only a single round-trip efficiency. Assuming symmetric
+    legs, each one-way efficiency is its square root, so e.g. a 76% round trip becomes
+    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872).
+
+    I/O Example:
+        phes:
+            name                 round_trip_efficiency
+            NQ Pumped Hydro-10h  76.0
+
+        returns (adds the two efficiency columns):
+            name                 round_trip_efficiency  efficiency_charge  efficiency_discharge
+            NQ Pumped Hydro-10h  76.0                   87.18              87.18
+    """
+    phes = phes.copy()
+    one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
+    phes["efficiency_charge"] = one_way_efficiency
+    phes["efficiency_discharge"] = one_way_efficiency
+    return phes
+
+
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:
     """
     Standardises capitalisation of "storage" in a pandas Series.

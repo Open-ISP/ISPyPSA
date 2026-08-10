@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
+    _derive_phes_symmetric_efficiency,
     _is_battery_row,
     _is_pumped_hydro_row,
     _is_storage_row,
@@ -452,3 +453,23 @@ def test_is_storage_row(csv_str_to_df):
     # Battery,  Distributed Resources Batteries and Pumped Hydro all match.
     # Solar thermal still does not.
     assert list(result) == [True, True, False, True, False]
+
+
+# --- _derive_phes_symmetric_efficiency ---
+
+
+def test_derive_phes_symmetric_efficiency(csv_str_to_df):
+    # A single round-trip efficiency becomes equal charge and discharge legs, each its
+    # square root: sqrt(0.81) = 0.9 -> 90.0%.
+    phes = csv_str_to_df("""
+        name,                  round_trip_efficiency
+        NQ Pumped Hydro - 24h, 81.0
+    """)
+
+    result = _derive_phes_symmetric_efficiency(phes)
+
+    expected = csv_str_to_df("""
+        name,                  round_trip_efficiency, efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, 81.0,                  90.0,              90.0
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)

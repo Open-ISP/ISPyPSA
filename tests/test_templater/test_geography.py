@@ -2,8 +2,39 @@ import pandas as pd
 
 from ispypsa.templater.geography import (
     _extract_subregion_id,
+    _map_geo_id_to_granularity,
     _template_network_geography,
 )
+
+
+def test_map_geo_id_to_granularity_nem_regions(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        Q1,      rez,        QLD
+    """)
+    geo_id = pd.Series(["CNSW", "SNW", "Q1"])
+
+    result = _map_geo_id_to_granularity(geo_id, "nem_regions", sub_regional_geography)
+
+    expected = pd.Series(["NSW", "NSW", "QLD"])
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_map_geo_id_to_granularity_single_region(csv_str_to_df):
+    # sub_regional_geography's content is irrelevant at "single_region" — every geo_id
+    # collapses to the constant "NEM" id without being looked up at all.
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+    """)
+    geo_id = pd.Series(["CNSW", "Q1"])
+
+    result = _map_geo_id_to_granularity(geo_id, "single_region", sub_regional_geography)
+
+    expected = pd.Series(["NEM", "NEM"])
+    pd.testing.assert_series_equal(result, expected)
 
 
 def test_extract_subregion_id_with_comma_in_name():

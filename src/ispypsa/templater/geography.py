@@ -300,3 +300,23 @@ def _build_geo_region_lookup(sub_regional_geography: pd.DataFrame) -> dict[str, 
     for region in set(sub_regional_geography["region_id"]):
         lookup[region] = region
     return lookup
+
+
+def _map_geo_id_to_granularity(
+    geo_id: pd.Series, regional_granularity: str, sub_regional_geography: pd.DataFrame
+) -> pd.Series:
+    """Maps rez/sub-region geo_ids to their region_id ("nem_regions") or "NEM" ("single_region").
+
+    I/O Example:
+        geo_id: pd.Series(["CNSW", "SNW"])
+        regional_granularity: "nem_regions"
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+
+        returns: pd.Series(["NSW", "NSW"])
+    """
+    if regional_granularity == "single_region":
+        return pd.Series(_SINGLE_REGION_ID, index=geo_id.index)
+    return geo_id.map(_build_geo_region_lookup(sub_regional_geography))

@@ -34,8 +34,9 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.geography import _build_geo_region_lookup
+from ispypsa.templater.geography import _map_geo_id_to_granularity
 from ispypsa.templater.helpers import (
+    _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
     _is_battery_row,
     _is_pumped_hydro_row,
@@ -45,7 +46,6 @@ from ispypsa.templater.helpers import (
 from ispypsa.templater.mappings import (
     _COMMON_NEW_ENTRANT_PROPERTY_MAP,
     _GENERATORS_NEW_ENTRANT_PROPERTY_MAP,
-    _SINGLE_REGION_ID,
     _STORAGE_BATTERY_PROPERTY_MAP,
     _STORAGE_PHES_PROPERTY_MAP,
 )
@@ -520,15 +520,6 @@ def _aggregate_by_geo_id(
     )[value_columns].mean()
 
 
-def _map_geo_id_to_granularity(
-    geo_id: pd.Series, regional_granularity: str, sub_regional_geography: pd.DataFrame
-) -> pd.Series:
-    """Maps sub-region geo_ids to their region_id ("nem_regions") or "NEM" ("single_region")."""
-    if regional_granularity == "single_region":
-        return pd.Series(_SINGLE_REGION_ID, index=geo_id.index)
-    return geo_id.map(_build_geo_region_lookup(sub_regional_geography))
-
-
 def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
     """Sets 'name' on merged rows to "{geo_id} {technology}".
 
@@ -797,29 +788,6 @@ def _assert_botn_technology_expected(phes: pd.DataFrame) -> None:
             f"'BOTN - Cethana' technology should be '{expected}': "
             f"got {sorted(unexpected, key=str)} in 'new_entrants_summary' table."
         )
-
-
-def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
-    """Splits the round-trip 'round_trip_efficiency' (%) into charge and discharge legs.
-
-    The IASR PHES table gives only a single round-trip efficiency. Assuming symmetric
-    legs, each one-way efficiency is its square root, so e.g. a 76% round trip becomes
-    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872).
-
-    I/O Example:
-        phes:
-            name                 round_trip_efficiency
-            NQ Pumped Hydro-10h  76.0
-
-        returns (adds the two efficiency columns):
-            name                 round_trip_efficiency  efficiency_charge  efficiency_discharge
-            NQ Pumped Hydro-10h  76.0                   87.18              87.18
-    """
-    phes = phes.copy()
-    one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
-    phes["efficiency_charge"] = one_way_efficiency
-    phes["efficiency_discharge"] = one_way_efficiency
-    return phes
 
 
 # --- generator-specific helpers ---

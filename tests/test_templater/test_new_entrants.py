@@ -11,7 +11,6 @@ from ispypsa.templater.new_entrants import (
     _assert_build_cost_zone_matches_geo_id,
     _assert_table_valid,
     _collapse_geo_id_to_granularity,
-    _derive_phes_symmetric_efficiency,
     _group_by_source_key,
     _merge_lcf_build,
     _merge_lcf_om,
@@ -441,23 +440,6 @@ def test_assert_botn_technology_expected_raises_on_unexpected_value(csv_str_to_d
         ),
     ):
         _assert_botn_technology_expected(phes)
-
-
-def test_derive_phes_symmetric_efficiency(csv_str_to_df):
-    # A single round-trip efficiency becomes equal charge and discharge legs, each its
-    # square root: sqrt(0.91) ≈ 0.9 -> 90.0%.
-    phes = csv_str_to_df("""
-        name,                  round_trip_efficiency
-        NQ Pumped Hydro - 24h, 81.0
-    """)
-
-    result = _derive_phes_symmetric_efficiency(phes)
-
-    expected = csv_str_to_df("""
-        name,                  round_trip_efficiency, efficiency_charge, efficiency_discharge
-        NQ Pumped Hydro - 24h, 81.0,                  90.0,              90.0
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
 
 
 def test_merge_phes_properties_empty(csv_str_to_df):

@@ -1,0 +1,45 @@
+IASR ID,Power Station,Technology Type,Minimum Stable Level (MW)_IASR 2023 (Backcasting),Minimum Stable Level (MW)_Typical Lowest Band,Minimum Stable Level (MW)_Minimum Continuous Operating Level
+BW01,Bayswater,Steam Sub Critical,250,260,170
+BW02,Bayswater,Steam Sub Critical,250,200,170
+BW03,Bayswater,Steam Sub Critical,250,200,170
+BW04,Bayswater,Steam Sub Critical,250,200,170
+ER01,Eraring,Steam Sub Critical,210,182,180
+ER02,Eraring,Steam Sub Critical,210,182,180
+ER03,Eraring,Steam Sub Critical,210,182,180
+ER04,Eraring,Steam Sub Critical,210,182,180
+MP1,Mt Piper,Steam Sub Critical,270,220,150
+MP2,Mt Piper,Steam Sub Critical,270,220,150
+VP5,Vales Point B,Steam Sub Critical,250,200,180
+VP6,Vales Point B,Steam Sub Critical,250,200,180
+CALL_B_1,Callide B,Steam Sub Critical,155,180,140
+CALL_B_2,Callide B,Steam Sub Critical,155,180,140
+CPP_3,Callide C,Steam Super Critical,180,180,170
+CPP_4,Callide C,Steam Super Critical,180,180,126
+GSTONE1,Gladstone,Steam Sub Critical,110,110,110
+GSTONE2,Gladstone,Steam Sub Critical,110,110,110
+GSTONE3,Gladstone,Steam Sub Critical,110,110,110
+GSTONE4,Gladstone,Steam Sub Critical,110,110,110
+GSTONE5,Gladstone,Steam Sub Critical,110,110,110
+GSTONE6,Gladstone,Steam Sub Critical,110,110,110
+KPP_1,Kogan Creek,Steam Super Critical,330,320,180
+MPP_1,Millmerran,Steam Super Critical,200,180,160
+MPP_2,Millmerran,Steam Super Critical,200,180,160
+STAN-1,Stanwell,Steam Sub Critical,140,185,115
+STAN-2,Stanwell,Steam Sub Critical,140,170,115
+STAN-3,Stanwell,Steam Sub Critical,140,185,115
+STAN-4,Stanwell,Steam Sub Critical,140,185,115
+TARONG#1,Tarong,Steam Sub Critical,140,170,140
+TARONG#2,Tarong,Steam Sub Critical,140,170,140
+TARONG#3,Tarong,Steam Sub Critical,140,140,140
+TARONG#4,Tarong,Steam Sub Critical,140,140,140
+TNPS1,Tarong North,Steam Super Critical,180,200,180
+LOYYB1,Loy Yang B,Steam Sub Critical,320,240,200
+LOYYB2,Loy Yang B,Steam Sub Critical,320,240,200
+LYA1,Loy Yang A Power Station,Steam Sub Critical,300,250,210
+LYA2,Loy Yang A Power Station,Steam Sub Critical,300,250,210
+LYA3,Loy Yang A Power Station,Steam Sub Critical,300,250,210
+LYA4,Loy Yang A Power Station,Steam Sub Critical,300,250,210
+YWPS1,Yallourn W,Steam Sub Critical,200,200,200
+YWPS2,Yallourn W,Steam Sub Critical,200,200,200
+YWPS3,Yallourn W,Steam Sub Critical,200,220,200
+YWPS4,Yallourn W,Steam Sub Critical,200,220,200
