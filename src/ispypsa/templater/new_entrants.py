@@ -452,9 +452,10 @@ def _merge_lcf_build(
             BOTN - Cethana - 20h  BOTN - Cethana                TAS
 
         technology_specific_lcfs:
-            Cost zone / REZ ID  REZ name / Description  Wind    BOTN - Cethana
-            Q1                  Far North QLD           1.0860  Not Applicable
-            TAS                 Subregional Ref Node    1.0325  100
+            Cost zone / REZ ID  REZ name / Description  Wind            OCGT (small GT)  BOTN - Cethana
+            Q1                  Far North QLD           1.0860          Not Applicable   Not Applicable
+            NQ                  Subregional Ref Node    Not Applicable  1.0801           Not Applicable
+            TAS                 Subregional Ref Node    1.0325          Not Applicable   100
 
         returns (adds lcf_build):
             name                  ...  lcf_build
@@ -563,7 +564,9 @@ def _reshape_technology_specific_lcfs(
         var_name="lcf_technology",
         value_name="lcf_build",
     ).rename(columns={zone_col: "geo_id"})
-    long["lcf_build"] = pd.to_numeric(long["lcf_build"], errors="coerce")
+    long["lcf_build"] = pd.to_numeric(                                                                                                                                                                                                
+        long["lcf_build"].replace("Not Applicable", pd.NA), errors="raise"                                                                                                                                                            
+    )
     in_factor_form = ~long["lcf_technology"].isin(_LCF_COLUMNS_IN_PERCENT)
     long.loc[in_factor_form, "lcf_build"] *= 100
     return long.dropna(subset="lcf_build").reset_index(drop=True)
