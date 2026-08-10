@@ -564,8 +564,8 @@ def _reshape_technology_specific_lcfs(
         var_name="lcf_technology",
         value_name="lcf_build",
     ).rename(columns={zone_col: "geo_id"})
-    long["lcf_build"] = pd.to_numeric(                                                                                                                                                                                                
-        long["lcf_build"].replace("Not Applicable", pd.NA), errors="raise"                                                                                                                                                            
+    long["lcf_build"] = pd.to_numeric(
+        long["lcf_build"].replace("Not Applicable", pd.NA), errors="raise"
     )
     in_factor_form = ~long["lcf_technology"].isin(_LCF_COLUMNS_IN_PERCENT)
     long.loc[in_factor_form, "lcf_build"] *= 100
