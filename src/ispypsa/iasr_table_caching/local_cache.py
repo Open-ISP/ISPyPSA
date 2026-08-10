@@ -60,6 +60,8 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "gpg_min_stable_level_new_entrants",
             "battery_properties",
             "pumped_hydro_new_entrant_properties",
+            "technology_specific_lcfs",
+            "locational_cost_factors",
         ] + augmentation
 
     else:

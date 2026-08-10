@@ -17,7 +17,13 @@ There are two independent public orchestrators, one per output table. Each one:
        into battery and pumped-hydro (PHES) rows, which take their storage-specific
        properties from different IASR tables, then recombines them before merging
        the common properties.
-    6. Selects the table's schema columns.
+    6. Merges in the two locational cost factors: lcf_build (per geo_id + technology)
+       and lcf_om (per geo_id alone) — see _merge_lcf_build and _merge_lcf_om.
+    7. Selects the table's schema columns.
+
+Note: lcf_build is taken directly from IASR's precomputed technology_specific_lcfs table,
+rather than recomputed from the more granular cost-component IASR tables at this
+stage.
 """
 
 import logging
@@ -51,6 +57,8 @@ _GENERATOR_IDENTITY_COLUMNS = [
 _GENERATOR_PROPERTY_COLUMNS = [
     "fom",
     "vom",
+    "lcf_build",
+    "lcf_om",
     "lifetime_technical",
     "lifetime_economic",
     "heat_rate",
@@ -73,6 +81,8 @@ _STORAGE_PROPERTY_COLUMNS = [
     "soc_max",
     "soc_min",
     "minimum_stable_level",
+    "lcf_build",
+    "lcf_om",
     "lifetime_technical",
     "lifetime_economic",
     "degradation_annual",
@@ -120,11 +130,18 @@ _PHES_PROPERTY_KEY_RENAMES = {
     _BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]
 }
 
+# Typo(?) in 'Regional build cost zone' for PHES rows in NSA subregion: see Open-ISP/ISPyPSA#131.
+_KNOWN_BUILD_COST_ZONE_TYPOS = {
+    ("NSA", "CSA"),  # (geo_id, Regional build cost zone)
+}
+
+# Data scale diff for 'BOTN - Cethana' in LCF table: see first comment on Open-ISP/ISPyPSA#131.
+_LCF_COLUMNS_IN_PERCENT = ["BOTN - Cethana"]
+
 
 # --- public orchestrators ---
 
 
-# NOTE: partial scope intentional - lcf_* columns added in a later PR!
 def _template_generators_new_entrant(
     iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
@@ -133,8 +150,9 @@ def _template_generators_new_entrant(
     Keeps only generator rows, renames the carried-over summary columns to schema
     names, derives geo_id (REZ ID or sub-region) and resource_type (from the VRE
     resource code in the IASR ID), merges in the per-technology property columns
-    (see ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP``), and returns the identity +
-    property columns.
+    (see ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP``) and the two locational cost factors
+    (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id), and returns the
+    identity + property columns.
 
     Args:
         iasr_tables: IASR tables; uses ``new_entrants_summary`` plus the property
@@ -163,10 +181,12 @@ def _template_generators_new_entrant(
     gens = _set_geo_id(gens)
     gens = _add_resource_type(gens)
     gens = _merge_properties(gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP)
+    _assert_build_cost_zone_matches_geo_id(gens)
+    gens = _merge_lcf_build(gens, iasr_tables["technology_specific_lcfs"])
+    gens = _merge_lcf_om(gens, iasr_tables["locational_cost_factors"])
     return gens[_GENERATOR_IDENTITY_COLUMNS + _GENERATOR_PROPERTY_COLUMNS]
 
 
-# NOTE: partial scope intentional - lcf_* columns added in a later PR!
 def _template_storage_new_entrant(
     iasr_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
@@ -176,7 +196,9 @@ def _template_storage_new_entrant(
     and derives geo_id (REZ ID or sub-region). Battery and pumped-hydro (PHES) rows draw
     their storage-specific properties from different IASR tables, so each subset is merged
     separately and recombined; the shared properties (see
-    ``_COMMON_NEW_ENTRANT_PROPERTY_MAP``) are then merged onto the combined set.
+    ``_COMMON_NEW_ENTRANT_PROPERTY_MAP``) and the two locational cost factors
+    (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id) are then merged onto the
+    combined set.
 
     Args:
         iasr_tables: IASR tables; uses ``new_entrants_summary`` plus the property tables
@@ -209,6 +231,9 @@ def _template_storage_new_entrant(
     )
     storage = pd.concat([batteries, phes], ignore_index=True)
     storage = _merge_properties(storage, iasr_tables, _COMMON_NEW_ENTRANT_PROPERTY_MAP)
+    _assert_build_cost_zone_matches_geo_id(storage)
+    storage = _merge_lcf_build(storage, iasr_tables["technology_specific_lcfs"])
+    storage = _merge_lcf_om(storage, iasr_tables["locational_cost_factors"])
     return storage[_STORAGE_IDENTITY_COLUMNS + _STORAGE_PROPERTY_COLUMNS]
 
 
@@ -241,7 +266,12 @@ def _merge_properties(
         property_map
     ).items():
         table = iasr_tables[table_name]
-        _assert_property_table_attrs(table, table_name, props)
+        _assert_table_valid(
+            table,
+            table_name,
+            _required_property_columns(props),
+            f"{sorted(props.keys())}",
+        )
         matched_technology = _fuzzy_map_to_allowed_values(
             new_entrants["technology"],
             table[technology_col],
@@ -282,6 +312,20 @@ def _group_by_source_key(property_map: dict[str, dict]) -> dict[tuple[str, str],
     return groups
 
 
+def _required_property_columns(props: dict[str, dict]) -> set[str]:
+    """Returns every ``value_col``/``technology_col`` named across a source's properties.
+
+    I/O Example:
+        props:
+            fom: {table: fixed_opex_new_entrants, technology_col: Technology, value_col: Base value}
+            vom: {table: variable_opex_new_entrants, technology_col: Generator, value_col: Base value}
+
+        returns:
+            {"Technology", "Generator", "Base value"}
+    """
+    return {d[col] for col in ["value_col", "technology_col"] for d in props.values()}
+
+
 def _get_property_value_map(
     table: pd.DataFrame, attrs: dict[str, str | float]
 ) -> pd.Series:
@@ -310,26 +354,25 @@ def _get_property_value_map(
     return value_map
 
 
-def _assert_property_table_attrs(
-    table: pd.DataFrame, table_name: str, attrs: dict[str, dict]
+def _assert_table_valid(
+    table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
 ) -> None:
-    """Asserts a property table has all required columns and isn't empty.
+    """Asserts a source table has every required column and isn't empty.
 
-    Guards against two ways a property table can silently break the downstream
-    merge: missing required columns, or has no rows. Checks every property sourced
-    from ``table`` at once (``attrs`` is one ``_group_by_source_key`` group), so a
-    single table failure is reported once, naming every property it would have fed.
+    Shared precondition check for every IASR table merged in this module — guards
+    against two silent-failure modes: a missing column producing a KeyError, and
+    an empty table merges to an all-NaN column with no warning.
 
     Args:
-        table: the property table to validate, e.g. ``iasr_tables["battery_properties"]``.
-        table_name: ``table``'s IASR table name, used only to name it in error messages.
-        attrs: every property sourced from ``table``, keyed by property name — each
-            value is that property's entry from a property map (e.g.
-            ``_STORAGE_BATTERY_PROPERTY_MAP["storage_hours"]``).
+        table: the source table to validate, e.g. ``iasr_tables["battery_properties"]``.
+        table_name: ``table``'s IASR table name, used to name it in error messages.
+        required_cols: every column the downstream merge reads from ``table``.
+        merge_desc: short description of what would be merged, named in the
+            empty-table error, e.g. ``"properties '['fom']'"`` or ``"'lcf_build'"``.
 
     Raises:
-        ValueError: if ``table`` is missing any property's ``technology_col``/
-            ``value_col``, or if ``table`` has no rows.
+        ValueError: if any of ``required_cols`` is missing from ``table``, or if
+            ``table`` has no rows.
 
     I/O Example:
         table:
@@ -337,27 +380,18 @@ def _assert_property_table_attrs(
             Wind        2.0         unused_info
 
         table_name: "fixed_opex_new_entrants"
-        attrs: {
-            fom: {table: fixed_opex_new_entrants, technology_col: Technology, value_col: Base value}
-        }
+        required_cols: {"Technology", "Base value"}
+        merge_desc: "properties '['fom']'"
 
-        # No ValueError raised: table has rows, both expected columns (Technology,
-        # Base value) present.
+        # No ValueError raised: table has rows, both required columns present.
     """
-    required_cols = {
-        d[col_name]
-        for col_name in ["value_col", "technology_col"]
-        for d in attrs.values()
-    }
     missing_cols = required_cols - set(table.columns)
     if missing_cols:
         raise ValueError(
             f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
         )
     if table.empty:
-        raise ValueError(
-            f"'{table_name}' table is empty - cannot merge properties '{sorted(attrs.keys())}'"
-        )
+        raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
 
 
 def _set_geo_id(new_entrants: pd.DataFrame) -> pd.DataFrame:
@@ -368,6 +402,174 @@ def _set_geo_id(new_entrants: pd.DataFrame) -> pd.DataFrame:
     """
     new_entrants["geo_id"] = new_entrants.apply(_pick_location, axis=1)
     return new_entrants
+
+
+# --- locational cost factor (LCF) helpers ---
+
+
+def _assert_build_cost_zone_matches_geo_id(new_entrants: pd.DataFrame) -> None:
+    """Asserts the LCF lookup key (geo_id) matches the IASR's 'Regional build cost zone'.
+
+    LCFs are keyed on geo_id here, which equals each unit's cost zone. v7.5 (and 7.8) breaks
+    that rule for three NSA pumped-hydro rows, mislabelling them with the CSA cost zone
+    (``_KNOWN_BUILD_COST_ZONE_TYPOS``); we accept that known typo and key on geo_id (NSA)
+    regardless. Any *other* divergence is unexpected — possibly a real cost-zone split
+    rather than a typo — so this function raises if any other diffs are seen.
+
+    Raises:
+        ValueError: if geo_id and 'Regional build cost zone' diverge for any
+            (geo_id, cost zone) pair not in ``_KNOWN_BUILD_COST_ZONE_TYPOS``.
+    """
+    divergent = new_entrants[
+        new_entrants["geo_id"] != new_entrants["Regional build cost zone"]
+    ]
+    unexpected = (
+        set(zip(divergent["geo_id"], divergent["Regional build cost zone"]))
+        - _KNOWN_BUILD_COST_ZONE_TYPOS
+    )
+    if unexpected:
+        raise ValueError(
+            "Unexpected divergence between geo_id and 'Regional build cost zone' in "
+            f"new_entrants_summary: {sorted(unexpected, key=str)}."
+        )
+
+
+def _merge_lcf_build(
+    new_entrants: pd.DataFrame, technology_specific_lcfs: pd.DataFrame
+) -> pd.DataFrame:
+    """Merges the build/connection locational cost factor (``lcf_build``, %) per unit.
+
+    Looks up each unit's precomputed build/connection locational cost factor (LCF) from
+    ``technology_specific_lcfs``, merged on (geo_id, technology). Units with no entry for
+    their (geo_id, technology) pair get NaN (a default is applied downstream — see the
+    schema ``nan_fill``).
+
+    I/O Example:
+        new_entrants (BOTN 'technology' already overridden):
+            name                  technology                    geo_id
+            Q1_WH_Far North QLD   Wind                          Q1
+            NQ OCGT Small         OCGT (small GT)               NQ
+            BOTN - Cethana - 20h  BOTN - Cethana                TAS
+
+        technology_specific_lcfs:
+            Cost zone / REZ ID  REZ name / Description  Wind            OCGT (small GT)  BOTN - Cethana
+            Q1                  Far North QLD           1.0860          Not Applicable   Not Applicable
+            NQ                  Subregional Ref Node    Not Applicable  1.0801           Not Applicable
+            TAS                 Subregional Ref Node    1.0325          Not Applicable   100
+
+        returns (adds lcf_build):
+            name                  ...  lcf_build
+            Q1_WH_Far North QLD   ...  108.60
+            NQ OCGT Small         ...  108.01
+            BOTN - Cethana - 20h  ...  100.0
+    """
+    lcf_by_geo_id_and_technology = _reshape_technology_specific_lcfs(
+        technology_specific_lcfs
+    )
+    new_entrants = new_entrants.copy()
+    new_entrants["lcf_technology"] = _fuzzy_map_to_allowed_values(
+        new_entrants["technology"],
+        lcf_by_geo_id_and_technology["lcf_technology"].unique(),
+        task_desc="merging new entrant 'lcf_build' by technology",
+    )
+    return new_entrants.merge(
+        lcf_by_geo_id_and_technology, how="left", on=["geo_id", "lcf_technology"]
+    ).drop(columns="lcf_technology")
+
+
+def _merge_lcf_om(
+    new_entrants: pd.DataFrame, locational_cost_factors: pd.DataFrame
+) -> pd.DataFrame:
+    """Merges the O&M locational cost factor (``lcf_om``, %) per unit, looked up by geo_id.
+
+    The O&M LCF is a single per-zone factor (technology-independent), already a percentage,
+    held in the ``O&M costs 3`` column of ``locational_cost_factors``. Units whose geo_id
+    has no entry get NaN (a 100% default is applied downstream).
+
+    Raises:
+        ValueError: if 'O&M costs 3' column contains anything ``pd.to_numeric`` can't parse,
+            e.g. a stray typo in the IASR table.
+
+    I/O Example:
+        new_entrants:
+            name                 geo_id
+            Q1_WH_Far North QLD  Q1
+            NQ OCGT Small        NQ
+
+        locational_cost_factors (relevant cols):
+            Cost zone / REZ ID  O&M costs 3
+            Q1                  122.27
+            NQ                  114.997
+
+        returns (adds lcf_om):
+            name                 geo_id  lcf_om
+            Q1_WH_Far North QLD  Q1      122.27
+            NQ OCGT Small        NQ      114.997
+    """
+    # "Cost zone / REZ ID" and "O&M costs 3": literal v7.5 IASR workbook column names.
+    zone_col = "Cost zone / REZ ID"
+    om_col = "O&M costs 3"
+    _assert_table_valid(
+        locational_cost_factors,
+        "locational_cost_factors",
+        {zone_col, om_col},
+        "'lcf_om'",
+    )
+    om_by_geo_id = pd.to_numeric(
+        locational_cost_factors.set_index(zone_col)[om_col], errors="raise"
+    )
+    new_entrants = new_entrants.copy()
+    new_entrants["lcf_om"] = new_entrants["geo_id"].map(om_by_geo_id)
+    return new_entrants
+
+
+def _reshape_technology_specific_lcfs(
+    technology_specific_lcfs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Reshapes the wide ``technology_specific_lcfs`` table to long (geo_id, technology, %).
+
+    Each source row is a cost zone (a REZ ID or sub-region — i.e. a geo_id) and each column
+    after the description is a technology's precomputed LCF. Factors are converted to
+    percentages (×100), except the bespoke columns already published as percentages
+    (``_LCF_COLUMNS_IN_PERCENT``). "Not Applicable"/blank cells become NaN and are dropped,
+    so only fully defined (geo_id, technology) pairs remain.
+
+    I/O Example:
+        technology_specific_lcfs:
+            Cost zone / REZ ID  REZ name / Description  Wind    BOTN - Cethana
+            Q1                  Far North QLD           1.0860  Not Applicable
+            TAS                 Subregional Ref Node    1.0325  100
+
+        returns:
+            geo_id  lcf_technology  lcf_build
+            Q1      Wind            108.60       # factor ×100
+            TAS     Wind            103.25
+            TAS     BOTN - Cethana  100.0        # already % -> left unscaled
+    """
+    # "Cost zone / REZ ID" / "REZ name / Description": literal v7.5 IASR column names.
+    zone_col = "Cost zone / REZ ID"
+    description_col = "REZ name / Description"
+    _assert_table_valid(
+        technology_specific_lcfs,
+        "technology_specific_lcfs",
+        {zone_col, description_col},
+        "'lcf_build'",
+    )
+    technology_cols = technology_specific_lcfs.columns.difference(
+        [zone_col, description_col]
+    )
+    long = technology_specific_lcfs.melt(
+        id_vars=zone_col,
+        value_vars=list(technology_cols),
+        var_name="lcf_technology",
+        value_name="lcf_build",
+    ).rename(columns={zone_col: "geo_id"})
+    long["lcf_build"] = pd.to_numeric(
+        long["lcf_build"].replace("Not Applicable", pd.NA), errors="raise"
+    )
+    in_factor_form = ~long["lcf_technology"].isin(_LCF_COLUMNS_IN_PERCENT)
+    long.loc[in_factor_form, "lcf_build"] *= 100
+    return long.dropna(subset="lcf_build").reset_index(drop=True)
 
 
 # --- storage-specific helpers ---

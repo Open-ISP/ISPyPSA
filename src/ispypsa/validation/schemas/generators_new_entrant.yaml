@@ -18,7 +18,7 @@ description: >
     - `lead_time_and_project_life`
     - `gpg_min_stable_level_new_entrants`
     - `locational_cost_factors`
-    - `technology_cost_breakdown_ratios`
+    - `technology_specific_lcfs`
 
   If absent:
   Only existing (and planned) generation will be modelled.
