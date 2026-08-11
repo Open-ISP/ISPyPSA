@@ -23,8 +23,8 @@ def _fuzzy_match_names(
     pipeline keys on. An exact dictionary mapping would silently miss those
     rows; fuzzy matching repairs them instead.
 
-    ``choices`` holds the canonical spellings (e.g. the sub-region names from
-    the nodes table). ``task_desc`` names the operation in the log line each
+    ``choices`` holds the canonical spellings (e.g. the NEM sub-region names
+    hardcoded in mappings.py). ``task_desc`` names the operation in the log line each
     repair emits. ``threshold`` (0-100) is the minimum fuzz.ratio score a
     pairing must reach; ``not_match`` sets what happens to names left over
     when no choice scores that high — the sentinel "existing" keeps the
@@ -34,7 +34,7 @@ def _fuzzy_match_names(
     Matching is one to one without replacement over the unique values of both
     sides: an exact match claims its choice first, then the remaining pairs
     are matched by repeatedly taking the highest-scoring (name, choice) pair
-    above ``threshold``. Because each choice can be claimed once, a name may
+    that reaches ``threshold``. Because each choice can be claimed once, a name may
     not receive its own best match if a stronger pairing takes that choice
     first — and for the same reason, this function is unsuitable where two
     different names in the series should map to the same choice. Nothing
