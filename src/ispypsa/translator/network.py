@@ -222,7 +222,7 @@ def _resolve_path_limits(
     """Resolves the sparse limits table to one row per modelled path, direction
     and timeslice, then fills empty capacities with the system default.
 
-    Blank path_id, direction or capacity cells are wildcards (see the
+    Blank path_id or direction values are wildcards (see the
     network_transmission_path_limits schema). The limits arrive already filtered
     to the modelled paths (see _drop_limits_for_unmodelled_paths), so
     _resolve_wildcards expands the path_id and direction wildcards against the
