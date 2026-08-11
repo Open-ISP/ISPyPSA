@@ -14,27 +14,42 @@ def _fuzzy_match_names(
     not_match: str = "existing",
     threshold: int = 0,
 ) -> pd.Series:
-    """
-    Fuzzy matches values in `name_series` with values in `choices`.
-    Fuzzy matching is used where typos or minor differences in names in raw data
-    may cause issues with exact mappings (e.g. using a dictionary mapping).
-    This function is only suitable for use where name_series does not have
-    repeated values since matching is done without replacement
+    """Replace each name in ``name_series`` with the ``choices`` entry it best
+    matches, pairing unique names and choices one to one.
 
-    Args:
-        name_series: :class:`pandas.Series` with names to be matched with values in
-            `choices`
-        choices: Iterable of `choices` that are replacement values
-        task_desc: Task description to include in logging information
-        not_match: optional. Defaults to "existing". If "existing", wherever a match
-            that exceeds the threshold does not exist the existing value is retained.
-            If any other string, this will be used to replace the existing value
-            where a match that exceeds the threshold does not exist.
-        threshold: match quality threshold to exceed for replacement. Between 0 and 100
+    The raw IASR workbooks spell the same entity slightly differently from
+    sheet to sheet — typos, stray footnotes, punctuation — so a name column
+    often almost-but-not-exactly matches the canonical names the rest of the
+    pipeline keys on. An exact dictionary mapping would silently miss those
+    rows; fuzzy matching repairs them instead.
 
-    Returns:
-        :class:`pandas.Series` with values from `choices` that correspond to the closest
-            match to the original values in `name_series`
+    ``choices`` holds the canonical spellings (e.g. the NEM sub-region names
+    hardcoded in mappings.py). ``task_desc`` names the operation in the log line each
+    repair emits. ``threshold`` (0-100) is the minimum fuzz.ratio score a
+    pairing must reach; ``not_match`` sets what happens to names left over
+    when no choice scores that high — the sentinel "existing" keeps the
+    original name, and any other string is written in as a literal
+    replacement (e.g. not_match="unknown" stamps unmatched rows "unknown").
+
+    Matching is one to one without replacement over the unique values of both
+    sides: an exact match claims its choice first, then the remaining pairs
+    are matched by repeatedly taking the highest-scoring (name, choice) pair
+    that reaches ``threshold``. Because each choice can be claimed once, a name may
+    not receive its own best match if a stronger pairing takes that choice
+    first — and for the same reason, this function is unsuitable where two
+    different names in the series should map to the same choice. Nothing
+    raises: leftover names take the ``not_match`` fallback, and every changed
+    name is logged at INFO so the repairs can be audited.
+
+    I/O Example:
+        name_series = ["Centarl NSW", "Southern NSW", "Northern NSW"]
+        choices = ["Central NSW", "Southern NSW"]
+        task_desc = "matching sub-region names"
+
+        returns:
+            ["Central NSW",    # typo repaired (logged at INFO)
+             "Southern NSW",   # exact match, claims its choice first
+             "Northern NSW"]   # choices exhausted: "existing" keeps the original
     """
     match_dict = _one_to_one_priority_based_fuzzy_matching(
         set(name_series), set(choices), not_match, threshold

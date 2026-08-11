@@ -94,6 +94,79 @@ def _duplicate_for_both_directions(limits: pd.DataFrame) -> pd.DataFrame:
     """
 ```
 
+### Docstrings: generic helpers
+
+Most helpers don't need this section — a one-line summary and an I/O Example
+is right for a helper that names its own columns and serves one caller.
+Apply this guide when a helper is *generic*: the signals are that
+
+- column or key names arrive as parameters instead of appearing literally in
+  the body, so the body alone can't tell the reader what the data means;
+- it has (or is written to invite) several call sites with different domain
+  meanings; and
+- it enforces a rule its callers depend on but don't restate — a precedence
+  order, a validation contract, a guarantee about the output's shape.
+
+The first signal is the gate; the other two raise the stakes. For these
+functions the docstring is the only place the full story exists, so it earns
+a longer, structured treatment — a short narrative, one idea per paragraph,
+in this order:
+
+1. **Summary line: the function's effect, naming the parameters it
+   connects.** "Resolve which row of ``table`` applies to each key
+   combination in ``allowed_values``, returning one explicit row per
+   combination." The summary should earn the function's name — if it is
+   called _resolve_*, the summary should say what gets resolved.
+
+2. **The input's story.** Before any mechanism, explain what the input data
+   is and why it looks the way it does — especially the oddity the function
+   exists to handle ("Rather than write out a row for every key, the user
+   may leave a key cell blank…"). Motivating the weirdness is what makes the
+   mechanism paragraph land.
+
+3. **What each remaining parameter represents**, in domain terms rather than
+   shape ("every value the model needs an entry for — e.g. the enabled
+   expansion elements").
+
+4. **The mechanism** — how the function connects the inputs, precise enough
+   to cover the compound cases (see below).
+
+5. **The failure contract last** — what happens when the work can't be
+   completed for some of the data (raise, fallback, or log-and-continue),
+   and why that response is the right one.
+
+Wording rules, beyond the general terminology guidance:
+
+- **Define derived vocabulary from the signature at first mention.** If the
+  prose says "key columns", pin it down inline: "a key column — any column
+  of ``table`` not in ``value_columns``". A term defined only by the body's
+  code is a term the docstring hasn't defined.
+- **State behaviour for the compound case, not just the simple one.** "Each
+  blank is expanded to one row per value" is vague about a row with two
+  blanks; "one row per combination of ``allowed_values`` across its blank
+  columns" is not.
+- **Phrase rules to cover every case the code handles.** A tie-break
+  described as "an expanded row vs one that named the key directly"
+  misdescribes two expanded rows colliding; "where several rows land on the
+  same key, the one that started with fewer blanks wins" covers both.
+- **Borrow concrete names from the I/O Example in the prose** (direction,
+  path_id). A generic function documented only in generic nouns is hard to
+  follow; the example's columns give the prose something to point at.
+- **Prefer a concrete failing input to set-membership phrasing.** "A
+  direction of, say, 'sideways' raises" beats "non-blank values must be
+  among the listed values".
+- **Don't let one word do double duty.** "A key column *listed* in
+  ``allowed_values``" and "among the *listed* values" use one word for two
+  different lookups.
+- **Verify claims about callers and upstream schemas against the code.**
+  A docstring that states where a parameter's values come from is making a
+  testable claim — check the call sites first, and describe what callers
+  actually pass rather than the provenance you assume.
+
+Worked examples: `_resolve_wildcards` in `src/ispypsa/translator/helpers.py`
+(a raising failure contract) and `_fuzzy_match_names` in
+`src/ispypsa/templater/helpers.py` (a fallback-and-log contract).
+
 ### Module docstrings
 
 A module docstring orients a reader who has never seen the module before. By
