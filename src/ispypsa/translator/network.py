@@ -11,13 +11,13 @@ The three sparse input tables (limits, expansion options, expansion costs) may
 use blank key cells as wildcards; each is first put through _resolve_wildcards
 (see translator/helpers.py) to expand those wildcards to concrete rows. Rows
 the configuration deliberately excludes (unmodelled REZ paths, disabled
-expansions, non-investment-period years) are filtered out before resolution,
-logged at INFO. For the limits table a path_id unknown to the paths table
-survives that filtering, so _resolve_wildcards raises on it as bad input data.
-The options and costs filters cannot make that distinction — an expansion_id
-outside the enabled set may be a disabled element, a constraint group or a
-typo — so anything outside the enabled elements or investment periods is
-filtered and logged rather than raised on.
+expansions, non-investment-period years) are filtered out before resolution.
+For the limits table a path_id unknown to the paths table survives that
+filtering, so _resolve_wildcards raises on it as bad input data. The options
+and costs filters cannot make that distinction — an expansion_id outside the
+enabled set may be a disabled element or a constraint group — so anything
+outside the enabled elements or investment periods is filtered rather than
+raised on.
 
 _translate_network_to_links is the pipeline orchestrator and reads as the
 step-by-step story; each helper's docstring carries an I/O example, and inline
@@ -431,7 +431,7 @@ def _resolve_expansion_options(
     row. constraint_relaxation rows are not physical paths — they are set aside
     first and become relaxation generators in ispypsa.translator.constraints.
     Options for disabled or non-modelled elements are config-driven selection,
-    filtered out next (logged at INFO). _resolve_wildcards then expands the
+    filtered out next. _resolve_wildcards then expands the
     blanks against the enabled elements and the two physical directions.
 
     Each element's forward and reverse must form a coherent pair from one option
@@ -485,9 +485,7 @@ def _keep_rows_for_enabled_elements(
     Selecting the enabled elements is config-driven, so it happens before
     wildcard resolution rather than inside it. Rows for disabled or non-modelled
     elements drop out here, as do rows for constraint groups (their expansion_ids
-    are constraint_ids, routed to ispypsa.translator.constraints instead). The
-    filtered ids are logged at INFO — a typo'd expansion_id is indistinguishable
-    from these designed drops, so the log line is its only trace.
+    are constraint_ids, routed to ispypsa.translator.constraints instead).
 
     I/O Example:
         table:                                enabled_ids = ["CQ-NQ"]
@@ -504,11 +502,6 @@ def _keep_rows_for_enabled_elements(
     """
     ids = table["expansion_id"]
     keep = ids.isna() | ids.isin(enabled_ids)
-    if not keep.all():
-        logging.info(
-            f"Filtered rows whose expansion_id is not an enabled expansion "
-            f"element: {sorted(set(ids[~keep]))}"
-        )
     return table[keep]
 
 
@@ -606,7 +599,7 @@ def _prepare_expansion_costs(
     table-wide default cost, an empty year a static cost across the investment
     periods. Costs for disabled elements, constraint groups (routed to
     ispypsa.translator.constraints) and years outside the investment periods are
-    all designed selection, filtered out first (logged at INFO). _resolve_wildcards
+    all designed selection, filtered out first. _resolve_wildcards
     then expands the blanks against the enabled elements and the investment
     periods. A blank cost then resolves to free — the nan_fill the schema
     declares for the cost column. Year values are labels matched against the

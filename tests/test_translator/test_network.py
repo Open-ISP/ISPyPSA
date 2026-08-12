@@ -860,9 +860,9 @@ def test_translate_network_to_links_logs_config_filtered_rows(
     csv_str_to_df, sample_model_config, caplog
 ):
     """Rows filtered out by config-driven selection — limits for unmodelled REZ
-    paths, options and costs for elements that are not enabled, and cost years
-    outside the investment periods — are logged at INFO so their absence from
-    the model can be audited."""
+    paths and cost years outside the investment periods — are logged at INFO so
+    their absence from the model can be audited. (Options and costs for
+    non-enabled elements are filtered silently.)"""
     ispypsa_tables = _network_tables(csv_str_to_df)
     sample_model_config.network.nodes.rezs = "attached_to_parent_node"
 
@@ -872,17 +872,6 @@ def test_translate_network_to_links_logs_config_filtered_rows(
     assert (
         "Filtered limit rows for paths configured out of the model: "
         "['N1-CNSW', 'Q1-NQ']"
-    ) in caplog.text
-    # The options table's filtered ids (SWQLD1 was already set aside as a
-    # constraint_relaxation row)...
-    assert (
-        "Filtered rows whose expansion_id is not an enabled expansion element: "
-        "['Q1-NQ']"
-    ) in caplog.text
-    # ...and the costs table's, where SWQLD1 is filtered rather than set aside.
-    assert (
-        "Filtered rows whose expansion_id is not an enabled expansion element: "
-        "['Q1-NQ', 'SWQLD1']"
     ) in caplog.text
     assert (
         "Filtered expansion cost rows for years outside the investment periods: [2025]"
