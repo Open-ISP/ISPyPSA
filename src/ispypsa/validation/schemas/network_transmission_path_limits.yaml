@@ -3,34 +3,59 @@ required: false
 unique:
   - [path_id, direction, timeslice]
 description: >
-  Transmission capacity limits for each path, by direction and optionally by
-  demand condition (timeslice).
+  Transmission capacity limits, looked up per path, flow direction and demand
+  condition (timeslice).
 
-  A limit with a timeslice applies to that demand condition only; a limit with
-  no timeslice is a fallback for the conditions no per-timeslice limit covers
-  (see the timeslice column). A path may carry either or both. In the default
-  IASR data, flow-path limits vary by demand condition while REZ-to-subregion
-  connection limits are static, but that reflects the source tables rather than
-  a schema rule.
+  The three key columns — path_id, direction and timeslice — identify the
+  combination a limit applies to. Any key may be left empty to act as a wildcard
+  matching every value of that dimension: an empty timeslice is a fallback across
+  demand conditions, an empty direction applies to both directions, and an empty
+  path_id is a table-wide default. Where several rows match a combination the most
+  specific (fewest empty keys) wins; the custom_validation rules require that
+  resolution to be both unambiguous and complete.
 
   Source tables:
     - `flow_path_transfer_capability`
     - `initial_transmission_limits`
 
   If absent:
-  No transmission capacity limits are enforced.
+  There are no transmission paths to limit; a populated paths table requires
+  matching limits (see custom_validation).
+custom_validation:
+  - name: limits_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. (The combination and
+      wildcard model is described in the table description; this generalises
+      timeslices.no_overlapping_windows to all three keys.)
+  - name: limits_cover_every_path_direction_and_timeslice
+    description: >
+      A path that names timeslices must name them all for its region, or add an empty-timeslice
+      fallback, in both directions; a single all-empty row covers the whole space.
+      Because the timeslices table's windows partition the year, covering every
+      region timeslice_id covers every snapshot downstream.
 columns:
   path_id:
     type: string
-    required: true
+    required: false
     allowed_values_from:
       - network_transmission_paths: path_id
-    description: Transmission path identifier.
+    description: >
+      Transmission path the limit applies to.
+
+      If absent (or empty):
+      Wildcard — applies to every path no more specific row covers (a table-wide
+      default).
   direction:
     type: string
-    required: true
+    required: false
     allowed_values: [forward, reverse]
-    description: Power flow direction relative to geo_from and geo_to.
+    description: >
+      Power flow direction relative to geo_from and geo_to.
+
+      If absent (or empty):
+      Wildcard — applies to both directions for any combination no more specific
+      row covers.
   timeslice:
     type: string
     required: false
@@ -38,21 +63,22 @@ columns:
       - timeslices: timeslice_id
     description: >
       Demand condition the limit applies to: the limit binds only at snapshots
-      inside the timeslice's active windows.
+      inside the timeslice's active windows. A timeslice_id's region is the prefix
+      before its first underscore (e.g. qld in qld_peak_demand).
 
       If absent (or empty):
-      The limit is a fallback for this path_id and direction, applying at
-      snapshots not covered by any non-NaN timeslice row for the same path_id
-      and direction. A path_id and direction may carry both a no-timeslice row
-      and per-timeslice rows; where a per-timeslice row covers a snapshot its
-      limit takes precedence, and the no-timeslice limit fills the remainder.
+      Wildcard — a fallback across demand conditions, applying at every timeslice
+      no more specific row covers for the same path and direction.
   capacity:
     type: float
     required: false
     units: MW
     gte: 0.0
+    nan_fill: {config: network.transmission_default_limit}
     description: >
-      Transfer capability limit.
+      Transfer capability limit for the resolved combination.
 
       If absent (or empty):
-      The path is constraint-modelled with no explicit physical limit.
+      The combination takes the configured transmission default
+      (network.transmission_default_limit). A value sentinel, distinct from 0,
+      which is a genuine zero-capacity corridor.
