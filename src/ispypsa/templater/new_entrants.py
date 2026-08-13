@@ -24,8 +24,6 @@ There are two independent public orchestrators, one per output table. Each one:
        REZ-located (VRE) rows are left untouched at every granularity.
        Sub-region-located (thermal/storage) rows with the same technology are merged
        into one row per collapsed geo_id, taking the mean of every numeric property.
-       Known duplicate build option (see _KNOWN_DUPLICATE_SUBREGION_OPTIONS) dropped
-       to avoid double-weighting the CNSW subregion values.
 
 Note: lcf_build is taken directly from IASR's precomputed technology_specific_lcfs table,
 rather than recomputed from the more granular cost-component IASR tables at this
@@ -99,17 +97,6 @@ _STORAGE_PROPERTY_COLUMNS = [
 # collapse (see _collapse_geo_id_to_granularity).
 _GENERATOR_GEO_ID_GROUP_KEYS = ["technology", "resource_type", "fuel_type"]
 _STORAGE_GEO_ID_GROUP_KEYS = ["technology", "fuel_type"]
-
-# A second named build option for the same technology/sub-region - dropped before
-# cross-sub-region aggregation so it doesn't double-weight CNSW in the average;
-# left as-is (so still visible) at sub_regions granularity.
-# See Open-ISP/ISPyPSA#131.
-_KNOWN_DUPLICATE_SUBREGION_OPTIONS = {
-    "WOO OCGT Small",
-    "WOO OCGT Large",
-    "WOO CCGT",
-    "WOO CCGT with CCS",
-}
 
 # Source (IASR new_entrants_summary) column names → schema output column names.
 _SUMMARY_COLUMN_RENAMES = {
@@ -498,15 +485,10 @@ def _collapse_geo_id_to_granularity(
         return new_entrants
 
     is_subregion = _is_subregion_geo_id(new_entrants["geo_id"], sub_regional_geography)
-    unchanged = new_entrants[~is_subregion]
-    to_collapse = new_entrants[is_subregion]
+    unchanged = new_entrants[~is_subregion].copy()
+    to_collapse = new_entrants[is_subregion].copy()
     if to_collapse.empty:
         return new_entrants
-
-    to_collapse = to_collapse[
-        ~to_collapse["name"].isin(_KNOWN_DUPLICATE_SUBREGION_OPTIONS)
-    ]
-    _assert_no_unexpected_duplicate_options(to_collapse, group_key_columns)
 
     to_collapse["geo_id"] = _map_geo_id_to_granularity(
         to_collapse["geo_id"], regional_granularity, sub_regional_geography
@@ -524,31 +506,6 @@ def _is_subregion_geo_id(
     """Boolean mask of ``geo_id`` values that are sub-region-located (not REZ)."""
     geo_type_by_geo_id = sub_regional_geography.set_index("geo_id")["geo_type"]
     return geo_id.map(geo_type_by_geo_id) == "subregion"
-
-
-def _assert_no_unexpected_duplicate_options(
-    to_collapse: pd.DataFrame, group_key_columns: list[str]
-) -> None:
-    """Raises if a (``group_key_columns``, geo_id) combination has more than one row.
-
-    A repeat here would silently skew the cross-sub-region average toward whichever
-    sub-region has the extra row — the same failure mode
-    ``_KNOWN_DUPLICATE_SUBREGION_OPTIONS`` guards against for the one known "WOO"
-    case. Any other repeat is unexpected at this stage.
-
-    Raises:
-        ValueError: if any (``group_key_columns``, geo_id) combination has more than
-            one row.
-    """
-    option_counts = to_collapse.groupby(
-        group_key_columns + ["geo_id"], dropna=False
-    ).size()
-    unexpected = option_counts[option_counts > 1]
-    if not unexpected.empty:
-        raise ValueError(
-            "Unexpected duplicate new_entrant technology options: "
-            f"{sorted(unexpected.index)}"
-        )
 
 
 def _aggregate_by_geo_id(

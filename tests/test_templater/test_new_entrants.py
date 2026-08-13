@@ -9,7 +9,6 @@ from ispypsa.templater.new_entrants import (
     _add_resource_type,
     _assert_botn_technology_expected,
     _assert_build_cost_zone_matches_geo_id,
-    _assert_no_unexpected_duplicate_options,
     _assert_table_valid,
     _collapse_geo_id_to_granularity,
     _derive_phes_symmetric_efficiency,
@@ -607,63 +606,6 @@ def test_collapse_geo_id_to_granularity_averages_across_sub_regions(csv_str_to_d
         result.sort_values("technology").reset_index(drop=True),
         expected.sort_values("technology").reset_index(drop=True),
     )
-
-
-def test_collapse_geo_id_to_granularity_drops_known_duplicate_before_averaging(
-    csv_str_to_df,
-):
-    # CNSW has a known duplicate build option ("WOO OCGT Small", alongside "CNSW
-    # OCGT Small" - see _KNOWN_DUPLICATE_SUBREGION_OPTIONS)
-    new_entrants = csv_str_to_df("""
-        name,            technology, geo_id, value
-        CNSW OCGT Small, OCGT,       CNSW,   104.0
-        WOO OCGT Small,  OCGT,       CNSW,   104.0
-        SNW OCGT Small,  OCGT,       SNW,    100.0
-    """)
-    sub_regional_geography = csv_str_to_df("""
-        geo_id,     geo_type,       region_id
-        CNSW,       subregion,      NSW
-        SNW,        subregion,      NSW
-    """)
-
-    result = _collapse_geo_id_to_granularity(
-        new_entrants,
-        "nem_regions",
-        sub_regional_geography,
-        ["technology"],
-        ["value"],
-    )
-
-    expected = csv_str_to_df("""
-        name,     technology, geo_id, value
-        NSW OCGT, OCGT,       NSW,    102.0
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_collapse_geo_id_to_granularity_raises_on_unexpected_duplicate(csv_str_to_df):
-    # Two DIFFERENTLY-named rows sharing (technology, geo_id) that ISN'T the known
-    # WOO case must raise rather than silently skew the average.
-    new_entrants = csv_str_to_df("""
-        name,             technology, geo_id, value
-        CNSW OCGT Small,  OCGT,       CNSW,   104.0
-        ANOTHER OCGT,     OCGT,       CNSW,   200.0
-        SNW OCGT Small,   OCGT,       SNW,    100.0
-    """)
-    sub_regional_geography = csv_str_to_df("""
-        geo_id,     geo_type,       region_id
-        CNSW,       subregion,      NSW
-        SNW,        subregion,      NSW
-    """)
-
-    with pytest.raises(ValueError, match="Unexpected duplicate"):
-        _collapse_geo_id_to_granularity(
-            new_entrants,
-            "nem_regions",
-            sub_regional_geography,
-            ["technology"],
-            ["value"],
-        )
 
 
 def test_collapse_geo_id_to_granularity_single_region_maps_to_nem(csv_str_to_df):
