@@ -274,3 +274,29 @@ def _rez_rows_for_single_region(
 def _extract_subregion_id(series: pd.Series) -> pd.Series:
     """Extract subregion ID from 'Name (ID)' format, e.g. 'Northern Queensland (NQ)' -> 'NQ'."""
     return series.str.extract(r"\(([A-Z]+)\)", expand=False)
+
+
+def _build_geo_region_lookup(sub_regional_geography: pd.DataFrame) -> dict[str, str]:
+    """Maps every geo (sub-region, REZ, or NEM region) to its NEM region id.
+
+    ``sub_regional_geography`` already lists both sub-regions and REZs against their
+    ``region_id``. NEM regions are added as identities so that geos which are
+    already regions — after granularity aggregation, or on new parallel corridors —
+    resolve to themselves.
+
+    I/O Example:
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            NQ      subregion  QLD
+            CNSW    subregion  NSW
+            Q1      rez        QLD
+
+        returns:
+            {"NQ": "QLD", "CNSW": "NSW", "Q1": "QLD", "QLD": "QLD", "NSW": "NSW"}
+    """
+    lookup = dict(
+        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+    )
+    for region in set(sub_regional_geography["region_id"]):
+        lookup[region] = region
+    return lookup

@@ -72,6 +72,8 @@ _NEW_FORMAT_OUTPUTS = [
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
     "costs_connection",
+    "generators_new_entrant",
+    "storage_new_entrant",
 ]
 
 # Custom constraints are templated only at sub_regions (coarser granularities
@@ -286,6 +288,28 @@ _EXPECTED_EXPANSION_COST_ROWS_75 = {
     "single_region": 1209,
 }
 
+_EXPECTED_COSTS_CONNECTION_ROWS_75 = {
+    "sub_regions": 14725,
+    "nem_regions": 10385,
+    "single_region": 8649,
+}
+
+# Drift-detection only
+_EXPECTED_GENERATORS_NEW_ENTRANT_ROWS_75 = {
+    "sub_regions": 282,
+    "nem_regions": 218,
+    "single_region": 194,
+}
+_EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75 = {
+    "sub_regions": 235,
+    "nem_regions": 167,
+    "single_region": 135,
+}
+
+# "Non-REZ" placeholder REZ IDs used by generation technologies with no specific
+# REZ location (state-wide VRE/DER). See Open-ISP/ISPyPSA#133
+_NON_REZ_PLACEHOLDER_GEO_IDS = {"N0", "V0"}
+
 
 @pytest.mark.parametrize("granularity", ["sub_regions", "nem_regions", "single_region"])
 def test_create_ispypsa_inputs_new_format(
@@ -315,6 +339,9 @@ def test_create_ispypsa_inputs_new_format(
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
     options = pd.read_csv(output_dir / "network_expansion_options.csv")
     costs = pd.read_csv(output_dir / "network_transmission_path_expansion_costs.csv")
+    costs_connection = pd.read_csv(output_dir / "costs_connection.csv")
+    gens_new_entrant = pd.read_csv(output_dir / "generators_new_entrant.csv")
+    storage_new_entrant = pd.read_csv(output_dir / "storage_new_entrant.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert len(geo) == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75
@@ -354,6 +381,31 @@ def test_create_ispypsa_inputs_new_format(
     # is uneven).
     assert set(costs["expansion_id"]) == set(options["expansion_id"])
     assert len(costs) == _EXPECTED_EXPANSION_COST_ROWS_75[granularity]
+
+    # generators_new_entrant / storage_new_entrant — row counts drop at coarser
+    # granularities as sub-region-located technology options merge into one row
+    # per region (REZ-located rows are unaffected). geo_ids are real network_geography
+    # entries, except the pre-existing "Non-REZ" placeholder gap (ISPyPSA#133)
+    assert (
+        len(gens_new_entrant) == _EXPECTED_GENERATORS_NEW_ENTRANT_ROWS_75[granularity]
+    )
+    assert gens_new_entrant["name"].is_unique
+    assert set(gens_new_entrant["geo_id"]) <= (
+        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
+    )
+
+    assert (
+        len(storage_new_entrant) == _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75[granularity]
+    )
+    assert storage_new_entrant["name"].is_unique
+    assert set(storage_new_entrant["geo_id"]) <= set(geo["geo_id"])
+
+    # costs_connection - every new entrant technology + geo_id + year has a row
+    # geo_id's are real network_geography entries + _NON_REZ_PLACEHOLDER_GEO_IDS
+    assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
+    assert set(costs_connection["geo_id"]) <= (
+        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
+    )
 
     # custom_constraints — written only at sub_regions. Detailed content is
     # covered by test_custom_constraints_from_plexos.py; here we assert the CLI

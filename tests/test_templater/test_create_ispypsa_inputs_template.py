@@ -62,13 +62,14 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
 def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """Per-technology property tables the new_entrant templater merges.
 
-    Covers the generator technologies used across the new-format fixtures below
-    (Wind, Large scale Solar PV, OCGT (small GT)) so the property merges resolve.
-    The storage property tables (battery_properties, pumped_hydro_new_entrant_properties)
-    are included too: the fixtures have no storage rows, so the storage subset is empty,
-    but the tables must still be present and non-empty for the merge asserts to pass.
-    Detailed merge behaviour is covered in test_new_entrants.py; here they just
-    need to be present for the wiring to run.
+    Covers every generator/storage technology used across the new-format fixtures
+    below (Wind, Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs
+    storage), Pumped Hydro (24hrs storage)/BOTN - Cethana). technology_specific_lcfs
+    and locational_cost_factors additionally cover every geo_id those fixtures use
+    (Q1, CNSW, SNW, NQ, TAS), including NQ - used by the nem_regions/single_region
+    fixtures to prove a real cross-region merge (see the comments there). Detailed
+    merge behaviour is covered in test_new_entrants.py; here they just need to be
+    present for the wiring to run.
     """
     return {
         "fixed_opex_new_entrants": csv_str_to_df("""
@@ -76,6 +77,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           20.0,                     $
             Large scale Solar PV,           15.0,                     $
             OCGT (small GT),                17.0,                     $
+            Battery Storage (2hrs storage), 13.5,                     $
             Pumped Hydro (24hrs storage),   78.5,                     $
             BOTN - Cethana,                 78.5,                     $
         """),
@@ -90,6 +92,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           5,                      30
             Large scale Solar PV,           25,                     30
             OCGT (small GT),                25,                     40
+            Battery Storage (2hrs storage), 20,                     20
             Pumped Hydro (24hrs storage),   40,                     90
             BOTN - Cethana,                 40,                     90
         """),
@@ -104,6 +107,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           0.0
             Large scale Solar PV,           0.0
             OCGT (small GT),                50.0
+            Battery Storage (2hrs storage), 0.0
             Pumped Hydro (24hrs storage),   40.0
             BOTN - Cethana,                 40.0
         """),
@@ -117,17 +121,19 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             BOTN - Cethana - 20h,          20,                       80
         """),
         "technology_specific_lcfs": csv_str_to_df("""
-            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Pumped Hydro (24hrs storage), BOTN - Cethana
-            Q1,                 Far North QLD,          1.05,           1.08,                 Not Applicable,  Not Applicable,               Not Applicable
-            CNSW,               Subregional Ref Node,   Not Applicable, Not Applicable,       1.04,            Not Applicable,               Not Applicable
-            SNW,                Subregional Ref Node,   Not Applicable, Not Applicable,       1.00,            Not Applicable,               Not Applicable
-            TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,       Not Applicable,  1.0469,                       100
+            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs storage), Pumped Hydro (24hrs storage), BOTN - Cethana
+            Q1,                 Far North QLD,          1.05,           1.08,                 Not Applicable,  Not Applicable,                 Not Applicable,               Not Applicable
+            CNSW,               Subregional Ref Node,   Not Applicable, Not Applicable,       1.04,            1.03,                           Not Applicable,               Not Applicable
+            SNW,                Subregional Ref Node,   Not Applicable, Not Applicable,       1.00,            1.01,                           Not Applicable,               Not Applicable
+            NQ,                 Subregional Ref Node,   Not Applicable, Not Applicable,       1.02,            1.02,                           Not Applicable,               Not Applicable
+            TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,       Not Applicable,  Not Applicable,                 1.0469,                       100
         """),
         "locational_cost_factors": csv_str_to_df("""
             Cost zone / REZ ID, O&M costs 3
             Q1,                 122.0
             CNSW,               110.0
             SNW,                100.0
+            NQ,                 105.0
             TAS,                100.0
         """),
     }
@@ -306,12 +312,12 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
+        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Not Applicable, TAS,        TAS
     """)
 
     with (
@@ -402,6 +408,50 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert set(costs_connection["geo_id"]) == {"Q1", "CNSW", "SNW"}
     assert len(costs_connection) == 8
 
+    # At sub_regions, geo_id collapse is a no-op: one row per new-entrant summary
+    # row. Detailed collapse behaviour is covered by test_new_entrants.py.
+    generators_new_entrant = result["generators_new_entrant"]
+    assert set(generators_new_entrant.columns) == {
+        "name",
+        "technology",
+        "resource_type",
+        "geo_id",
+        "fuel_type",
+        "fom",
+        "vom",
+        "lcf_build",
+        "lcf_om",
+        "lifetime_technical",
+        "lifetime_economic",
+        "heat_rate",
+        "minimum_stable_level",
+    }
+    # Wind + Large scale Solar PV (both Q1) + CNSW OCGT Small + SNW OCGT Small.
+    assert set(generators_new_entrant["geo_id"]) == {"Q1", "CNSW", "SNW"}
+    assert len(generators_new_entrant) == 4
+
+    storage_new_entrant = result["storage_new_entrant"]
+    assert set(storage_new_entrant.columns) == {
+        "name",
+        "technology",
+        "geo_id",
+        "fuel_type",
+        "storage_hours",
+        "fom",
+        "efficiency_charge",
+        "efficiency_discharge",
+        "soc_max",
+        "soc_min",
+        "minimum_stable_level",
+        "lcf_build",
+        "lcf_om",
+        "lifetime_technical",
+        "lifetime_economic",
+        "degradation_annual",
+    }
+    # BOTN - Cethana (Pumped Hydro), the only storage row in the fixture.
+    assert len(storage_new_entrant) == 1
+
     # Custom-constraints tables are spliced into the output via
     # template.update(template_custom_constraints_from_plexos(...)). The
     # templater is mocked with _stub_custom_constraints_tables (full content is
@@ -439,6 +489,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         Queensland,       Southern Queensland (SQ),        South Pine 275 kV
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
+        New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -502,12 +553,16 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
+        NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
+        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -587,6 +642,15 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(costs_connection["geo_id"]) == {"Q1", "NSW"}
     assert len(costs_connection) == 6
 
+    # REZ rows are untouched, subregions in same region collapse:
+    generators_new_entrant = result["generators_new_entrant"]
+    assert set(generators_new_entrant["geo_id"]) == {"Q1", "NSW", "QLD"}
+    assert len(generators_new_entrant) == 4
+
+    # REZ rows are untouched, subregions in same region collapse:
+    storage_new_entrant = result["storage_new_entrant"]
+    assert len(storage_new_entrant) == 3
+
     # Custom constraints from PLEXOS are sub-regional export limits with no
     # meaningful representation once sub-regions are collapsed, so the templater
     # skips them at nem_regions granularity. The mock turns a regression in that
@@ -605,6 +669,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         Queensland,       Northern Queensland (NQ),        Ross 275 kV
         Queensland,       Central Queensland (CQ),         Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
+        New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -659,12 +724,16 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         IBR,    10
     """)
     new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
+        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
+        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
+        NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
+        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -739,6 +808,15 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # [(2 VRE x 1 REZ) + (1 non-VRE x NEM)] x 2 years
     assert set(connection_costs["geo_id"]) == {"Q1", "NEM"}
     assert len(connection_costs) == 6
+
+    # REZ rows untouched, everything else collapses to 'NEM' geo_id
+    generators_new_entrant = result["generators_new_entrant"]
+    assert set(generators_new_entrant["geo_id"]) == {"Q1", "NEM"}
+    assert len(generators_new_entrant) == 3
+
+    # REZ rows untouched, everything else collapses to 'NEM' geo_id
+    storage_new_entrant = result["storage_new_entrant"]
+    assert len(storage_new_entrant) == 2
 
     # Custom constraints from PLEXOS are sub-regional export limits with no
     # meaningful representation at single_region, so the templater skips them.

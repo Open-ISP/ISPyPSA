@@ -69,16 +69,6 @@ columns:
 
       This column is used to define the `carrier` for the generating unit in the
       PyPSA model, and to map to fuel prices.
-  fuel_price_mapping:
-    type: string
-    required: true
-    allowed_values_from:
-      - costs_fuel_prices: fuel_price_mapping
-    description: >
-      The string that maps to fuel costs for this generator.
-
-      For new entrant generators, fuel prices (e.g. for OCGT) are given at the regional
-      node level such as "QLD new OCGT".
   fom:
     type: float
     required: true

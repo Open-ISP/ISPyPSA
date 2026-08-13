@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 
+from ispypsa.templater.geography import _build_geo_region_lookup
 from ispypsa.templater.mappings import _CANONICAL_TIMESLICES, _SINGLE_REGION_ID
 
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}
@@ -185,32 +186,6 @@ def _aggregate_to_granularity(
 
 
 # --- Region-prefixed timeslices ---
-
-
-def _build_geo_region_lookup(sub_regional_geography: pd.DataFrame) -> dict[str, str]:
-    """Maps every geo (sub-region, REZ, or NEM region) to its NEM region id.
-
-    ``sub_regional_geography`` already lists both sub-regions and REZs against their
-    ``region_id``. NEM regions are added as identities so that geos which are
-    already regions — after granularity aggregation, or on new parallel corridors —
-    resolve to themselves.
-
-    I/O Example:
-        sub_regional_geography:
-            geo_id  geo_type   region_id
-            NQ      subregion  QLD
-            CNSW    subregion  NSW
-            Q1      rez        QLD
-
-        returns:
-            {"NQ": "QLD", "CNSW": "NSW", "Q1": "QLD", "QLD": "QLD", "NSW": "NSW"}
-    """
-    lookup = dict(
-        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
-    )
-    for region in set(sub_regional_geography["region_id"]):
-        lookup[region] = region
-    return lookup
 
 
 def _add_region_to_timeslices(

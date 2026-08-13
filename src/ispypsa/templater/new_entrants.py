@@ -20,6 +20,10 @@ There are two independent public orchestrators, one per output table. Each one:
     6. Merges in the two locational cost factors: lcf_build (per geo_id + technology)
        and lcf_om (per geo_id alone) — see _merge_lcf_build and _merge_lcf_om.
     7. Selects the table's schema columns.
+    8. Collapses geo_id to the model's regional_granularity — see _collapse_geo_id_to_granularity.
+       REZ-located (VRE) rows are left untouched at every granularity.
+       Sub-region-located (thermal/storage) rows with the same technology are merged
+       into one row per collapsed geo_id, taking the mean of every numeric property.
 
 Note: lcf_build is taken directly from IASR's precomputed technology_specific_lcfs table,
 rather than recomputed from the more granular cost-component IASR tables at this
@@ -30,6 +34,7 @@ import logging
 
 import pandas as pd
 
+from ispypsa.templater.geography import _build_geo_region_lookup
 from ispypsa.templater.helpers import (
     _fuzzy_map_to_allowed_values,
     _is_battery_row,
@@ -40,6 +45,7 @@ from ispypsa.templater.helpers import (
 from ispypsa.templater.mappings import (
     _COMMON_NEW_ENTRANT_PROPERTY_MAP,
     _GENERATORS_NEW_ENTRANT_PROPERTY_MAP,
+    _SINGLE_REGION_ID,
     _STORAGE_BATTERY_PROPERTY_MAP,
     _STORAGE_PHES_PROPERTY_MAP,
 )
@@ -50,7 +56,6 @@ _GENERATOR_IDENTITY_COLUMNS = [
     "resource_type",
     "geo_id",
     "fuel_type",
-    "fuel_price_mapping",
 ]
 
 # Explicit output order (schema order)
@@ -88,12 +93,16 @@ _STORAGE_PROPERTY_COLUMNS = [
     "degradation_annual",
 ]
 
+# Columns that define a distinct sub-region-located technology option for granularity
+# collapse (see _collapse_geo_id_to_granularity).
+_GENERATOR_GEO_ID_GROUP_KEYS = ["technology", "resource_type", "fuel_type"]
+_STORAGE_GEO_ID_GROUP_KEYS = ["technology", "fuel_type"]
+
 # Source (IASR new_entrants_summary) column names → schema output column names.
 _SUMMARY_COLUMN_RENAMES = {
     "IASR ID / DLT names": "name",
     "Technology Type": "technology",
     "Fuel type": "fuel_type",
-    "Fuel cost mapping": "fuel_price_mapping",
 }
 
 # TODO(revisit): Distributed Resources Solar currently gets no resource_type; add a
@@ -116,16 +125,13 @@ _RESOURCE_CODE_PATTERN = "_({})_".format(
 )
 
 # BOTN - Cethana is the one named, site-specific PHES project among the generic
-# technologies. This mapping assists this special case handling through templating.
+# technologies. These two mappings assist this special case handling through templating.
 _BOTN_CETHANA_DETAILS = {
     "name": "BOTN - Cethana",
     "full_name": "BOTN - Cethana - 20h",  # pumped_hydro_new_entrant_properties keys it this way
     "technology": "Pumped Hydro (24hrs storage)",  # its generic tech in new_entrants_summary
 }
 
-# The pumped-hydro table is the lone property table that keys BOTN by its full_name;
-# every other property table uses the shorter (no ' - 20h') name. Renaming the
-# key lets the PHES merge run as a plain technology-keyed merge (see _normalise_phes_botn_key).
 _PHES_PROPERTY_KEY_RENAMES = {
     _BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]
 }
@@ -144,6 +150,8 @@ _LCF_COLUMNS_IN_PERCENT = ["BOTN - Cethana"]
 
 def _template_generators_new_entrant(
     iasr_tables: dict[str, pd.DataFrame],
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates the new entrant generators table from the IASR summary and properties.
 
@@ -151,14 +159,18 @@ def _template_generators_new_entrant(
     names, derives geo_id (REZ ID or sub-region) and resource_type (from the VRE
     resource code in the IASR ID), merges in the per-technology property columns
     (see ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP``) and the two locational cost factors
-    (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id), and returns the
-    identity + property columns.
+    (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id), collapses geo_id to
+    ``regional_granularity`` (see ``_collapse_geo_id_to_granularity``), and returns
+    the identity + property columns.
 
     Args:
         iasr_tables: IASR tables; uses ``new_entrants_summary`` plus the property
             tables named in ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP``.
+        regional_granularity: "sub_regions", "nem_regions", or "single_region".
+        sub_regional_geography: network_geography templated at "sub_regions"
+            granularity; columns used: 'geo_id', 'geo_type', 'region_id'.
 
-    I/O Example (identity columns abbreviated to name/technology):
+    I/O Example (identity columns abbreviated to name/technology; regional_granularity="sub_regions"):
         new_entrants_summary:
             IASR ID / DLT names  Technology Type  ...
             N3_WH_rez            Wind             ...
@@ -184,11 +196,20 @@ def _template_generators_new_entrant(
     _assert_build_cost_zone_matches_geo_id(gens)
     gens = _merge_lcf_build(gens, iasr_tables["technology_specific_lcfs"])
     gens = _merge_lcf_om(gens, iasr_tables["locational_cost_factors"])
-    return gens[_GENERATOR_IDENTITY_COLUMNS + _GENERATOR_PROPERTY_COLUMNS]
+    gens = gens[_GENERATOR_IDENTITY_COLUMNS + _GENERATOR_PROPERTY_COLUMNS]
+    return _collapse_geo_id_to_granularity(
+        gens,
+        regional_granularity,
+        sub_regional_geography,
+        _GENERATOR_GEO_ID_GROUP_KEYS,
+        _GENERATOR_PROPERTY_COLUMNS,
+    )
 
 
 def _template_storage_new_entrant(
     iasr_tables: dict[str, pd.DataFrame],
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates the new entrant storage table from the IASR summary and properties.
 
@@ -198,13 +219,17 @@ def _template_storage_new_entrant(
     separately and recombined; the shared properties (see
     ``_COMMON_NEW_ENTRANT_PROPERTY_MAP``) and the two locational cost factors
     (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id) are then merged onto the
-    combined set.
+    combined set, and geo_id is collapsed to ``regional_granularity`` (see
+    ``_collapse_geo_id_to_granularity``).
 
     Args:
         iasr_tables: IASR tables; uses ``new_entrants_summary`` plus the property tables
             named in the storage property maps and ``_COMMON_NEW_ENTRANT_PROPERTY_MAP``.
+        regional_granularity: "sub_regions", "nem_regions", or "single_region".
+        sub_regional_geography: network_geography templated at "sub_regions"
+            granularity; columns used: 'geo_id', 'geo_type', 'region_id'.
 
-    I/O Example (identity columns abbreviated to name/technology):
+    I/O Example (identity columns abbreviated to name/technology; regional_granularity="sub_regions"):
         new_entrants_summary:
             IASR ID / DLT names  Technology Type                ...
             NQ Battery - 2h      Battery Storage (2hrs storage)  ...
@@ -234,7 +259,14 @@ def _template_storage_new_entrant(
     _assert_build_cost_zone_matches_geo_id(storage)
     storage = _merge_lcf_build(storage, iasr_tables["technology_specific_lcfs"])
     storage = _merge_lcf_om(storage, iasr_tables["locational_cost_factors"])
-    return storage[_STORAGE_IDENTITY_COLUMNS + _STORAGE_PROPERTY_COLUMNS]
+    storage = storage[_STORAGE_IDENTITY_COLUMNS + _STORAGE_PROPERTY_COLUMNS]
+    return _collapse_geo_id_to_granularity(
+        storage,
+        regional_granularity,
+        sub_regional_geography,
+        _STORAGE_GEO_ID_GROUP_KEYS,
+        _STORAGE_PROPERTY_COLUMNS,
+    )
 
 
 # --- shared helpers ---
@@ -402,6 +434,123 @@ def _set_geo_id(new_entrants: pd.DataFrame) -> pd.DataFrame:
     """
     new_entrants["geo_id"] = new_entrants.apply(_pick_location, axis=1)
     return new_entrants
+
+
+# --- regional granularity collapse ---
+
+
+def _collapse_geo_id_to_granularity(
+    new_entrants: pd.DataFrame,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+    group_key_columns: list[str],
+    value_columns: list[str],
+) -> pd.DataFrame:
+    """Aggregates subregional options sharing ``group_key_columns`` to ``regional_granularity``.
+
+    No-op at "sub_regions" (already the finest granularity). Otherwise:
+        1. Splits ``new_entrants`` into REZ rows (left untouched) and subregion rows.
+        2. Subregion rows get grouped by ``group_key_columns`` + the re-keyed geo_id and
+            averaged over ``value_columns``.
+        3. Aggregated rows' 'name' set to "{geo_id} {technology}" (except BOTN - see
+            ``_name_collapsed_rows``).
+        4. Returns concatted REZ rows and aggregated rows.
+
+    Args:
+        new_entrants: identity + property columns, one row per subregion/REZ
+            technology option.
+        regional_granularity: "sub_regions", "nem_regions", or "single_region".
+        sub_regional_geography: network_geography templated at "sub_regions"
+            granularity; columns used: 'geo_id', 'geo_type', 'region_id'.
+        group_key_columns: identity columns (besides geo_id and name) that define a
+            distinct technology option.
+        value_columns: every property column to average through the merge.
+
+    I/O Example (regional_granularity="nem_regions"; two sub-regions in one region):
+        new_entrants:
+            name             technology       geo_id  lcf_build
+            CNSW OCGT Small  OCGT (small GT)  CNSW    104.0
+            SNW OCGT Small   OCGT (small GT)  SNW     100.0
+
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+
+        returns:
+            name                 technology       geo_id  lcf_build
+            NSW OCGT (small GT)  OCGT (small GT)  NSW     102.0  # mean(104, 100)
+    """
+    if regional_granularity == "sub_regions":
+        return new_entrants
+
+    is_subregion = _is_subregion_geo_id(new_entrants["geo_id"], sub_regional_geography)
+    unchanged = new_entrants[~is_subregion].copy()
+    to_collapse = new_entrants[is_subregion].copy()
+    if to_collapse.empty:
+        return new_entrants
+
+    to_collapse["geo_id"] = _map_geo_id_to_granularity(
+        to_collapse["geo_id"], regional_granularity, sub_regional_geography
+    )
+    collapsed = _aggregate_by_geo_id(to_collapse, group_key_columns, value_columns)
+    collapsed = _name_collapsed_rows(collapsed)
+
+    return pd.concat([unchanged, collapsed], ignore_index=True)[new_entrants.columns]
+
+
+# NOTE: maybe move to helpers.py in future?
+def _is_subregion_geo_id(
+    geo_id: pd.Series, sub_regional_geography: pd.DataFrame
+) -> pd.Series:
+    """Boolean mask of ``geo_id`` values that are sub-region-located (not REZ)."""
+    geo_type_by_geo_id = sub_regional_geography.set_index("geo_id")["geo_type"]
+    return geo_id.map(geo_type_by_geo_id) == "subregion"
+
+
+def _aggregate_by_geo_id(
+    new_entrants: pd.DataFrame,
+    group_key_columns: list[str],
+    value_columns: list[str],
+) -> pd.DataFrame:
+    """Groups by ``group_key_columns`` + 'geo_id' and averages ``value_columns``."""
+    # 'dropna=False' set to keep thermal generator rows (w/ NaN 'resource_type')
+    return new_entrants.groupby(
+        group_key_columns + ["geo_id"], dropna=False, as_index=False
+    )[value_columns].mean()
+
+
+def _map_geo_id_to_granularity(
+    geo_id: pd.Series, regional_granularity: str, sub_regional_geography: pd.DataFrame
+) -> pd.Series:
+    """Maps sub-region geo_ids to their region_id ("nem_regions") or "NEM" ("single_region")."""
+    if regional_granularity == "single_region":
+        return pd.Series(_SINGLE_REGION_ID, index=geo_id.index)
+    return geo_id.map(_build_geo_region_lookup(sub_regional_geography))
+
+
+def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
+    """Sets 'name' on merged rows to "{geo_id} {technology}".
+
+    The lone documented exception is BOTN - Cethana (see ``_BOTN_CETHANA_DETAILS``):
+    a named, site-specific project rather than a generic technology archetype, which
+    keeps its original 'name'.
+
+    I/O Example:
+        collapsed:
+            technology       geo_id
+            OCGT (small GT)  NSW
+            BOTN - Cethana   TAS
+
+        returns:
+            technology       geo_id  name
+            OCGT (small GT)  NSW     NSW OCGT (small GT)
+            BOTN - Cethana   TAS     BOTN - Cethana - 20h  # original name kept
+    """
+    fresh_name = collapsed["geo_id"] + " " + collapsed["technology"]
+    is_botn = collapsed["technology"] == _BOTN_CETHANA_DETAILS["name"]
+    collapsed["name"] = fresh_name.mask(is_botn, _BOTN_CETHANA_DETAILS["full_name"])
+    return collapsed
 
 
 # --- locational cost factor (LCF) helpers ---
