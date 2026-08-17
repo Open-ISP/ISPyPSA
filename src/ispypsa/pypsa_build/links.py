@@ -85,12 +85,20 @@ def _build_link_pu_overrides(
             CQ-NQ_existing  p_max_pu   ,                1.0     # fallback
             CQ-NQ_existing  p_min_pu   ,                -0.714  # fallback only
 
-        timeslice_snapshots: qld_peak_demand active at (2025, 2025-01-13 12:00)
+        timeslice_snapshots:
+            timeslice_id     investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-13 12:00
+
+        links (the p_max_pu / p_min_pu here are placeholders):
+            name            p_max_pu  p_min_pu
+            CQ-NQ_existing  1.0       0.0
+
         snapshots: (2025, 2025-01-13 12:00), (2025, 2025-01-15 12:00)
 
         returns:
             {"CQ-NQ_existing": {"p_max_pu": series [0.857, 1.0],
                                 "p_min_pu": series [-0.714, -0.714]}}
+            (each series indexed by snapshots)
     """
     if link_timeslice_limits is None or link_timeslice_limits.empty:
         return {}
