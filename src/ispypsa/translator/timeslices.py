@@ -20,7 +20,7 @@ def _create_timeslice_snapshot_mapping(
 
     Mapping is done on a model year by model year basis:
         - Each model year is mapped to a reference year.
-        - Then the timeslice windows for that reference year are used map each
+        - Then the timeslice windows for that reference year are used to map each
           snapshot to a timeslice_id.
 
     I/O Example:
