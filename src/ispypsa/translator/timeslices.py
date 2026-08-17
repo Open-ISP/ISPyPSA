@@ -18,6 +18,11 @@ def _create_timeslice_snapshot_mapping(
     assigns to the snapshot's model year (the same assignment the demand and
     VRE traces use).
 
+    Mapping is done on a model year by model year basis:
+        - Each model year is mapped to a reference year.
+        - Then the timeslice windows for that reference year are used map each
+          snapshot to a timeslice_id.
+
     I/O Example:
         timeslices (each year's windows tile (cover in full) its financial year:
         summer opens in November and wraps past New Year, a peak day interrupts it,
