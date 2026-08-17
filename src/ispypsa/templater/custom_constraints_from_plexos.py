@@ -235,10 +235,9 @@ _CONSTRAINT_NAME_PREFIX = "ExportGroup_"
 _EXCLUDED_PARENT_CLASSES = ("Purchaser",)
 _AREA_SUFFIX_PATTERN = re.compile(r" Area\d+$")
 
-# Output columns of the three custom-constraint template tables. Both the
-# populated builders below and empty_custom_constraint_tables() project onto
-# these, so the header-only tables emitted at coarse granularities carry
-# exactly the same columns as the populated sub_regions tables.
+# Output columns of the three custom-constraint template tables. Shared by the
+# LHS/RHS builders below and empty_custom_constraint_tables() so the header-only
+# and populated tables carry identical columns.
 _CUSTOM_CONSTRAINTS_COLUMNS = ["constraint_id", "direction"]
 _CUSTOM_CONSTRAINTS_LHS_COLUMNS = [
     "constraint_id",
@@ -390,7 +389,7 @@ def _build_custom_constraints(constraints: pd.DataFrame) -> pd.DataFrame:
             ),
             "direction": directions,
         }
-    )[_CUSTOM_CONSTRAINTS_COLUMNS].reset_index(drop=True)
+    ).reset_index(drop=True)
 
 
 def _raise_on_unmapped_sense(sense_rows: pd.DataFrame, directions: pd.Series) -> None:

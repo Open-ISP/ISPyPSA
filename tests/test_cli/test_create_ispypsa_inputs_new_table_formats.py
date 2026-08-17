@@ -45,9 +45,17 @@ Handover steps (when 6.0 support is dropped):
 """
 
 import time
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
+from ispypsa.templater import list_templater_output_files
+from ispypsa.templater.custom_constraints_from_plexos import (
+    _CUSTOM_CONSTRAINTS_COLUMNS,
+    _CUSTOM_CONSTRAINTS_LHS_COLUMNS,
+    _CUSTOM_CONSTRAINTS_RHS_COLUMNS,
+)
 
 from .cli_test_helpers import (
     assert_task_ran,
@@ -65,28 +73,19 @@ from .cli_test_helpers_new_table_formats import (
     prepare_test_cache_new_format,
 )
 
-_NEW_FORMAT_OUTPUTS = [
-    "network_geography",
-    "network_transmission_paths",
-    "network_transmission_path_limits",
-    "network_expansion_options",
-    "network_transmission_path_expansion_costs",
-    "timeslices",
-    "costs_connection",
-    "generators_new_entrant",
-    "storage_new_entrant",
-]
 
-# Custom constraints are templated only at sub_regions (coarser granularities
-# collapse the entities they reference) but written at every granularity —
-# header-only at nem_regions / single_region. Detailed content lives in
-# test_custom_constraints_from_plexos.py; here we check the CLI writes them
-# populated at sub_regions and empty otherwise.
-_CUSTOM_CONSTRAINT_OUTPUTS = [
-    "custom_constraints",
-    "custom_constraints_lhs",
-    "custom_constraints_rhs",
-]
+def _expected_output_files(granularity: str) -> list[str]:
+    """The templater's declared output set under the new-format flag.
+
+    FEATURE_FLAGS is read at import, so the ISPYPSA_USE_NEW_TABLE_FORMAT env var
+    the tests set only reaches the CLI subprocess; the in-process call needs
+    the flag patched.
+    """
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        return list_templater_output_files(granularity)
 
 
 def test_create_ispypsa_inputs_task_new_format(
@@ -127,7 +126,7 @@ def test_create_ispypsa_inputs_task_new_format(
     # Check outputs created
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     assert output_dir.exists()
-    verify_output_files(output_dir, _NEW_FORMAT_OUTPUTS)
+    verify_output_files(output_dir, _expected_output_files("sub_regions"))
 
     # Check log and config files
     log_file = tmp_path / "run_dir" / "test_run" / "ISPyPSA.log"
@@ -324,8 +323,7 @@ _NUM_REFERENCE_YEARS_75 = 15
 # Custom constraints extracted from the PLEXOS model — one ISPyPSA constraint
 # per entry in CONSTRAINT_NAMES in scripts/extract_plexos_constraints.py (the
 # authoritative set: 14 export-group limits + 1 GPG constraint). All survive
-# templating at sub_regions; coarser granularities collapse the sub-regional
-# entities they reference, so the tables are emitted header-only there.
+# templating at sub_regions.
 _NUM_CUSTOM_CONSTRAINTS_75 = 15
 
 # Drift-detection: total LHS coefficient rows across all constraints. No clean
@@ -357,6 +355,7 @@ def test_create_ispypsa_inputs_new_format(
     )
 
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
+    verify_output_files(output_dir, _expected_output_files(granularity))
     geo = pd.read_csv(output_dir / "network_geography.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
@@ -437,12 +436,10 @@ def test_create_ispypsa_inputs_new_format(
     assert timeslices["timeslice_id"].nunique() == _NUM_TIMESLICE_IDS_75
     assert timeslices["reference_year"].nunique() == _NUM_REFERENCE_YEARS_75
 
-    # custom_constraints — templated only at sub_regions but written at every
-    # granularity (header-only at coarser ones). Detailed content is covered by
+    # custom_constraints — populated at sub_regions, header-only elsewhere (see
+    # empty_custom_constraint_tables). Detailed content is covered by
     # test_custom_constraints_from_plexos.py; here we pin the populated output's
     # size (constraint count + LHS rows) and check no orphan LHS/RHS rows.
-    # Empty at coarser granularities.
-    verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
     constraints = pd.read_csv(output_dir / "custom_constraints.csv")
     lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
     rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
@@ -459,5 +456,8 @@ def test_create_ispypsa_inputs_new_format(
         assert set(rhs["constraint_id"]) <= constraint_ids
     else:
         assert constraints.empty
+        assert list(constraints.columns) == _CUSTOM_CONSTRAINTS_COLUMNS
         assert lhs.empty
+        assert list(lhs.columns) == _CUSTOM_CONSTRAINTS_LHS_COLUMNS
         assert rhs.empty
+        assert list(rhs.columns) == _CUSTOM_CONSTRAINTS_RHS_COLUMNS

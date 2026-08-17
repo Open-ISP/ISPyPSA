@@ -10,10 +10,14 @@ from ispypsa.templater import (
     list_templater_output_files,
     load_manually_extracted_tables,
 )
+from ispypsa.templater.custom_constraints_from_plexos import (
+    empty_custom_constraint_tables,
+)
 from ispypsa.templater.network_expansion import (
     _FLOW_PATH_FORWARD_MW_COL,
     _FLOW_PATH_REVERSE_MW_COL,
 )
+from ispypsa.templater.timeslices import _TIMESLICE_COLUMNS
 
 _FP_AUG_OPTION_COLS = [
     "Flow path",
@@ -379,6 +383,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("sub_regions"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
@@ -417,17 +424,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert len(expansion_costs) == 6
 
     timeslices = result["timeslices"]
-    assert set(timeslices.columns) == {
-        "timeslice_id",
-        "reference_year",
-        "start_month_day",
-        "end_month_day",
-    }
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
     # The stub calendar's two windows decode into two tiling window patterns
     # (nsw_peak_demand and nsw_winter_reference) for FY2026's reference year.
     assert len(timeslices) == 2
 
-    assert "costs_connection" in result
     costs_connection = result["costs_connection"]
     assert set(costs_connection.columns) == {
         "geo_id",
@@ -638,6 +639,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("nem_regions"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
@@ -668,12 +672,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     # timeslices is granularity-invariant — same two patterns as at sub_regions.
     timeslices = result["timeslices"]
-    assert set(timeslices.columns) == {
-        "timeslice_id",
-        "reference_year",
-        "start_month_day",
-        "end_month_day",
-    }
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
     assert len(timeslices) == 2
 
     costs_connection = result["costs_connection"]
@@ -698,29 +697,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 3
 
-    # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation once sub-regions are collapsed, so at
-    # nem_regions the templater emits them header-only instead of templating
-    # them. The mock turns a regression in that gate into a clean assertion
-    # failure instead of a PLEXOS-extract disk read.
+    # Not templated at this granularity (see empty_custom_constraint_tables);
+    # the mock turns a regression in that gate into a clean assertion failure
+    # rather than a PLEXOS-extract disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert set(result["custom_constraints"].columns) == {"constraint_id", "direction"}
-    assert result["custom_constraints"].empty
-    assert set(result["custom_constraints_lhs"].columns) == {
-        "constraint_id",
-        "term_type",
-        "variable_name",
-        "coefficient",
-        "date_from",
-    }
-    assert result["custom_constraints_lhs"].empty
-    assert set(result["custom_constraints_rhs"].columns) == {
-        "constraint_id",
-        "timeslice",
-        "rhs",
-        "date_from",
-    }
-    assert result["custom_constraints_rhs"].empty
+    for name, expected in empty_custom_constraint_tables().items():
+        pd.testing.assert_frame_equal(result[name], expected)
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -837,6 +819,9 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("single_region"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
@@ -866,12 +851,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     # timeslices is granularity-invariant — same two patterns as at sub_regions.
     timeslices = result["timeslices"]
-    assert set(timeslices.columns) == {
-        "timeslice_id",
-        "reference_year",
-        "start_month_day",
-        "end_month_day",
-    }
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
     assert len(timeslices) == 2
 
     costs_connection = result["costs_connection"]
@@ -895,26 +875,9 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 2
 
-    # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation at single_region, so the templater emits them
-    # header-only instead of templating them. The mock turns a regression in
-    # that gate into a clean assertion failure instead of a PLEXOS-extract
-    # disk read.
+    # Not templated at this granularity (see empty_custom_constraint_tables);
+    # the mock turns a regression in that gate into a clean assertion failure
+    # rather than a PLEXOS-extract disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert set(result["custom_constraints"].columns) == {"constraint_id", "direction"}
-    assert result["custom_constraints"].empty
-    assert set(result["custom_constraints_lhs"].columns) == {
-        "constraint_id",
-        "term_type",
-        "variable_name",
-        "coefficient",
-        "date_from",
-    }
-    assert result["custom_constraints_lhs"].empty
-    assert set(result["custom_constraints_rhs"].columns) == {
-        "constraint_id",
-        "timeslice",
-        "rhs",
-        "date_from",
-    }
-    assert result["custom_constraints_rhs"].empty
+    for name, expected in empty_custom_constraint_tables().items():
+        pd.testing.assert_frame_equal(result[name], expected)

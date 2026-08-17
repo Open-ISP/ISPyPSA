@@ -87,8 +87,7 @@ _BASE_TEMPLATE_OUTPUTS = [
 
 # Outputs from the new-format templater branch. Granularity-invariant: the
 # same tables are emitted for sub_regions, nem_regions, and single_region
-# (only their contents differ — the custom-constraint tables are header-only
-# at coarser granularities).
+# (only their contents differ — see empty_custom_constraint_tables).
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
 # delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
