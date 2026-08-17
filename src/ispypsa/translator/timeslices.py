@@ -1,9 +1,6 @@
 import logging
 
 import pandas as pd
-from isp_trace_parser import construct_reference_year_mapping
-
-from ispypsa.config import ModelConfig
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +8,14 @@ _TIMESLICE_SNAPSHOT_COLUMNS = ["timeslice_id", "investment_periods", "snapshots"
 
 
 def _create_timeslice_snapshot_mapping(
-    timeslices: pd.DataFrame, snapshots: pd.DataFrame, config: ModelConfig
+    timeslices: pd.DataFrame,
+    snapshots: pd.DataFrame,
+    reference_year_mapping: dict[int, int],
+    year_type: str,
 ) -> pd.DataFrame:
     """Maps each snapshot to the timeslice active on its date, using the
-    window pattern of the reference year the configured reference_year_cycle
-    assigns to the snapshot's model year (the same assignment the demand and
-    VRE traces use).
+    window pattern of the reference year assigned to the snapshot's model
+    year.
 
     Mapping is done on a model year by model year basis:
         - Each model year is mapped to a reference year.
@@ -46,9 +45,7 @@ def _create_timeslice_snapshot_mapping(
             2026                2026-01-07 12:00:00
             2026                2026-01-31 12:00:00  # 2011 peak dates; summer in 2018
 
-        config:
-            year_type fy, start_year 2025, end_year 2026,
-            reference_year_cycle [2011, 2018]
+        reference_year_mapping {2025: 2011, 2026: 2018}, year_type "fy"
             -> FY2025 uses 2011's pattern, FY2026 uses 2018's
 
         returns:
@@ -59,10 +56,7 @@ def _create_timeslice_snapshot_mapping(
             nsw_peak_demand       2026                2026-01-07 12:00:00
             nsw_summer_typical    2026                2026-01-31 12:00:00
     """
-    reference_year_mapping = _map_model_years_to_reference_years(config)
-    snapshots = _add_interval_model_year_and_month_day(
-        snapshots, config.temporal.year_type
-    )
+    snapshots = _add_interval_model_year_and_month_day(snapshots, year_type)
     mapped = [
         _tag_snapshots_with_pattern(
             snapshots[snapshots["model_year"] == model_year],
@@ -71,21 +65,6 @@ def _create_timeslice_snapshot_mapping(
         for model_year, reference_year in reference_year_mapping.items()
     ]
     return _concat_tagged_snapshots(mapped)
-
-
-def _map_model_years_to_reference_years(config: ModelConfig) -> dict[int, int]:
-    """The model-year -> reference-year assignment, via the identical
-    construct_reference_year_mapping call the trace pipeline makes.
-
-    I/O Example:
-        start_year 2025, end_year 2027, reference_year_cycle [2011, 2018]
-        -> {2025: 2011, 2026: 2018, 2027: 2011}
-    """
-    return construct_reference_year_mapping(
-        start_year=config.temporal.range.start_year,
-        end_year=config.temporal.range.end_year,
-        reference_years=config.temporal.capacity_expansion.reference_year_cycle,
-    )
 
 
 def _add_interval_model_year_and_month_day(

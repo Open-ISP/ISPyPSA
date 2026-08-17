@@ -5,9 +5,6 @@ from ispypsa.translator.timeslices import (
     _log_referenced_timeslices_without_snapshots,
 )
 
-# sample_model_config: start_year 2026, end_year 2028, year_type fy,
-# reference_year_cycle [2024].
-
 
 def _snapshots(csv_str_to_df, csv_str: str) -> pd.DataFrame:
     snapshots = csv_str_to_df(csv_str)
@@ -15,7 +12,7 @@ def _snapshots(csv_str_to_df, csv_str: str) -> pd.DataFrame:
     return snapshots
 
 
-def test_pattern_expanded_into_every_model_year(csv_str_to_df, sample_model_config):
+def test_pattern_expanded_into_every_model_year(csv_str_to_df):
     timeslices = csv_str_to_df("""
         timeslice_id,     reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,  2024,            01-13,            01-14
@@ -32,7 +29,10 @@ def test_pattern_expanded_into_every_model_year(csv_str_to_df, sample_model_conf
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2024, 2028: 2024},
+        year_type="fy",
     )
 
     expected = _snapshots(
@@ -44,20 +44,14 @@ def test_pattern_expanded_into_every_model_year(csv_str_to_df, sample_model_conf
         nsw_peak_demand,  2028,                2028-01-13 12:00:00
         """,
     )
-    pd.testing.assert_frame_equal(
-        result.sort_values("snapshots").reset_index(drop=True),
-        expected.sort_values("snapshots").reset_index(drop=True),
-    )
+    pd.testing.assert_frame_equal(result, expected)
 
 
-def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(
-    csv_str_to_df, sample_model_config
-):
-    sample_model_config.temporal.capacity_expansion.reference_year_cycle = [2024, 2018]
+def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(csv_str_to_df):
     # FY2026 -> 2024, FY2027 -> 2018. Each region and reference year tiles
-    # the year the way the templater emits it: summer split around a peak
-    # window, winter crossing 30 June. Regions are independent, so every
-    # snapshot gets exactly one tag per region; the peak days differ between
+    # the year (covers all intervals) the way the templater emits it: summer
+    # split around a peak window, winter crossing 30 June. Regions are independent,
+    # so every snapshot gets exactly one tag per region; the peak days differ between
     # regions and reference years so the tags visibly diverge.
     timeslices = csv_str_to_df("""
         timeslice_id,          reference_year,  start_month_day,  end_month_day
@@ -93,7 +87,10 @@ def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2018},
+        year_type="fy",
     )
 
     expected = _snapshots(
@@ -119,10 +116,7 @@ def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_model_year_boundary_snapshot_uses_year_just_ended(
-    csv_str_to_df, sample_model_config
-):
-    sample_model_config.temporal.capacity_expansion.reference_year_cycle = [2024, 2018]
+def test_model_year_boundary_snapshot_uses_year_just_ended(csv_str_to_df):
     # FY2026 -> 2024, FY2027 -> 2018. The snapshot stamped 2026-07-01 00:00
     # is FY2026's last interval, so it takes 2024's window (peak), not 2018's
     # (summer) even though 1 July belongs to FY2027.
@@ -140,7 +134,10 @@ def test_model_year_boundary_snapshot_uses_year_just_ended(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2018},
+        year_type="fy",
     )
 
     expected = _snapshots(
@@ -153,9 +150,7 @@ def test_model_year_boundary_snapshot_uses_year_just_ended(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_boundary_snapshots_belong_to_the_window_ending_there(
-    csv_str_to_df, sample_model_config
-):
+def test_boundary_snapshots_belong_to_the_window_ending_there(csv_str_to_df):
     # Snapshots are stamped with their interval's end time, so a snapshot
     # stamped exactly on the boundary between two adjacent windows is the
     # earlier window's final interval. Summer is split around the peak day,
@@ -177,7 +172,7 @@ def test_boundary_snapshots_belong_to_the_window_ending_there(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices, snapshots, reference_year_mapping={2026: 2024}, year_type="fy"
     )
 
     expected = _snapshots(
@@ -189,15 +184,10 @@ def test_boundary_snapshots_belong_to_the_window_ending_there(
         nsw_peak_demand,     2026,                2026-01-14 00:00:00
         """,
     )
-    pd.testing.assert_frame_equal(
-        result.sort_values("snapshots").reset_index(drop=True),
-        expected.sort_values("snapshots").reset_index(drop=True),
-    )
+    pd.testing.assert_frame_equal(result, expected)
 
 
-def test_leap_day_windows_in_leap_and_non_leap_years(
-    csv_str_to_df, sample_model_config
-):
+def test_leap_day_windows_in_leap_and_non_leap_years(csv_str_to_df):
     # Reference year 2024's pattern carries leap-day boundaries. Windows are
     # month-day ranges, so 28 February is always in [02-28, 02-29), and
     # 29 February only exists to be tagged in leap FY2028.
@@ -218,7 +208,10 @@ def test_leap_day_windows_in_leap_and_non_leap_years(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2024, 2028: 2024},
+        year_type="fy",
     )
 
     expected = _snapshots(
@@ -234,10 +227,7 @@ def test_leap_day_windows_in_leap_and_non_leap_years(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_reference_year_without_patterns_leaves_its_model_years_untagged(
-    csv_str_to_df, sample_model_config
-):
-    sample_model_config.temporal.capacity_expansion.reference_year_cycle = [2024, 2018]
+def test_reference_year_without_patterns_leaves_its_model_years_untagged(csv_str_to_df):
     # FY2026 -> 2024, FY2027 -> 2018. Only 2018 has a pattern; the schema's
     # configured_reference_years_have_patterns check (not yet enforced) is
     # what would catch this, so here FY2026's snapshot is simply untagged.
@@ -255,7 +245,10 @@ def test_reference_year_without_patterns_leaves_its_model_years_untagged(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2018},
+        year_type="fy",
     )
 
     expected = _snapshots(
@@ -268,11 +261,7 @@ def test_reference_year_without_patterns_leaves_its_model_years_untagged(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_calendar_year_type_switches_pattern_at_new_year(
-    csv_str_to_df, sample_model_config
-):
-    sample_model_config.temporal.year_type = "calendar"
-    sample_model_config.temporal.capacity_expansion.reference_year_cycle = [2024, 2018]
+def test_calendar_year_type_switches_pattern_at_new_year(csv_str_to_df):
     # Calendar 2026 -> 2024, 2027 -> 2018. Summer wraps past New Year in both
     # patterns; the December snapshot takes 2024's summer and the January one
     # 2018's, so 2018's 01-07 peak day applies but 2024's 12-14 one does not
@@ -297,7 +286,10 @@ def test_calendar_year_type_switches_pattern_at_new_year(
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices,
+        snapshots,
+        reference_year_mapping={2026: 2024, 2027: 2018},
+        year_type="calendar",
     )
 
     expected = _snapshots(
@@ -312,7 +304,7 @@ def test_calendar_year_type_switches_pattern_at_new_year(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_empty_timeslices_table(csv_str_to_df, sample_model_config):
+def test_empty_timeslices_table(csv_str_to_df):
     timeslices = pd.DataFrame(
         columns=["timeslice_id", "reference_year", "start_month_day", "end_month_day"]
     )
@@ -325,7 +317,7 @@ def test_empty_timeslices_table(csv_str_to_df, sample_model_config):
     )
 
     result = _create_timeslice_snapshot_mapping(
-        timeslices, snapshots, sample_model_config
+        timeslices, snapshots, reference_year_mapping={2026: 2024}, year_type="fy"
     )
 
     expected = csv_str_to_df("""
