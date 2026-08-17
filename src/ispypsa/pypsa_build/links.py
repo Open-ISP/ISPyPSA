@@ -21,20 +21,32 @@ def _add_links_to_network(
     make link_timeslice_limits and timeslice_snapshots required and drop the
     None handling in _build_link_pu_overrides.
 
-    Args:
-        network: The `pypsa.Network` object
-        links: `pd.DataFrame` with `PyPSA` style `Link` attributes.
-        link_timeslice_limits: `pd.DataFrame` with per-timeslice per-unit
-            limits (columns name, attribute, timeslice, value). Required on
-            the new-format path, where the links table's p_max_pu / p_min_pu
-            are placeholders it overrides at every snapshot; omitted on the
-            old-format path.
-        timeslice_snapshots: `pd.DataFrame` mapping timeslice_ids to the
-            snapshots they are active at (columns timeslice_id,
-            investment_periods, snapshots). Required whenever
-            link_timeslice_limits is given.
+    I/O Example (new-format path):
+        links (the p_max_pu / p_min_pu here are placeholders):
+            name            bus0  bus1  carrier  p_nom  p_max_pu  p_min_pu  p_nom_extendable
+            CQ-NQ_existing  CQ    NQ    AC       1400   1.0       0.0       False
 
-    Returns: None
+        link_timeslice_limits:
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
+            CQ-NQ_existing  p_max_pu   ,                1.0     # fallback
+            CQ-NQ_existing  p_min_pu   ,                -0.714  # fallback only
+
+        timeslice_snapshots:
+            timeslice_id     investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-13 12:00
+
+        network.snapshots: (2025, 2025-01-13 12:00), (2025, 2025-01-15 12:00)
+
+        returns None; network is modified in place — it gains the Link
+        CQ-NQ_existing with p_nom = 1400 and the per-snapshot series
+            network.links_t.p_max_pu["CQ-NQ_existing"] = [0.857, 1.0]
+            network.links_t.p_min_pu["CQ-NQ_existing"] = [-0.714, -0.714]
+
+    I/O Example (old-format path):
+        _add_links_to_network(network, links)
+        returns None; network gains the Link with the links table's static
+        p_max_pu / p_min_pu and no per-snapshot series.
     """
     pu_overrides = _build_link_pu_overrides(
         link_timeslice_limits, timeslice_snapshots, links, network.snapshots
