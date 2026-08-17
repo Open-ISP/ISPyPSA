@@ -11,19 +11,27 @@ def _add_links_to_network(
     """Adds the Links defined in a pypsa-friendly input table called `"links"` to the
     `pypsa.Network` object.
 
-    When the new-format per-timeslice limit tables are given, links with
-    per-timeslice limits get per-snapshot p_max_pu / p_min_pu series in place
-    of the static values in the links table (see _build_link_pu_overrides).
+    On the new-format path the two limit tables are required: each link's
+    per-timeslice limits are expanded into per-snapshot p_max_pu / p_min_pu
+    series that replace the links table's placeholder values (see
+    _build_link_pu_overrides). On the old-format path both are omitted and
+    the links table's p_max_pu / p_min_pu are the limits.
+
+    FEATURE_FLAG_CLEANUP[use_new_table_format]: once the flag is retired,
+    make link_timeslice_limits and timeslice_snapshots required and drop the
+    None handling in _build_link_pu_overrides.
 
     Args:
         network: The `pypsa.Network` object
         links: `pd.DataFrame` with `PyPSA` style `Link` attributes.
         link_timeslice_limits: `pd.DataFrame` with per-timeslice per-unit
-            limits (columns name, attribute, timeslice, value), or None when
-            all link limits are static.
+            limits (columns name, attribute, timeslice, value). Required on
+            the new-format path, where the links table's p_max_pu / p_min_pu
+            are placeholders it overrides at every snapshot; omitted on the
+            old-format path.
         timeslice_snapshots: `pd.DataFrame` mapping timeslice_ids to the
             snapshots they are active at (columns timeslice_id,
-            investment_periods, snapshots). Required when
+            investment_periods, snapshots). Required whenever
             link_timeslice_limits is given.
 
     Returns: None
