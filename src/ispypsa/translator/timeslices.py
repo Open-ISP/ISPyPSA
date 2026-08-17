@@ -165,8 +165,10 @@ def _month_day_in_window(
     """
     after_start = month_day >= start
     before_end = month_day < end
+    in_plain_window = after_start & before_end
+    in_wrapping_window = after_start | before_end
     wraps = end <= start
-    return (after_start | before_end).where(wraps, after_start & before_end)
+    return (~wraps & in_plain_window) | (wraps & in_wrapping_window)
 
 
 def _concat_tagged_snapshots(mapped: list[pd.DataFrame]) -> pd.DataFrame:
