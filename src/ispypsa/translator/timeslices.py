@@ -19,9 +19,9 @@ def _create_timeslice_snapshot_mapping(
     VRE traces use).
 
     I/O Example:
-        timeslices (each year's windows tile its financial year: summer opens
-        in November and wraps past New Year, a peak day interrupts it, summer
-        resumes to April, then winter runs April to November, crossing 30
+        timeslices (each year's windows tile (cover in full) its financial year:
+        summer opens in November and wraps past New Year, a peak day interrupts it,
+        summer resumes to April, then winter runs April to November, crossing 30
         June into the next financial year):
             timeslice_id          reference_year  start_month_day  end_month_day
             nsw_summer_typical    2011            11-01            01-31
@@ -54,10 +54,7 @@ def _create_timeslice_snapshot_mapping(
             nsw_peak_demand       2026                2026-01-07 12:00:00
             nsw_summer_typical    2026                2026-01-31 12:00:00
     """
-    if timeslices.empty:
-        return pd.DataFrame(columns=_TIMESLICE_SNAPSHOT_COLUMNS)
     reference_year_mapping = _map_model_years_to_reference_years(config)
-    _raise_on_reference_years_without_patterns(reference_year_mapping, timeslices)
     snapshots = _add_interval_model_year_and_month_day(
         snapshots, config.temporal.year_type
     )
@@ -86,29 +83,13 @@ def _map_model_years_to_reference_years(config: ModelConfig) -> dict[int, int]:
     )
 
 
-def _raise_on_reference_years_without_patterns(
-    reference_year_mapping: dict[int, int], timeslices: pd.DataFrame
-) -> None:
-    """Raise if the configured cycle uses reference years the timeslices
-    table has no patterns for — silently producing no windows would let
-    timeslice-tagged limits and constraints never bind."""
-    missing = sorted(
-        set(reference_year_mapping.values()) - set(timeslices["reference_year"])
-    )
-    if missing:
-        raise ValueError(
-            f"Configured reference_year_cycle includes reference years with "
-            f"no timeslice window patterns: {missing}"
-        )
-
-
 def _add_interval_model_year_and_month_day(
     snapshots: pd.DataFrame, year_type: str
 ) -> pd.DataFrame:
-    """Adds the model year and month-day of the interval each snapshot stands
-    for. Snapshots are stamped with the interval's end time, so both are read
-    off the interval's last instant, one second before the stamp: a stamp of
-    exactly midnight belongs to the day (and year) just ended.
+    """Adds the model year and month-day for each snapshot. Snapshots are stamped
+    with the interval's end time, so both are read off the interval's last instant, one
+    second before the stamp: a stamp of exactly midnight belongs to the day (and year)
+    just ended.
 
     I/O Example (year_type fy):
         investment_periods  snapshots
@@ -135,7 +116,9 @@ def _tag_snapshots_with_pattern(
     snapshots: pd.DataFrame, pattern: pd.DataFrame
 ) -> pd.DataFrame:
     """Tags one model year's snapshots with the timeslice whose window their
-    month-day falls in.
+    month-day falls in, by pairing every snapshot with every window and
+    keeping the pairs where the month-day lies in the window. A pattern
+    with no windows tags nothing.
 
     I/O Example:
         snapshots (FY2026, month_day already added):
@@ -151,39 +134,34 @@ def _tag_snapshots_with_pattern(
             nsw_winter_reference  04-01            11-01
 
         returns:
-            investment_periods  snapshots            timeslice_id
-            2026                2026-01-07 12:00:00  nsw_peak_demand
-            2026                2025-08-15 12:00:00  nsw_winter_reference
+            timeslice_id          investment_periods  snapshots
+            nsw_winter_reference  2026                2025-08-15 12:00:00
+            nsw_peak_demand       2026                2026-01-07 12:00:00
     """
-    tagged = [
-        _snapshots_in_window(snapshots, window) for window in pattern.itertuples()
-    ]
-    return pd.concat(tagged)
+    pairs = snapshots.merge(pattern, how="cross")
+    in_window = _month_day_in_window(
+        pairs["month_day"], pairs["start_month_day"], pairs["end_month_day"]
+    )
+    return pairs.loc[in_window, _TIMESLICE_SNAPSHOT_COLUMNS]
 
 
-def _snapshots_in_window(snapshots: pd.DataFrame, window) -> pd.DataFrame:
-    """Selects the snapshots whose month-day lies in one window, tagged with
-    its timeslice. A window whose end is at or before its start wraps past
-    New Year.
+def _month_day_in_window(
+    month_day: pd.Series, start: pd.Series, end: pd.Series
+) -> pd.Series:
+    """Element-wise: is month_day in the [start, end) month-day window? A
+    window whose end is at or before its start wraps past New Year.
 
     I/O Example:
-        snapshots:
-            investment_periods  snapshots            month_day
-            2026                2025-12-15 12:00:00  12-15
-            2026                2026-01-07 12:00:00  01-07  # equals end: excluded
-
-        window nsw_summer_typical 11-01 -> 01-07 (wraps) ->
-            investment_periods  snapshots            timeslice_id
-            2026                2025-12-15 12:00:00  nsw_summer_typical
+        month_day  start  end    ->
+        12-15      11-01  01-07  True   # wraps: after start
+        01-07      11-01  01-07  False  # equals end: excluded
+        01-07      01-07  01-08  True
+        08-15      04-01  11-01  True
     """
-    month_day = snapshots["month_day"]
-    after_start = month_day >= window.start_month_day
-    before_end = month_day < window.end_month_day
-    wraps = window.end_month_day <= window.start_month_day
-    in_window = (after_start | before_end) if wraps else (after_start & before_end)
-    tagged = snapshots.loc[in_window, ["investment_periods", "snapshots"]].copy()
-    tagged["timeslice_id"] = window.timeslice_id
-    return tagged
+    after_start = month_day >= start
+    before_end = month_day < end
+    wraps = end <= start
+    return (after_start | before_end).where(wraps, after_start & before_end)
 
 
 def _concat_tagged_snapshots(mapped: list[pd.DataFrame]) -> pd.DataFrame:

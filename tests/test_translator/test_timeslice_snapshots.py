@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from ispypsa.translator.timeslices import (
     _create_timeslice_snapshot_mapping,
@@ -235,7 +234,13 @@ def test_leap_day_windows_in_leap_and_non_leap_years(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_raises_on_reference_years_without_patterns(csv_str_to_df, sample_model_config):
+def test_reference_year_without_patterns_leaves_its_model_years_untagged(
+    csv_str_to_df, sample_model_config
+):
+    sample_model_config.temporal.capacity_expansion.reference_year_cycle = [2024, 2018]
+    # FY2026 -> 2024, FY2027 -> 2018. Only 2018 has a pattern; the schema's
+    # configured_reference_years_have_patterns check (not yet enforced) is
+    # what would catch this, so here FY2026's snapshot is simply untagged.
     timeslices = csv_str_to_df("""
         timeslice_id,     reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,  2018,            01-13,            01-14
@@ -245,11 +250,22 @@ def test_raises_on_reference_years_without_patterns(csv_str_to_df, sample_model_
         """
         investment_periods,  snapshots
         2026,                2026-01-13 12:00:00
+        2026,                2027-01-13 12:00:00
         """,
     )
 
-    with pytest.raises(ValueError, match=r"no timeslice window patterns: \[2024\]"):
-        _create_timeslice_snapshot_mapping(timeslices, snapshots, sample_model_config)
+    result = _create_timeslice_snapshot_mapping(
+        timeslices, snapshots, sample_model_config
+    )
+
+    expected = _snapshots(
+        csv_str_to_df,
+        """
+        timeslice_id,     investment_periods,  snapshots
+        nsw_peak_demand,  2026,                2027-01-13 12:00:00
+        """,
+    )
+    pd.testing.assert_frame_equal(result, expected)
 
 
 def test_calendar_year_type_switches_pattern_at_new_year(

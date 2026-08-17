@@ -25,9 +25,9 @@ custom_validation:
       temporal.capacity_expansion.reference_year_cycle must appear in
       reference_year, so each model year has a pattern to draw its windows
       from. This is a config-to-table check: the table can be valid on its own
-      and still fail it under a particular cycle. Currently enforced by the
-      translator (ispypsa.translator.timeslices), which raises rather than
-      silently producing no windows.
+      and still fail it under a particular cycle. Skipped when the table is
+      absent or empty — no patterns at all is a valid configuration (see "If
+      absent"); the check only applies when some patterns are supplied.
 description: >
   Month-day windows during which each demand-condition timeslice is active,
   one pattern per reference (weather) year.
