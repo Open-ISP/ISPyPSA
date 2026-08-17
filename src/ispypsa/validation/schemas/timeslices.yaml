@@ -7,10 +7,8 @@ custom_validation:
     description: >
       Within a region (the timeslice_id prefix before the first underscore)
       and reference_year, no two windows may cover the same day. Windows are
-      compared as expanded [start, end) day ranges, not raw month-day strings:
-      an end_month_day at or before its start wraps into the following calendar
-      year (e.g. 11-20 to 03-20), and winter windows run past 30 June into the
-      next financial year (04-01 to 10-01).
+      compared as [start, end) month-day ranges where an end_month_day at or
+      before its start wraps past New Year (e.g. 11-20 to 03-20).
   - name: windows_cover_full_year_per_region_and_reference_year
     description: >
       Within a region (the timeslice_id prefix before the first underscore)
@@ -21,15 +19,27 @@ custom_validation:
       where the next begins and the last wraps to the first. A region need not
       use all three timeslice types (e.g. tas has no peak_demand) as long as the
       windows it does have tile the year.
+  - name: configured_reference_years_have_patterns
+    description: >
+      Every reference year in the model config's
+      temporal.capacity_expansion.reference_year_cycle must appear in
+      reference_year, so each model year has a pattern to draw its windows
+      from. This is a config-to-table check: the table can be valid on its own
+      and still fail it under a particular cycle. Currently enforced by the
+      translator (ispypsa.translator.timeslices), which raises rather than
+      silently producing no windows.
 description: >
   Month-day windows during which each demand-condition timeslice is active,
   one pattern per reference (weather) year.
 
   One row per active window. The translator re-sequences the patterns to the
-  configured reference_year_cycle — each model financial year gets the
-  windows of the reference year assigned to it, the same assignment used for
-  demand and VRE traces — to build time-varying transmission path limits and
-  to restrict custom constraints to the snapshots their RHS values apply to.
+  model config's reference_year_cycle — each model year gets the windows of
+  the reference year assigned to it, the same assignment used for demand and
+  VRE traces — to build time-varying transmission path limits and to restrict
+  custom constraints to the snapshots their RHS values apply to. Windows are
+  month-day ranges applied to each model year's dates directly, so any
+  year_type works: a window is active on a date whenever the date's month-day
+  falls in the window's range.
 
   Source tables:
     - `timeslice_RefYear5000` (PLEXOS data package extract)
@@ -79,16 +89,14 @@ columns:
     required: true
     format: "%m-%d"
     description: >
-      First day of the window (inclusive), e.g. "11-18". Windows belong to
-      the financial year they start in: months July-December fall in the
-      financial year's first calendar year, January-June in its second.
+      First day of the window (inclusive), e.g. "11-18".
   end_month_day:
     type: string
     required: true
     format: "%m-%d"
     description: >
-      Day the window ends (exclusive), interpreted as its first occurrence
-      after the start — "11-18" to "03-20" wraps into the next calendar
-      year, and winter's "04-01" to "10-01" extends past 30 June into the
-      next financial year. "02-29" boundaries (from leap reference years)
-      are clamped to "02-28" when expanded into non-leap model years.
+      Day the window ends (exclusive). An end at or before its start wraps
+      past New Year: "11-18" to "03-20" covers 18 November through 19 March.
+      A "02-29" boundary (from a leap reference year) simply never matches a
+      date in non-leap model years; 28 February stays in whichever window
+      covers "02-28".
