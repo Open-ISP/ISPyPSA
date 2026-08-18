@@ -106,7 +106,7 @@ from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
 )
 from ispypsa.translator.network import (
-    _keep_rows_for_enabled_elements,
+    _keep_rows_for_expansion_ids,
     _pair_forward_and_reverse_options,
     _prepare_expansion_costs,
     _resolve_expansion_options,
@@ -294,10 +294,11 @@ def _translate_custom_constraints_from_network_tables(
     )
     rhs = _concat_non_empty([rhs, expansion_limit_rhs], _INTERNAL_RHS_COLUMNS)
     lhs, rhs = _finalise_lhs_and_rhs(lhs, rhs)
+    relaxation_generators = _finalise_generators(relaxation_generators)
     return {
         "custom_constraints_lhs": lhs,
         "custom_constraints_rhs": rhs,
-        "custom_constraints_generators": _finalise_generators(relaxation_generators),
+        "custom_constraints_generators": relaxation_generators,
     }
 
 
@@ -357,9 +358,20 @@ def _add_constraint_type(
     matching the vocabulary pypsa_build applies constraints with).
 
     I/O Example:
-        rhs: constraint_id=SWQLD1, rhs=3000
-        custom_constraints: constraint_id=SWQLD1, direction="<="
-        -> constraint_id=SWQLD1, rhs=3000, constraint_type="<="
+        rhs:
+            constraint_id  timeslice        rhs   investment_period
+            SWQLD1         qld_peak_demand  3000  2026
+            NQ1            qld_peak_demand  2650  2026
+
+        custom_constraints:
+            constraint_id  direction
+            SWQLD1         <=
+            NQ1            =
+
+        returns:
+            constraint_id  timeslice        rhs   investment_period  constraint_type
+            SWQLD1         qld_peak_demand  3000  2026               <=
+            NQ1            qld_peak_demand  2650  2026               ==
     """
     rhs = rhs.merge(custom_constraints, on="constraint_id", how="left")
     rhs["constraint_type"] = rhs["direction"].map(_DIRECTION_TO_CONSTRAINT_TYPE)
@@ -383,9 +395,17 @@ def _add_component_and_attribute(lhs: pd.DataFrame) -> pd.DataFrame:
     belongs to.
 
     I/O Example:
-        term_type=generator_output -> component=Generator, attribute=p
-        term_type=link_flow        -> component=Link,      attribute=p
-        term_type=storage_output   -> component=Storage,   attribute=p
+        lhs:
+            constraint_id  term_type         variable_name    coefficient  investment_period
+            SWQLD1         link_flow         NSW-QLD          0.84         2026
+            SWQLD1         generator_output  KINGASF1         0.14         2026
+            SWQLD1         storage_output    Q8 Battery - 2h  0.43         2026
+
+        returns:
+            constraint_id  variable_name    coefficient  investment_period  component  attribute
+            SWQLD1         NSW-QLD          0.84         2026               Link       p
+            SWQLD1         KINGASF1         0.14         2026               Generator  p
+            SWQLD1         Q8 Battery - 2h  0.43         2026               Storage    p
     """
     lhs = lhs.copy()
     lhs["component"] = lhs["term_type"].map(
@@ -477,23 +497,37 @@ def _create_constraint_relaxation_generators(
     The generators' p_nom enters the parent constraint's LHS with coefficient
     -1.0 (see _relaxation_generator_lhs_terms), so building them relaxes the
     constraint at the option's cost; total relaxation is capped at the
-    option's allowed_expansion by the expansion-limit constraints. The
-    constraints in the model (constraint_ids) are the enabled elements the
-    options and costs wildcards resolve against, gated as a whole by the
-    config's rez_transmission_expansion flag.
+    option's allowed_expansion by the expansion-limit constraints.
 
-    I/O Example:
+    Options and costs may use blank key cells as wildcards: a blank
+    expansion_id means "every constraint" — here, every constraint in the
+    model (constraint_ids) — and a blank cost year means "every investment
+    period", so a single blank-id row gives all constraints the same
+    relaxation option or cost, and a blank-year cost row is a static cost
+    across the periods. If the config's rez_transmission_expansion flag is
+    off, no relaxation generators are built at all.
+
+    I/O Example (blank cells are wildcards):
         ispypsa_tables["network_expansion_options"]:
             expansion_id  expansion_type         allowed_expansion  expansion_option
             SWQLD1        constraint_relaxation  500                Option 2
+                          constraint_relaxation  200                Default
 
         ispypsa_tables["network_transmission_path_expansion_costs"]:
             expansion_id  year  cost
             SWQLD1        2030  100000
+                                80000    # every constraint, every period
 
-        constraint_ids=["SWQLD1"], investment_periods=[2030] returns (abridged):
-            name             isp_name  bus                             p_nom  build_year  allowed_expansion
-            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    2030        500
+        constraint_ids = ["SWQLD1", "NQ1"]
+
+        config: rez_transmission_expansion = True, investment_periods = [2030, 2040]
+
+        returns:
+            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost       allowed_expansion
+            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(100000)  500
+            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)   500
+            NQ1_exp_2030     NQ1       bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(80000)   200
+            NQ1_exp_2040     NQ1       bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)   200
     """
     if not config.network.rez_transmission_expansion:
         return pd.DataFrame(columns=_GENERATOR_COLUMNS + ["allowed_expansion"])
@@ -543,7 +577,7 @@ def _resolve_relaxation_options(
     options = options[
         expansion_type.isna() | (expansion_type == "constraint_relaxation")
     ]
-    options = _keep_rows_for_enabled_elements(options, constraint_ids)
+    options = _keep_rows_for_expansion_ids(options, constraint_ids)
     allowed_values = {
         "expansion_id": constraint_ids,
         "expansion_type": ["constraint_relaxation"],
@@ -557,9 +591,15 @@ def _format_relaxation_generators(generators: pd.DataFrame) -> pd.DataFrame:
     """Adds the PyPSA generator attributes shared by all relaxation generators.
 
     I/O Example:
-        expansion_id=SWQLD1, year=2030, capital_cost=8140, allowed_expansion=500
-        -> name=SWQLD1_exp_2030, isp_name=SWQLD1, p_nom=0.0,
-           p_nom_extendable=True, build_year=2030, lifetime=inf
+        generators:
+            expansion_id  year  capital_cost  allowed_expansion
+            SWQLD1        2030  8140          500
+            SWQLD1        2040  7900          500
+
+        returns:
+            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost  allowed_expansion
+            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       8140          500
+            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       7900          500
     """
     generators = generators.rename(columns={"expansion_id": "isp_name"})
     generators["name"] = (
@@ -589,7 +629,9 @@ def _relaxation_generator_lhs_terms(
             SWQLD1_exp_2030  SWQLD1    2030
             SWQLD1_exp_2040  SWQLD1    2040
 
-        investment_periods=[2030, 2040] returns:
+        investment_periods=[2030, 2040]
+
+        returns:
             constraint_id  investment_period  variable_name    component  attribute  coefficient
             SWQLD1         2030               SWQLD1_exp_2030  Generator  p_nom      -1.0
             SWQLD1         2040               SWQLD1_exp_2030  Generator  p_nom      -1.0
