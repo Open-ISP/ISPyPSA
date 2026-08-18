@@ -168,13 +168,18 @@ def test_snapshot_covered_by_neither_named_timeslice_nor_fallback_raises(csv_str
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
 
-    with pytest.raises(
-        ValueError,
-        match=r"leaves 3 \(link, attribute, snapshot\) combination\(s\) undefined",
-    ):
+    with pytest.raises(ValueError) as excinfo:
         _add_links_to_network(
             network, _links(csv_str_to_df), link_timeslice_limits, timeslice_snapshots
         )
+
+    assert str(excinfo.value) == (
+        "link_timeslice_limits leaves 3 (link, attribute, snapshot) combination(s) "
+        "undefined: no fallback (blank-timeslice) row and no named timeslice active "
+        "there. Affected (link, attribute): [('CQ-NQ_existing', 'p_max_pu')]. "
+        "First uncovered (investment_period, snapshot): (2025, 2025-01-01 00:00:00), "
+        "(2025, 2025-01-01 02:00:00), (2025, 2025-01-01 03:00:00)"
+    )
 
 
 def test_links_without_timeslice_limits_keep_their_static_values(csv_str_to_df):

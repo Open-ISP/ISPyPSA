@@ -250,12 +250,16 @@ def _raise_if_snapshots_uncovered(limits_per_snapshot: pd.DataFrame) -> None:
     if uncovered.empty:
         return
     pairs = sorted(set(zip(uncovered["name"], uncovered["attribute"])))
-    first = uncovered.loc[:, ["investment_periods", "snapshots"]].head(5)
+    first = uncovered.head(5)
+    first_snapshots = [
+        f"({period}, {snapshot})"
+        for period, snapshot in zip(first["investment_periods"], first["snapshots"])
+    ]
     raise ValueError(
         f"link_timeslice_limits leaves {len(uncovered)} (link, attribute, snapshot) "
         f"combination(s) undefined: no fallback (blank-timeslice) row and no named "
         f"timeslice active there. Affected (link, attribute): {pairs}. "
-        f"First uncovered snapshots:\n{first.to_string(index=False)}"
+        f"First uncovered (investment_period, snapshot): {', '.join(first_snapshots)}"
     )
 
 
