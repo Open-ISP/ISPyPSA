@@ -1,6 +1,14 @@
 import pandas as pd
 import pypsa
 
+_LIMIT_PER_SNAPSHOT_COLUMNS = [
+    "name",
+    "attribute",
+    "investment_periods",
+    "snapshots",
+    "value",
+]
+
 
 def _add_links_to_network(
     network: pypsa.Network,
@@ -11,7 +19,7 @@ def _add_links_to_network(
     """Adds the Links defined in a pypsa-friendly input table called `"links"` to the
     `pypsa.Network` object.
 
-    On the new-format path the two limit tables are required: each link's
+    On the new-format path the two timeslice tables are required: each link's
     per-timeslice limits are expanded into per-snapshot p_max_pu / p_min_pu
     series that replace the links table's placeholder values (see
     _build_link_pu_overrides). On the old-format path both are omitted and
@@ -36,20 +44,40 @@ def _add_links_to_network(
             timeslice_id     investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
-        network.snapshots: (2025, 2025-01-13 12:00), (2025, 2025-01-15 12:00)
+        network.snapshots:
+            investment_periods  snapshots
+            2025                2025-01-13 12:00
+            2025                2025-01-15 12:00
 
-        returns None; network is modified in place — it gains the Link
-        CQ-NQ_existing with p_nom = 1400 and the per-snapshot series
-            network.links_t.p_max_pu["CQ-NQ_existing"] = [0.857, 1.0]
-            network.links_t.p_min_pu["CQ-NQ_existing"] = [-0.714, -0.714]
+        returns None; network is modified in place. It gains the Link:
+            network.links:
+                name            bus0  bus1  p_nom  p_nom_extendable
+                CQ-NQ_existing  CQ    NQ    1400   False
+        with per-snapshot limits in place of the placeholders:
+            network.links_t.p_max_pu:
+                investment_periods  snapshots         CQ-NQ_existing
+                2025                2025-01-13 12:00  0.857
+                2025                2025-01-15 12:00  1.0
+            network.links_t.p_min_pu:
+                investment_periods  snapshots         CQ-NQ_existing
+                2025                2025-01-13 12:00  -0.714
+                2025                2025-01-15 12:00  -0.714
 
     I/O Example (old-format path):
-        _add_links_to_network(network, links)
-        returns None; network gains the Link with the links table's static
-        p_max_pu / p_min_pu and no per-snapshot series.
+        links:
+            name            bus0  bus1  carrier  p_nom  p_max_pu  p_min_pu  p_nom_extendable
+            CQ-NQ_existing  CQ    NQ    AC       1400   1.0       -0.5      False
+
+        returns None; network is modified in place. It gains the Link with
+        the links table's p_max_pu / p_min_pu as static values:
+            network.links:
+                name            bus0  bus1  p_nom  p_max_pu  p_min_pu  p_nom_extendable
+                CQ-NQ_existing  CQ    NQ    1400   1.0       -0.5      False
+        and no per-snapshot series (network.links_t.p_max_pu / p_min_pu have
+        no CQ-NQ_existing column).
     """
     pu_overrides = _build_link_pu_overrides(
-        link_timeslice_limits, timeslice_snapshots, links, network.snapshots
+        link_timeslice_limits, timeslice_snapshots, network.snapshots
     )
     links["class_name"] = "Link"
     for _, row in links.iterrows():
@@ -59,7 +87,6 @@ def _add_links_to_network(
 def _build_link_pu_overrides(
     link_timeslice_limits: pd.DataFrame | None,
     timeslice_snapshots: pd.DataFrame | None,
-    links: pd.DataFrame,
     snapshots: pd.MultiIndex,
 ) -> dict[str, dict[str, pd.Series]]:
     """Expands each link's per-timeslice limits into per-snapshot series.
@@ -67,16 +94,9 @@ def _build_link_pu_overrides(
     The translator emits two kinds of limit row per (link, attribute): rows
     with a named timeslice, which apply at the snapshots that timeslice is
     active, and a row with timeslice = NaN, which is the fallback for every
-    snapshot no named timeslice covers (the coverage contract is
-    Open-ISP/ISPyPSA#123). Each series is seeded with the fallback and the
-    named timeslices are then written over it, so a snapshot's value is its
-    named timeslice's limit if it has one and the fallback otherwise.
-
-    The links table's static p_max_pu / p_min_pu are placeholders the
-    translator sets so the columns exist; they only remain in effect at
-    snapshots the limit rows leave uncovered, which the coverage contract
-    rules out. A named timeslice with no snapshots leaves the fallback in
-    place — the translator has already logged it.
+    snapshot no named timeslice covers. Every snapshot must end up with a
+    value from one or the other; a snapshot left without one raises rather
+    than silently keeping the links table's placeholder p_max_pu / p_min_pu.
 
     I/O Example:
         link_timeslice_limits:
@@ -89,82 +109,180 @@ def _build_link_pu_overrides(
             timeslice_id     investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
-        links (the p_max_pu / p_min_pu here are placeholders):
-            name            p_max_pu  p_min_pu
-            CQ-NQ_existing  1.0       0.0
+        snapshots:
+            investment_periods  snapshots
+            2025                2025-01-13 12:00
+            2025                2025-01-15 12:00
 
-        snapshots: (2025, 2025-01-13 12:00), (2025, 2025-01-15 12:00)
+        returns (each series indexed by snapshots):
+            {"CQ-NQ_existing": {"p_max_pu": [0.857, 1.0],
+                                "p_min_pu": [-0.714, -0.714]}}
 
-        returns:
-            {"CQ-NQ_existing": {"p_max_pu": series [0.857, 1.0],
-                                "p_min_pu": series [-0.714, -0.714]}}
-            (each series indexed by snapshots)
+        Without the p_max_pu fallback row, p_max_pu would be undefined at the
+        second snapshot -> ValueError.
     """
     if link_timeslice_limits is None or link_timeslice_limits.empty:
         return {}
-    timeslice_labels = _timeslice_snapshot_labels(timeslice_snapshots)
-    static_values = links.set_index("name").loc[:, ["p_max_pu", "p_min_pu"]]
-    overrides = {}
-    for (name, attribute), rows in link_timeslice_limits.groupby(["name", "attribute"]):
-        series = pd.Series(static_values.loc[name, attribute], index=snapshots)
-        series = _apply_fallback_limit(series, rows)
-        series = _apply_named_timeslice_limits(series, rows, timeslice_labels)
-        overrides.setdefault(name, {})[attribute] = series
-    return overrides
+    limits_per_snapshot = _expand_limits_to_snapshots(
+        link_timeslice_limits, timeslice_snapshots, snapshots
+    )
+    _raise_if_snapshots_uncovered(limits_per_snapshot)
+    return _series_by_link_and_attribute(limits_per_snapshot, snapshots)
 
 
-def _apply_fallback_limit(series: pd.Series, rows: pd.DataFrame) -> pd.Series:
-    """Sets every snapshot to the timeslice = NaN fallback row's value, if there is one.
-
-    I/O Example:
-        series: [1.0, 1.0]
-        rows:
-            timeslice        value
-            qld_peak_demand  0.857
-            ,                0.9    # fallback
-        -> [0.9, 0.9]
-
-        rows with no fallback row -> series unchanged
-    """
-    fallback = rows.loc[rows["timeslice"].isna(), "value"]
-    if fallback.empty:
-        return series
-    return pd.Series(fallback.iloc[0], index=series.index)
-
-
-def _apply_named_timeslice_limits(
-    series: pd.Series, rows: pd.DataFrame, timeslice_labels: dict[str, list[tuple]]
-) -> pd.Series:
-    """Writes each named timeslice's value at the snapshots it is active.
-
-    I/O Example:
-        series: [0.9, 0.9, 0.9]  (snapshots s0, s1, s2)
-        rows:
-            timeslice        value
-            qld_peak_demand  0.857
-            ,                0.9    # fallback rows are skipped
-        timeslice_labels: {"qld_peak_demand": [s1, s2]}
-        -> [0.9, 0.857, 0.857]
-    """
-    series = series.copy()
-    for row in rows.loc[rows["timeslice"].notna()].itertuples():
-        series.loc[timeslice_labels.get(row.timeslice, [])] = row.value
-    return series
-
-
-def _timeslice_snapshot_labels(
+def _expand_limits_to_snapshots(
+    link_timeslice_limits: pd.DataFrame,
     timeslice_snapshots: pd.DataFrame,
-) -> dict[str, list[tuple]]:
-    """The (investment_period, snapshot) labels each timeslice is active at.
+    snapshots: pd.MultiIndex,
+) -> pd.DataFrame:
+    """One row per (link, attribute, snapshot): the named timeslice's value where
+    one is active there, else the fallback, else NaN.
 
     I/O Example:
-        timeslice_id=qld_peak_demand, investment_periods=2025,
-        snapshots=2025-01-13 12:00
-        -> {"qld_peak_demand": [(2025, Timestamp("2025-01-13 12:00"))]}
+        link_timeslice_limits:
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
+            CQ-NQ_existing  p_max_pu   ,                1.0
+            CQ-NQ_existing  p_min_pu   qld_peak_demand  -0.9    # no fallback
+
+        timeslice_snapshots:
+            timeslice_id     investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-13 12:00
+
+        snapshots:
+            investment_periods  snapshots
+            2025                2025-01-13 12:00
+            2025                2025-01-15 12:00
+
+        returns:
+            name            attribute  investment_periods  snapshots         value
+            CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
+            CQ-NQ_existing  p_max_pu   2025                2025-01-15 12:00  1.0    # fallback
+            CQ-NQ_existing  p_min_pu   2025                2025-01-13 12:00  -0.9
+            CQ-NQ_existing  p_min_pu   2025                2025-01-15 12:00         # uncovered
     """
-    mapping = timeslice_snapshots.copy()
-    mapping["snapshots"] = pd.to_datetime(mapping["snapshots"])
-    return {
-        timeslice_id: list(zip(rows["investment_periods"], rows["snapshots"]))
-        for timeslice_id, rows in mapping.groupby("timeslice_id")
-    }
+    is_fallback = link_timeslice_limits["timeslice"].isna()
+    named = _place_named_limits_at_snapshots(
+        link_timeslice_limits[~is_fallback], timeslice_snapshots
+    )
+    fallback = link_timeslice_limits.loc[is_fallback, ["name", "attribute", "value"]]
+    grid = _link_attribute_snapshot_grid(link_timeslice_limits, snapshots)
+    grid = grid.merge(named, how="left")
+    grid = grid.merge(fallback.rename(columns={"value": "fallback"}), how="left")
+    grid["value"] = grid["value"].fillna(grid["fallback"])
+    return grid.loc[:, _LIMIT_PER_SNAPSHOT_COLUMNS]
+
+
+def _link_attribute_snapshot_grid(
+    link_timeslice_limits: pd.DataFrame, snapshots: pd.MultiIndex
+) -> pd.DataFrame:
+    """Every (link, attribute) pair in the limits table at every snapshot.
+
+    I/O Example:
+        link_timeslice_limits (only name and attribute are read):
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
+            CQ-NQ_existing  p_max_pu   ,                1.0     # same pair, once in the grid
+
+        snapshots:
+            investment_periods  snapshots
+            2025                2025-01-13 12:00
+            2025                2025-01-15 12:00
+
+        returns:
+            name            attribute  investment_periods  snapshots
+            CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00
+            CQ-NQ_existing  p_max_pu   2025                2025-01-15 12:00
+    """
+    pairs = link_timeslice_limits.loc[:, ["name", "attribute"]].drop_duplicates()
+    snapshot_rows = pd.DataFrame(
+        snapshots.tolist(), columns=["investment_periods", "snapshots"]
+    )
+    return pairs.merge(snapshot_rows, how="cross")
+
+
+def _place_named_limits_at_snapshots(
+    named: pd.DataFrame, timeslice_snapshots: pd.DataFrame
+) -> pd.DataFrame:
+    """Places each named-timeslice limit at the snapshots its timeslice is active.
+
+    A timeslice with no snapshots contributes no rows (the translator has
+    already logged it).
+
+    I/O Example:
+        named:
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
+
+        timeslice_snapshots:
+            timeslice_id     investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-13 12:00
+
+        returns:
+            name            attribute  investment_periods  snapshots         value
+            CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
+    """
+    active_at = timeslice_snapshots.rename(columns={"timeslice_id": "timeslice"})
+    active_at["snapshots"] = pd.to_datetime(active_at["snapshots"])
+    placed = named.merge(active_at, on="timeslice")
+    return placed.loc[:, _LIMIT_PER_SNAPSHOT_COLUMNS]
+
+
+def _raise_if_snapshots_uncovered(limits_per_snapshot: pd.DataFrame) -> None:
+    """Raises if any (link, attribute) has a snapshot with neither a named-timeslice
+    nor a fallback value.
+
+    I/O Example:
+        limits_per_snapshot:
+            name            attribute  investment_periods  snapshots         value
+            CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
+            CQ-NQ_existing  p_max_pu   2025                2025-01-15 12:00  1.0
+        returns None
+
+        limits_per_snapshot:
+            name            attribute  investment_periods  snapshots         value
+            CQ-NQ_existing  p_min_pu   2025                2025-01-13 12:00  -0.9
+            CQ-NQ_existing  p_min_pu   2025                2025-01-15 12:00         # uncovered
+        raises ValueError naming (CQ-NQ_existing, p_min_pu) and the
+        uncovered snapshot (2025, 2025-01-15 12:00).
+    """
+    uncovered = limits_per_snapshot[limits_per_snapshot["value"].isna()]
+    if uncovered.empty:
+        return
+    pairs = sorted(set(zip(uncovered["name"], uncovered["attribute"])))
+    first = uncovered.loc[:, ["investment_periods", "snapshots"]].head(5)
+    raise ValueError(
+        f"link_timeslice_limits leaves {len(uncovered)} (link, attribute, snapshot) "
+        f"combination(s) undefined: no fallback (blank-timeslice) row and no named "
+        f"timeslice active there. Affected (link, attribute): {pairs}. "
+        f"First uncovered snapshots:\n{first.to_string(index=False)}"
+    )
+
+
+def _series_by_link_and_attribute(
+    limits_per_snapshot: pd.DataFrame, snapshots: pd.MultiIndex
+) -> dict[str, dict[str, pd.Series]]:
+    """Reshapes the long table into {link: {attribute: series indexed by snapshots}}.
+
+    I/O Example:
+        limits_per_snapshot:
+            name            attribute  investment_periods  snapshots         value
+            CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
+            CQ-NQ_existing  p_max_pu   2025                2025-01-15 12:00  1.0
+            CQ-NQ_existing  p_min_pu   2025                2025-01-13 12:00  -0.714
+            CQ-NQ_existing  p_min_pu   2025                2025-01-15 12:00  -0.714
+
+        snapshots:
+            investment_periods  snapshots
+            2025                2025-01-13 12:00
+            2025                2025-01-15 12:00
+
+        returns (each series indexed by snapshots):
+            {"CQ-NQ_existing": {"p_max_pu": [0.857, 1.0],
+                                "p_min_pu": [-0.714, -0.714]}}
+    """
+    overrides = {}
+    for (name, attribute), rows in limits_per_snapshot.groupby(["name", "attribute"]):
+        series = rows.set_index(["investment_periods", "snapshots"])["value"]
+        overrides.setdefault(name, {})[attribute] = series.reindex(snapshots)
+    return overrides
