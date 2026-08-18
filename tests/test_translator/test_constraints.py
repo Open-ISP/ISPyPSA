@@ -325,3 +325,134 @@ def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
     pd.testing.assert_frame_equal(
         result["custom_constraints_rhs"], expected_rhs, check_dtype=False
     )
+
+
+def test_path_expansion_limit_is_max_of_forward_and_reverse(
+    csv_str_to_df, sample_model_config
+):
+    """Expansion links carry forward/reverse per unit of max(forward, reverse),
+    so the cap on their total p_nom must be that max, not the forward value."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,         allowed_expansion,  expansion_option
+        NSW-QLD,       forward,                800,                NSW-QLD Option 1
+        NSW-QLD,       reverse,                1000,               NSW-QLD Option 1
+        SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
+    """)
+
+    result = _translate_custom_constraints_from_network_tables(
+        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    )
+
+    rhs = result["custom_constraints_rhs"]
+    expected = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,  rhs,   constraint_type
+        NSW-QLD_expansion_limit,  ,                   ,           1000,  <=
+    """)
+    pd.testing.assert_frame_equal(
+        rhs[rhs["constraint_name"] == "NSW-QLD_expansion_limit"].reset_index(drop=True),
+        expected,
+        check_dtype=False,
+    )
+
+
+def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
+    csv_str_to_df, sample_model_config
+):
+    """A blank expansion_id relaxation option (and a blank expansion_id, blank
+    year cost) is a default for every constraint in the model; a specific
+    row still wins for its own constraint."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
+        constraint_id,  direction
+        SWQLD1,         <=
+        NQ1,            <=
+    """)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+        NQ1,            generator_output,  KINGASF1,       0.5,
+    """)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  3000,
+        NQ1,            qld_peak_demand,  2650,
+    """)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,         allowed_expansion,  expansion_option
+        NSW-QLD,       forward,                1000,               NSW-QLD Option 1
+        NSW-QLD,       reverse,                900,                NSW-QLD Option 1
+        SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
+        ,              constraint_relaxation,  200,                Default relaxation
+    """)
+    ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+        NSW-QLD,       2026,  500000
+        ,              ,      100000
+    """)
+
+    result = _translate_custom_constraints_from_network_tables(
+        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    )
+
+    expected_generators = csv_str_to_df(f"""
+        name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
+        NQ1_exp_2026,     NQ1,       bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        NQ1_exp_2028,     NQ1,       bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        SWQLD1_exp_2028,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+    """)
+    generators = result["custom_constraints_generators"]
+    pd.testing.assert_frame_equal(
+        generators.sort_values("name").reset_index(drop=True),
+        expected_generators,
+        check_dtype=False,
+        rtol=1e-5,
+    )
+    rhs = result["custom_constraints_rhs"]
+    expected_limits = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,  rhs,   constraint_type
+        NQ1_expansion_limit,      ,                   ,           200,   <=
+        NSW-QLD_expansion_limit,  ,                   ,           1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,           400,   <=
+    """)
+    limits = rhs[rhs["constraint_name"].str.endswith("_expansion_limit")]
+    pd.testing.assert_frame_equal(
+        limits.sort_values("constraint_name").reset_index(drop=True),
+        expected_limits,
+        check_dtype=False,
+    )
+
+
+def test_relaxation_option_for_constraint_not_in_model_is_dropped(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,         allowed_expansion,  expansion_option
+        NSW-QLD,       forward,                1000,               NSW-QLD Option 1
+        NSW-QLD,       reverse,                900,                NSW-QLD Option 1
+        SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
+        NQ1,           constraint_relaxation,  300,                NQ1 Option 1
+    """)
+    ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+        NSW-QLD,       2026,  500000
+        SWQLD1,        2026,  100000
+        NQ1,           2026,  100000
+    """)
+
+    result = _translate_custom_constraints_from_network_tables(
+        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    )
+
+    expected_generators = csv_str_to_df(f"""
+        name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
+        SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+    """)
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_generators"],
+        expected_generators,
+        check_dtype=False,
+        rtol=1e-5,
+    )
