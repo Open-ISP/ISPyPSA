@@ -98,6 +98,40 @@ def test_fallback_only_attribute_gets_the_fallback_at_every_snapshot(csv_str_to_
     pd.testing.assert_frame_equal(_link_pu_limits(network, "CQ-NQ_existing"), expected)
 
 
+@pytest.mark.xfail(
+    reason="Open-ISP/ISPyPSA#138: an all-blank timeslice column is read from CSV as "
+    "float64 and cannot be merged onto the object-typed (empty) timeslice_snapshots",
+    raises=ValueError,
+    strict=True,
+)
+def test_fallback_only_limits_with_no_timeslices_apply_at_every_snapshot(csv_str_to_df):
+    # The translator emits this shape for zero-capacity corridors and all-default
+    # paths in a run with no timeslices configured.
+    network = _network()
+    link_timeslice_limits = csv_str_to_df("""
+        name,            attribute,  timeslice,  value
+        CQ-NQ_existing,  p_max_pu,   ,           0.0
+        CQ-NQ_existing,  p_min_pu,   ,           0.0
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice_id,  investment_periods,  snapshots
+    """)
+
+    _add_links_to_network(
+        network, _links(csv_str_to_df), link_timeslice_limits, timeslice_snapshots
+    )
+
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            p_max_pu,  p_min_pu
+        2025,                2025-01-01 00:00:00,  0.0,       0.0
+        2025,                2025-01-01 01:00:00,  0.0,       0.0
+        2025,                2025-01-01 02:00:00,  0.0,       0.0
+        2025,                2025-01-01 03:00:00,  0.0,       0.0
+    """)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+    pd.testing.assert_frame_equal(_link_pu_limits(network, "CQ-NQ_existing"), expected)
+
+
 def test_named_timeslices_that_tile_the_snapshots_need_no_fallback(csv_str_to_df):
     network = _network()
     link_timeslice_limits = csv_str_to_df("""
