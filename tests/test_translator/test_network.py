@@ -493,8 +493,8 @@ def test_translate_network_to_links_zero_capacity_parallel_path(
     """A new parallel corridor has zero existing capacity, given as a
     timeslice = NaN fallback of 0 in both directions. It becomes an inert
     existing link at p_nom 0 (its buildable capacity is modelled by expansion
-    links), and the zero-p_nom link is skipped when translating per-timeslice
-    limits, so it yields no link_timeslice_limits rows and no 0/0 division."""
+    links) whose per-timeslice limits are per-unit 0 rather than an undefined
+    0/0, so pypsa_build treats it like any other link."""
     ispypsa_tables = _network_tables(csv_str_to_df)
     ispypsa_tables["network_transmission_paths"] = csv_str_to_df("""
         path_id,   geo_from,  geo_to,  carrier
@@ -521,7 +521,9 @@ def test_translate_network_to_links_zero_capacity_parallel_path(
     pd.testing.assert_frame_equal(links, expected_links, check_dtype=False)
 
     expected_limits = csv_str_to_df("""
-        name,  attribute,  timeslice,  value
+        name,               attribute,  timeslice,  value
+        CNSW-SNW_existing,  p_max_pu,   ,           0.0
+        CNSW-SNW_existing,  p_min_pu,   ,           0.0
     """)
     pd.testing.assert_frame_equal(
         link_timeslice_limits, expected_limits, check_dtype=False

@@ -350,9 +350,7 @@ def _translate_timeslice_limits_to_pu(
     Named-timeslice rows carry their timeslice; a timeslice = NaN row is the
     fallback applied to snapshots no named timeslice covers (the coverage
     contract is Open-ISP/ISPyPSA#123). pypsa_build expands these into per-snapshot
-    series via the timeslice_snapshots mapping. Zero-p_nom links (new parallel
-    corridors) are skipped — all their limits are zero and the per-unit form is
-    undefined.
+    series via the timeslice_snapshots mapping.
 
     I/O Example:
         limits:
@@ -370,21 +368,24 @@ def _translate_timeslice_limits_to_pu(
             CQ-NQ_existing  p_max_pu   qld_peak_demand       0.857   # 1200/1400
             CQ-NQ_existing  p_max_pu   qld_winter_reference  1.0     # 1400/1400
             CQ-NQ_existing  p_min_pu   ,                     -0.714  # fallback, -1000/1400
+
+        A zero-p_nom link with capacity 0 in a row -> value 0.0 for that row.
     """
     rows = limits.merge(
         existing_links.loc[:, ["isp_name", "name", "p_nom"]],
         left_on="path_id",
         right_on="isp_name",
     )
-    # Zero-p_nom links (new parallel corridors) have no per-unit form, so they
-    # contribute no timeslice rows.
-    rows = rows[rows["p_nom"] > 0]
     rows["attribute"] = rows["direction"].map(
         {"forward": "p_max_pu", "reverse": "p_min_pu"}
     )
     # Reverse flow is negative, so reverse limits become negative p_min_pu values.
     sign = rows["direction"].map({"forward": 1.0, "reverse": -1.0})
-    rows["value"] = sign * rows["capacity"] / rows["p_nom"]
+    # A zero-p_nom link (new parallel corridor) has only zero limits; 0/0 is
+    # undefined, so its per-unit value is defined as 0.
+    rows["value"] = np.where(
+        rows["p_nom"] > 0, sign * rows["capacity"] / rows["p_nom"], 0.0
+    )
     return rows.loc[:, _LINK_TIMESLICE_LIMIT_COLUMNS].reset_index(drop=True)
 
 
