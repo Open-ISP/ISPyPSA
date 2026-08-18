@@ -307,12 +307,28 @@ def test_expansion_links_keep_their_static_values(csv_str_to_df):
 
 
 def test_old_format_call_without_limit_tables(csv_str_to_df):
+    # With no limit tables the links table's p_max_pu / p_min_pu are the real
+    # limits and stay static; nothing is checked or overridden.
     network = _network()
+    links = csv_str_to_df("""
+        name,            bus0,  bus1,  carrier,  p_nom,  p_max_pu,  p_min_pu,  p_nom_extendable
+        CQ-NQ_existing,  bus1,  bus2,  AC,       1400,   1.0,       -0.5,      False
+    """)
 
-    _add_links_to_network(network, _links(csv_str_to_df))
+    _add_links_to_network(network, links)
 
-    assert network.links.loc["CQ-NQ_existing", "p_nom"] == 1400
-    assert "CQ-NQ_existing" not in network.links_t.p_max_pu.columns
+    expected = csv_str_to_df("""
+        Link,            p_nom,  p_max_pu,  p_min_pu
+        CQ-NQ_existing,  1400,   1.0,       -0.5
+    """).set_index("Link")
+    pd.testing.assert_frame_equal(
+        network.links.loc[:, ["p_nom", "p_max_pu", "p_min_pu"]],
+        expected,
+        check_names=False,
+        check_dtype=False,
+    )
+    assert list(network.links_t.p_max_pu.columns) == []
+    assert list(network.links_t.p_min_pu.columns) == []
 
 
 def test_expand_limits_to_snapshots(csv_str_to_df):
