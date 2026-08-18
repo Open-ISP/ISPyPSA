@@ -197,22 +197,26 @@ def _translate_custom_constraints_from_network_tables(
     not in the model.
 
     I/O Example (config: investment periods 2026 and 2028):
-        custom_constraints:            custom_constraints_rhs:
-            constraint_id  direction      constraint_id  timeslice        rhs   date_from
-            SWQLD1         <=             SWQLD1         qld_peak_demand  3000
+        ispypsa_tables["custom_constraints"]:
+            constraint_id  direction
+            SWQLD1         <=
 
-        custom_constraints_lhs:
+        ispypsa_tables["custom_constraints_rhs"]:
+            constraint_id  timeslice        rhs   date_from
+            SWQLD1         qld_peak_demand  3000
+
+        ispypsa_tables["custom_constraints_lhs"]:
             constraint_id  term_type         variable_name  coefficient  date_from
             SWQLD1         link_flow         NSW-QLD        0.84
             SWQLD1         generator_output  KINGASF1       0.14
 
-        network_expansion_options:
+        ispypsa_tables["network_expansion_options"]:
             expansion_id  expansion_type         allowed_expansion  expansion_option
             NSW-QLD       forward                1000               Option 1
             NSW-QLD       reverse                900                Option 1
             SWQLD1        constraint_relaxation  400                Option 2
 
-        network_transmission_path_expansion_costs:
+        ispypsa_tables["network_transmission_path_expansion_costs"]:
             expansion_id  year  cost
             NSW-QLD       2026  500000
             SWQLD1        2026  100000
@@ -222,14 +226,14 @@ def _translate_custom_constraints_from_network_tables(
             NSW-QLD   NSW-QLD_existing  False
             NSW-QLD   NSW-QLD_exp_2026  True
 
-        returns custom_constraints_rhs:
+        returns["custom_constraints_rhs"]:
             constraint_name          investment_period  timeslice        rhs   constraint_type
             SWQLD1                   2026               qld_peak_demand  3000  <=
             SWQLD1                   2028               qld_peak_demand  3000  <=
             NSW-QLD_expansion_limit                                      1000  <=
             SWQLD1_expansion_limit                                       400   <=
 
-        custom_constraints_lhs (2028 rows mirror 2026):
+        returns["custom_constraints_lhs"] (2028 rows mirror 2026):
             constraint_name          investment_period  variable_name     component  attribute  coefficient
             SWQLD1                   2026               NSW-QLD_existing  Link       p          0.84
             SWQLD1                   2026               NSW-QLD_exp_2026  Link       p          0.84
@@ -238,7 +242,7 @@ def _translate_custom_constraints_from_network_tables(
             NSW-QLD_expansion_limit                     NSW-QLD_exp_2026  Link       p_nom      1.0
             SWQLD1_expansion_limit                      SWQLD1_exp_2026   Generator  p_nom      1.0
 
-        custom_constraints_generators (abridged):
+        returns["custom_constraints_generators"] (abridged):
             name             isp_name  bus                             p_nom  build_year  capital_cost
             SWQLD1_exp_2026  SWQLD1    bus_for_custom_constraint_gens  0.0    2026        annuitise(100000)
     """
@@ -479,11 +483,11 @@ def _create_constraint_relaxation_generators(
     config's rez_transmission_expansion flag.
 
     I/O Example:
-        network_expansion_options:
+        ispypsa_tables["network_expansion_options"]:
             expansion_id  expansion_type         allowed_expansion  expansion_option
             SWQLD1        constraint_relaxation  500                Option 2
 
-        network_transmission_path_expansion_costs:
+        ispypsa_tables["network_transmission_path_expansion_costs"]:
             expansion_id  year  cost
             SWQLD1        2030  100000
 
