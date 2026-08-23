@@ -181,14 +181,14 @@ def _expand_limits_to_snapshots(
         link_timeslice_limits[~is_fallback], timeslice_snapshots
     )
     fallback = link_timeslice_limits.loc[is_fallback, ["name", "attribute", "value"]]
-    grid = _link_attribute_snapshot_grid(links, snapshots)
+    grid = _create_link_attribute_snapshot_grid(links, snapshots)
     grid = grid.merge(named, how="left")
     grid = grid.merge(fallback.rename(columns={"value": "fallback"}), how="left")
     grid["value"] = grid["value"].fillna(grid["fallback"])
     return grid.loc[:, _LIMIT_PER_SNAPSHOT_COLUMNS]
 
 
-def _link_attribute_snapshot_grid(
+def _create_link_attribute_snapshot_grid(
     links: pd.DataFrame, snapshots: pd.MultiIndex
 ) -> pd.DataFrame:
     """Every existing (non-extendable) link, for both p_max_pu and p_min_pu, at
