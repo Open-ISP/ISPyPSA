@@ -42,7 +42,7 @@ def _add_links_to_network(
             CQ-NQ_existing  p_min_pu   ,                -0.714  # fallback only
 
         timeslice_snapshots:
-            timeslice_id     investment_periods  snapshots
+            timeslice        investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
         network.snapshots:
@@ -115,7 +115,7 @@ def _build_link_pu_overrides(
             CQ-NQ_existing  p_min_pu   ,                -0.714  # fallback only
 
         timeslice_snapshots:
-            timeslice_id     investment_periods  snapshots
+            timeslice        investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
         snapshots:
@@ -161,7 +161,7 @@ def _expand_limits_to_snapshots(
             CQ-NQ_existing  p_min_pu   qld_peak_demand  -0.9    # no fallback
 
         timeslice_snapshots:
-            timeslice_id     investment_periods  snapshots
+            timeslice        investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
         snapshots:
@@ -234,15 +234,16 @@ def _place_named_limits_at_snapshots(
             CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
 
         timeslice_snapshots:
-            timeslice_id     investment_periods  snapshots
+            timeslice        investment_periods  snapshots
             qld_peak_demand  2025                2025-01-13 12:00
 
         returns:
             name            attribute  investment_periods  snapshots         value
             CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
     """
-    active_at = timeslice_snapshots.rename(columns={"timeslice_id": "timeslice"})
-    active_at["snapshots"] = pd.to_datetime(active_at["snapshots"])
+    active_at = timeslice_snapshots.assign(
+        snapshots=pd.to_datetime(timeslice_snapshots["snapshots"])
+    )
     placed = named.merge(active_at, on="timeslice")
     return placed.loc[:, _LIMIT_PER_SNAPSHOT_COLUMNS]
 
