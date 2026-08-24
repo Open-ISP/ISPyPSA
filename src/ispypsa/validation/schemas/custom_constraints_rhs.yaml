@@ -22,7 +22,7 @@ columns:
     type: string
     required: false
     allowed_values_from:
-      - timeslices: timeslice_id
+      - timeslices: timeslice
     description: >
       Demand condition the limit applies to: the constraint binds only at
       snapshots inside the timeslice's active windows.
