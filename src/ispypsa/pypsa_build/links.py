@@ -241,9 +241,8 @@ def _place_named_limits_at_snapshots(
             name            attribute  investment_periods  snapshots         value
             CQ-NQ_existing  p_max_pu   2025                2025-01-13 12:00  0.857
     """
-    active_at = timeslice_snapshots.assign(
-        snapshots=pd.to_datetime(timeslice_snapshots["snapshots"])
-    )
+    active_at = timeslice_snapshots.copy()
+    active_at["snapshots"] = pd.to_datetime(active_at["snapshots"])
     placed = named.merge(active_at, on="timeslice")
     return placed.loc[:, _LIMIT_PER_SNAPSHOT_COLUMNS]
 
