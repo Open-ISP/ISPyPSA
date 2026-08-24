@@ -33,7 +33,7 @@ custom_validation:
       A path that names timeslices must name them all for its region, or add an empty-timeslice
       fallback, in both directions; a single all-empty row covers the whole space.
       Because the timeslices table's windows partition the year, covering every
-      region timeslice_id covers every snapshot downstream.
+      region timeslice covers every snapshot downstream.
 columns:
   path_id:
     type: string
@@ -60,10 +60,10 @@ columns:
     type: string
     required: false
     allowed_values_from:
-      - timeslices: timeslice_id
+      - timeslices: timeslice
     description: >
       Demand condition the limit applies to: the limit binds only at snapshots
-      inside the timeslice's active windows. A timeslice_id's region is the prefix
+      inside the timeslice's active windows. A timeslice's region is the prefix
       before its first underscore (e.g. qld in qld_peak_demand).
 
       If absent (or empty):

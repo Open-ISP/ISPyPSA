@@ -1,11 +1,11 @@
 table: timeslices
 required: false
 unique:
-  - [timeslice_id, reference_year, start_month_day]
+  - [timeslice, reference_year, start_month_day]
 custom_validation:
   - name: no_overlapping_windows_per_region_and_reference_year
     description: >
-      Within a region (the timeslice_id prefix before the first underscore)
+      Within a region (the timeslice prefix before the first underscore)
       and reference_year, no two windows may cover the same day. Windows are
       compared as expanded [start, end) day ranges, not raw month-day strings:
       an end_month_day at or before its start wraps into the following calendar
@@ -13,7 +13,7 @@ custom_validation:
       next financial year (04-01 to 10-01).
   - name: windows_cover_full_year_per_region_and_reference_year
     description: >
-      Within a region (the timeslice_id prefix before the first underscore)
+      Within a region (the timeslice prefix before the first underscore)
       and reference_year, the windows must cover every day of the year, leaving
       no day with no active timeslice. Together with
       no_overlapping_windows_per_region_and_reference_year this makes the
@@ -52,7 +52,7 @@ description: >
   No timeslice is ever active: timeslice-tagged transmission path limits and
   custom-constraint RHS values never apply to any snapshot.
 columns:
-  timeslice_id:
+  timeslice:
     type: string
     required: true
     allowed_values: [
