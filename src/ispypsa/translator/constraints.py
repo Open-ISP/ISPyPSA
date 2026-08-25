@@ -87,9 +87,10 @@ names are rejected.
 Input integrity is the table schemas' job, not this module's. The rules the
 pipeline relies on without re-checking — unique input rows, a direction for
 every constraint with RHS values, the LHS and RHS naming the same
-constraints, no constraint_relaxation option on an "=" constraint, and a
-cost for every expandable element in every investment period — are declared
-in src/ispypsa/validation/schemas (custom_constraints*.yaml,
+constraints, every LHS variable_name naming a component in the table its
+term_type refers to, no constraint_relaxation option on an "=" constraint,
+and a cost for every expandable element in every investment period — are
+declared in src/ispypsa/validation/schemas (custom_constraints*.yaml,
 network_expansion_options.yaml and
 network_transmission_path_expansion_costs.yaml).
 
@@ -200,9 +201,9 @@ def _translate_custom_constraints_from_network_tables(
     custom_constraints_rhs, network_expansion_options and
     network_transmission_path_expansion_costs tables, plus the PyPSA friendly
     links table from ispypsa.translator.network (existing plus expansion
-    links). Generator and battery terms pass through with their IASR IDs as
-    variable_names: pypsa_build skips (and logs) terms whose components are
-    not in the model.
+    links). Generator, storage and load terms pass through with their IASR
+    IDs as variable_names, unchecked: the custom_constraints_lhs schema ties
+    every variable_name to its component table.
 
     I/O Example (config: investment periods 2026 and 2028):
         ispypsa_tables["custom_constraints"]:
