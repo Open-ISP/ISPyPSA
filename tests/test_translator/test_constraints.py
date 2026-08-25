@@ -199,7 +199,8 @@ def test_equality_direction_becomes_double_equals(csv_str_to_df, sample_model_co
         constraint_id,  direction
         SWQLD1,         =
     """)
-    # No relaxation option: an "==" constraint can't be relaxed.
+    # No relaxation option: the network_expansion_options schema forbids
+    # relaxing an "=" constraint.
     ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
         expansion_id,  expansion_type,  allowed_expansion,  expansion_option
         NSW-QLD,       forward,         1000,               NSW-QLD Option 1
@@ -262,23 +263,6 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
     )
 
 
-def test_raises_on_relaxation_option_for_equality_constraint(
-    csv_str_to_df, sample_model_config
-):
-    ispypsa_tables = _constraint_tables(csv_str_to_df)
-    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
-        constraint_id,  direction
-        SWQLD1,         =
-    """)
-
-    with pytest.raises(
-        ValueError, match=r"'==' constraints with a constraint_relaxation.*SWQLD1"
-    ):
-        _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
-        )
-
-
 def test_link_terms_not_in_model_dropped_and_logged(
     csv_str_to_df, sample_model_config, caplog
 ):
@@ -321,35 +305,129 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
         )
 
     assert (
-        "Custom constraints dropped (no LHS terms in model): ['NQ1']"
+        "Custom constraint RHS rows dropped (no LHS terms in that period): "
+        "[('NQ1', 2026), ('NQ1', 2028)]"
     ) in caplog.text
-    assert "NQ1" not in set(result["custom_constraints_rhs"]["constraint_name"])
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                   2026,               qld_peak_demand,  3000,  <=
+        SWQLD1,                   2028,               qld_peak_demand,  3000,  <=
+        NSW-QLD_expansion_limit,  ,                   ,                 1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,                 400,   <=
+    """)
+    sort_cols = ["constraint_name", "investment_period", "timeslice"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_rhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
-def test_raises_on_rhs_without_direction(csv_str_to_df, sample_model_config):
+def _one_sided_period_expected_outputs(csv_str_to_df):
+    """SWQLD1 binding in 2028 only, with a single generator term: the outputs
+    both mid-horizon date_from cases below converge on."""
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+    """)
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                   2028,               qld_peak_demand,  3000,  <=
+        NSW-QLD_expansion_limit,  ,                   ,                 1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,                 400,   <=
+    """)
+    return expected_lhs, expected_rhs
+
+
+def _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs):
+    lhs_sort = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(lhs_sort).reset_index(drop=True),
+        expected_lhs.sort_values(lhs_sort).reset_index(drop=True),
+        check_dtype=False,
+    )
+    rhs_sort = ["constraint_name", "investment_period", "timeslice"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"].sort_values(rhs_sort).reset_index(drop=True),
+        expected_rhs.sort_values(rhs_sort).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_rhs_starting_mid_horizon_drops_lhs_for_earlier_periods_and_logs(
+    csv_str_to_df, sample_model_config, caplog
+):
+    """An RHS whose date_from falls after the 2026 period start (2025-07-01)
+    but before 2028's (2027-07-01) binds only in 2028, so SWQLD1's 2026 LHS
+    terms have nothing to pair with and are dropped — including the
+    relaxation generator's, which only enter periods the constraint binds in."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
-    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
-        constraint_id,  direction
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+    """)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  3000,  2027-01-01T00:00:00
     """)
 
-    with pytest.raises(ValueError, match=r"no direction.*SWQLD1"):
-        _translate_custom_constraints_from_network_tables(
+    with caplog.at_level("INFO"):
+        result = _translate_custom_constraints_from_network_tables(
             ispypsa_tables, _links(csv_str_to_df), sample_model_config
         )
 
+    assert (
+        "Custom constraint LHS terms dropped (no RHS row in that period): "
+        "[('SWQLD1', 2026)]"
+    ) in caplog.text
+    expected_lhs, expected_rhs = _one_sided_period_expected_outputs(csv_str_to_df)
+    _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
 
-def test_raises_on_duplicate_rhs_rows(csv_str_to_df, sample_model_config):
+
+def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
+    csv_str_to_df, sample_model_config, caplog
+):
+    """The mirror case: LHS terms that only start after the 2026 period start
+    leave SWQLD1's 2026 RHS row with nothing to constrain, so it is dropped
+    rather than emitted as an empty (or relaxation-only) constraint."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,         2027-01-01T00:00:00
+    """)
     ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
         constraint_id,  timeslice,        rhs,   date_from
         SWQLD1,         qld_peak_demand,  3000,
-        SWQLD1,         qld_peak_demand,  2500,
     """)
 
-    with pytest.raises(ValueError, match=r"Duplicate custom constraint RHS.*SWQLD1"):
+    with caplog.at_level("INFO"):
+        result = _translate_custom_constraints_from_network_tables(
+            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        )
+
+    assert (
+        "Custom constraint RHS rows dropped (no LHS terms in that period): "
+        "[('SWQLD1', 2026)]"
+    ) in caplog.text
+    expected_lhs, expected_rhs = _one_sided_period_expected_outputs(csv_str_to_df)
+    _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
+
+
+def test_no_one_sided_period_log_when_every_period_has_both_sides(
+    csv_str_to_df, sample_model_config, caplog
+):
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+
+    with caplog.at_level("INFO"):
         _translate_custom_constraints_from_network_tables(
             ispypsa_tables, _links(csv_str_to_df), sample_model_config
         )
+
+    assert "dropped (no LHS terms in that period)" not in caplog.text
+    assert "dropped (no RHS row in that period)" not in caplog.text
 
 
 def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):

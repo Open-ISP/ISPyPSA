@@ -54,49 +54,57 @@ A blank investment_period means the row applies in every period; a blank
 timeslice means the RHS binds at every snapshot (otherwise only at snapshots
 inside the timeslice's windows, see ispypsa.translator.timeslices).
 
-The pipeline runs as follows. Duplicate input rows are rejected first, since
-they would silently collapse during date resolution. Then the date_from
-column of the LHS and RHS tables is resolved into one row per investment
-period: for each period, each group (a constraint's term, or a constraint's
-timeslice) keeps the row active at the period's start — the latest date_from
-on or before it, with no-date_from rows as the baseline. The RHS gains each
-constraint's sense from custom_constraints as constraint_type. LHS term_types
-map to the PyPSA component and attribute their variable belongs to, and each
-link_flow term is expanded from its path_id to every link the model has on
-that path — the existing link and each expansion link — so flow through new
-builds counts towards the constraint too. Terms for paths not in the model
-are dropped, and constraints left with no LHS terms are dropped with them.
+The pipeline runs as follows. The date_from column of the LHS and RHS tables
+is resolved into one row per investment period: for each period, each group
+(a constraint's term, or a constraint's timeslice) keeps the row active at
+the period's start — the latest date_from on or before it, with no-date_from
+rows as the baseline. The RHS gains each constraint's sense from
+custom_constraints as constraint_type. LHS term_types map to the PyPSA
+component and attribute their variable belongs to, and each link_flow term
+is expanded from its path_id to every link the model has on that path — the
+existing link and each expansion link — so flow through new builds counts
+towards the constraint too; terms for paths not in the model are dropped.
+Because date resolution can leave a constraint with terms but no limit (or a
+limit but no terms) in some periods, the two tables are then reconciled
+period by period: a constraint is kept only in the periods where it has both
+LHS terms and an RHS row, and the one-sided periods are dropped and logged.
 
 Constraint relaxation comes next, gated by the config's
 rez_transmission_expansion flag. Each constraint that has a
 constraint_relaxation expansion option gets one extendable dummy generator
 per investment period at the option's annualised cost. The generator's p_nom
-enters the parent constraint's LHS with a sign chosen by the constraint's
-direction so that building it always loosens the constraint: subtracted from
-a "<=" it raises the cap, added to a ">=" it lowers the floor. No
-single-signed term can loosen an "=", so a relaxation option on an equality
-constraint is rejected. Finally the expansion-limit constraints cap the total
+enters the parent constraint's LHS, in each period the constraint binds in,
+with a sign chosen by the constraint's direction so that building it always
+loosens the constraint: subtracted from a "<=" it raises the cap, added to a
+">=" it lowers the floor. Finally the expansion-limit constraints cap the total
 p_nom built across each expandable element's per-period components: for a
 path the cap is max(forward, reverse) of its option, matching the per-unit
 ratings ispypsa.translator.network gives its expansion links; for a
 relaxation it is the option's allowed_expansion. Both tables are then
-finalised — constraint_id becomes constraint_name and one-sided or duplicate
-constraints are rejected.
+finalised — constraint_id becomes constraint_name and duplicate constraint
+names are rejected.
+
+Input integrity is the table schemas' job, not this module's. The rules the
+pipeline relies on without re-checking — unique input rows, a direction for
+every constraint with RHS values, the LHS and RHS naming the same
+constraints, and no constraint_relaxation option on an "=" constraint — are
+declared in src/ispypsa/validation/schemas (custom_constraints*.yaml and
+network_expansion_options.yaml).
 
 Reference detail:
 
 - direction to constraint_type: "<=" and ">=" pass through, "=" becomes "==".
-- relaxation generator coefficient: -1.0 on a "<=" constraint, +1.0 on a
-  ">="; a relaxation option on an "==" constraint raises.
+- relaxation generator coefficient: -1.0 on a "<=" constraint, +1.0 on a ">=".
 - term_type to component/attribute lives in ispypsa.translator.mappings
   (_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE and _..._ATTRIBUTE_TYPE).
 - Expansion-limit constraints are named "<expansion_id>_expansion_limit" so a
   relaxation cap doesn't collide with the constraint it relaxes.
-- Dropped rows: link_flow terms whose path is not in the model (logged); RHS
-  rows for constraints with no LHS terms (logged); relaxation options and
-  costs for constraints not in the model, or all of them when
-  rez_transmission_expansion is off; date_from rows that only start after
-  every investment period.
+- Dropped rows: link_flow terms whose path is not in the model (logged); per
+  investment period, RHS rows of a constraint with no LHS terms in that
+  period and LHS terms of a constraint with no RHS row in that period (both
+  logged); relaxation options and costs for constraints not in the model, or
+  all of them when rez_transmission_expansion is off; date_from rows that
+  only start after every investment period.
 """
 
 import logging
@@ -151,7 +159,8 @@ _DIRECTION_TO_CONSTRAINT_TYPE = {"<=": "<=", ">=": ">=", "=": "=="}
 
 # The LHS sign that lets a relaxation generator's p_nom loosen a constraint:
 # subtracting it from a "<=" raises the cap, adding it to a ">=" lowers the
-# floor. No single sign loosens an "==", so it is absent here and rejected.
+# floor. No single sign loosens an "==", so the network_expansion_options
+# schema forbids relaxing one and it is absent here.
 _CONSTRAINT_TYPE_TO_RELAXATION_COEFFICIENT = {"<=": -1.0, ">=": 1.0}
 
 # Working column orders before constraint_id is renamed to constraint_name.
@@ -161,19 +170,6 @@ _INTERNAL_LHS_COLUMNS = ["constraint_id"] + [
 _INTERNAL_RHS_COLUMNS = ["constraint_id"] + [
     c for c in _RHS_COLUMNS if c != "constraint_name"
 ]
-
-
-def _raise_on_duplicate_input_rows(
-    table: pd.DataFrame, keys: list[str], label: str
-) -> None:
-    """Raise on input rows sharing the same key — duplicates would otherwise
-    silently collapse to one arbitrary row during date_from resolution."""
-    duplicates = table[table.duplicated(subset=keys, keep=False)]
-    if not duplicates.empty:
-        raise ValueError(
-            f"Duplicate custom constraint {label} rows for: "
-            f"{sorted(set(duplicates['constraint_id']))}"
-        )
 
 
 def _concat_non_empty(frames: list[pd.DataFrame], columns: list[str]) -> pd.DataFrame:
@@ -256,16 +252,6 @@ def _translate_custom_constraints_from_network_tables(
             name             isp_name  bus                             p_nom  build_year  capital_cost
             SWQLD1_exp_2026  SWQLD1    bus_for_custom_constraint_gens  0.0    2026        annuitise(100000)
     """
-    _raise_on_duplicate_input_rows(
-        ispypsa_tables["custom_constraints_rhs"],
-        ["constraint_id", "timeslice", "date_from"],
-        "RHS",
-    )
-    _raise_on_duplicate_input_rows(
-        ispypsa_tables["custom_constraints_lhs"],
-        ["constraint_id", "term_type", "variable_name", "date_from"],
-        "LHS",
-    )
     period_starts = _investment_period_start_dates(
         config.temporal.capacity_expansion.investment_periods,
         config.temporal.year_type,
@@ -283,15 +269,13 @@ def _translate_custom_constraints_from_network_tables(
     )
     lhs = _add_component_and_attribute(lhs)
     lhs = _expand_link_flow_terms(lhs, links)
-    rhs = _drop_rhs_without_lhs_terms(rhs, lhs)
+    lhs, rhs = _drop_one_sided_constraint_periods(lhs, rhs)
 
     relaxation_generators = _create_constraint_relaxation_generators(
         ispypsa_tables, sorted(set(rhs["constraint_id"])), config
     )
     relaxation_generator_lhs = _relaxation_generator_lhs_terms(
-        relaxation_generators,
-        config.temporal.capacity_expansion.investment_periods,
-        rhs,
+        relaxation_generators, rhs
     )
     path_caps = _resolve_path_expansion_caps(
         ispypsa_tables["network_expansion_options"], links
@@ -386,19 +370,7 @@ def _add_constraint_type(
     """
     rhs = rhs.merge(custom_constraints, on="constraint_id", how="left")
     rhs["constraint_type"] = rhs["direction"].map(_DIRECTION_TO_CONSTRAINT_TYPE)
-    _raise_on_missing_constraint_type(rhs)
     return rhs.drop(columns="direction")
-
-
-def _raise_on_missing_constraint_type(rhs: pd.DataFrame) -> None:
-    """Raise if any RHS row's constraint has no (or an unmapped) sense — the
-    constraint can't be applied without one."""
-    missing = rhs.loc[rhs["constraint_type"].isna(), "constraint_id"]
-    if not missing.empty:
-        raise ValueError(
-            f"Custom constraints with RHS values but no direction in the "
-            f"custom_constraints table: {sorted(set(missing))}"
-        )
 
 
 def _add_component_and_attribute(lhs: pd.DataFrame) -> pd.DataFrame:
@@ -481,20 +453,53 @@ def _log_link_terms_not_in_model(link_terms: pd.DataFrame, links: pd.DataFrame) 
         )
 
 
-def _drop_rhs_without_lhs_terms(rhs: pd.DataFrame, lhs: pd.DataFrame) -> pd.DataFrame:
-    """Drops (and logs) RHS rows for constraints left with no LHS terms — a
-    constraint with an empty LHS can't be applied.
+def _drop_one_sided_constraint_periods(
+    lhs: pd.DataFrame, rhs: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Keeps each constraint only in the investment periods where it has both
+    LHS terms and an RHS row, dropping (and logging) the one-sided periods.
+
+    A period is one-sided when one side's date_from starts later than the
+    other's, or when every LHS term was dropped because its path is not in
+    the model. Either way the constraint can't be applied in that period.
 
     I/O Example:
-        rhs constraint_ids {SWQLD1, NQ1}, lhs constraint_ids {SWQLD1}
-        -> NQ1's RHS rows dropped and logged; SWQLD1's kept
+        lhs (abridged):                       rhs (abridged):
+            constraint_id  investment_period     constraint_id  investment_period
+            SWQLD1         2028                  SWQLD1         2026
+            NQ1            2026                  SWQLD1         2028
+            NQ1            2028                  NQ1            2026
+
+        returns:
+            lhs without its NQ1 2028 term (no RHS row that period; logged)
+            rhs without its SWQLD1 2026 row (no LHS terms that period; logged)
     """
-    without_lhs = set(rhs["constraint_id"]) - set(lhs["constraint_id"])
-    if without_lhs:
+    keys = ["constraint_id", "investment_period"]
+    lhs_periods = lhs.loc[:, keys].drop_duplicates()
+    rhs_periods = rhs.loc[:, keys].drop_duplicates()
+    _log_one_sided_periods(
+        rhs_periods, lhs_periods, "RHS rows dropped (no LHS terms in that period)"
+    )
+    _log_one_sided_periods(
+        lhs_periods, rhs_periods, "LHS terms dropped (no RHS row in that period)"
+    )
+    two_sided = lhs_periods.merge(rhs_periods, on=keys)
+    return lhs.merge(two_sided, on=keys), rhs.merge(two_sided, on=keys)
+
+
+def _log_one_sided_periods(
+    present: pd.DataFrame, required: pd.DataFrame, message: str
+) -> None:
+    """Logs the (constraint_id, investment_period) pairs in present that have
+    no partner in required — the pairs _drop_one_sided_constraint_periods is
+    about to drop."""
+    unmatched = present.merge(required, how="left", indicator=True)
+    unmatched = unmatched[unmatched["_merge"] == "left_only"]
+    if not unmatched.empty:
+        pairs = zip(unmatched["constraint_id"], unmatched["investment_period"])
         logger.info(
-            f"Custom constraints dropped (no LHS terms in model): {sorted(without_lhs)}"
+            f"Custom constraint {message}: {sorted((c, int(p)) for c, p in pairs)}"
         )
-    return rhs[~rhs["constraint_id"].isin(without_lhs)]
 
 
 def _create_constraint_relaxation_generators(
@@ -626,18 +631,17 @@ def _format_relaxation_generators(generators: pd.DataFrame) -> pd.DataFrame:
 
 
 def _relaxation_generator_lhs_terms(
-    relaxation_generators: pd.DataFrame,
-    investment_periods: list[int],
-    rhs: pd.DataFrame,
+    relaxation_generators: pd.DataFrame, rhs: pd.DataFrame
 ) -> pd.DataFrame:
     """LHS terms letting each relaxation generator's capacity loosen its
     parent constraint.
 
-    Terms are per investment period and only include generators already built
-    by that period — capacity built in a later period can't relax an earlier
-    period's constraint. Each term's sign follows the parent constraint's
-    direction (see _relaxation_coefficients) so that building capacity always
-    loosens the constraint.
+    A term exists for each period the parent constraint has an RHS row in,
+    and only for generators already built by that period — capacity built in
+    a later period can't relax an earlier period's constraint. Each term's
+    sign follows the parent constraint's direction (see
+    _relaxation_coefficients) so that building capacity always loosens the
+    constraint.
 
     I/O Example:
         relaxation_generators:
@@ -646,30 +650,25 @@ def _relaxation_generator_lhs_terms(
             SWQLD1_exp_2040  SWQLD1    2040
             NQ1_exp_2030     NQ1       2030
 
-        investment_periods=[2030, 2040]
-
         rhs (abridged):
-            constraint_id  constraint_type
-            SWQLD1         <=
-            NQ1            >=
+            constraint_id  investment_period  constraint_type
+            SWQLD1         2030               <=
+            SWQLD1         2040               <=
+            NQ1            2040               >=      # NQ1 has no 2030 row
 
         returns:
             constraint_id  investment_period  variable_name    component  attribute  coefficient
             SWQLD1         2030               SWQLD1_exp_2030  Generator  p_nom      -1.0
             SWQLD1         2040               SWQLD1_exp_2030  Generator  p_nom      -1.0
             SWQLD1         2040               SWQLD1_exp_2040  Generator  p_nom      -1.0
-            NQ1            2030               NQ1_exp_2030     Generator  p_nom      1.0   # ">=": added, lowering the floor
-            NQ1            2040               NQ1_exp_2030     Generator  p_nom      1.0
+            NQ1            2040               NQ1_exp_2030     Generator  p_nom      1.0   # ">=": added, lowering the floor
     """
-    terms = []
-    for period in investment_periods:
-        built = relaxation_generators[
-            relaxation_generators["build_year"] <= period
-        ].copy()
-        built["investment_period"] = period
-        terms.append(built)
-    terms = pd.concat(terms, ignore_index=True)
-    terms = terms.rename(columns={"isp_name": "constraint_id", "name": "variable_name"})
+    constraint_periods = rhs.loc[:, ["constraint_id", "investment_period"]]
+    terms = constraint_periods.drop_duplicates().merge(
+        relaxation_generators, left_on="constraint_id", right_on="isp_name"
+    )
+    terms = terms[terms["build_year"] <= terms["investment_period"]].copy()
+    terms = terms.rename(columns={"name": "variable_name"})
     terms["component"] = "Generator"
     terms["attribute"] = "p_nom"
     terms["coefficient"] = _relaxation_coefficients(terms["constraint_id"], rhs)
@@ -680,8 +679,9 @@ def _relaxation_generator_lhs_terms(
 def _relaxation_coefficients(constraint_ids: pd.Series, rhs: pd.DataFrame) -> pd.Series:
     """The LHS coefficient that lets a relaxation generator's p_nom loosen
     each constraint: -1.0 on a "<=" (subtracting from the LHS raises the cap)
-    and +1.0 on a ">=" (adding to the LHS lowers the floor). Raises for "=="
-    constraints, which no single-signed term can loosen.
+    and +1.0 on a ">=" (adding to the LHS lowers the floor). No single-signed
+    term can loosen an "==", so the network_expansion_options schema forbids
+    relaxing one.
 
     I/O Example:
         constraint_ids: SWQLD1, SWQLD1, NQ1
@@ -696,23 +696,9 @@ def _relaxation_coefficients(constraint_ids: pd.Series, rhs: pd.DataFrame) -> pd
     constraint_type = rhs.drop_duplicates("constraint_id").set_index("constraint_id")[
         "constraint_type"
     ]
-    coefficients = constraint_ids.map(constraint_type).map(
+    return constraint_ids.map(constraint_type).map(
         _CONSTRAINT_TYPE_TO_RELAXATION_COEFFICIENT
     )
-    _raise_on_relaxed_equality_constraints(constraint_ids[coefficients.isna()])
-    return coefficients
-
-
-def _raise_on_relaxed_equality_constraints(constraint_ids: pd.Series) -> None:
-    """Raise when a constraint_relaxation option targets an "==" constraint —
-    a single-signed slack term could only move the equality one way, which
-    isn't a relaxation."""
-    if not constraint_ids.empty:
-        raise ValueError(
-            "Constraint relaxation is only supported for '<=' and '>=' "
-            "constraints; '==' constraints with a constraint_relaxation "
-            f"expansion option: {sorted(set(constraint_ids))}"
-        )
 
 
 def _resolve_path_expansion_caps(
@@ -856,8 +842,8 @@ def _expansion_limit_rhs(caps: pd.DataFrame) -> pd.DataFrame:
 def _finalise_lhs_and_rhs(
     lhs: pd.DataFrame, rhs: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Renames constraint_id to constraint_name, validates the LHS/RHS
-    pairing, and sets the final PyPSA friendly column orders.
+    """Renames constraint_id to constraint_name, rejects duplicate constraint
+    names, and sets the final PyPSA friendly column orders.
 
     I/O Example:
         lhs: constraint_id=SWQLD1, ...  rhs: constraint_id=SWQLD1, ...
@@ -867,7 +853,6 @@ def _finalise_lhs_and_rhs(
     lhs = lhs.rename(columns={"constraint_id": "constraint_name"})
     rhs = rhs.rename(columns={"constraint_id": "constraint_name"})
     _raise_on_duplicate_rhs_rows(rhs)
-    _raise_on_unpaired_constraints(lhs, rhs)
     return (
         lhs.loc[:, _LHS_COLUMNS].reset_index(drop=True),
         rhs.loc[:, _RHS_COLUMNS].reset_index(drop=True),
@@ -883,19 +868,6 @@ def _raise_on_duplicate_rhs_rows(rhs: pd.DataFrame) -> None:
         raise ValueError(
             f"Duplicate custom constraint RHS rows for: "
             f"{sorted(set(duplicates['constraint_name']))}"
-        )
-
-
-def _raise_on_unpaired_constraints(lhs: pd.DataFrame, rhs: pd.DataFrame) -> None:
-    """Raise if any constraint appears on only one side — a one-sided
-    constraint can't be applied."""
-    lhs_names = set(lhs["constraint_name"])
-    rhs_names = set(rhs["constraint_name"])
-    if lhs_names != rhs_names:
-        raise ValueError(
-            f"Custom constraints with LHS terms but no RHS: "
-            f"{sorted(lhs_names - rhs_names)}; with RHS but no LHS terms: "
-            f"{sorted(rhs_names - lhs_names)}"
         )
 
 

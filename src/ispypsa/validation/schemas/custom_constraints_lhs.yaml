@@ -19,6 +19,15 @@ description: >
 
   If absent:
   Constraints have no terms, so no custom constraints bind.
+custom_validation:
+  - name: lhs_and_rhs_name_the_same_constraints
+    description: >
+      Every constraint_id with a row here must have at least one row in
+      custom_constraints_rhs, and every constraint_id in custom_constraints_rhs
+      must have at least one row here. A constraint with terms but no limit
+      value, or a limit value but no terms, cannot be applied. This does not
+      require every custom_constraints row to have terms: a catalogued
+      constraint with neither LHS nor RHS rows simply never binds.
 columns:
   constraint_id:
     type: string
