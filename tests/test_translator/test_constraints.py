@@ -199,13 +199,84 @@ def test_equality_direction_becomes_double_equals(csv_str_to_df, sample_model_co
         constraint_id,  direction
         SWQLD1,         =
     """)
+    # No relaxation option: an "==" constraint can't be relaxed.
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+        NSW-QLD,       forward,         1000,               NSW-QLD Option 1
+        NSW-QLD,       reverse,         900,                NSW-QLD Option 1
+    """)
 
     result = _translate_custom_constraints_from_network_tables(
         ispypsa_tables, _links(csv_str_to_df), sample_model_config
     )
 
-    rhs = result["custom_constraints_rhs"]
-    assert set(rhs.loc[rhs["constraint_name"] == "SWQLD1", "constraint_type"]) == {"=="}
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,             rhs,   constraint_type
+        SWQLD1,                   2026,               qld_peak_demand,       3000,  ==
+        SWQLD1,                   2026,               qld_winter_reference,  3500,  ==
+        SWQLD1,                   2028,               qld_peak_demand,       3000,  ==
+        SWQLD1,                   2028,               qld_winter_reference,  3500,  ==
+        NSW-QLD_expansion_limit,  ,                   ,                      1000,  <=
+    """)
+    sort_cols = ["constraint_name", "investment_period", "timeslice"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_rhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
+    csv_str_to_df, sample_model_config
+):
+    """A ">=" constraint is loosened by lowering its floor, so the relaxation
+    generator's p_nom is added to the LHS (+1.0) rather than subtracted."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
+        constraint_id,  direction
+        SWQLD1,         >=
+    """)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+    """)
+
+    result = _translate_custom_constraints_from_network_tables(
+        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_raises_on_relaxation_option_for_equality_constraint(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
+        constraint_id,  direction
+        SWQLD1,         =
+    """)
+
+    with pytest.raises(
+        ValueError, match=r"'==' constraints with a constraint_relaxation.*SWQLD1"
+    ):
+        _translate_custom_constraints_from_network_tables(
+            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        )
 
 
 def test_link_terms_not_in_model_dropped_and_logged(

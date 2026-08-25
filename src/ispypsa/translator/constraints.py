@@ -70,9 +70,12 @@ are dropped, and constraints left with no LHS terms are dropped with them.
 Constraint relaxation comes next, gated by the config's
 rez_transmission_expansion flag. Each constraint that has a
 constraint_relaxation expansion option gets one extendable dummy generator
-per investment period at the option's annualised cost; the generator's p_nom
-enters the parent constraint's LHS with coefficient -1.0, so building it
-relaxes the constraint. Finally the expansion-limit constraints cap the total
+per investment period at the option's annualised cost. The generator's p_nom
+enters the parent constraint's LHS with a sign chosen by the constraint's
+direction so that building it always loosens the constraint: subtracted from
+a "<=" it raises the cap, added to a ">=" it lowers the floor. No
+single-signed term can loosen an "=", so a relaxation option on an equality
+constraint is rejected. Finally the expansion-limit constraints cap the total
 p_nom built across each expandable element's per-period components: for a
 path the cap is max(forward, reverse) of its option, matching the per-unit
 ratings ispypsa.translator.network gives its expansion links; for a
@@ -83,6 +86,8 @@ constraints are rejected.
 Reference detail:
 
 - direction to constraint_type: "<=" and ">=" pass through, "=" becomes "==".
+- relaxation generator coefficient: -1.0 on a "<=" constraint, +1.0 on a
+  ">="; a relaxation option on an "==" constraint raises.
 - term_type to component/attribute lives in ispypsa.translator.mappings
   (_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE and _..._ATTRIBUTE_TYPE).
 - Expansion-limit constraints are named "<expansion_id>_expansion_limit" so a
@@ -143,6 +148,11 @@ _GENERATOR_COLUMNS = [
 ]
 
 _DIRECTION_TO_CONSTRAINT_TYPE = {"<=": "<=", ">=": ">=", "=": "=="}
+
+# The LHS sign that lets a relaxation generator's p_nom loosen a constraint:
+# subtracting it from a "<=" raises the cap, adding it to a ">=" lowers the
+# floor. No single sign loosens an "==", so it is absent here and rejected.
+_CONSTRAINT_TYPE_TO_RELAXATION_COEFFICIENT = {"<=": -1.0, ">=": 1.0}
 
 # Working column orders before constraint_id is renamed to constraint_name.
 _INTERNAL_LHS_COLUMNS = ["constraint_id"] + [
@@ -281,6 +291,7 @@ def _translate_custom_constraints_from_network_tables(
     relaxation_generator_lhs = _relaxation_generator_lhs_terms(
         relaxation_generators,
         config.temporal.capacity_expansion.investment_periods,
+        rhs,
     )
     path_caps = _resolve_path_expansion_caps(
         ispypsa_tables["network_expansion_options"], links
@@ -494,10 +505,11 @@ def _create_constraint_relaxation_generators(
     """Builds one extendable dummy generator per relaxable constraint and
     investment period, with the selected expansion option's annualised cost.
 
-    The generators' p_nom enters the parent constraint's LHS with coefficient
-    -1.0 (see _relaxation_generator_lhs_terms), so building them relaxes the
-    constraint at the option's cost; total relaxation is capped at the
-    option's allowed_expansion by the expansion-limit constraints.
+    The generators' p_nom enters the parent constraint's LHS with a sign set
+    by the constraint's direction (see _relaxation_generator_lhs_terms), so
+    building them relaxes the constraint at the option's cost; total
+    relaxation is capped at the option's allowed_expansion by the
+    expansion-limit constraints.
 
     Options and costs may use blank key cells as wildcards: a blank
     expansion_id means "every constraint" — here, every constraint in the
@@ -614,28 +626,40 @@ def _format_relaxation_generators(generators: pd.DataFrame) -> pd.DataFrame:
 
 
 def _relaxation_generator_lhs_terms(
-    relaxation_generators: pd.DataFrame, investment_periods: list[int]
+    relaxation_generators: pd.DataFrame,
+    investment_periods: list[int],
+    rhs: pd.DataFrame,
 ) -> pd.DataFrame:
-    """LHS terms subtracting each relaxation generator's capacity from its
+    """LHS terms letting each relaxation generator's capacity loosen its
     parent constraint.
 
     Terms are per investment period and only include generators already built
     by that period — capacity built in a later period can't relax an earlier
-    period's constraint.
+    period's constraint. Each term's sign follows the parent constraint's
+    direction (see _relaxation_coefficients) so that building capacity always
+    loosens the constraint.
 
     I/O Example:
         relaxation_generators:
             name             isp_name  build_year
             SWQLD1_exp_2030  SWQLD1    2030
             SWQLD1_exp_2040  SWQLD1    2040
+            NQ1_exp_2030     NQ1       2030
 
         investment_periods=[2030, 2040]
+
+        rhs (abridged):
+            constraint_id  constraint_type
+            SWQLD1         <=
+            NQ1            >=
 
         returns:
             constraint_id  investment_period  variable_name    component  attribute  coefficient
             SWQLD1         2030               SWQLD1_exp_2030  Generator  p_nom      -1.0
             SWQLD1         2040               SWQLD1_exp_2030  Generator  p_nom      -1.0
             SWQLD1         2040               SWQLD1_exp_2040  Generator  p_nom      -1.0
+            NQ1            2030               NQ1_exp_2030     Generator  p_nom      1.0   # ">=": added, lowering the floor
+            NQ1            2040               NQ1_exp_2030     Generator  p_nom      1.0
     """
     terms = []
     for period in investment_periods:
@@ -648,9 +672,47 @@ def _relaxation_generator_lhs_terms(
     terms = terms.rename(columns={"isp_name": "constraint_id", "name": "variable_name"})
     terms["component"] = "Generator"
     terms["attribute"] = "p_nom"
-    terms["coefficient"] = -1.0
+    terms["coefficient"] = _relaxation_coefficients(terms["constraint_id"], rhs)
     columns = [c for c in _LHS_COLUMNS if c != "constraint_name"] + ["constraint_id"]
     return terms.loc[:, columns]
+
+
+def _relaxation_coefficients(constraint_ids: pd.Series, rhs: pd.DataFrame) -> pd.Series:
+    """The LHS coefficient that lets a relaxation generator's p_nom loosen
+    each constraint: -1.0 on a "<=" (subtracting from the LHS raises the cap)
+    and +1.0 on a ">=" (adding to the LHS lowers the floor). Raises for "=="
+    constraints, which no single-signed term can loosen.
+
+    I/O Example:
+        constraint_ids: SWQLD1, SWQLD1, NQ1
+
+        rhs (abridged):
+            constraint_id  constraint_type
+            SWQLD1         <=
+            NQ1            >=
+
+        returns: -1.0, -1.0, 1.0
+    """
+    constraint_type = rhs.drop_duplicates("constraint_id").set_index("constraint_id")[
+        "constraint_type"
+    ]
+    coefficients = constraint_ids.map(constraint_type).map(
+        _CONSTRAINT_TYPE_TO_RELAXATION_COEFFICIENT
+    )
+    _raise_on_relaxed_equality_constraints(constraint_ids[coefficients.isna()])
+    return coefficients
+
+
+def _raise_on_relaxed_equality_constraints(constraint_ids: pd.Series) -> None:
+    """Raise when a constraint_relaxation option targets an "==" constraint —
+    a single-signed slack term could only move the equality one way, which
+    isn't a relaxation."""
+    if not constraint_ids.empty:
+        raise ValueError(
+            "Constraint relaxation is only supported for '<=' and '>=' "
+            "constraints; '==' constraints with a constraint_relaxation "
+            f"expansion option: {sorted(set(constraint_ids))}"
+        )
 
 
 def _resolve_path_expansion_caps(
