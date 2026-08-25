@@ -1,119 +1,3 @@
-"""Translate the new-format custom-constraint tables into PyPSA friendly form.
-
-This module sits in the translator stage alongside ispypsa.translator.network.
-It turns the templated custom-constraint tables (PLEXOS-derived group
-constraints such as SWQLD1) into the LHS/RHS tables pypsa_build applies as
-linopy constraints, and adds the endogenous expansion-limit constraints, with
-their constraint-relaxation generators, that cap how much capacity the model
-can build for each expandable network element.
-
-The inputs are the three custom-constraint tables — custom_constraints (one
-row per constraint), custom_constraints_lhs (one row per term per date_from)
-and custom_constraints_rhs (one row per timeslice per date_from):
-
-    custom_constraints:            custom_constraints_rhs:
-        constraint_id  direction      constraint_id  timeslice        rhs   date_from
-        SWQLD1         <=             SWQLD1         qld_peak_demand  3000
-                                      SWQLD1         qld_peak_demand  2500  2027-07-01T00:00:00
-
-    custom_constraints_lhs:
-        constraint_id  term_type         variable_name  coefficient  date_from
-        SWQLD1         link_flow         NSW-QLD        0.84
-        SWQLD1         generator_output  KINGASF1       0.14
-
-plus network_expansion_options and network_transmission_path_expansion_costs
-(the unified expansion tables, see ispypsa.translator.network) and the PyPSA
-friendly links table (existing plus expansion links).
-
-The outputs are the PyPSA friendly custom_constraints_rhs (one row per
-constraint, investment period and timeslice), custom_constraints_lhs (one row
-per constraint, investment period and term) and custom_constraints_generators
-(one row per relaxable constraint and investment period):
-
-    custom_constraints_rhs:
-        constraint_name          investment_period  timeslice        rhs   constraint_type
-        SWQLD1                   2026               qld_peak_demand  3000  <=
-        SWQLD1                   2028               qld_peak_demand  2500  <=
-        NSW-QLD_expansion_limit                                      1000  <=
-        SWQLD1_expansion_limit                                       400   <=
-
-    custom_constraints_lhs (2028 rows mirror 2026):
-        constraint_name          investment_period  variable_name     component  attribute  coefficient
-        SWQLD1                   2026               NSW-QLD_existing  Link       p          0.84
-        SWQLD1                   2026               NSW-QLD_exp_2026  Link       p          0.84
-        SWQLD1                   2026               KINGASF1          Generator  p          0.14
-        SWQLD1                   2026               SWQLD1_exp_2026   Generator  p_nom      -1.0
-        NSW-QLD_expansion_limit                     NSW-QLD_exp_2026  Link       p_nom      1.0
-        SWQLD1_expansion_limit                      SWQLD1_exp_2026   Generator  p_nom      1.0
-
-    custom_constraints_generators (abridged):
-        name             isp_name  bus                             p_nom  p_nom_extendable  build_year  capital_cost
-        SWQLD1_exp_2026  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2026        annuitise(100000)
-
-A blank investment_period means the row applies in every period. A named
-timeslice scopes the RHS to the snapshots inside that timeslice's windows
-(the timeslices table); a blank timeslice is the constraint's fallback,
-applying at the snapshots none of its named-timeslice rows cover, so a
-constraint with only named rows does not bind outside them. This module
-passes timeslice through untouched — resolving it to snapshots is
-pypsa_build's job when the constraints are applied.
-
-The pipeline runs as follows. The date_from column of the LHS and RHS tables
-is resolved into one row per investment period: for each period, each group
-(a constraint's term, or a constraint's timeslice) keeps the row active at
-the period's start — the latest date_from on or before it, with no-date_from
-rows as the baseline. The RHS gains each constraint's sense from
-custom_constraints as constraint_type. LHS term_types map to the PyPSA
-component and attribute their variable belongs to, and each link_flow term
-is expanded from its path_id to every link the model has on that path — the
-existing link and each expansion link — so flow through new builds counts
-towards the constraint too; terms for paths not in the model are dropped.
-Because date resolution can leave a constraint with terms but no limit (or a
-limit but no terms) in some periods, the two tables are then reconciled
-period by period: a constraint is kept only in the periods where it has both
-LHS terms and an RHS row, and the one-sided periods are dropped and logged.
-
-Constraint relaxation comes next, gated by the config's
-rez_transmission_expansion flag. Each constraint that has a
-constraint_relaxation expansion option gets one extendable dummy generator
-per investment period at the option's annualised cost. The generator's p_nom
-enters the parent constraint's LHS, in each period the constraint binds in,
-with a sign chosen by the constraint's direction so that building it always
-loosens the constraint: subtracted from a "<=" it raises the cap, added to a
-">=" it lowers the floor. Finally the expansion-limit constraints cap the total
-p_nom built across each expandable element's per-period components: for a
-path the cap is max(forward, reverse) of its option, matching the per-unit
-ratings ispypsa.translator.network gives its expansion links; for a
-relaxation it is the option's allowed_expansion. Both tables are then
-finalised — constraint_id becomes constraint_name and duplicate constraint
-names are rejected.
-
-Input integrity is the table schemas' job, not this module's. The rules the
-pipeline relies on without re-checking — unique input rows, a direction for
-every constraint with RHS values, the LHS and RHS naming the same
-constraints, every LHS variable_name naming a component in the table its
-term_type refers to, no constraint_relaxation option on an "=" constraint,
-and a cost for every expandable element in every investment period — are
-declared in src/ispypsa/validation/schemas (custom_constraints*.yaml,
-network_expansion_options.yaml and
-network_transmission_path_expansion_costs.yaml).
-
-Reference detail:
-
-- direction to constraint_type: "<=" and ">=" pass through, "=" becomes "==".
-- relaxation generator coefficient: -1.0 on a "<=" constraint, +1.0 on a ">=".
-- term_type to component/attribute lives in ispypsa.translator.mappings
-  (_CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE and _..._ATTRIBUTE_TYPE).
-- Expansion-limit constraints are named "<expansion_id>_expansion_limit" so a
-  relaxation cap doesn't collide with the constraint it relaxes.
-- Dropped rows: link_flow terms whose path is not in the model (logged); per
-  investment period, RHS rows of a constraint with no LHS terms in that
-  period and LHS terms of a constraint with no RHS row in that period (both
-  logged); relaxation options and costs for constraints not in the model, or
-  all of them when rez_transmission_expansion is off; date_from rows that
-  only start after every investment period.
-"""
-
 import logging
 
 import numpy as np
@@ -201,13 +85,76 @@ def _translate_custom_constraints_from_network_tables(
     """Translates the custom-constraint tables and builds the endogenous
     expansion-limit constraints.
 
-    Consumes the custom_constraints, custom_constraints_lhs,
-    custom_constraints_rhs, network_expansion_options and
-    network_transmission_path_expansion_costs tables, plus the PyPSA friendly
-    links table from ispypsa.translator.network (existing plus expansion
-    links). Generator, storage and load terms pass through with their IASR
-    IDs as variable_names, unchecked: the custom_constraints_lhs schema ties
-    every variable_name to its component table.
+    Custom constraint tables are translated to by:
+
+        -  determining the LHS and RHS values active during each investment period. Values
+        with the most recent date_from date falling on or before the start of an
+        investment are taken as active for that period. Blank date_from row are treated as
+        the earliest values.
+        - term_type values are mapped to PyPSA components and attribute combinations.
+        - LHS link_flow terms are expanded from their path_id into one term per link
+        the model has on that path, the existing link and each expansion link, so
+        flow through new builds counts towards the constraint.
+        - LHS and RHS rows are dropped in investment periods where the constraint does
+        not have both LHS terms and an RHS value. This happens when date_from coverage
+        differs between the two sides (including a side whose earliest date_from falls
+        after a period's start), or when all of a constraint's LHS terms reference
+        components outside the configured model scope (e.g. flow path links when
+        regional_granularity is single_region).
+
+    Dummy generators are added to the LHS of constraints with relaxation options and
+    costs:
+
+        - Constraint relaxation is gated by the config's rez_transmission_expansion
+        flag: with it off, no dummy generators or relaxation expansion-limit
+        constraints are created.
+        - For rows in network_expansion_options with an expansion_type of
+        constraint_relaxation dummy generators capacity values are added to the LHS of the
+        constraint specified by the expansion_id column.
+        - One dummy generator is added per relaxation option per investment period. A
+        period's constraint LHS carries every generator built up to that period, so
+        the relaxation available accumulates across the horizon.
+        - The dummy generators allow PyPSA to invest in relaxing the constraint. Their
+        capital_cost is the option's cost from network_transmission_path_expansion_costs,
+        annuitised with the config's wacc and annuitisation_lifetime.
+        - The generator definitions are returned in PyPSA friendly format in the
+        table custom_constraints_generators.
+        - For <= constraints the generator LHS term is negative and for >= the LHS is
+        positive.
+
+    For each set of expansion links for a given transmission flow path and constraint
+    relaxation dummy generators, an additional constraint is created limiting the total
+    transmission expansion or constraint relaxation built across the investment
+    periods.
+
+        - The constraint RHS is derived from allowed_expansion in
+        network_expansion_options, with a constraint_type of <=. For a relaxation the
+        option's allowed_expansion is used directly; for a flow path the RHS is
+        max(forward, reverse).
+        - Each of the expansion links or dummy generators capacity (p_nom) values are
+        added to the constraint LHS.
+        - These constraints are returned appended to the custom_constraints_lhs and
+        custom_constraints_rhs tables.
+
+    Input integrity is the table schemas' job, not this module's. The rules the
+    pipeline relies on without re-checking — unique input rows, a direction for
+    every constraint with RHS values, the LHS and RHS naming the same
+    constraints, every LHS variable_name matching an ID in one of the input
+    tables for its term_type (e.g. a generator_output term names a generator
+    in generators_existing_planned or generators_new_entrant), no
+    constraint_relaxation option on an "=" constraint, and a cost for every
+    expandable element in every investment period — are declared in
+    src/ispypsa/validation/schemas (custom_constraints*.yaml,
+    network_expansion_options.yaml and
+    network_transmission_path_expansion_costs.yaml).
+
+    In the output tables, a blank investment_period means the row applies in
+    every period. A named timeslice scopes the RHS to the snapshots inside that
+    timeslice's windows (the timeslices table); a blank timeslice is the
+    constraint's fallback, applying at the snapshots none of its named-timeslice
+    rows cover, so a constraint with only named rows does not bind outside them.
+    Timeslice values pass through untouched — resolving them to snapshots is
+    pypsa_build's job when the constraints are applied.
 
     I/O Example (config: investment periods 2026 and 2028):
         ispypsa_tables["custom_constraints"]:
