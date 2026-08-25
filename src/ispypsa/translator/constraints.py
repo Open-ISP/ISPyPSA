@@ -87,9 +87,11 @@ names are rejected.
 Input integrity is the table schemas' job, not this module's. The rules the
 pipeline relies on without re-checking — unique input rows, a direction for
 every constraint with RHS values, the LHS and RHS naming the same
-constraints, and no constraint_relaxation option on an "=" constraint — are
-declared in src/ispypsa/validation/schemas (custom_constraints*.yaml and
-network_expansion_options.yaml).
+constraints, no constraint_relaxation option on an "=" constraint, and a
+cost for every expandable element in every investment period — are declared
+in src/ispypsa/validation/schemas (custom_constraints*.yaml,
+network_expansion_options.yaml and
+network_transmission_path_expansion_costs.yaml).
 
 Reference detail:
 
@@ -521,8 +523,11 @@ def _create_constraint_relaxation_generators(
     model (constraint_ids) — and a blank cost year means "every investment
     period", so a single blank-id row gives all constraints the same
     relaxation option or cost, and a blank-year cost row is a static cost
-    across the periods. If the config's rez_transmission_expansion flag is
-    off, no relaxation generators are built at all.
+    across the periods. Every constraint with an option has a cost in every
+    investment period (the costs schema's coverage rule), so joining the two
+    gives exactly one generator per option and period. If the config's
+    rez_transmission_expansion flag is off, no relaxation generators are
+    built at all.
 
     I/O Example (blank cells are wildcards):
         ispypsa_tables["network_expansion_options"]:

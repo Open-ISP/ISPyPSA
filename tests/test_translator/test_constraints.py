@@ -40,7 +40,9 @@ def _constraint_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
         expansion_id,  year,  cost
         NSW-QLD,       2026,  500000
+        NSW-QLD,       2028,  500000
         SWQLD1,        2026,  100000
+        SWQLD1,        2028,  80000
     """)
     return tables
 
@@ -96,8 +98,10 @@ def test_translate_custom_constraints_lhs(csv_str_to_df, sample_model_config):
         SWQLD1,                   2028,               Q8 Battery - 2h,     Storage,    p,          0.43
         SWQLD1,                   2026,               SWQLD1_exp_2026,     Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,     Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,     Generator,  p_nom,      -1.0
         NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,    Link,       p_nom,      1.0
         SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,     Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,     Generator,  p_nom,      1.0
     """)
     sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
     pd.testing.assert_frame_equal(
@@ -119,9 +123,11 @@ def test_translate_custom_constraints_relaxation_generators(
     expected_generators = csv_str_to_df(f"""
         name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
         SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        SWQLD1_exp_2028,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {80000 * _ANNUITY_PER_DOLLAR}
     """)
+    generators = result["custom_constraints_generators"]
     pd.testing.assert_frame_equal(
-        result["custom_constraints_generators"],
+        generators.sort_values("name").reset_index(drop=True),
         expected_generators,
         check_dtype=False,
         rtol=1e-5,
@@ -252,8 +258,10 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
         SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
         SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      1.0
         NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
         SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
     """)
     sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
     pd.testing.assert_frame_equal(
@@ -325,13 +333,16 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
 
 def _one_sided_period_expected_outputs(csv_str_to_df):
     """SWQLD1 binding in 2028 only, with a single generator term: the outputs
-    both mid-horizon date_from cases below converge on."""
+    both mid-horizon date_from cases below converge on. Both relaxation
+    generators are still built, but only enter the 2028 constraint."""
     expected_lhs = csv_str_to_df("""
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
         NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
         SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
     """)
     expected_rhs = csv_str_to_df("""
         constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
@@ -584,11 +595,12 @@ def test_relaxation_option_for_constraint_not_in_model_is_dropped(
         SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
         NQ1,           constraint_relaxation,  300,                NQ1 Option 1
     """)
+    # Blank years: a static cost across the investment periods.
     ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
         expansion_id,  year,  cost
-        NSW-QLD,       2026,  500000
-        SWQLD1,        2026,  100000
-        NQ1,           2026,  100000
+        NSW-QLD,       ,      500000
+        SWQLD1,        ,      100000
+        NQ1,           ,      100000
     """)
 
     result = _translate_custom_constraints_from_network_tables(
@@ -598,9 +610,11 @@ def test_relaxation_option_for_constraint_not_in_model_is_dropped(
     expected_generators = csv_str_to_df(f"""
         name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
         SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        SWQLD1_exp_2028,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
     """)
+    generators = result["custom_constraints_generators"]
     pd.testing.assert_frame_equal(
-        result["custom_constraints_generators"],
+        generators.sort_values("name").reset_index(drop=True),
         expected_generators,
         check_dtype=False,
         rtol=1e-5,
