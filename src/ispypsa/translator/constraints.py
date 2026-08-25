@@ -50,9 +50,13 @@ per constraint, investment period and term) and custom_constraints_generators
         name             isp_name  bus                             p_nom  p_nom_extendable  build_year  capital_cost
         SWQLD1_exp_2026  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2026        annuitise(100000)
 
-A blank investment_period means the row applies in every period; a blank
-timeslice means the RHS binds at every snapshot (otherwise only at snapshots
-inside the timeslice's windows, see ispypsa.translator.timeslices).
+A blank investment_period means the row applies in every period. A named
+timeslice scopes the RHS to the snapshots inside that timeslice's windows
+(the timeslices table); a blank timeslice is the constraint's fallback,
+applying at the snapshots none of its named-timeslice rows cover, so a
+constraint with only named rows does not bind outside them. This module
+passes timeslice through untouched — resolving it to snapshots is
+pypsa_build's job when the constraints are applied.
 
 The pipeline runs as follows. The date_from column of the LHS and RHS tables
 is resolved into one row per investment period: for each period, each group
