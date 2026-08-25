@@ -150,8 +150,29 @@ def test_translate_custom_constraints_rez_expansion_disabled(
     pd.testing.assert_frame_equal(
         result["custom_constraints_generators"], expected_generators, check_dtype=False
     )
-    lhs = result["custom_constraints_lhs"]
-    assert "SWQLD1_exp_2026" not in set(lhs["variable_name"])
+    # No relaxation terms and no SWQLD1_expansion_limit; the path's expansion
+    # limit is unaffected by the flag.
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,                   2026,               NSW-QLD_exp_2026,  Link,       p,          0.84
+        SWQLD1,                   2028,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,                   2028,               NSW-QLD_exp_2026,  Link,       p,          0.84
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               Q8 Battery - 2h,   Storage,    p,          0.43
+        SWQLD1,                   2028,               Q8 Battery - 2h,   Storage,    p,          0.43
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+    """)
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,             rhs,   constraint_type
+        SWQLD1,                   2026,               qld_peak_demand,       3000,  <=
+        SWQLD1,                   2026,               qld_winter_reference,  3500,  <=
+        SWQLD1,                   2028,               qld_peak_demand,       3000,  <=
+        SWQLD1,                   2028,               qld_winter_reference,  3500,  <=
+        NSW-QLD_expansion_limit,  ,                   ,                      1000,  <=
+    """)
+    _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
 
 
 def test_date_from_resolved_at_period_starts(csv_str_to_df, sample_model_config):
@@ -196,7 +217,23 @@ def test_date_from_after_all_periods_contributes_nothing(
         ispypsa_tables, _links(csv_str_to_df), sample_model_config
     )
 
-    assert "LATEGEN" not in set(result["custom_constraints_lhs"]["variable_name"])
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_equality_direction_becomes_double_equals(csv_str_to_df, sample_model_config):
@@ -289,7 +326,23 @@ def test_link_terms_not_in_model_dropped_and_logged(
     assert (
         "Custom constraint link_flow terms dropped (paths not in model): ['TAS-SEV']"
     ) in caplog.text
-    assert "TAS-SEV" not in set(result["custom_constraints_lhs"]["variable_name"])
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_constraint_with_no_lhs_terms_dropped_and_logged(
@@ -427,9 +480,11 @@ def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
     _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
 
 
-def test_no_one_sided_period_log_when_every_period_has_both_sides(
+def test_no_drop_logs_when_every_term_and_period_is_in_the_model(
     csv_str_to_df, sample_model_config, caplog
 ):
+    """The base fixture's link is in the model and both sides cover both
+    periods, so none of the module's INFO drop lines fire."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
     with caplog.at_level("INFO"):
@@ -437,8 +492,9 @@ def test_no_one_sided_period_log_when_every_period_has_both_sides(
             ispypsa_tables, _links(csv_str_to_df), sample_model_config
         )
 
-    assert "dropped (no LHS terms in that period)" not in caplog.text
-    assert "dropped (no RHS row in that period)" not in caplog.text
+    assert "link_flow terms dropped" not in caplog.text
+    assert "RHS rows dropped" not in caplog.text
+    assert "LHS terms dropped" not in caplog.text
 
 
 def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
