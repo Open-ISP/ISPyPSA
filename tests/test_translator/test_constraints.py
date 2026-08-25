@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.translator.constraints import (
-    _translate_custom_constraints_from_network_tables,
+    _translate_custom_constraints,
 )
 from ispypsa.translator.helpers import _annuitised_investment_costs
 
@@ -55,11 +55,32 @@ def _links(csv_str_to_df) -> pd.DataFrame:
     """)
 
 
+def _generators(csv_str_to_df) -> pd.DataFrame:
+    """Existing units carry their own name as isp_name. LATEGEN backs the
+    date_from-after-all-periods test."""
+    return csv_str_to_df("""
+        isp_name,  name
+        KINGASF1,  KINGASF1
+        LATEGEN,   LATEGEN
+    """)
+
+
+def _storage(csv_str_to_df) -> pd.DataFrame:
+    return csv_str_to_df("""
+        isp_name,         name
+        Q8 Battery - 2h,  Q8 Battery - 2h
+    """)
+
+
 def test_translate_custom_constraints_rhs(csv_str_to_df, sample_model_config):
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_rhs = csv_str_to_df("""
@@ -82,8 +103,12 @@ def test_translate_custom_constraints_rhs(csv_str_to_df, sample_model_config):
 def test_translate_custom_constraints_lhs(csv_str_to_df, sample_model_config):
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_lhs = csv_str_to_df("""
@@ -116,8 +141,12 @@ def test_translate_custom_constraints_relaxation_generators(
 ):
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_generators = csv_str_to_df(f"""
@@ -140,8 +169,12 @@ def test_translate_custom_constraints_rez_expansion_disabled(
     ispypsa_tables = _constraint_tables(csv_str_to_df)
     sample_model_config.network.rez_transmission_expansion = False
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_generators = csv_str_to_df("""
@@ -185,8 +218,12 @@ def test_date_from_resolved_at_period_starts(csv_str_to_df, sample_model_config)
         SWQLD1,         qld_peak_demand,  2500,  2026-12-01T00:00:00
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     rhs = result["custom_constraints_rhs"]
@@ -213,8 +250,12 @@ def test_date_from_after_all_periods_contributes_nothing(
         SWQLD1,         generator_output,  LATEGEN,        0.5,          2040-01-01T00:00:00
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_lhs = csv_str_to_df("""
@@ -250,8 +291,12 @@ def test_equality_direction_becomes_double_equals(csv_str_to_df, sample_model_co
         NSW-QLD,       reverse,         900,                NSW-QLD Option 1
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_rhs = csv_str_to_df("""
@@ -285,8 +330,12 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
         SWQLD1,         generator_output,  KINGASF1,       0.14,
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_lhs = csv_str_to_df("""
@@ -308,9 +357,9 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
     )
 
 
-def test_link_terms_not_in_model_dropped_and_logged(
-    csv_str_to_df, sample_model_config, caplog
-):
+def test_link_term_not_in_model_raises(csv_str_to_df, sample_model_config):
+    """TAS-SEV has no links in the model, so the constraint can't be applied
+    as written — dropping the term would silently weaken it, so raise."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
     ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,  coefficient,  date_from
@@ -318,18 +367,100 @@ def test_link_terms_not_in_model_dropped_and_logged(
         SWQLD1,         generator_output,  KINGASF1,       0.14,
     """)
 
-    with caplog.at_level("INFO"):
-        result = _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
         )
 
     assert (
-        "Custom constraint link_flow terms dropped (paths not in model): ['TAS-SEV']"
-    ) in caplog.text
+        "Custom constraint LHS terms reference components not in the model: "
+        "[('SWQLD1', 'TAS-SEV')]"
+    ) in str(excinfo.value)
+
+
+def test_generator_and_storage_terms_not_in_model_raise(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  UNKNOWNGEN,     0.14,
+        SWQLD1,         storage_output,    Big Battery,    0.43,
+    """)
+
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Custom constraint LHS terms reference components not in the model: "
+        "[('SWQLD1', 'Big Battery'), ('SWQLD1', 'UNKNOWNGEN')]"
+    ) in str(excinfo.value)
+
+
+def test_load_terms_raise(csv_str_to_df, sample_model_config):
+    """Load variables aren't implemented in pypsa_build, so a constraint with
+    a load term can't be applied as written."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,  variable_name,  coefficient,  date_from
+        SWQLD1,         load,       SQ,             0.3,
+    """)
+
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Custom constraint load terms are not supported; constraints with "
+        "load terms: ['SWQLD1']"
+    ) in str(excinfo.value)
+
+
+def test_new_entrant_terms_expand_to_per_build_year_components(
+    csv_str_to_df, sample_model_config
+):
+    """A term naming a new entrant generator's isp_name covers each of its
+    per-build-year components, mirroring link_flow expansion."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  N2 Solar,       0.5,
+    """)
+    generators = csv_str_to_df("""
+        isp_name,  name
+        N2 Solar,  N2 Solar_2026
+        N2 Solar,  N2 Solar_2028
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        generators,
+        _storage(csv_str_to_df),
+        sample_model_config,
+    )
+
     expected_lhs = csv_str_to_df("""
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
-        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
-        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               N2 Solar_2026,     Generator,  p,          0.5
+        SWQLD1,                   2026,               N2 Solar_2028,     Generator,  p,          0.5
+        SWQLD1,                   2028,               N2 Solar_2026,     Generator,  p,          0.5
+        SWQLD1,                   2028,               N2 Solar_2028,     Generator,  p,          0.5
         SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
@@ -361,8 +492,12 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
     """)
 
     with caplog.at_level("INFO"):
-        result = _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        result = _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
         )
 
     assert (
@@ -439,8 +574,12 @@ def test_rhs_starting_mid_horizon_drops_lhs_for_earlier_periods_and_logs(
     """)
 
     with caplog.at_level("INFO"):
-        result = _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        result = _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
         )
 
     assert (
@@ -468,8 +607,12 @@ def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
     """)
 
     with caplog.at_level("INFO"):
-        result = _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        result = _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
         )
 
     assert (
@@ -480,19 +623,22 @@ def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
     _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
 
 
-def test_no_drop_logs_when_every_term_and_period_is_in_the_model(
+def test_no_one_sided_drop_logs_when_both_sides_cover_both_periods(
     csv_str_to_df, sample_model_config, caplog
 ):
-    """The base fixture's link is in the model and both sides cover both
-    periods, so none of the module's INFO drop lines fire."""
+    """Both sides of the base fixture's constraint cover both periods, so
+    neither one-sided INFO drop line fires."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
     with caplog.at_level("INFO"):
-        _translate_custom_constraints_from_network_tables(
-            ispypsa_tables, _links(csv_str_to_df), sample_model_config
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            sample_model_config,
         )
 
-    assert "link_flow terms dropped" not in caplog.text
     assert "RHS rows dropped" not in caplog.text
     assert "LHS terms dropped" not in caplog.text
 
@@ -522,8 +668,12 @@ def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
         NSW-QLD,       reverse,         900,                Option 1
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        pd.DataFrame(columns=["isp_name", "name"]),
+        pd.DataFrame(columns=["isp_name", "name"]),
+        sample_model_config,
     )
 
     expected_lhs = csv_str_to_df("""
@@ -556,8 +706,12 @@ def test_path_expansion_limit_is_max_of_forward_and_reverse(
         SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     rhs = result["custom_constraints_rhs"]
@@ -607,8 +761,12 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         ,              ,      100000
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_generators = csv_str_to_df(f"""
@@ -659,8 +817,12 @@ def test_relaxation_option_for_constraint_not_in_model_is_dropped(
         NQ1,           ,      100000
     """)
 
-    result = _translate_custom_constraints_from_network_tables(
-        ispypsa_tables, _links(csv_str_to_df), sample_model_config
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        sample_model_config,
     )
 
     expected_generators = csv_str_to_df(f"""

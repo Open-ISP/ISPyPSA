@@ -77,64 +77,31 @@ def _concat_non_empty(frames: list[pd.DataFrame], columns: list[str]) -> pd.Data
     return pd.concat(non_empty, ignore_index=True)
 
 
-def _translate_custom_constraints_from_network_tables(
+def _translate_custom_constraints(
     ispypsa_tables: dict[str, pd.DataFrame],
     links: pd.DataFrame,
+    generators: pd.DataFrame,
+    storage: pd.DataFrame,
     config: ModelConfig,
 ) -> dict[str, pd.DataFrame]:
-    """Translates the custom-constraint tables and builds the endogenous
-    expansion-limit constraints.
+    """Translates the custom-constraint tables and appends the endogenous
+    expansion-limit constraints, returning them in PyPSA friendly form.
 
-    Custom constraint tables are translated to by:
-
-        -  determining the LHS and RHS values active during each investment period. Values
-        with the most recent date_from date falling on or before the start of an
-        investment are taken as active for that period. Blank date_from row are treated as
-        the earliest values.
-        - term_type values are mapped to PyPSA components and attribute combinations.
-        - LHS link_flow terms are expanded from their path_id into one term per link
-        the model has on that path, the existing link and each expansion link, so
-        flow through new builds counts towards the constraint.
-        - LHS and RHS rows are dropped in investment periods where the constraint does
-        not have both LHS terms and an RHS value. This happens when date_from coverage
-        differs between the two sides (including a side whose earliest date_from falls
-        after a period's start), or when all of a constraint's LHS terms reference
-        components outside the configured model scope (e.g. flow path links when
-        regional_granularity is single_region).
-
-    Dummy generators are added to the LHS of constraints with relaxation options and
-    costs:
-
-        - Constraint relaxation is gated by the config's rez_transmission_expansion
-        flag: with it off, no dummy generators or relaxation expansion-limit
-        constraints are created.
-        - For rows in network_expansion_options with an expansion_type of
-        constraint_relaxation dummy generators capacity values are added to the LHS of the
-        constraint specified by the expansion_id column.
-        - One dummy generator is added per relaxation option per investment period. A
-        period's constraint LHS carries every generator built up to that period, so
-        the relaxation available accumulates across the horizon.
-        - The dummy generators allow PyPSA to invest in relaxing the constraint. Their
-        capital_cost is the option's cost from network_transmission_path_expansion_costs,
-        annuitised with the config's wacc and annuitisation_lifetime.
-        - The generator definitions are returned in PyPSA friendly format in the
-        table custom_constraints_generators.
-        - For <= constraints the generator LHS term is negative and for >= the LHS is
-        positive.
-
-    For each set of expansion links for a given transmission flow path and constraint
-    relaxation dummy generators, an additional constraint is created limiting the total
-    transmission expansion or constraint relaxation built across the investment
-    periods.
-
-        - The constraint RHS is derived from allowed_expansion in
-        network_expansion_options, with a constraint_type of <=. For a relaxation the
-        option's allowed_expansion is used directly; for a flow path the RHS is
-        max(forward, reverse).
-        - Each of the expansion links or dummy generators capacity (p_nom) values are
-        added to the constraint LHS.
-        - These constraints are returned appended to the custom_constraints_lhs and
-        custom_constraints_rhs tables.
+    Three constraint blocks are produced in sequence and assembled here.
+    _translate_constraint_tables turns the user-authored constraint tables
+    into per-investment-period LHS/RHS rows. _create_constraint_relaxations
+    adds extendable dummy generators that let the model buy relaxation of
+    those constraints, with the LHS terms wiring them in.
+    _create_expansion_limit_constraints caps the total capacity built for
+    each expandable element — expansion links and relaxation generators
+    alike. The blocks are concatenated and finalised once: constraint_id
+    becomes constraint_name, and duplicate (constraint, period, timeslice)
+    RHS rows across the assembled set raise a ValueError, since pypsa_build
+    would build two constraints with the same name from them. Relaxation
+    resolves against the assembled RHS,
+    so a future producer of constraint blocks (e.g. new entrant build limits)
+    should append before the relaxation step if its constraints are to be
+    relaxable.
 
     Input integrity is the table schemas' job, not this module's. The rules the
     pipeline relies on without re-checking — unique input rows, a direction for
@@ -166,9 +133,11 @@ def _translate_custom_constraints_from_network_tables(
             SWQLD1         qld_peak_demand  3000
 
         ispypsa_tables["custom_constraints_lhs"]:
-            constraint_id  term_type         variable_name  coefficient  date_from
-            SWQLD1         link_flow         NSW-QLD        0.84
-            SWQLD1         generator_output  KINGASF1       0.14
+            constraint_id  term_type         variable_name    coefficient  date_from
+            SWQLD1         link_flow         NSW-QLD          0.84
+            SWQLD1         generator_output  KINGASF1         0.14
+            SWQLD1         generator_output  N2 Solar         0.5
+            SWQLD1         storage_output    Q8 Battery - 2h  0.43
 
         ispypsa_tables["network_expansion_options"]:
             expansion_id  expansion_type         allowed_expansion  expansion_option
@@ -179,12 +148,27 @@ def _translate_custom_constraints_from_network_tables(
         ispypsa_tables["network_transmission_path_expansion_costs"]:
             expansion_id  year  cost
             NSW-QLD       2026  500000
+            NSW-QLD       2028  500000
             SWQLD1        2026  100000
+            SWQLD1        2028  80000
 
         links:
             isp_name  name              p_nom_extendable
             NSW-QLD   NSW-QLD_existing  False
             NSW-QLD   NSW-QLD_exp_2026  True
+
+        generators (isp_name = name for existing units; a new entrant's ID
+        maps to each of its per-build-year components):
+            isp_name  name
+            KINGASF1  KINGASF1
+            N2 Solar  N2 Solar_2026
+            N2 Solar  N2 Solar_2028
+
+        storage:
+            isp_name         name
+            Q8 Battery - 2h  Q8 Battery - 2h
+            SQ BESS          SQ BESS_2026
+            SQ BESS          SQ BESS_2028
 
         returns["custom_constraints_rhs"]:
             constraint_name          investment_period  timeslice        rhs   constraint_type
@@ -198,13 +182,124 @@ def _translate_custom_constraints_from_network_tables(
             SWQLD1                   2026               NSW-QLD_existing  Link       p          0.84
             SWQLD1                   2026               NSW-QLD_exp_2026  Link       p          0.84
             SWQLD1                   2026               KINGASF1          Generator  p          0.14
+            SWQLD1                   2026               N2 Solar_2026     Generator  p          0.5
+            SWQLD1                   2026               N2 Solar_2028     Generator  p          0.5
+            SWQLD1                   2026               Q8 Battery - 2h   Storage    p          0.43
             SWQLD1                   2026               SWQLD1_exp_2026   Generator  p_nom      -1.0
+            SWQLD1                   2028               SWQLD1_exp_2028   Generator  p_nom      -1.0  # relaxation accumulates
             NSW-QLD_expansion_limit                     NSW-QLD_exp_2026  Link       p_nom      1.0
             SWQLD1_expansion_limit                      SWQLD1_exp_2026   Generator  p_nom      1.0
+            SWQLD1_expansion_limit                      SWQLD1_exp_2028   Generator  p_nom      1.0
 
         returns["custom_constraints_generators"] (abridged):
             name             isp_name  bus                             p_nom  build_year  capital_cost
             SWQLD1_exp_2026  SWQLD1    bus_for_custom_constraint_gens  0.0    2026        annuitise(100000)
+            SWQLD1_exp_2028  SWQLD1    bus_for_custom_constraint_gens  0.0    2028        annuitise(80000)
+    """
+    lhs, rhs = _translate_constraint_tables(
+        ispypsa_tables, links, generators, storage, config
+    )
+    relaxation_generators, relaxation_lhs, relaxation_caps = (
+        _create_constraint_relaxations(
+            ispypsa_tables["network_expansion_options"],
+            ispypsa_tables["network_transmission_path_expansion_costs"],
+            rhs,
+            config,
+        )
+    )
+    expansion_limit_lhs, expansion_limit_rhs = _create_expansion_limit_constraints(
+        ispypsa_tables["network_expansion_options"],
+        links,
+        relaxation_generators,
+        relaxation_caps,
+    )
+    lhs = _concat_non_empty(
+        [lhs, relaxation_lhs, expansion_limit_lhs], _INTERNAL_LHS_COLUMNS
+    )
+    rhs = _concat_non_empty([rhs, expansion_limit_rhs], _INTERNAL_RHS_COLUMNS)
+    lhs, rhs = _finalise_lhs_and_rhs(lhs, rhs)
+    return {
+        "custom_constraints_lhs": lhs,
+        "custom_constraints_rhs": rhs,
+        "custom_constraints_generators": relaxation_generators,
+    }
+
+
+def _translate_constraint_tables(
+    ispypsa_tables: dict[str, pd.DataFrame],
+    links: pd.DataFrame,
+    generators: pd.DataFrame,
+    storage: pd.DataFrame,
+    config: ModelConfig,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Translates the user-authored custom-constraint tables into one LHS term
+    and one RHS row per constraint, investment period and (RHS only)
+    timeslice, still keyed by constraint_id.
+
+    The translation steps:
+
+        - the LHS and RHS values active during each investment period are
+        determined: each group keeps the value with the most recent date_from
+        falling on or before the period's start, blank date_from rows acting
+        as the earliest values.
+        - term_type values are mapped to PyPSA component and attribute
+        combinations.
+        - every LHS term must resolve to a component in the model. A term naming a
+        component the configured model doesn't contain (e.g. a link_flow term when
+        regional_granularity is single_region builds no links) raises, since applying
+        the constraint without the term would silently weaken it. load terms aren't
+        implemented in pypsa_build and also raise.
+        - LHS terms are expanded from their input IDs into one term per matching
+        model component (the links, generators and storage tables' isp_name to name
+        mapping): a link_flow term covers its path's existing link and each expansion
+        link, and a term on a new entrant generator or storage unit covers each of
+        its per-build-year components.
+        - LHS and RHS rows are dropped in investment periods where the constraint does
+        not have both LHS terms and an RHS value. This happens when date_from coverage
+        differs between the two sides (including a side whose earliest date_from falls
+        after a period's start).
+
+    I/O Example (config: investment periods 2026 and 2028):
+        ispypsa_tables["custom_constraints"]:
+            constraint_id  direction
+            SWQLD1         <=
+
+        ispypsa_tables["custom_constraints_rhs"]:
+            constraint_id  timeslice        rhs   date_from
+            SWQLD1         qld_peak_demand  3000
+
+        ispypsa_tables["custom_constraints_lhs"]:
+            constraint_id  term_type         variable_name  coefficient  date_from
+            SWQLD1         link_flow         NSW-QLD        0.84
+            SWQLD1         generator_output  KINGASF1       0.14
+
+        links:
+            isp_name  name              p_nom_extendable
+            NSW-QLD   NSW-QLD_existing  False
+            NSW-QLD   NSW-QLD_exp_2026  True
+
+        generators:
+            isp_name  name
+            KINGASF1  KINGASF1
+            N2 Solar  N2 Solar_2026
+            N2 Solar  N2 Solar_2028
+
+        storage:
+            isp_name         name
+            Q8 Battery - 2h  Q8 Battery - 2h
+            SQ BESS          SQ BESS_2026
+            SQ BESS          SQ BESS_2028
+
+        returns lhs (2028 rows mirror 2026):
+            constraint_id  investment_period  variable_name     component  attribute  coefficient
+            SWQLD1         2026               NSW-QLD_existing  Link       p          0.84
+            SWQLD1         2026               NSW-QLD_exp_2026  Link       p          0.84
+            SWQLD1         2026               KINGASF1          Generator  p          0.14
+
+        returns rhs:
+            constraint_id  investment_period  timeslice        rhs   constraint_type
+            SWQLD1         2026               qld_peak_demand  3000  <=
+            SWQLD1         2028               qld_peak_demand  3000  <=
     """
     period_starts = _investment_period_start_dates(
         config.temporal.capacity_expansion.investment_periods,
@@ -222,40 +317,11 @@ def _translate_custom_constraints_from_network_tables(
         period_starts,
     )
     lhs = _add_component_and_attribute(lhs)
-    lhs = _expand_link_flow_terms(lhs, links)
-    lhs, rhs = _drop_one_sided_constraint_periods(lhs, rhs)
-
-    relaxations = _resolve_relaxation_options(
-        ispypsa_tables["network_expansion_options"],
-        sorted(set(rhs["constraint_id"])),
-        config,
-    )
-    relaxation_generators = _create_constraint_relaxation_generators(
-        relaxations,
-        ispypsa_tables["network_transmission_path_expansion_costs"],
-        config,
-    )
-    relaxation_generator_lhs = _relaxation_generator_lhs_terms(
-        relaxation_generators, rhs
-    )
-    path_caps = _resolve_path_expansion_caps(
-        ispypsa_tables["network_expansion_options"], links
-    )
-    relaxation_caps = relaxations.loc[:, ["expansion_id", "allowed_expansion"]]
-    expansion_limit_lhs, expansion_limit_rhs = _create_expansion_limit_constraints(
-        links, relaxation_generators, path_caps, relaxation_caps
-    )
-
-    lhs = _concat_non_empty(
-        [lhs, relaxation_generator_lhs, expansion_limit_lhs], _INTERNAL_LHS_COLUMNS
-    )
-    rhs = _concat_non_empty([rhs, expansion_limit_rhs], _INTERNAL_RHS_COLUMNS)
-    lhs, rhs = _finalise_lhs_and_rhs(lhs, rhs)
-    return {
-        "custom_constraints_lhs": lhs,
-        "custom_constraints_rhs": rhs,
-        "custom_constraints_generators": relaxation_generators,
-    }
+    model_components = _model_component_names(links, generators, storage)
+    _raise_on_load_terms(lhs)
+    _raise_on_terms_not_in_model(lhs, model_components)
+    lhs = _expand_terms_to_model_components(lhs, model_components)
+    return _drop_one_sided_constraint_periods(lhs, rhs)
 
 
 def _investment_period_start_dates(
@@ -373,10 +439,101 @@ def _raise_on_unmapped_term_types(lhs: pd.DataFrame) -> None:
         )
 
 
-def _expand_link_flow_terms(lhs: pd.DataFrame, links: pd.DataFrame) -> pd.DataFrame:
-    """Replaces each link term's path_id with the model's link names — the
-    existing link plus each expansion link — one term per link. Terms for
-    paths not in the model are dropped and logged.
+def _model_component_names(
+    links: pd.DataFrame, generators: pd.DataFrame, storage: pd.DataFrame
+) -> pd.DataFrame:
+    """One row per model component an LHS term can resolve to: the component
+    type, the ID the constraint tables refer to it by (isp_name) and the
+    model component's name.
+
+    I/O Example:
+        links:
+            isp_name  name
+            NSW-QLD   NSW-QLD_existing
+            NSW-QLD   NSW-QLD_exp_2030
+
+        generators:
+            isp_name  name
+            KINGASF1  KINGASF1
+            N2 Solar  N2 Solar_2030
+            N2 Solar  N2 Solar_2040
+
+        storage:
+            isp_name         name
+            Q8 Battery - 2h  Q8 Battery - 2h
+            SQ BESS          SQ BESS_2030
+            SQ BESS          SQ BESS_2040
+
+        returns:
+            isp_name         name              component
+            NSW-QLD          NSW-QLD_existing  Link
+            NSW-QLD          NSW-QLD_exp_2030  Link
+            KINGASF1         KINGASF1          Generator
+            N2 Solar         N2 Solar_2030     Generator
+            N2 Solar         N2 Solar_2040     Generator
+            Q8 Battery - 2h  Q8 Battery - 2h   Storage
+            SQ BESS          SQ BESS_2030      Storage
+            SQ BESS          SQ BESS_2040      Storage
+    """
+    frames = [
+        links.loc[:, ["isp_name", "name"]].assign(component="Link"),
+        generators.loc[:, ["isp_name", "name"]].assign(component="Generator"),
+        storage.loc[:, ["isp_name", "name"]].assign(component="Storage"),
+    ]
+    return _concat_non_empty(frames, ["isp_name", "name", "component"])
+
+
+def _raise_on_load_terms(lhs: pd.DataFrame) -> None:
+    """Raises for load terms — load variables aren't implemented in
+    pypsa_build, so a constraint carrying one can't be applied as specified."""
+    load_terms = lhs[lhs["component"] == "Load"]
+    if not load_terms.empty:
+        raise ValueError(
+            "Custom constraint load terms are not supported; constraints "
+            f"with load terms: {sorted(set(load_terms['constraint_id']))}"
+        )
+
+
+def _raise_on_terms_not_in_model(
+    lhs: pd.DataFrame, model_components: pd.DataFrame
+) -> None:
+    """Raises when a term references a component with no match in the model —
+    e.g. a link_flow term when regional_granularity is single_region builds no
+    links. Applying the constraint without the term would silently weaken it,
+    so the run halts instead.
+
+    I/O Example:
+        lhs:
+            constraint_id  variable_name  component
+            SWQLD1         NSW-QLD        Link
+            SWQLD1         KINGASF1       Generator
+
+        model_components with only ("NSW-QLD", Link) raises:
+            "... components not in the model: [('SWQLD1', 'KINGASF1')]"
+    """
+    ids = model_components.loc[:, ["component", "isp_name"]].drop_duplicates()
+    matched = lhs.merge(
+        ids,
+        how="left",
+        left_on=["component", "variable_name"],
+        right_on=["component", "isp_name"],
+    )
+    missing = matched[matched["isp_name"].isna()]
+    if not missing.empty:
+        pairs = sorted(set(zip(missing["constraint_id"], missing["variable_name"])))
+        raise ValueError(
+            f"Custom constraint LHS terms reference components not in the "
+            f"model: {pairs}"
+        )
+
+
+def _expand_terms_to_model_components(
+    lhs: pd.DataFrame, model_components: pd.DataFrame
+) -> pd.DataFrame:
+    """Replaces each term's input ID with the model components it covers, one
+    term per component: a link_flow term covers its path's existing and
+    expansion links, and a term on a new entrant generator or storage unit
+    covers each of its per-build-year components.
 
     I/O Example:
         lhs:
@@ -384,37 +541,25 @@ def _expand_link_flow_terms(lhs: pd.DataFrame, links: pd.DataFrame) -> pd.DataFr
             SWQLD1         NSW-QLD        Link       0.84
             SWQLD1         KINGASF1       Generator  0.14
 
-        links:
-            isp_name  name
-            NSW-QLD   NSW-QLD_existing
-            NSW-QLD   NSW-QLD_exp_2030
+        model_components:
+            isp_name  name              component
+            NSW-QLD   NSW-QLD_existing  Link
+            NSW-QLD   NSW-QLD_exp_2030  Link
+            KINGASF1  KINGASF1          Generator
 
         returns:
             constraint_id  variable_name     component  coefficient
-            SWQLD1         KINGASF1          Generator  0.14
             SWQLD1         NSW-QLD_existing  Link       0.84
             SWQLD1         NSW-QLD_exp_2030  Link       0.84
+            SWQLD1         KINGASF1          Generator  0.14
     """
-    link_terms = lhs[lhs["component"] == "Link"]
-    other_terms = lhs[lhs["component"] != "Link"]
-    _log_link_terms_not_in_model(link_terms, links)
-    expanded = link_terms.merge(
-        links.loc[:, ["isp_name", "name"]], left_on="variable_name", right_on="isp_name"
+    expanded = lhs.merge(
+        model_components,
+        left_on=["component", "variable_name"],
+        right_on=["component", "isp_name"],
     )
     expanded = expanded.drop(columns=["variable_name", "isp_name"])
-    expanded = expanded.rename(columns={"name": "variable_name"})
-    return pd.concat([other_terms, expanded], ignore_index=True)
-
-
-def _log_link_terms_not_in_model(link_terms: pd.DataFrame, links: pd.DataFrame) -> None:
-    """Logs the link_flow terms whose path has no link in the model (they are
-    dropped by the merge in _expand_link_flow_terms)."""
-    missing = set(link_terms["variable_name"]) - set(links["isp_name"])
-    if missing:
-        logger.info(
-            f"Custom constraint link_flow terms dropped (paths not in model): "
-            f"{sorted(missing)}"
-        )
+    return expanded.rename(columns={"name": "variable_name"})
 
 
 def _drop_one_sided_constraint_periods(
@@ -423,9 +568,9 @@ def _drop_one_sided_constraint_periods(
     """Keeps each constraint only in the investment periods where it has both
     LHS terms and an RHS row, dropping (and logging) the one-sided periods.
 
-    A period is one-sided when one side's date_from starts later than the
-    other's, or when every LHS term was dropped because its path is not in
-    the model. Either way the constraint can't be applied in that period.
+    A period is one-sided when one side's date_from coverage starts later
+    than the other's, leaving the constraint with terms but no limit (or a
+    limit but no terms) in the earlier periods, where it can't be applied.
 
     I/O Example:
         lhs (abridged):
@@ -470,6 +615,74 @@ def _log_one_sided_periods(
         logger.info(
             f"Custom constraint {message}: {sorted((c, int(p)) for c, p in pairs)}"
         )
+
+
+def _create_constraint_relaxations(
+    options: pd.DataFrame,
+    expansion_costs: pd.DataFrame,
+    rhs: pd.DataFrame,
+    config: ModelConfig,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Creates the dummy generators that let PyPSA invest in relaxing
+    constraints with a constraint_relaxation expansion option, the LHS terms
+    wiring them into their constraints, and the caps on how much can be built.
+
+        - Constraint relaxation is gated by the config's rez_transmission_expansion
+        flag: with it off, no dummy generators or relaxation expansion-limit
+        constraints are created.
+        - For rows in network_expansion_options with an expansion_type of
+        constraint_relaxation, dummy generator capacity is added to the LHS of the
+        constraint named by the expansion_id column.
+        - One dummy generator is created per relaxation option per investment period.
+        A period's constraint LHS carries every generator built up to that period, so
+        the relaxation available accumulates across the horizon.
+        - The generators' capital_cost is the option's cost from
+        network_transmission_path_expansion_costs, annuitised with the config's wacc
+        and annuitisation_lifetime.
+        - For <= constraints the generator LHS terms are negative and for >= they
+        are positive, so building capacity always loosens the constraint.
+        - Each option's allowed_expansion is returned as its cap, for
+        _create_expansion_limit_constraints to bound the total relaxation built.
+
+    I/O Example (investment periods 2026 and 2028; rez_transmission_expansion on):
+        options:
+            expansion_id  expansion_type         allowed_expansion  expansion_option
+            SWQLD1        constraint_relaxation  400                Option 2
+
+        expansion_costs:
+            expansion_id  year  cost
+            SWQLD1        2026  100000
+            SWQLD1        2028  80000
+
+        rhs (abridged):
+            constraint_id  investment_period  constraint_type
+            SWQLD1         2026               <=
+            SWQLD1         2028               <=
+
+        returns generators (abridged):
+            name             isp_name  build_year  capital_cost
+            SWQLD1_exp_2026  SWQLD1    2026        annuitise(100000)
+            SWQLD1_exp_2028  SWQLD1    2028        annuitise(80000)
+
+        returns lhs terms:
+            constraint_id  investment_period  variable_name    component  attribute  coefficient
+            SWQLD1         2026               SWQLD1_exp_2026  Generator  p_nom      -1.0
+            SWQLD1         2028               SWQLD1_exp_2026  Generator  p_nom      -1.0
+            SWQLD1         2028               SWQLD1_exp_2028  Generator  p_nom      -1.0
+
+        returns caps:
+            expansion_id  allowed_expansion
+            SWQLD1        400
+    """
+    relaxations = _resolve_relaxation_options(
+        options, sorted(set(rhs["constraint_id"])), config
+    )
+    relaxation_generators = _create_constraint_relaxation_generators(
+        relaxations, expansion_costs, config
+    )
+    relaxation_lhs = _relaxation_generator_lhs_terms(relaxation_generators, rhs)
+    caps = relaxations.loc[:, ["expansion_id", "allowed_expansion"]]
+    return relaxation_generators, relaxation_lhs, caps
 
 
 def _create_constraint_relaxation_generators(
@@ -605,7 +818,10 @@ def _relaxation_generator_lhs_terms(
     a later period can't relax an earlier period's constraint. Each term's
     sign follows the parent constraint's direction (see
     _relaxation_coefficients) so that building capacity always loosens the
-    constraint.
+    constraint. The function works from any generators frame carrying name,
+    isp_name (the parent constraint) and build_year, against any RHS carrying
+    constraint_id, investment_period and constraint_type — it isn't specific
+    to where either came from.
 
     I/O Example:
         relaxation_generators:
@@ -705,22 +921,33 @@ def _resolve_path_expansion_caps(
 
 
 def _create_expansion_limit_constraints(
+    options: pd.DataFrame,
     links: pd.DataFrame,
     relaxation_generators: pd.DataFrame,
-    path_caps: pd.DataFrame,
     relaxation_caps: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Caps the total capacity built across each expandable element's
     per-period components at the selected option's capacity.
 
     The components are the paths' expansion links and the constraints'
-    relaxation generators; the caps are path_caps' max(forward, reverse) and
-    relaxation_caps' allowed_expansion, one row per element in each. The
-    constraints have no investment_period or timeslice — they apply to the
-    p_nom variables globally. Names get an "_expansion_limit" suffix so a
-    relaxation cap doesn't collide with the constraint it relaxes.
+    relaxation generators. A path's cap is max(forward, reverse) of its
+    resolved expansion option (see _resolve_path_expansion_caps); a
+    relaxation's cap is its option's allowed_expansion, passed in as
+    relaxation_caps. Each cap becomes an RHS row with constraint_type "<="
+    and no investment_period or timeslice — it applies to the p_nom variables
+    globally — and each component contributes a coefficient-1.0 p_nom LHS
+    term. Names get an "_expansion_limit" suffix so a relaxation cap doesn't
+    collide with the constraint it relaxes. The underlying builders
+    (_expansion_limit_lhs and _expansion_limit_rhs) take any (element,
+    component) and (element, cap) rows — they aren't specific to paths or
+    relaxations.
 
     I/O Example:
+        options:
+            expansion_id  expansion_type  allowed_expansion  expansion_option
+            CQ-NQ         forward         800                BigLine
+            CQ-NQ         reverse         1000               BigLine
+
         links:
             isp_name  name            p_nom_extendable
             CQ-NQ     CQ-NQ_existing  False
@@ -730,10 +957,6 @@ def _create_expansion_limit_constraints(
         relaxation_generators:
             name             isp_name
             SWQLD1_exp_2030  SWQLD1
-
-        path_caps:
-            expansion_id  allowed_expansion
-            CQ-NQ         1000
 
         relaxation_caps:
             expansion_id  allowed_expansion
@@ -745,11 +968,12 @@ def _create_expansion_limit_constraints(
             CQ-NQ_expansion_limit   CQ-NQ_exp_2040   Link       p_nom      1.0          NaN
             SWQLD1_expansion_limit  SWQLD1_exp_2030  Generator  p_nom      1.0          NaN
 
-        and rhs:
+        and rhs (CQ-NQ capped at max(forward, reverse)):
             constraint_id           rhs   constraint_type  investment_period  timeslice
             CQ-NQ_expansion_limit   1000  <=               NaN                NaN
             SWQLD1_expansion_limit  500   <=               NaN                NaN
     """
+    path_caps = _resolve_path_expansion_caps(options, links)
     lhs = pd.concat(
         [
             _expansion_limit_lhs(links[links["p_nom_extendable"]], "Link"),
@@ -809,8 +1033,9 @@ def _expansion_limit_rhs(caps: pd.DataFrame) -> pd.DataFrame:
 def _finalise_lhs_and_rhs(
     lhs: pd.DataFrame, rhs: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Renames constraint_id to constraint_name, rejects duplicate constraint
-    names, and sets the final PyPSA friendly column orders.
+    """Renames constraint_id to constraint_name, raises on duplicate
+    (constraint, period, timeslice) RHS rows, and sets the final PyPSA
+    friendly column orders.
 
     I/O Example:
         lhs: constraint_id=SWQLD1, ...  rhs: constraint_id=SWQLD1, ...
