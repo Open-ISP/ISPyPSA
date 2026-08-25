@@ -15,6 +15,9 @@ from ispypsa.templater.dynamic_generator_properties import (
 from ispypsa.templater.energy_policy_targets import (
     _template_energy_policy_targets,
 )
+from ispypsa.templater.existing_planned import (
+    _template_generators_existing_planned,
+)
 from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
@@ -22,10 +25,8 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
-from ispypsa.templater.geography import (
-    _build_geo_region_lookup,
-    _template_network_geography,
-)
+from ispypsa.templater.geography import _template_network_geography
+from ispypsa.templater.helpers import _build_geo_region_lookup
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
     _extract_flow_path_options_from_iasr,
@@ -250,6 +251,10 @@ def create_ispypsa_inputs_template(
             template["generators_new_entrant"],
             template["storage_new_entrant"],
             sub_regional_geography,
+        )
+
+        template["generators_existing_planned"] = _template_generators_existing_planned(
+            iasr_tables, regional_granularity, sub_regional_geography
         )
 
         if regional_granularity == "sub_regions":

@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.geography import _build_geo_region_lookup
+from ispypsa.templater.helpers import _build_geo_region_lookup
 from ispypsa.templater.mappings import _CANONICAL_TIMESLICES, _SINGLE_REGION_ID
 
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}

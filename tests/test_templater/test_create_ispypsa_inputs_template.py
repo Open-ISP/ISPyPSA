@@ -136,6 +136,63 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
+# NOTE: temporary while existing/planned storage properties not yet wired into
+# templater - input tables defined here for brevity until then.
+def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The ECAA summary plus its per-unit property tables, wiring-only fixture.
+
+    BW01 (CNSW coal generator) and Q1G1 (Q1 REZ solar generator) prove the
+    generator/geo_id wiring at every granularity (CNSW collapses to NSW at
+    nem_regions/single_region; Q1 stays untouched, matching new entrant's REZ
+    fixtures above). Q8_BATT_2H proves the storage split still excludes storage
+    rows from generators_existing_planned's output. Detailed merge behaviour is
+    covered in test_existing_planned.py; here they just need to be present for
+    wiring to run.
+    """
+    summary = csv_str_to_df("""
+        IASR ID / DLT names,  Power Station,  Technology Type,                REZ ID,          Sub-region,  Fuel type,  Fuel cost mapping
+        BW01,                 Bayswater,      Steam Sub Critical,             Not Applicable,  CNSW,        Black Coal, Bayswater
+        Q1G1,                 Solar Farm,     Large scale Solar PV,           Q1,              NQ,          Solar,      Solar Farm
+        SAMPLE_BATT,          Sample Battery, Battery Storage (2hrs storage), Not Applicable,  CNSW,        Battery,    Sample Battery
+    """)
+    return {
+        "existing_committed_anticipated_additional_generator_summary": summary,
+        "pumped_hydro_existing_committed_anticipated_additional_properties": csv_str_to_df(
+            "Power Station"
+        ),
+        "maximum_capacity_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Installed capacity (MW),  Commissioning date
+            BW01,     660.0,
+            Q1G1,     100.0,                    2028-12-01
+        """),
+        # Built directly - the real column name's trailing "1," is a literal comma
+        "variable_opex_existing_committed_anticipated_additional_generators": pd.DataFrame(
+            {
+                "IASR ID": ["BW01", "Q1G1"],
+                "Variable OPEX ($/MWh sent out)1,": [8.0, 0.0],
+            }
+        ),
+        "heat_rates_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Heat rate (GJ/MWh)
+            BW01,     10.05
+            Q1G1,     0.0
+        """),
+        "expected_closure_years": csv_str_to_df("""
+            IASR ID,  Expected Closure Year (Calendar year)
+            BW01,     2033
+            Q1G1,     2100
+        """),
+        "coal_minimum_stable_level": csv_str_to_df("""
+            IASR ID,  Technology Type,      Minimum Stable Level (MW)_Typical Lowest Band
+            BW01,     Steam Sub Critical,   260.0
+        """),
+        "gpg_min_stable_level_existing_generators": csv_str_to_df("""
+            IASR ID,              Technology Type,  Min Stable Level (MW)
+            SOME_OTHER_GAS_UNIT,  CCGT,             5.0
+        """),
+    }
+
+
 def _stub_timeslice_calendar(csv_str_to_df) -> pd.DataFrame:
     """Minimal raw timeslice calendar: two windows that tile planning year
     FY2026 — a hot-day peak and a winter window that wraps back to it, so the
@@ -373,6 +430,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -484,6 +542,26 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     }
     # BOTN - Cethana (Pumped Hydro), the only storage row in the fixture.
     assert len(storage_new_entrant) == 1
+
+    # generators_existing_planned — BW01 (CNSW) and Q1G1 (Q1 REZ); SAMPLE_BATT
+    # is excluded (storage)
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned.columns) == {
+        "name",
+        "power_station",
+        "technology",
+        "geo_id",
+        "fuel_type",
+        "fuel_price_mapping",
+        "capacity",
+        "vom",
+        "heat_rate",
+        "commissioning_date",
+        "closure_year",
+        "minimum_load",
+    }
+    assert set(generators_existing_planned["geo_id"]) == {"CNSW", "Q1"}
+    assert len(generators_existing_planned) == 2
 
     # Custom-constraints tables are spliced into the output via
     # template.update(template_custom_constraints_from_plexos(...)). The
@@ -632,6 +710,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -696,6 +775,11 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # REZ rows are untouched, subregions in same region collapse:
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 3
+
+    # generators_existing_planned — CNSW relabels to NSW; Q1 REZ stays untouched.
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned["geo_id"]) == {"NSW", "Q1"}
+    assert len(generators_existing_planned) == 2
 
     # Not templated at this granularity (see empty_custom_constraint_tables);
     # the mock turns a regression in that gate into a clean assertion failure
@@ -812,6 +896,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -874,6 +959,11 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # REZ rows untouched, everything else collapses to 'NEM' geo_id
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 2
+
+    # generators_existing_planned — CNSW relabels to NEM; Q1 REZ stays untouched.
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned["geo_id"]) == {"NEM", "Q1"}
+    assert len(generators_existing_planned) == 2
 
     # Not templated at this granularity (see empty_custom_constraint_tables);
     # the mock turns a regression in that gate into a clean assertion failure

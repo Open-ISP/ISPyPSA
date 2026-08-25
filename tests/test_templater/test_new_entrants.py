@@ -9,18 +9,13 @@ from ispypsa.templater.new_entrants import (
     _add_resource_type,
     _assert_botn_technology_expected,
     _assert_build_cost_zone_matches_geo_id,
-    _assert_table_valid,
     _collapse_geo_id_to_granularity,
-    _group_by_source_key,
     _merge_lcf_build,
     _merge_lcf_om,
     _merge_phes_properties,
     _merge_properties,
-    _normalise_phes_botn_key,
     _override_botn_technology,
-    _required_property_columns,
     _reshape_technology_specific_lcfs,
-    _set_geo_id,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
 )
@@ -171,127 +166,10 @@ def test_template_storage_new_entrant(csv_str_to_df):
     assert len(result) == 3
 
 
-# --- _required_property_columns ---
-
-
-def test_required_property_columns():
-    # Two properties sharing a source - both properties' value_col/technology_col
-    # are collected into one set.
-    props = {
-        "storage_hours": {
-            "table": "battery_properties",
-            "technology_col": "Technology",
-            "value_col": "Storage hours",
-        },
-        "degradation_annual": {
-            "table": "battery_properties",
-            "technology_col": "Technology",
-            "value_col": "Variable value",
-        },
-    }
-
-    result = _required_property_columns(props)
-
-    assert result == {"Technology", "Storage hours", "Variable value"}
-
-
-# --- _assert_table_valid ---
-
-
-def test_assert_table_valid_passes(csv_str_to_df):
-    # Table has both required columns and at least one row - no error raised.
-    table = csv_str_to_df("""
-        Technology,  Base value
-        Wind,        20.0
-    """)
-    # should not raise
-    _assert_table_valid(
-        table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
-    )
-
-
-def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
-    # Table is missing a required column -> raise, naming the table and the column.
-    table = csv_str_to_df("""
-        Technology,  Base value
-        Wind,        20.0
-    """)
-
-    with pytest.raises(
-        ValueError,
-        match=r"'fixed_opex_new_entrants' table missing required columns: "
-        r"\['Storage hours'\]",
-    ):
-        _assert_table_valid(
-            table,
-            "fixed_opex_new_entrants",
-            {"Technology", "Storage hours"},
-            "'fom'",
-        )
-
-
-def test_assert_table_valid_raises_empty_table():
-    # Table has both required columns but no rows -> raise, naming what would
-    # have been merged.
-    table = pd.DataFrame(columns=["Technology", "Base value"])
-
-    with pytest.raises(
-        ValueError,
-        match=r"'fixed_opex_new_entrants' table is empty - cannot merge 'fom'",
-    ):
-        _assert_table_valid(
-            table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
-        )
-
-
-# --- _group_by_source_key ---
-
-
-def test_group_by_source_key():
-    # Two properties sharing a (table, technology_col) source are grouped together,
-    # each keeping its original attrs dict unchanged; two properties from the same
-    # table but with different technology_cols are independent.
-    property_map = {
-        "storage_hours": {
-            "table": "battery_properties",
-            "technology_col": "Technology",
-            "value_col": "Energy capacity_Hours",
-        },
-        "efficiency_charge": {
-            "table": "battery_properties",
-            "technology_col": "Technology",
-            "value_col": "Charge efficiency_%",
-        },
-        "lifetime_technical": {
-            "table": "lead_time_and_project_life",
-            "technology_col": "Technology",
-            "value_col": "Technical life (years)",
-        },
-        "different_tech_col": {
-            "table": "lead_time_and_project_life",
-            "technology_col": "Alternate Technology",
-            "value_col": "Test",
-        },
-    }
-
-    result = _group_by_source_key(property_map)
-
-    expected = {
-        ("battery_properties", "Technology"): {
-            "storage_hours": property_map["storage_hours"],
-            "efficiency_charge": property_map["efficiency_charge"],
-        },
-        ("lead_time_and_project_life", "Technology"): {
-            "lifetime_technical": property_map["lifetime_technical"],
-        },
-        ("lead_time_and_project_life", "Alternate Technology"): {
-            "different_tech_col": property_map["different_tech_col"]
-        },
-    }
-    assert result == expected
-
-
 # --- _merge_properties ---
+# (_group_properties_by_source, _required_property_columns and
+# _get_property_value_map are shared with existing_planned.py and now live in, and
+# are tested in, helpers.py / test_helpers.py.)
 
 
 def test_merge_properties(csv_str_to_df, caplog):
@@ -308,12 +186,12 @@ def test_merge_properties(csv_str_to_df, caplog):
     property_map = {
         "storage_hours": {
             "table": "battery_properties",
-            "technology_col": "Technology",
+            "key_col": "Technology",
             "value_col": "Energy capacity_Hours",
         },
         "efficiency_charge": {
             "table": "battery_properties",
-            "technology_col": "Technology",
+            "key_col": "Technology",
             "value_col": "Charge efficiency_%",
         },
     }
@@ -353,7 +231,7 @@ def test_merge_properties_raises_on_invalid_source_table(csv_str_to_df):
     property_map = {
         "fom": {
             "table": "fixed_opex_new_entrants",
-            "technology_col": "Technology",
+            "key_col": "Technology",
             "value_col": "Base value",
         }
     }
@@ -460,68 +338,10 @@ def test_merge_phes_properties_empty(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-# --- _normalise_phes_botn_key ---
-
-
-def test_normalise_phes_botn_key(csv_str_to_df):
-    # The pumped-hydro table's full BOTN spelling is renamed to the bare name so it matches
-    # the overridden 'technology'; the shared iasr_tables dict is not mutated.
-    pumped_hydro = csv_str_to_df("""
-        Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
-        Pumped Hydro (24hrs storage),  24,                       76
-        BOTN - Cethana - 20h,          20,                       81
-    """)
-    iasr_tables = {"pumped_hydro_new_entrant_properties": pumped_hydro}
-    before = pumped_hydro.copy()
-
-    result = _normalise_phes_botn_key(iasr_tables)
-
-    expected = csv_str_to_df("""
-        Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
-        Pumped Hydro (24hrs storage),  24,                       76
-        BOTN - Cethana,                20,                       81
-    """)
-    pd.testing.assert_frame_equal(
-        result["pumped_hydro_new_entrant_properties"], expected
-    )
-    # the shared dict's table is left untouched
-    pd.testing.assert_frame_equal(
-        iasr_tables["pumped_hydro_new_entrant_properties"], before
-    )
-
-
-# --- _set_geo_id ---
-
-
-def test_set_geo_id(csv_str_to_df):
-    # Check that the wrapper adds 'geo_id' column, correctly applying ``_pick_location``
-    # and not impacting existing columns.
-    new_entrants = csv_str_to_df("""
-        technology,                     REZ ID,         Sub-region
-        Wind,                           N3,             CNSW
-        OCGT (small GT),                Not Applicable, NQ
-    """)
-
-    result = _set_geo_id(new_entrants)
-
-    expected = csv_str_to_df("""
-        technology,                     REZ ID,         Sub-region, geo_id
-        Wind,                           N3,             CNSW,       N3
-        OCGT (small GT),                Not Applicable, NQ,         NQ
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_set_geo_id_empty_input(csv_str_to_df):
-    # Empty input still returns the added geo_id column
-    new_entrants = pd.DataFrame(columns=["technology", "REZ ID", "Sub-region"])
-
-    result = _set_geo_id(new_entrants)
-
-    expected = csv_str_to_df("""
-        technology, REZ ID, Sub-region, geo_id
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+# (BOTN's pumped-hydro key correction is now a plain _apply_known_value_replacement
+# call -- see helpers.py / test_helpers.py for that mechanism's own tests. Its wiring
+# here is covered incidentally by test_merge_phes_properties above, which already
+# exercises a full-spelling BOTN row resolving correctly.)
 
 
 # --- _collapse_geo_id_to_granularity ---
@@ -548,7 +368,12 @@ def test_collapse_geo_id_to_granularity_sub_regions_is_noop(csv_str_to_df):
         ["value"],
     )
 
-    pd.testing.assert_frame_equal(result, new_entrants)
+    expected = csv_str_to_df("""
+        name,            technology, geo_id, value
+        CNSW OCGT Small, OCGT,       CNSW,   104.0
+        Q1_WH,           Wind,       Q1,     999.0
+    """)
+    pd.testing.assert_frame_equal(result, expected)
 
 
 def test_collapse_geo_id_to_granularity_averages_across_sub_regions(csv_str_to_df):
@@ -642,7 +467,10 @@ def test_collapse_geo_id_to_granularity_empty_input(csv_str_to_df):
         ["value"],
     )
 
-    pd.testing.assert_frame_equal(result, new_entrants)
+    expected = csv_str_to_df("""
+        name,   technology,     geo_id,     value
+    """)
+    pd.testing.assert_frame_equal(result, expected)
 
 
 # --- _add_resource_type (generator-specific) ---
