@@ -384,7 +384,10 @@ def _expand_link_flow_terms(lhs: pd.DataFrame, links: pd.DataFrame) -> pd.DataFr
             SWQLD1         NSW-QLD        Link       0.84
             SWQLD1         KINGASF1       Generator  0.14
 
-        links (isp_name -> name): NSW-QLD -> NSW-QLD_existing, NSW-QLD_exp_2030
+        links:
+            isp_name  name
+            NSW-QLD   NSW-QLD_existing
+            NSW-QLD   NSW-QLD_exp_2030
 
         returns:
             constraint_id  variable_name     component  coefficient
@@ -425,11 +428,17 @@ def _drop_one_sided_constraint_periods(
     the model. Either way the constraint can't be applied in that period.
 
     I/O Example:
-        lhs (abridged):                       rhs (abridged):
-            constraint_id  investment_period     constraint_id  investment_period
-            SWQLD1         2028                  SWQLD1         2026
-            NQ1            2026                  SWQLD1         2028
-            NQ1            2028                  NQ1            2026
+        lhs (abridged):
+            constraint_id  investment_period
+            SWQLD1         2028
+            NQ1            2026
+            NQ1            2028
+
+        rhs (abridged):
+            constraint_id  investment_period
+            SWQLD1         2026
+            SWQLD1         2028
+            NQ1            2026
 
         returns:
             lhs without its NQ1 2028 term (no RHS row that period; logged)
@@ -475,8 +484,7 @@ def _create_constraint_relaxation_generators(
     by the constraint's direction (see _relaxation_generator_lhs_terms), so
     building them relaxes the constraint at the option's cost; total
     relaxation is capped at the option's allowed_expansion by the
-    expansion-limit constraints, which take that cap from the same resolved
-    relaxations rather than from the generators.
+    expansion-limit constraints.
 
     The costs table may use blank key cells as wildcards: a blank
     expansion_id is a table-wide default cost and a blank year a static cost
@@ -723,9 +731,13 @@ def _create_expansion_limit_constraints(
             name             isp_name
             SWQLD1_exp_2030  SWQLD1
 
-        path_caps:                           relaxation_caps:
-            expansion_id  allowed_expansion      expansion_id  allowed_expansion
-            CQ-NQ         1000                   SWQLD1        500
+        path_caps:
+            expansion_id  allowed_expansion
+            CQ-NQ         1000
+
+        relaxation_caps:
+            expansion_id  allowed_expansion
+            SWQLD1        500
 
         returns lhs:
             constraint_id           variable_name    component  attribute  coefficient  investment_period
