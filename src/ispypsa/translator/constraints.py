@@ -82,6 +82,7 @@ def _translate_custom_constraints(
     links: pd.DataFrame,
     generators: pd.DataFrame,
     storage: pd.DataFrame,
+    demand_nodes: pd.DataFrame,
     config: ModelConfig,
 ) -> dict[str, pd.DataFrame]:
     """Translates the custom-constraint tables and appends the endogenous
@@ -138,6 +139,7 @@ def _translate_custom_constraints(
             SWQLD1         generator_output  KINGASF1         0.14
             SWQLD1         generator_output  N2 Solar         0.5
             SWQLD1         storage_output    Q8 Battery - 2h  0.43
+            SWQLD1         load              SQ               -0.33
 
         ispypsa_tables["network_expansion_options"]:
             expansion_id  expansion_type         allowed_expansion  expansion_option
@@ -170,6 +172,10 @@ def _translate_custom_constraints(
             SQ BESS          SQ BESS_2026
             SQ BESS          SQ BESS_2028
 
+        demand_nodes:
+            name
+            SQ
+
         returns["custom_constraints_rhs"]:
             constraint_name          investment_period  timeslice        rhs   constraint_type
             SWQLD1                   2026               qld_peak_demand  3000  <=
@@ -185,6 +191,7 @@ def _translate_custom_constraints(
             SWQLD1                   2026               N2 Solar_2026     Generator  p          0.5
             SWQLD1                   2026               N2 Solar_2028     Generator  p          0.5
             SWQLD1                   2026               Q8 Battery - 2h   Storage    p          0.43
+            SWQLD1                   2026               load_SQ           Load       p_set      -0.33
             SWQLD1                   2026               SWQLD1_exp_2026   Generator  p_nom      -1.0
             SWQLD1                   2028               SWQLD1_exp_2028   Generator  p_nom      -1.0  # relaxation accumulates
             NSW-QLD_expansion_limit                     NSW-QLD_exp_2026  Link       p_nom      1.0
@@ -197,7 +204,7 @@ def _translate_custom_constraints(
             SWQLD1_exp_2028  SWQLD1    bus_for_custom_constraint_gens  0.0    2028        annuitise(80000)
     """
     lhs, rhs = _translate_constraint_tables(
-        ispypsa_tables, links, generators, storage, config
+        ispypsa_tables, links, generators, storage, demand_nodes, config
     )
     relaxation_generators, relaxation_lhs, relaxation_caps = (
         _create_constraint_relaxations(
@@ -230,6 +237,7 @@ def _translate_constraint_tables(
     links: pd.DataFrame,
     generators: pd.DataFrame,
     storage: pd.DataFrame,
+    demand_nodes: pd.DataFrame,
     config: ModelConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Translates the user-authored custom-constraint tables into one LHS term
@@ -246,14 +254,17 @@ def _translate_constraint_tables(
         combinations.
         - every LHS term must resolve to a component in the model. A term naming a
         component the configured model doesn't contain (e.g. a link_flow term when
-        regional_granularity is single_region builds no links) raises, since applying
-        the constraint without the term would silently weaken it. load terms aren't
-        implemented in pypsa_build and also raise.
+        regional_granularity is single_region builds no links, or a load term when
+        the granularity doesn't make its sub-region a demand node) raises, since
+        applying the constraint without the term would silently alter it.
         - LHS terms are expanded from their input IDs into one term per matching
-        model component (the links, generators and storage tables' isp_name to name
-        mapping): a link_flow term covers its path's existing link and each expansion
-        link, and a term on a new entrant generator or storage unit covers each of
-        its per-build-year components.
+        model component (the links, generators, storage and demand_nodes tables'
+        isp_name to name mapping): a link_flow term covers its path's existing link
+        and each expansion link, a term on a new entrant generator or storage unit
+        covers each of its per-build-year components, and a load term maps to
+        the "load_<bus>" Load component at its demand node — a data term whose
+        p_set attribute pypsa_build resolves from the demand trace, not an
+        optimisation variable.
         - LHS and RHS rows are dropped in investment periods where the constraint does
         not have both LHS terms and an RHS value. This happens when date_from coverage
         differs between the two sides (including a side whose earliest date_from falls
@@ -290,6 +301,10 @@ def _translate_constraint_tables(
             SQ BESS          SQ BESS_2026
             SQ BESS          SQ BESS_2028
 
+        demand_nodes:
+            name
+            SQ
+
         returns lhs (2028 rows mirror 2026):
             constraint_id  investment_period  variable_name     component  attribute  coefficient
             SWQLD1         2026               NSW-QLD_existing  Link       p          0.84
@@ -317,8 +332,7 @@ def _translate_constraint_tables(
         period_starts,
     )
     lhs = _add_component_and_attribute(lhs)
-    model_components = _model_component_names(links, generators, storage)
-    _raise_on_load_terms(lhs)
+    model_components = _model_component_names(links, generators, storage, demand_nodes)
     _raise_on_terms_not_in_model(lhs, model_components)
     lhs = _expand_terms_to_model_components(lhs, model_components)
     return _drop_one_sided_constraint_periods(lhs, rhs)
@@ -440,11 +454,21 @@ def _raise_on_unmapped_term_types(lhs: pd.DataFrame) -> None:
 
 
 def _model_component_names(
-    links: pd.DataFrame, generators: pd.DataFrame, storage: pd.DataFrame
+    links: pd.DataFrame,
+    generators: pd.DataFrame,
+    storage: pd.DataFrame,
+    demand_nodes: pd.DataFrame,
 ) -> pd.DataFrame:
     """One row per model component an LHS term can resolve to: the component
     type, the ID the constraint tables refer to it by (isp_name) and the
     model component's name.
+
+    Demand nodes — the buses with demand attached, not all buses — appear as
+    Load rows: a load term resolves to the Load component pypsa_build attaches
+    to its node's demand trace, named "load_<bus>" (see
+    ispypsa.pypsa_build.buses). Which buses carry demand follows the regional
+    granularity (sub-region buses, region buses, or the single NEM bus); REZ
+    buses never do (see ispypsa.translator.buses).
 
     I/O Example:
         links:
@@ -464,6 +488,10 @@ def _model_component_names(
             SQ BESS          SQ BESS_2030
             SQ BESS          SQ BESS_2040
 
+        demand_nodes:
+            name
+            SQ
+
         returns:
             isp_name         name              component
             NSW-QLD          NSW-QLD_existing  Link
@@ -474,24 +502,17 @@ def _model_component_names(
             Q8 Battery - 2h  Q8 Battery - 2h   Storage
             SQ BESS          SQ BESS_2030      Storage
             SQ BESS          SQ BESS_2040      Storage
+            SQ               load_SQ           Load
     """
     frames = [
         links.loc[:, ["isp_name", "name"]].assign(component="Link"),
         generators.loc[:, ["isp_name", "name"]].assign(component="Generator"),
         storage.loc[:, ["isp_name", "name"]].assign(component="Storage"),
+        demand_nodes.loc[:, ["name"]]
+        .rename(columns={"name": "isp_name"})
+        .assign(name="load_" + demand_nodes["name"], component="Load"),
     ]
     return _concat_non_empty(frames, ["isp_name", "name", "component"])
-
-
-def _raise_on_load_terms(lhs: pd.DataFrame) -> None:
-    """Raises for load terms — load variables aren't implemented in
-    pypsa_build, so a constraint carrying one can't be applied as specified."""
-    load_terms = lhs[lhs["component"] == "Load"]
-    if not load_terms.empty:
-        raise ValueError(
-            "Custom constraint load terms are not supported; constraints "
-            f"with load terms: {sorted(set(load_terms['constraint_id']))}"
-        )
 
 
 def _raise_on_terms_not_in_model(
@@ -509,7 +530,8 @@ def _raise_on_terms_not_in_model(
             SWQLD1         KINGASF1       Generator
 
         model_components with only ("NSW-QLD", Link) raises:
-            "... components not in the model: [('SWQLD1', 'KINGASF1')]"
+            "... components not in the model, as (constraint_id,
+            variable_name): [('SWQLD1', 'KINGASF1')]"
     """
     ids = model_components.loc[:, ["component", "isp_name"]].drop_duplicates()
     matched = lhs.merge(
@@ -523,7 +545,7 @@ def _raise_on_terms_not_in_model(
         pairs = sorted(set(zip(missing["constraint_id"], missing["variable_name"])))
         raise ValueError(
             f"Custom constraint LHS terms reference components not in the "
-            f"model: {pairs}"
+            f"model, as (constraint_id, variable_name): {pairs}"
         )
 
 

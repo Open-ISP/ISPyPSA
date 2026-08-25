@@ -72,6 +72,15 @@ def _storage(csv_str_to_df) -> pd.DataFrame:
     """)
 
 
+def _demand_nodes(csv_str_to_df) -> pd.DataFrame:
+    """The buses with demand attached — at the fixture's sub_regions
+    granularity, the sub-region buses."""
+    return csv_str_to_df("""
+        name
+        SQ
+    """)
+
+
 def test_translate_custom_constraints_rhs(csv_str_to_df, sample_model_config):
     ispypsa_tables = _constraint_tables(csv_str_to_df)
 
@@ -80,6 +89,7 @@ def test_translate_custom_constraints_rhs(csv_str_to_df, sample_model_config):
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -108,6 +118,7 @@ def test_translate_custom_constraints_lhs(csv_str_to_df, sample_model_config):
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -146,6 +157,7 @@ def test_translate_custom_constraints_relaxation_generators(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -174,6 +186,7 @@ def test_translate_custom_constraints_rez_expansion_disabled(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -223,6 +236,7 @@ def test_date_from_resolved_at_period_starts(csv_str_to_df, sample_model_config)
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -255,6 +269,7 @@ def test_date_from_after_all_periods_contributes_nothing(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -296,6 +311,7 @@ def test_equality_direction_becomes_double_equals(csv_str_to_df, sample_model_co
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -335,6 +351,7 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -373,12 +390,13 @@ def test_link_term_not_in_model_raises(csv_str_to_df, sample_model_config):
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
     assert (
-        "Custom constraint LHS terms reference components not in the model: "
-        "[('SWQLD1', 'TAS-SEV')]"
+        "Custom constraint LHS terms reference components not in the model, "
+        "as (constraint_id, variable_name): [('SWQLD1', 'TAS-SEV')]"
     ) in str(excinfo.value)
 
 
@@ -398,22 +416,67 @@ def test_generator_and_storage_terms_not_in_model_raise(
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
     assert (
-        "Custom constraint LHS terms reference components not in the model: "
+        "Custom constraint LHS terms reference components not in the model, "
+        "as (constraint_id, variable_name): "
         "[('SWQLD1', 'Big Battery'), ('SWQLD1', 'UNKNOWNGEN')]"
     ) in str(excinfo.value)
 
 
-def test_load_terms_raise(csv_str_to_df, sample_model_config):
-    """Load variables aren't implemented in pypsa_build, so a constraint with
-    a load term can't be applied as written."""
+def test_load_term_resolves_to_the_demand_nodes_load_component(
+    csv_str_to_df, sample_model_config
+):
+    """A load term is a data term on the sub-region's demand: it maps to the
+    load_<bus> Load component at its demand node, whose p_set pypsa_build
+    resolves from the demand trace."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
     ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
         constraint_id,  term_type,  variable_name,  coefficient,  date_from
-        SWQLD1,         load,       SQ,             0.3,
+        SWQLD1,         load,       SQ,             -0.33,
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               load_SQ,           Load,       p_set,      -0.33
+        SWQLD1,                   2028,               load_SQ,           Load,       p_set,      -0.33
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_load_term_for_sub_region_without_demand_node_raises(
+    csv_str_to_df, sample_model_config
+):
+    """A sub-region that isn't a demand node (it's outside the model, or the
+    granularity aggregates it away) has no demand for a load term to
+    reference."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,  variable_name,  coefficient,  date_from
+        SWQLD1,         load,       CNSW,           -0.33,
     """)
 
     with pytest.raises(ValueError) as excinfo:
@@ -422,12 +485,13 @@ def test_load_terms_raise(csv_str_to_df, sample_model_config):
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
     assert (
-        "Custom constraint load terms are not supported; constraints with "
-        "load terms: ['SWQLD1']"
+        "Custom constraint LHS terms reference components not in the model, "
+        "as (constraint_id, variable_name): [('SWQLD1', 'CNSW')]"
     ) in str(excinfo.value)
 
 
@@ -452,6 +516,7 @@ def test_new_entrant_terms_expand_to_per_build_year_components(
         _links(csv_str_to_df),
         generators,
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -497,6 +562,7 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
@@ -579,6 +645,7 @@ def test_rhs_starting_mid_horizon_drops_lhs_for_earlier_periods_and_logs(
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
@@ -612,6 +679,7 @@ def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
@@ -636,6 +704,7 @@ def test_no_one_sided_drop_logs_when_both_sides_cover_both_periods(
             _links(csv_str_to_df),
             _generators(csv_str_to_df),
             _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
             sample_model_config,
         )
 
@@ -673,6 +742,7 @@ def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
         _links(csv_str_to_df),
         pd.DataFrame(columns=["isp_name", "name"]),
         pd.DataFrame(columns=["isp_name", "name"]),
+        pd.DataFrame(columns=["name"]),
         sample_model_config,
     )
 
@@ -711,6 +781,7 @@ def test_path_expansion_limit_is_max_of_forward_and_reverse(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -766,6 +837,7 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
@@ -822,6 +894,7 @@ def test_relaxation_option_for_constraint_not_in_model_is_dropped(
         _links(csv_str_to_df),
         _generators(csv_str_to_df),
         _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
         sample_model_config,
     )
 
