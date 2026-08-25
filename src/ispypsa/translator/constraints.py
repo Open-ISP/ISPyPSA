@@ -278,8 +278,15 @@ def _translate_custom_constraints_from_network_tables(
     lhs = _expand_link_flow_terms(lhs, links)
     lhs, rhs = _drop_one_sided_constraint_periods(lhs, rhs)
 
+    relaxations = _resolve_relaxation_options(
+        ispypsa_tables["network_expansion_options"],
+        sorted(set(rhs["constraint_id"])),
+        config,
+    )
     relaxation_generators = _create_constraint_relaxation_generators(
-        ispypsa_tables, sorted(set(rhs["constraint_id"])), config
+        relaxations,
+        ispypsa_tables["network_transmission_path_expansion_costs"],
+        config,
     )
     relaxation_generator_lhs = _relaxation_generator_lhs_terms(
         relaxation_generators, rhs
@@ -287,8 +294,9 @@ def _translate_custom_constraints_from_network_tables(
     path_caps = _resolve_path_expansion_caps(
         ispypsa_tables["network_expansion_options"], links
     )
+    relaxation_caps = relaxations.loc[:, ["expansion_id", "allowed_expansion"]]
     expansion_limit_lhs, expansion_limit_rhs = _create_expansion_limit_constraints(
-        links, relaxation_generators, path_caps
+        links, relaxation_generators, path_caps, relaxation_caps
     )
 
     lhs = _concat_non_empty(
@@ -296,7 +304,6 @@ def _translate_custom_constraints_from_network_tables(
     )
     rhs = _concat_non_empty([rhs, expansion_limit_rhs], _INTERNAL_RHS_COLUMNS)
     lhs, rhs = _finalise_lhs_and_rhs(lhs, rhs)
-    relaxation_generators = _finalise_generators(relaxation_generators)
     return {
         "custom_constraints_lhs": lhs,
         "custom_constraints_rhs": rhs,
@@ -510,8 +517,8 @@ def _log_one_sided_periods(
 
 
 def _create_constraint_relaxation_generators(
-    ispypsa_tables: dict[str, pd.DataFrame],
-    constraint_ids: list[str],
+    relaxations: pd.DataFrame,
+    expansion_costs: pd.DataFrame,
     config: ModelConfig,
 ) -> pd.DataFrame:
     """Builds one extendable dummy generator per relaxable constraint and
@@ -521,72 +528,62 @@ def _create_constraint_relaxation_generators(
     by the constraint's direction (see _relaxation_generator_lhs_terms), so
     building them relaxes the constraint at the option's cost; total
     relaxation is capped at the option's allowed_expansion by the
-    expansion-limit constraints.
+    expansion-limit constraints, which take that cap from the same resolved
+    relaxations rather than from the generators.
 
-    Options and costs may use blank key cells as wildcards: a blank
-    expansion_id means "every constraint" — here, every constraint in the
-    model (constraint_ids) — and a blank cost year means "every investment
-    period", so a single blank-id row gives all constraints the same
-    relaxation option or cost, and a blank-year cost row is a static cost
-    across the periods. Every constraint with an option has a cost in every
-    investment period (the costs schema's coverage rule), so joining the two
-    gives exactly one generator per option and period. If the config's
-    rez_transmission_expansion flag is off, no relaxation generators are
-    built at all.
+    The costs table may use blank key cells as wildcards: a blank
+    expansion_id is a table-wide default cost and a blank year a static cost
+    across the investment periods (see _prepare_expansion_costs). Every
+    relaxable constraint has a cost in every investment period (the costs
+    schema's coverage rule), so there is exactly one generator per relaxation
+    and period.
 
     I/O Example (blank cells are wildcards):
-        ispypsa_tables["network_expansion_options"]:
+        relaxations (from _resolve_relaxation_options):
             expansion_id  expansion_type         allowed_expansion  expansion_option
             SWQLD1        constraint_relaxation  500                Option 2
-                          constraint_relaxation  200                Default
+            NQ1           constraint_relaxation  200                Default
 
-        ispypsa_tables["network_transmission_path_expansion_costs"]:
+        expansion_costs:
             expansion_id  year  cost
             SWQLD1        2030  100000
                                 80000    # every constraint, every period
 
-        constraint_ids = ["SWQLD1", "NQ1"]
-
-        config: rez_transmission_expansion = True, investment_periods = [2030, 2040]
+        config: investment_periods = [2030, 2040]
 
         returns:
-            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost       allowed_expansion
-            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(100000)  500
-            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)   500
-            NQ1_exp_2030     NQ1       bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(80000)   200
-            NQ1_exp_2040     NQ1       bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)   200
+            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost
+            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(100000)
+            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)
+            NQ1_exp_2030     NQ1       bus_for_custom_constraint_gens  0.0    True              2030        inf       annuitise(80000)
+            NQ1_exp_2040     NQ1       bus_for_custom_constraint_gens  0.0    True              2040        inf       annuitise(80000)
     """
-    if not config.network.rez_transmission_expansion:
-        return pd.DataFrame(columns=_GENERATOR_COLUMNS + ["allowed_expansion"])
-    relaxations = _resolve_relaxation_options(
-        ispypsa_tables["network_expansion_options"], constraint_ids
-    )
     costs = _prepare_expansion_costs(
-        ispypsa_tables["network_transmission_path_expansion_costs"],
-        constraint_ids,
+        expansion_costs,
+        sorted(set(relaxations["expansion_id"])),
         config.temporal.capacity_expansion.investment_periods,
         config.wacc,
         config.network.annuitisation_lifetime,
     )
-    generators = costs.merge(
-        relaxations.loc[:, ["expansion_id", "allowed_expansion"]], on="expansion_id"
-    )
-    return _format_relaxation_generators(generators)
+    return _format_relaxation_generators(costs)
 
 
 def _resolve_relaxation_options(
-    options: pd.DataFrame, constraint_ids: list[str]
+    options: pd.DataFrame, constraint_ids: list[str], config: ModelConfig
 ) -> pd.DataFrame:
     """Resolves the expansion-options wildcards to one constraint_relaxation
-    row per constraint in the model that has an option.
+    row per constraint in the model that has an option — or to no rows at all
+    when the config's rez_transmission_expansion flag is off.
 
     The physical forward/reverse rows are set aside first (they become
     expansion links in ispypsa.translator.network); a blank expansion_type
     covers constraint_relaxation too, so it is kept. Options for constraints
     not in the model are dropped, then _resolve_wildcards fans blank cells out
-    against the model's constraints, most specific row winning.
+    against the model's constraints, most specific row winning. The resolved
+    rows drive both the relaxation generators and, through allowed_expansion,
+    the expansion-limit caps.
 
-    I/O Example (blank cells are wildcards):
+    I/O Example (blank cells are wildcards; rez_transmission_expansion on):
         options:
             expansion_id  expansion_type         allowed_expansion  expansion_option
             CQ-NQ         forward                1000               BigLine   # physical: set aside
@@ -600,6 +597,8 @@ def _resolve_relaxation_options(
             SWQLD1        constraint_relaxation  400                Relax
             SWV1          constraint_relaxation  200                Default
     """
+    if not config.network.rez_transmission_expansion:
+        return pd.DataFrame(columns=options.columns)
     expansion_type = options["expansion_type"]
     options = options[
         expansion_type.isna() | (expansion_type == "constraint_relaxation")
@@ -619,14 +618,14 @@ def _format_relaxation_generators(generators: pd.DataFrame) -> pd.DataFrame:
 
     I/O Example:
         generators:
-            expansion_id  year  capital_cost  allowed_expansion
-            SWQLD1        2030  8140          500
-            SWQLD1        2040  7900          500
+            expansion_id  year  capital_cost
+            SWQLD1        2030  8140
+            SWQLD1        2040  7900
 
         returns:
-            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost  allowed_expansion
-            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       8140          500
-            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       7900          500
+            name             isp_name  bus                             p_nom  p_nom_extendable  build_year  lifetime  capital_cost
+            SWQLD1_exp_2030  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2030        inf       8140
+            SWQLD1_exp_2040  SWQLD1    bus_for_custom_constraint_gens  0.0    True              2040        inf       7900
     """
     generators = generators.rename(columns={"expansion_id": "isp_name"})
     generators["name"] = (
@@ -637,7 +636,7 @@ def _format_relaxation_generators(generators: pd.DataFrame) -> pd.DataFrame:
     generators["p_nom_extendable"] = True
     generators["build_year"] = generators["year"]
     generators["lifetime"] = np.inf
-    return generators.loc[:, _GENERATOR_COLUMNS + ["allowed_expansion"]]
+    return generators.loc[:, _GENERATOR_COLUMNS].reset_index(drop=True)
 
 
 def _relaxation_generator_lhs_terms(
@@ -754,16 +753,17 @@ def _create_expansion_limit_constraints(
     links: pd.DataFrame,
     relaxation_generators: pd.DataFrame,
     path_caps: pd.DataFrame,
+    relaxation_caps: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Caps the total capacity built across each expandable element's
     per-period components at the selected option's capacity.
 
-    For physical paths the cap is path_caps' max(forward, reverse); for
-    constraint relaxations it is the option's allowed_expansion carried on the
-    relaxation generators. The constraints have no investment_period or
-    timeslice — they apply to the p_nom variables globally. Names get an
-    "_expansion_limit" suffix so a relaxation cap doesn't collide with the
-    constraint it relaxes.
+    The components are the paths' expansion links and the constraints'
+    relaxation generators; the caps are path_caps' max(forward, reverse) and
+    relaxation_caps' allowed_expansion, one row per element in each. The
+    constraints have no investment_period or timeslice — they apply to the
+    p_nom variables globally. Names get an "_expansion_limit" suffix so a
+    relaxation cap doesn't collide with the constraint it relaxes.
 
     I/O Example:
         links:
@@ -773,12 +773,12 @@ def _create_expansion_limit_constraints(
             CQ-NQ     CQ-NQ_exp_2040  True
 
         relaxation_generators:
-            name             isp_name  allowed_expansion
-            SWQLD1_exp_2030  SWQLD1    500
+            name             isp_name
+            SWQLD1_exp_2030  SWQLD1
 
-        path_caps:
-            expansion_id  allowed_expansion
-            CQ-NQ         1000
+        path_caps:                           relaxation_caps:
+            expansion_id  allowed_expansion      expansion_id  allowed_expansion
+            CQ-NQ         1000                   SWQLD1        500
 
         returns lhs:
             constraint_id           variable_name    component  attribute  coefficient  investment_period
@@ -798,9 +798,7 @@ def _create_expansion_limit_constraints(
         ],
         ignore_index=True,
     )
-    relaxation_caps = relaxation_generators.loc[:, ["isp_name", "allowed_expansion"]]
-    relaxation_caps = relaxation_caps.rename(columns={"isp_name": "expansion_id"})
-    caps = pd.concat([path_caps, relaxation_caps.drop_duplicates()], ignore_index=True)
+    caps = pd.concat([path_caps, relaxation_caps], ignore_index=True)
     rhs = _expansion_limit_rhs(caps)
     lhs["constraint_id"] = lhs["constraint_id"] + "_expansion_limit"
     rhs["constraint_id"] = rhs["constraint_id"] + "_expansion_limit"
@@ -879,13 +877,3 @@ def _raise_on_duplicate_rhs_rows(rhs: pd.DataFrame) -> None:
             f"Duplicate custom constraint RHS rows for: "
             f"{sorted(set(duplicates['constraint_name']))}"
         )
-
-
-def _finalise_generators(relaxation_generators: pd.DataFrame) -> pd.DataFrame:
-    """Drops the allowed_expansion working column carried for the
-    expansion-limit RHS, leaving the PyPSA generator columns.
-
-    I/O Example:
-        columns [*_GENERATOR_COLUMNS, allowed_expansion] -> _GENERATOR_COLUMNS
-    """
-    return relaxation_generators.loc[:, _GENERATOR_COLUMNS].reset_index(drop=True)
