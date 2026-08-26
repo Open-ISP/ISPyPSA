@@ -254,6 +254,40 @@ def test_date_from_resolved_at_period_starts(csv_str_to_df, sample_model_config)
     )
 
 
+def test_calendar_year_periods_start_in_january(csv_str_to_df, sample_model_config):
+    """Under calendar years the 2026 period starts 2026-01-01, so a value
+    dated 2025-12-01 is already active in the first period — under fy it
+    would miss the 2025-07-01 period start and the 2026 rows would drop."""
+    sample_model_config.temporal.year_type = "calendar"
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  2500,  2025-12-01T00:00:00
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    rhs = result["custom_constraints_rhs"]
+    rhs = rhs[rhs["constraint_name"] == "SWQLD1"]
+    expected = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2026,               qld_peak_demand,  2500,  <=
+        SWQLD1,           2028,               qld_peak_demand,  2500,  <=
+    """)
+    pd.testing.assert_frame_equal(
+        rhs.sort_values("investment_period").reset_index(drop=True),
+        expected,
+        check_dtype=False,
+    )
+
+
 def test_date_from_after_all_periods_contributes_nothing(
     csv_str_to_df, sample_model_config
 ):
@@ -424,6 +458,32 @@ def test_generator_and_storage_terms_not_in_model_raise(
         "Custom constraint LHS terms reference components not in the model, "
         "as (constraint_id, variable_name): "
         "[('SWQLD1', 'Big Battery'), ('SWQLD1', 'UNKNOWNGEN')]"
+    ) in str(excinfo.value)
+
+
+def test_term_type_without_component_mapping_raises(csv_str_to_df, sample_model_config):
+    """A term_type with no entry in the term-type-to-component mappings (the
+    schema's allowed term_types and the translator's mappings drifting apart)
+    halts the run rather than silently dropping the term."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,    coefficient,  date_from
+        SWQLD1,         storage_capacity,  Q8 Battery - 2h,  0.43,
+    """)
+
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Custom constraint LHS term_types with no component mapping: "
+        "['storage_capacity']"
     ) in str(excinfo.value)
 
 
@@ -763,6 +823,72 @@ def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
     )
 
 
+def test_no_constraints_and_no_expansion_yields_header_only_tables(
+    csv_str_to_df, sample_model_config
+):
+    """With no custom constraints, no expansion options and no extendable
+    links, no constraint block produces rows and every output is
+    all-columns-no-rows."""
+    ispypsa_tables = {
+        "custom_constraints": pd.DataFrame(columns=["constraint_id", "direction"]),
+        "custom_constraints_lhs": pd.DataFrame(
+            columns=[
+                "constraint_id",
+                "term_type",
+                "variable_name",
+                "coefficient",
+                "date_from",
+            ]
+        ),
+        "custom_constraints_rhs": pd.DataFrame(
+            columns=["constraint_id", "timeslice", "rhs", "date_from"]
+        ),
+        "network_expansion_options": pd.DataFrame(
+            columns=[
+                "expansion_id",
+                "expansion_type",
+                "allowed_expansion",
+                "expansion_option",
+            ]
+        ),
+        "network_transmission_path_expansion_costs": pd.DataFrame(
+            columns=["expansion_id", "year", "cost"]
+        ),
+    }
+    links = csv_str_to_df("""
+        isp_name,  name,              p_nom_extendable
+        NSW-QLD,   NSW-QLD_existing,  False
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        links,
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,  component,  attribute,  coefficient
+    """)
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"], expected_lhs, check_dtype=False
+    )
+    expected_rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,  constraint_type
+    """)
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"], expected_rhs, check_dtype=False
+    )
+    expected_generators = csv_str_to_df("""
+        name,  isp_name,  bus,  p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
+    """)
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_generators"], expected_generators, check_dtype=False
+    )
+
+
 def test_path_expansion_limit_is_max_of_forward_and_reverse(
     csv_str_to_df, sample_model_config
 ):
@@ -910,3 +1036,44 @@ def test_relaxation_option_for_constraint_not_in_model_is_dropped(
         check_dtype=False,
         rtol=1e-5,
     )
+
+
+def test_constraint_named_after_a_path_raises_on_colliding_expansion_limits(
+    csv_str_to_df, sample_model_config
+):
+    """A relaxable constraint sharing its ID with an expandable path gives
+    both the same "<id>_expansion_limit" RHS row — pypsa_build would build
+    two constraints with the same name, so the final duplicate check halts."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints"] = csv_str_to_df("""
+        constraint_id,  direction
+        NSW-QLD,        <=
+    """)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        NSW-QLD,        generator_output,  KINGASF1,       0.14,
+    """)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        NSW-QLD,        qld_peak_demand,  3000,
+    """)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,         allowed_expansion,  expansion_option
+        NSW-QLD,       forward,                1000,               NSW-QLD Option 1
+        NSW-QLD,       reverse,                900,                NSW-QLD Option 1
+        NSW-QLD,       constraint_relaxation,  400,                NSW-QLD Option 2
+    """)
+
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            _generators(csv_str_to_df),
+            _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Duplicate custom constraint RHS rows for: ['NSW-QLD_expansion_limit']"
+    ) in str(excinfo.value)
