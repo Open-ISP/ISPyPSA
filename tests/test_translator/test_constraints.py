@@ -49,26 +49,27 @@ def _constraint_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
 
 def _links(csv_str_to_df) -> pd.DataFrame:
     return csv_str_to_df("""
-        isp_name,  name,              p_nom_extendable
-        NSW-QLD,   NSW-QLD_existing,  False
-        NSW-QLD,   NSW-QLD_exp_2026,  True
+        isp_name,  name,              p_nom_extendable,  build_year,  lifetime
+        NSW-QLD,   NSW-QLD_existing,  False,             2025,        inf
+        NSW-QLD,   NSW-QLD_exp_2026,  True,              2026,        inf
     """)
 
 
 def _generators(csv_str_to_df) -> pd.DataFrame:
-    """Existing units carry their own name as isp_name. LATEGEN backs the
-    date_from-after-all-periods test."""
+    """Existing units carry their own name as isp_name, a build year before
+    the first investment period, and an infinite lifetime (no scheduled
+    closure). LATEGEN backs the date_from-after-all-periods test."""
     return csv_str_to_df("""
-        isp_name,  name
-        KINGASF1,  KINGASF1
-        LATEGEN,   LATEGEN
+        isp_name,  name,      build_year,  lifetime
+        KINGASF1,  KINGASF1,  2025,        inf
+        LATEGEN,   LATEGEN,   2025,        inf
     """)
 
 
 def _storage(csv_str_to_df) -> pd.DataFrame:
     return csv_str_to_df("""
-        isp_name,         name
-        Q8 Battery - 2h,  Q8 Battery - 2h
+        isp_name,         name,             build_year,  lifetime
+        Q8 Battery - 2h,  Q8 Battery - 2h,  2025,        inf
     """)
 
 
@@ -101,6 +102,45 @@ def test_translate_custom_constraints_rhs(csv_str_to_df, sample_model_config):
         SWQLD1,                   2028,               qld_winter_reference,  3500,  <=
         NSW-QLD_expansion_limit,  ,                   ,                      1000,  <=
         SWQLD1_expansion_limit,   ,                   ,                      400,   <=
+    """)
+    sort_cols = ["constraint_name", "investment_period", "timeslice"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_rhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_rhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_rhs_row_with_blank_timeslice_is_kept_as_fallback(
+    csv_str_to_df, sample_model_config
+):
+    """A blank-timeslice RHS row is the constraint's fallback limit, applying
+    at the snapshots no named-timeslice row covers, and passes through
+    alongside the named rows rather than being dropped as a NaN group."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  3000,
+        SWQLD1,         ,                 2800,
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                   2026,               qld_peak_demand,  3000,  <=
+        SWQLD1,                   2026,               ,                 2800,  <=
+        SWQLD1,                   2028,               qld_peak_demand,  3000,  <=
+        SWQLD1,                   2028,               ,                 2800,  <=
+        NSW-QLD_expansion_limit,  ,                   ,                 1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,                 400,   <=
     """)
     sort_cols = ["constraint_name", "investment_period", "timeslice"]
     pd.testing.assert_frame_equal(
@@ -254,6 +294,42 @@ def test_date_from_resolved_at_period_starts(csv_str_to_df, sample_model_config)
     )
 
 
+def test_date_from_exactly_on_period_start_applies_in_that_period(
+    csv_str_to_df, sample_model_config
+):
+    """The value active at a period's start includes one dated exactly on it:
+    FY2028 starts 2027-07-01, so a 2027-07-01 value supersedes the baseline
+    for 2028 — the boundary is inclusive."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  3000,
+        SWQLD1,         qld_peak_demand,  2500,  2027-07-01T00:00:00
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    rhs = result["custom_constraints_rhs"]
+    rhs = rhs[rhs["constraint_name"] == "SWQLD1"]
+    expected = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2026,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2028,               qld_peak_demand,  2500,  <=
+    """)
+    pd.testing.assert_frame_equal(
+        rhs.sort_values("investment_period").reset_index(drop=True),
+        expected,
+        check_dtype=False,
+    )
+
+
 def test_calendar_year_periods_start_in_january(csv_str_to_df, sample_model_config):
     """Under calendar years the 2026 period starts 2026-01-01, so a value
     dated 2025-12-01 is already active in the first period — under fy it
@@ -311,6 +387,44 @@ def test_date_from_after_all_periods_contributes_nothing(
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
         SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_lhs_coefficient_superseded_mid_horizon(csv_str_to_df, sample_model_config):
+    """A dated LHS row supersedes the baseline coefficient in the periods
+    whose start it falls before, mirroring the RHS date_from resolution."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+        SWQLD1,         generator_output,  KINGASF1,       0.3,          2026-12-01T00:00:00
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.3
         SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
@@ -559,16 +673,18 @@ def test_new_entrant_terms_expand_to_per_build_year_components(
     csv_str_to_df, sample_model_config
 ):
     """A term naming a new entrant generator's isp_name covers each of its
-    per-build-year components, mirroring link_flow expansion."""
+    per-build-year components from their build years onward — the 2028
+    component's dispatch is fixed at zero in 2026, so its term only enters
+    the constraint once built."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
     ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,  coefficient,  date_from
         SWQLD1,         generator_output,  N2 Solar,       0.5,
     """)
     generators = csv_str_to_df("""
-        isp_name,  name
-        N2 Solar,  N2 Solar_2026
-        N2 Solar,  N2 Solar_2028
+        isp_name,  name,           build_year,  lifetime
+        N2 Solar,  N2 Solar_2026,  2026,        30
+        N2 Solar,  N2 Solar_2028,  2028,        30
     """)
 
     result = _translate_custom_constraints(
@@ -583,9 +699,156 @@ def test_new_entrant_terms_expand_to_per_build_year_components(
     expected_lhs = csv_str_to_df("""
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,                   2026,               N2 Solar_2026,     Generator,  p,          0.5
-        SWQLD1,                   2026,               N2 Solar_2028,     Generator,  p,          0.5
         SWQLD1,                   2028,               N2 Solar_2026,     Generator,  p,          0.5
         SWQLD1,                   2028,               N2 Solar_2028,     Generator,  p,          0.5
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_new_entrant_storage_term_expands_to_per_build_year_components(
+    csv_str_to_df, sample_model_config
+):
+    """A storage_output term naming a new entrant unit's isp_name covers each
+    of its per-build-year components from their build years onward, matching
+    the generator behaviour."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,       variable_name,  coefficient,  date_from
+        SWQLD1,         storage_output,  SQ BESS,        0.43,
+    """)
+    storage = csv_str_to_df("""
+        isp_name,  name,          build_year,  lifetime
+        SQ BESS,   SQ BESS_2026,  2026,        30
+        SQ BESS,   SQ BESS_2028,  2028,        30
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        storage,
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               SQ BESS_2026,      Storage,    p,          0.43
+        SWQLD1,                   2028,               SQ BESS_2026,      Storage,    p,          0.43
+        SWQLD1,                   2028,               SQ BESS_2028,      Storage,    p,          0.43
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_generator_capacity_term_targets_p_nom_of_built_components(
+    csv_str_to_df, sample_model_config
+):
+    """A generator_capacity term is a term on installed capacity (p_nom)
+    rather than dispatch, and on a new entrant it covers each per-build-year
+    component from its build year onward — a component's p_nom is a single
+    horizon-wide variable, so counting it earlier would let capacity built
+    for 2028 alter the 2026 constraint. Here alongside an output (p) term on
+    the same unit."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,           variable_name,  coefficient,  date_from
+        SWQLD1,         generator_capacity,  N2 Solar,       1.0,
+        SWQLD1,         generator_output,    N2 Solar,       0.5,
+    """)
+    generators = csv_str_to_df("""
+        isp_name,  name,           build_year,  lifetime
+        N2 Solar,  N2 Solar_2026,  2026,        30
+        N2 Solar,  N2 Solar_2028,  2028,        30
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        generators,
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               N2 Solar_2026,     Generator,  p_nom,      1.0
+        SWQLD1,                   2028,               N2 Solar_2026,     Generator,  p_nom,      1.0
+        SWQLD1,                   2028,               N2 Solar_2028,     Generator,  p_nom,      1.0
+        SWQLD1,                   2026,               N2 Solar_2026,     Generator,  p,          0.5
+        SWQLD1,                   2028,               N2 Solar_2026,     Generator,  p,          0.5
+        SWQLD1,                   2028,               N2 Solar_2028,     Generator,  p,          0.5
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_generator_terms_dropped_from_retirement_year(
+    csv_str_to_df, sample_model_config
+):
+    """A component's terms leave the constraint from its retirement year
+    (build_year + lifetime) onward — the bound is exclusive, matching when
+    PyPSA deactivates the component, so a unit built in 2025 with a 3-year
+    lifetime contributes in 2026 but not in the 2028 period itself."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         link_flow,         NSW-QLD,        0.84,
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+    """)
+    generators = csv_str_to_df("""
+        isp_name,  name,      build_year,  lifetime
+        KINGASF1,  KINGASF1,  2025,        3
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        generators,
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,                   2026,               NSW-QLD_exp_2026,  Link,       p,          0.84
+        SWQLD1,                   2028,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,                   2028,               NSW-QLD_exp_2026,  Link,       p,          0.84
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
         SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
@@ -800,8 +1063,8 @@ def test_empty_custom_constraint_tables(csv_str_to_df, sample_model_config):
     result = _translate_custom_constraints(
         ispypsa_tables,
         _links(csv_str_to_df),
-        pd.DataFrame(columns=["isp_name", "name"]),
-        pd.DataFrame(columns=["isp_name", "name"]),
+        pd.DataFrame(columns=["isp_name", "name", "build_year", "lifetime"]),
+        pd.DataFrame(columns=["isp_name", "name", "build_year", "lifetime"]),
         pd.DataFrame(columns=["name"]),
         sample_model_config,
     )
@@ -856,8 +1119,8 @@ def test_no_constraints_and_no_expansion_yields_header_only_tables(
         ),
     }
     links = csv_str_to_df("""
-        isp_name,  name,              p_nom_extendable
-        NSW-QLD,   NSW-QLD_existing,  False
+        isp_name,  name,              p_nom_extendable,  build_year,  lifetime
+        NSW-QLD,   NSW-QLD_existing,  False,             2025,        inf
     """)
 
     result = _translate_custom_constraints(
@@ -881,6 +1144,64 @@ def test_no_constraints_and_no_expansion_yields_header_only_tables(
     pd.testing.assert_frame_equal(
         result["custom_constraints_rhs"], expected_rhs, check_dtype=False
     )
+    expected_generators = csv_str_to_df("""
+        name,  isp_name,  bus,  p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
+    """)
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_generators"], expected_generators, check_dtype=False
+    )
+
+
+def test_constraints_translate_without_any_expansion_options(
+    csv_str_to_df, sample_model_config
+):
+    """The mirror of the empty-constraint-tables case: populated constraint
+    tables with an empty expansion options table (and so no extendable links)
+    translate as usual, while every expansion block — relaxation generators
+    and expansion limits — is empty."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["network_expansion_options"] = pd.DataFrame(
+        columns=[
+            "expansion_id",
+            "expansion_type",
+            "allowed_expansion",
+            "expansion_option",
+        ]
+    )
+    ispypsa_tables["network_transmission_path_expansion_costs"] = pd.DataFrame(
+        columns=["expansion_id", "year", "cost"]
+    )
+    links = csv_str_to_df("""
+        isp_name,  name,              p_nom_extendable,  build_year,  lifetime
+        NSW-QLD,   NSW-QLD_existing,  False,             2025,        inf
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        links,
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2026,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2028,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,           2028,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,           2026,               Q8 Battery - 2h,   Storage,    p,          0.43
+        SWQLD1,           2028,               Q8 Battery - 2h,   Storage,    p,          0.43
+    """)
+    expected_rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,             rhs,   constraint_type
+        SWQLD1,           2026,               qld_peak_demand,       3000,  <=
+        SWQLD1,           2026,               qld_winter_reference,  3500,  <=
+        SWQLD1,           2028,               qld_peak_demand,       3000,  <=
+        SWQLD1,           2028,               qld_winter_reference,  3500,  <=
+    """)
+    _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
     expected_generators = csv_str_to_df("""
         name,  isp_name,  bus,  p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
     """)
@@ -985,6 +1306,55 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
     expected_limits = csv_str_to_df("""
         constraint_name,          investment_period,  timeslice,  rhs,   constraint_type
         NQ1_expansion_limit,      ,                   ,           200,   <=
+        NSW-QLD_expansion_limit,  ,                   ,           1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,           400,   <=
+    """)
+    limits = rhs[rhs["constraint_name"].str.endswith("_expansion_limit")]
+    pd.testing.assert_frame_equal(
+        limits.sort_values("constraint_name").reset_index(drop=True),
+        expected_limits,
+        check_dtype=False,
+    )
+
+
+def test_blank_expansion_type_option_covers_constraint_relaxation(
+    csv_str_to_df, sample_model_config
+):
+    """An option row with a blank expansion_type is a wildcard covering
+    forward, reverse and constraint_relaxation alike, so a row keyed only by
+    the constraint's expansion_id still yields its relaxation."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+        NSW-QLD,       forward,         1000,               NSW-QLD Option 1
+        NSW-QLD,       reverse,         900,                NSW-QLD Option 1
+        SWQLD1,        ,                400,                SWQLD1 Option 2
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        _generators(csv_str_to_df),
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_generators = csv_str_to_df(f"""
+        name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
+        SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        SWQLD1_exp_2028,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {80000 * _ANNUITY_PER_DOLLAR}
+    """)
+    generators = result["custom_constraints_generators"]
+    pd.testing.assert_frame_equal(
+        generators.sort_values("name").reset_index(drop=True),
+        expected_generators,
+        check_dtype=False,
+        rtol=1e-5,
+    )
+    rhs = result["custom_constraints_rhs"]
+    expected_limits = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,  rhs,   constraint_type
         NSW-QLD_expansion_limit,  ,                   ,           1000,  <=
         SWQLD1_expansion_limit,   ,                   ,           400,   <=
     """)

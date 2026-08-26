@@ -116,6 +116,18 @@ def _translate_custom_constraints(
     network_expansion_options.yaml and
     network_transmission_path_expansion_costs.yaml).
 
+    Everything time-varying is quantised forward onto the investment-period
+    sequence, mirroring how PyPSA's multi-investment-period optimisation treats
+    the components themselves. A dated LHS or RHS value takes effect at the
+    first period whose start falls on or after its date_from (the boundary
+    is inclusive), so a change landing mid-period defers to the next period
+    rather than reaching back into the one it landed in. A term is kept in
+    exactly the periods PyPSA activates its component — build_year <= period
+    < build_year + lifetime, compared against the period labels — so a
+    component built between two periods joins the constraint at the next
+    label, one retiring between two periods leaves at the next label, and
+    the constraint never counts capacity or dispatch the model doesn't have.
+
     In the output tables, a blank investment_period means the row applies in
     every period. A named timeslice scopes the RHS to the snapshots inside that
     timeslice's windows (the timeslices table); a blank timeslice is the
@@ -155,22 +167,22 @@ def _translate_custom_constraints(
             SWQLD1        2028  80000
 
         links:
-            isp_name  name              p_nom_extendable
-            NSW-QLD   NSW-QLD_existing  False
-            NSW-QLD   NSW-QLD_exp_2026  True
+            isp_name  name              p_nom_extendable  build_year  lifetime
+            NSW-QLD   NSW-QLD_existing  False             2025        inf
+            NSW-QLD   NSW-QLD_exp_2026  True              2026        inf
 
         generators (isp_name = name for existing units; a new entrant's ID
         maps to each of its per-build-year components):
-            isp_name  name
-            KINGASF1  KINGASF1
-            N2 Solar  N2 Solar_2026
-            N2 Solar  N2 Solar_2028
+            isp_name  name           build_year  lifetime
+            KINGASF1  KINGASF1       2025        inf       # inf: never retires
+            N2 Solar  N2 Solar_2026  2026        30
+            N2 Solar  N2 Solar_2028  2028        30
 
         storage:
-            isp_name         name
-            Q8 Battery - 2h  Q8 Battery - 2h
-            SQ BESS          SQ BESS_2026
-            SQ BESS          SQ BESS_2028
+            isp_name         name             build_year  lifetime
+            Q8 Battery - 2h  Q8 Battery - 2h  2025        inf
+            SQ BESS          SQ BESS_2026     2026        20
+            SQ BESS          SQ BESS_2028     2028        20
 
         demand_nodes:
             name
@@ -183,13 +195,13 @@ def _translate_custom_constraints(
             NSW-QLD_expansion_limit                                      1000  <=
             SWQLD1_expansion_limit                                       400   <=
 
-        returns["custom_constraints_lhs"] (2028 rows mirror 2026):
+        returns["custom_constraints_lhs"] (2028 rows mirror 2026, and also
+        pick up N2 Solar_2028 once it is built):
             constraint_name          investment_period  variable_name     component  attribute  coefficient
             SWQLD1                   2026               NSW-QLD_existing  Link       p          0.84
             SWQLD1                   2026               NSW-QLD_exp_2026  Link       p          0.84
             SWQLD1                   2026               KINGASF1          Generator  p          0.14
-            SWQLD1                   2026               N2 Solar_2026     Generator  p          0.5
-            SWQLD1                   2026               N2 Solar_2028     Generator  p          0.5
+            SWQLD1                   2026               N2 Solar_2026     Generator  p          0.5   # N2 Solar_2028 enters in 2028 only
             SWQLD1                   2026               Q8 Battery - 2h   Storage    p          0.43
             SWQLD1                   2026               load_SQ           Load       p_set      -0.33
             SWQLD1                   2026               SWQLD1_exp_2026   Generator  p_nom      -1.0
@@ -266,6 +278,16 @@ def _translate_constraint_tables(
         the "load_<bus>" Load component at its demand node — a data term whose
         p_set attribute pypsa_build resolves from the demand trace, not an
         optimisation variable.
+        - each term is then dropped in the investment periods before its
+        component's build year, so a per-build-year component only enters the
+        constraint from its build year onward. Existing components' build years
+        precede the horizon and load terms have no build year, so both apply in
+        every period.
+        - terms are likewise dropped from their component's retirement year
+        onward — build_year + lifetime, the exclusive bound at which PyPSA
+        deactivates the component — so a unit retiring in a period's label
+        year contributes nothing to that period. Components with an infinite
+        lifetime never retire.
         - LHS and RHS rows are dropped in investment periods where the constraint does
         not have both LHS terms and an RHS value. This happens when date_from coverage
         differs between the two sides (including a side whose earliest date_from falls
@@ -286,31 +308,33 @@ def _translate_constraint_tables(
             SWQLD1         generator_output  KINGASF1       0.14
 
         links:
-            isp_name  name              p_nom_extendable
-            NSW-QLD   NSW-QLD_existing  False
-            NSW-QLD   NSW-QLD_exp_2026  True
+            isp_name  name              p_nom_extendable  build_year  lifetime
+            NSW-QLD   NSW-QLD_existing  False             2025        inf
+            NSW-QLD   NSW-QLD_exp_2026  True              2026        inf
 
         generators:
-            isp_name  name
-            KINGASF1  KINGASF1
-            N2 Solar  N2 Solar_2026
-            N2 Solar  N2 Solar_2028
+            isp_name  name           build_year  lifetime
+            KINGASF1  KINGASF1       2025        3         # retires 2028: out of service from the 2028 period
+            N2 Solar  N2 Solar_2026  2026        30
+            N2 Solar  N2 Solar_2028  2028        30
 
         storage:
-            isp_name         name
-            Q8 Battery - 2h  Q8 Battery - 2h
-            SQ BESS          SQ BESS_2026
-            SQ BESS          SQ BESS_2028
+            isp_name         name             build_year  lifetime
+            Q8 Battery - 2h  Q8 Battery - 2h  2025        inf
+            SQ BESS          SQ BESS_2026     2026        20
+            SQ BESS          SQ BESS_2028     2028        20
 
         demand_nodes:
             name
             SQ
 
-        returns lhs (2028 rows mirror 2026):
+        returns lhs:
             constraint_id  investment_period  variable_name     component  attribute  coefficient
             SWQLD1         2026               NSW-QLD_existing  Link       p          0.84
             SWQLD1         2026               NSW-QLD_exp_2026  Link       p          0.84
             SWQLD1         2026               KINGASF1          Generator  p          0.14
+            SWQLD1         2028               NSW-QLD_existing  Link       p          0.84
+            SWQLD1         2028               NSW-QLD_exp_2026  Link       p          0.84  # KINGASF1 retired: no 2028 term
 
         returns rhs:
             constraint_id  investment_period  timeslice        rhs   constraint_type
@@ -338,6 +362,8 @@ def _translate_constraint_tables(
     )
     _raise_on_terms_not_in_model(lhs, variable_name_mapping)
     lhs = _expand_terms_to_model_components(lhs, variable_name_mapping)
+    lhs = _drop_terms_before_build_year(lhs)
+    lhs = _drop_terms_from_retirement_year(lhs)
     return _drop_one_sided_constraint_periods(lhs, rhs)
 
 
@@ -474,7 +500,13 @@ def _map_constraint_variables_to_pypsa_names(
     _exp_<year> suffix) covers the path's existing link and each of its
     expansion links, and a new entrant generator or storage unit's ID covers
     each of its per-build-year components. An existing unit's name maps to
-    itself.
+    itself. Each row also carries its component's in-service window as
+    build_year and retirement_year — the latter computed as build_year +
+    lifetime, the year PyPSA deactivates the component, so a component with
+    an infinite lifetime never retires. _drop_terms_before_build_year and
+    _drop_terms_from_retirement_year use the pair to scope terms to the
+    periods the component is in service; Load rows have neither year —
+    demand is not built.
 
     Demand nodes — the buses with demand attached, not all buses — appear as
     Load rows: a load term resolves to the Load component pypsa_build attaches
@@ -485,60 +517,88 @@ def _map_constraint_variables_to_pypsa_names(
 
     I/O Example:
         links:
-            isp_name  name
-            NSW-QLD   NSW-QLD_existing
-            NSW-QLD   NSW-QLD_exp_2030
+            isp_name  name              build_year  lifetime
+            NSW-QLD   NSW-QLD_existing  2029        inf
+            NSW-QLD   NSW-QLD_exp_2030  2030        inf
 
         generators:
-            isp_name  name
-            KINGASF1  KINGASF1
-            N2 Solar  N2 Solar_2030
-            N2 Solar  N2 Solar_2040
+            isp_name  name           build_year  lifetime
+            KINGASF1  KINGASF1       2029        11        # closes 2040
+            N2 Solar  N2 Solar_2030  2030        30
+            N2 Solar  N2 Solar_2040  2040        30
 
         storage:
-            isp_name         name
-            Q8 Battery - 2h  Q8 Battery - 2h
-            SQ BESS          SQ BESS_2030
-            SQ BESS          SQ BESS_2040
+            isp_name         name             build_year  lifetime
+            Q8 Battery - 2h  Q8 Battery - 2h  2029        inf
+            SQ BESS          SQ BESS_2030     2030        20
+            SQ BESS          SQ BESS_2040     2040        20
 
         demand_nodes:
             name
             SQ
 
         returns:
-            constraint_variable_name  pypsa_model_name  component
-            NSW-QLD                   NSW-QLD_existing  Link
-            NSW-QLD                   NSW-QLD_exp_2030  Link
-            KINGASF1                  KINGASF1          Generator
-            N2 Solar                  N2 Solar_2030     Generator
-            N2 Solar                  N2 Solar_2040     Generator
-            Q8 Battery - 2h           Q8 Battery - 2h   Storage
-            SQ BESS                   SQ BESS_2030      Storage
-            SQ BESS                   SQ BESS_2040      Storage
-            SQ                        load_SQ           Load
+            constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
+            NSW-QLD                   NSW-QLD_existing  Link       2029        inf
+            NSW-QLD                   NSW-QLD_exp_2030  Link       2030        inf
+            KINGASF1                  KINGASF1          Generator  2029        2040
+            N2 Solar                  N2 Solar_2030     Generator  2030        2060
+            N2 Solar                  N2 Solar_2040     Generator  2040        2070
+            Q8 Battery - 2h           Q8 Battery - 2h   Storage    2029        inf
+            SQ BESS                   SQ BESS_2030      Storage    2030        2050
+            SQ BESS                   SQ BESS_2040      Storage    2040        2060
+            SQ                        load_SQ           Load                                  # data term: never built, always present
     """
-    to_mapping = {"isp_name": "constraint_variable_name", "name": "pypsa_model_name"}
     frames = [
-        links.loc[:, ["isp_name", "name"]]
-        .rename(columns=to_mapping)
-        .assign(component="Link"),
-        generators.loc[:, ["isp_name", "name"]]
-        .rename(columns=to_mapping)
-        .assign(component="Generator"),
-        storage.loc[:, ["isp_name", "name"]]
-        .rename(columns=to_mapping)
-        .assign(component="Storage"),
+        _component_mapping_rows(links, "Link"),
+        _component_mapping_rows(generators, "Generator"),
+        _component_mapping_rows(storage, "Storage"),
         pd.DataFrame(
             {
                 "constraint_variable_name": demand_nodes["name"],
                 "pypsa_model_name": "load_" + demand_nodes["name"],
                 "component": "Load",
+                "build_year": np.nan,
+                "retirement_year": np.nan,
             }
         ),
     ]
     return _concat_non_empty(
-        frames, ["constraint_variable_name", "pypsa_model_name", "component"]
+        frames,
+        [
+            "constraint_variable_name",
+            "pypsa_model_name",
+            "component",
+            "build_year",
+            "retirement_year",
+        ],
     )
+
+
+def _component_mapping_rows(
+    components: pd.DataFrame, component_type: str
+) -> pd.DataFrame:
+    """One mapping row per component, carrying its in-service window as
+    build_year and retirement_year — build_year + lifetime, the year PyPSA
+    deactivates the component, so an infinite lifetime never retires.
+
+    I/O Example (component_type="Generator"):
+        components:
+            isp_name  name      build_year  lifetime
+            KINGASF1  KINGASF1  2029        11
+            LOYYB     LOYYB     2029        inf
+
+        returns:
+            constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
+            KINGASF1                  KINGASF1          Generator  2029        2040
+            LOYYB                     LOYYB             Generator  2029        inf
+    """
+    rows = components.loc[:, ["isp_name", "name", "build_year"]].rename(
+        columns={"isp_name": "constraint_variable_name", "name": "pypsa_model_name"}
+    )
+    rows["component"] = component_type
+    rows["retirement_year"] = components["build_year"] + components["lifetime"]
+    return rows
 
 
 def _raise_on_terms_not_in_model(
@@ -597,20 +657,20 @@ def _expand_terms_to_model_components(
             SWQLD1         N2 Solar       Generator  0.5
 
         variable_name_mapping:
-            constraint_variable_name  pypsa_model_name  component
-            NSW-QLD                   NSW-QLD_existing  Link
-            NSW-QLD                   NSW-QLD_exp_2030  Link
-            KINGASF1                  KINGASF1          Generator
-            N2 Solar                  N2 Solar_2030     Generator
-            N2 Solar                  N2 Solar_2040     Generator
+            constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
+            NSW-QLD                   NSW-QLD_existing  Link       2029        inf
+            NSW-QLD                   NSW-QLD_exp_2030  Link       2030        inf
+            KINGASF1                  KINGASF1          Generator  2029        2040
+            N2 Solar                  N2 Solar_2030     Generator  2030        2060
+            N2 Solar                  N2 Solar_2040     Generator  2040        2070
 
         returns:
-            constraint_id  variable_name     component  coefficient
-            SWQLD1         NSW-QLD_existing  Link       0.84
-            SWQLD1         NSW-QLD_exp_2030  Link       0.84
-            SWQLD1         KINGASF1          Generator  0.14  # existing unit: unchanged
-            SWQLD1         N2 Solar_2030     Generator  0.5   # new entrant: one term
-            SWQLD1         N2 Solar_2040     Generator  0.5   # per build year
+            constraint_id  variable_name     component  coefficient  build_year  retirement_year
+            SWQLD1         NSW-QLD_existing  Link       0.84         2029        inf
+            SWQLD1         NSW-QLD_exp_2030  Link       0.84         2030        inf
+            SWQLD1         KINGASF1          Generator  0.14         2029        2040  # existing unit: unchanged
+            SWQLD1         N2 Solar_2030     Generator  0.5          2030        2060  # new entrant: one term
+            SWQLD1         N2 Solar_2040     Generator  0.5          2040        2070  # per build year
     """
     expanded = lhs.merge(
         variable_name_mapping,
@@ -619,6 +679,67 @@ def _expand_terms_to_model_components(
     )
     expanded = expanded.drop(columns=["variable_name", "constraint_variable_name"])
     return expanded.rename(columns={"pypsa_model_name": "variable_name"})
+
+
+def _drop_terms_before_build_year(lhs: pd.DataFrame) -> pd.DataFrame:
+    """Drops each term in the investment periods before its component's build
+    year, then drops the build_year column.
+
+    A component contributes nothing to a period before it is built — PyPSA
+    fixes its dispatch (p) to zero there, and its capacity (p_nom) is a single
+    horizon-wide variable that would otherwise let capacity built for a later
+    period alter an earlier period's constraint. Terms with no build_year
+    (load data terms) apply in every period.
+
+    I/O Example (columns abridged):
+        lhs:
+            constraint_id  investment_period  variable_name  build_year
+            SWQLD1         2026               N2 Solar_2026  2026
+            SWQLD1         2026               N2 Solar_2028  2028        # not built in 2026: dropped
+            SWQLD1         2028               N2 Solar_2028  2028
+            SWQLD1         2026               load_SQ                    # no build year: kept
+
+        returns:
+            constraint_id  investment_period  variable_name
+            SWQLD1         2026               N2 Solar_2026
+            SWQLD1         2028               N2 Solar_2028
+            SWQLD1         2026               load_SQ
+    """
+    built = lhs["build_year"].isna() | (lhs["build_year"] <= lhs["investment_period"])
+    return lhs[built].drop(columns="build_year")
+
+
+def _drop_terms_from_retirement_year(lhs: pd.DataFrame) -> pd.DataFrame:
+    """Drops each term in the investment periods from its component's
+    retirement year onward, then drops the retirement_year column. The
+    retirement year is build_year + lifetime and the bound is exclusive,
+    matching when PyPSA deactivates the component (it is in service for
+    build_year <= period < build_year + lifetime).
+
+    A retired component's dispatch (p) is zero, and its capacity (p_nom) is a
+    single horizon-wide variable that would otherwise keep counting capacity
+    after it has left the system. An infinite lifetime gives an inf
+    retirement year and load data terms have none — both apply in every
+    period.
+
+    I/O Example (columns abridged):
+        lhs:
+            constraint_id  investment_period  variable_name  retirement_year
+            SWQLD1         2026               KINGASF1       2028
+            SWQLD1         2028               KINGASF1       2028             # retired: dropped
+            SWQLD1         2026               load_SQ                         # no retirement year: kept
+            SWQLD1         2028               load_SQ
+
+        returns:
+            constraint_id  investment_period  variable_name
+            SWQLD1         2026               KINGASF1
+            SWQLD1         2026               load_SQ
+            SWQLD1         2028               load_SQ
+    """
+    in_service = lhs["retirement_year"].isna() | (
+        lhs["investment_period"] < lhs["retirement_year"]
+    )
+    return lhs[in_service].drop(columns="retirement_year")
 
 
 def _drop_one_sided_constraint_periods(
