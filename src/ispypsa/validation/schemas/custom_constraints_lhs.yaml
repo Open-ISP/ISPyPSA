@@ -55,10 +55,19 @@ columns:
     type: string
     required: true
     description: >
-      Name of the component the term's variable belongs to: an IASR ID for
+      Name of the model element the term's variable belongs to: an IASR ID for
       generator_output, generator_capacity and storage_output terms, a path_id
       for link_flow terms, a sub-region geo_id for load terms (see
       custom_validation for the table each resolves against).
+
+      Names refer to whole elements, never to the per-build-year components
+      the translator builds from them, and one term covers every component of
+      its element. A new entrant generator or storage unit is referred to by
+      its name in generators_new_entrant / storage_new_entrant (its location
+      and technology, e.g. "N2 Solar"), and the term applies to the unit in
+      every build year. A path is referred to by its path_id (e.g. "NSW-QLD"),
+      and the term applies to the path's existing link and each of its
+      expansion links.
   coefficient:
     type: float
     required: true

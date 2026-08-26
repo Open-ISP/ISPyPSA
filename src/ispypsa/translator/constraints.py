@@ -258,8 +258,9 @@ def _translate_constraint_tables(
         the granularity doesn't make its sub-region a demand node) raises, since
         applying the constraint without the term would silently alter it.
         - LHS terms are expanded from their input IDs into one term per matching
-        model component (the links, generators, storage and demand_nodes tables'
-        isp_name to name mapping): a link_flow term covers its path's existing link
+        model component (the constraint-variable-name to PyPSA-model-name mapping
+        built from the links, generators, storage and demand_nodes tables): a
+        link_flow term covers its path's existing link
         and each expansion link, a term on a new entrant generator or storage unit
         covers each of its per-build-year components, and a load term maps to
         the "load_<bus>" Load component at its demand node — a data term whose
@@ -332,9 +333,11 @@ def _translate_constraint_tables(
         period_starts,
     )
     lhs = _add_component_and_attribute(lhs)
-    model_components = _model_component_names(links, generators, storage, demand_nodes)
-    _raise_on_terms_not_in_model(lhs, model_components)
-    lhs = _expand_terms_to_model_components(lhs, model_components)
+    variable_name_mapping = _map_constraint_variables_to_pypsa_names(
+        links, generators, storage, demand_nodes
+    )
+    _raise_on_terms_not_in_model(lhs, variable_name_mapping)
+    lhs = _expand_terms_to_model_components(lhs, variable_name_mapping)
     return _drop_one_sided_constraint_periods(lhs, rhs)
 
 
@@ -453,15 +456,25 @@ def _raise_on_unmapped_term_types(lhs: pd.DataFrame) -> None:
         )
 
 
-def _model_component_names(
+def _map_constraint_variables_to_pypsa_names(
     links: pd.DataFrame,
     generators: pd.DataFrame,
     storage: pd.DataFrame,
     demand_nodes: pd.DataFrame,
 ) -> pd.DataFrame:
-    """One row per model component an LHS term can resolve to: the component
-    type, the ID the constraint tables refer to it by (isp_name) and the
-    model component's name.
+    """Builds the mapping from the names the custom-constraint tables refer to
+    model elements by (constraint_variable_name) to the names of the PyPSA
+    components built for them (pypsa_model_name), one row per component.
+
+    The links, generators and storage frames already carry both sides as their
+    isp_name (the element's un-suffixed ISP-level ID) and name columns; this
+    function relabels them into the constraints module's vocabulary. A
+    constraint variable name identifies a whole element, so one name can map
+    to several components: a path's name (e.g. NSW-QLD, with no _existing or
+    _exp_<year> suffix) covers the path's existing link and each of its
+    expansion links, and a new entrant generator or storage unit's ID covers
+    each of its per-build-year components. An existing unit's name maps to
+    itself.
 
     Demand nodes — the buses with demand attached, not all buses — appear as
     Load rows: a load term resolves to the Load component pypsa_build attaches
@@ -493,30 +506,43 @@ def _model_component_names(
             SQ
 
         returns:
-            isp_name         name              component
-            NSW-QLD          NSW-QLD_existing  Link
-            NSW-QLD          NSW-QLD_exp_2030  Link
-            KINGASF1         KINGASF1          Generator
-            N2 Solar         N2 Solar_2030     Generator
-            N2 Solar         N2 Solar_2040     Generator
-            Q8 Battery - 2h  Q8 Battery - 2h   Storage
-            SQ BESS          SQ BESS_2030      Storage
-            SQ BESS          SQ BESS_2040      Storage
-            SQ               load_SQ           Load
+            constraint_variable_name  pypsa_model_name  component
+            NSW-QLD                   NSW-QLD_existing  Link
+            NSW-QLD                   NSW-QLD_exp_2030  Link
+            KINGASF1                  KINGASF1          Generator
+            N2 Solar                  N2 Solar_2030     Generator
+            N2 Solar                  N2 Solar_2040     Generator
+            Q8 Battery - 2h           Q8 Battery - 2h   Storage
+            SQ BESS                   SQ BESS_2030      Storage
+            SQ BESS                   SQ BESS_2040      Storage
+            SQ                        load_SQ           Load
     """
+    to_mapping = {"isp_name": "constraint_variable_name", "name": "pypsa_model_name"}
     frames = [
-        links.loc[:, ["isp_name", "name"]].assign(component="Link"),
-        generators.loc[:, ["isp_name", "name"]].assign(component="Generator"),
-        storage.loc[:, ["isp_name", "name"]].assign(component="Storage"),
-        demand_nodes.loc[:, ["name"]]
-        .rename(columns={"name": "isp_name"})
-        .assign(name="load_" + demand_nodes["name"], component="Load"),
+        links.loc[:, ["isp_name", "name"]]
+        .rename(columns=to_mapping)
+        .assign(component="Link"),
+        generators.loc[:, ["isp_name", "name"]]
+        .rename(columns=to_mapping)
+        .assign(component="Generator"),
+        storage.loc[:, ["isp_name", "name"]]
+        .rename(columns=to_mapping)
+        .assign(component="Storage"),
+        pd.DataFrame(
+            {
+                "constraint_variable_name": demand_nodes["name"],
+                "pypsa_model_name": "load_" + demand_nodes["name"],
+                "component": "Load",
+            }
+        ),
     ]
-    return _concat_non_empty(frames, ["isp_name", "name", "component"])
+    return _concat_non_empty(
+        frames, ["constraint_variable_name", "pypsa_model_name", "component"]
+    )
 
 
 def _raise_on_terms_not_in_model(
-    lhs: pd.DataFrame, model_components: pd.DataFrame
+    lhs: pd.DataFrame, variable_name_mapping: pd.DataFrame
 ) -> None:
     """Raises when a term references a component with no match in the model —
     e.g. a link_flow term when regional_granularity is single_region builds no
@@ -529,18 +555,24 @@ def _raise_on_terms_not_in_model(
             SWQLD1         NSW-QLD        Link
             SWQLD1         KINGASF1       Generator
 
-        model_components with only ("NSW-QLD", Link) raises:
+        variable_name_mapping:
+            constraint_variable_name  pypsa_model_name  component
+            NSW-QLD                   NSW-QLD_existing  Link
+
+        raises:
             "... components not in the model, as (constraint_id,
             variable_name): [('SWQLD1', 'KINGASF1')]"
     """
-    ids = model_components.loc[:, ["component", "isp_name"]].drop_duplicates()
+    ids = variable_name_mapping.loc[
+        :, ["component", "constraint_variable_name"]
+    ].drop_duplicates()
     matched = lhs.merge(
         ids,
         how="left",
         left_on=["component", "variable_name"],
-        right_on=["component", "isp_name"],
+        right_on=["component", "constraint_variable_name"],
     )
-    missing = matched[matched["isp_name"].isna()]
+    missing = matched[matched["constraint_variable_name"].isna()]
     if not missing.empty:
         pairs = sorted(set(zip(missing["constraint_id"], missing["variable_name"])))
         raise ValueError(
@@ -550,12 +582,12 @@ def _raise_on_terms_not_in_model(
 
 
 def _expand_terms_to_model_components(
-    lhs: pd.DataFrame, model_components: pd.DataFrame
+    lhs: pd.DataFrame, variable_name_mapping: pd.DataFrame
 ) -> pd.DataFrame:
-    """Replaces each term's input ID with the model components it covers, one
-    term per component: a link_flow term covers its path's existing and
-    expansion links, and a term on a new entrant generator or storage unit
-    covers each of its per-build-year components.
+    """Replaces each term's constraint variable name (in the variable_name column) with
+    the PyPSA model component names it covers, one term per component: a link_flow term
+    covers its path's existing and expansion links, and a term on a new entrant
+    generator or storage unit covers each of its per-build-year components.
 
     I/O Example:
         lhs:
@@ -563,11 +595,11 @@ def _expand_terms_to_model_components(
             SWQLD1         NSW-QLD        Link       0.84
             SWQLD1         KINGASF1       Generator  0.14
 
-        model_components:
-            isp_name  name              component
-            NSW-QLD   NSW-QLD_existing  Link
-            NSW-QLD   NSW-QLD_exp_2030  Link
-            KINGASF1  KINGASF1          Generator
+        variable_name_mapping:
+            constraint_variable_name  pypsa_model_name  component
+            NSW-QLD                   NSW-QLD_existing  Link
+            NSW-QLD                   NSW-QLD_exp_2030  Link
+            KINGASF1                  KINGASF1          Generator
 
         returns:
             constraint_id  variable_name     component  coefficient
@@ -576,12 +608,12 @@ def _expand_terms_to_model_components(
             SWQLD1         KINGASF1          Generator  0.14
     """
     expanded = lhs.merge(
-        model_components,
+        variable_name_mapping,
         left_on=["component", "variable_name"],
-        right_on=["component", "isp_name"],
+        right_on=["component", "constraint_variable_name"],
     )
-    expanded = expanded.drop(columns=["variable_name", "isp_name"])
-    return expanded.rename(columns={"name": "variable_name"})
+    expanded = expanded.drop(columns=["variable_name", "constraint_variable_name"])
+    return expanded.rename(columns={"pypsa_model_name": "variable_name"})
 
 
 def _drop_one_sided_constraint_periods(
