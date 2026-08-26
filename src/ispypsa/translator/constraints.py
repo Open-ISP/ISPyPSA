@@ -240,7 +240,7 @@ def _translate_constraint_tables(
     demand_nodes: pd.DataFrame,
     config: ModelConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Translates the user-authored custom-constraint tables into one LHS term
+    """Translates the ISPyPSA custom-constraint tables into one LHS term
     and one RHS row per constraint, investment period and (RHS only)
     timeslice, still keyed by constraint_id.
 
@@ -594,18 +594,23 @@ def _expand_terms_to_model_components(
             constraint_id  variable_name  component  coefficient
             SWQLD1         NSW-QLD        Link       0.84
             SWQLD1         KINGASF1       Generator  0.14
+            SWQLD1         N2 Solar       Generator  0.5
 
         variable_name_mapping:
             constraint_variable_name  pypsa_model_name  component
             NSW-QLD                   NSW-QLD_existing  Link
             NSW-QLD                   NSW-QLD_exp_2030  Link
             KINGASF1                  KINGASF1          Generator
+            N2 Solar                  N2 Solar_2030     Generator
+            N2 Solar                  N2 Solar_2040     Generator
 
         returns:
             constraint_id  variable_name     component  coefficient
             SWQLD1         NSW-QLD_existing  Link       0.84
             SWQLD1         NSW-QLD_exp_2030  Link       0.84
-            SWQLD1         KINGASF1          Generator  0.14
+            SWQLD1         KINGASF1          Generator  0.14  # existing unit: unchanged
+            SWQLD1         N2 Solar_2030     Generator  0.5   # new entrant: one term
+            SWQLD1         N2 Solar_2040     Generator  0.5   # per build year
     """
     expanded = lhs.merge(
         variable_name_mapping,
@@ -989,7 +994,7 @@ def _create_expansion_limit_constraints(
     relaxation's cap is its option's allowed_expansion, passed in as
     relaxation_caps. Each cap becomes an RHS row with constraint_type "<="
     and no investment_period or timeslice — it applies to the p_nom variables
-    globally — and each component contributes a coefficient-1.0 p_nom LHS
+    globally — and each component contributes a coefficient 1.0 p_nom LHS
     term. Names get an "_expansion_limit" suffix so a relaxation cap doesn't
     collide with the constraint it relaxes. The underlying builders
     (_expansion_limit_lhs and _expansion_limit_rhs) take any (element,
@@ -1046,10 +1051,16 @@ def _expansion_limit_lhs(components: pd.DataFrame, component_type: str) -> pd.Da
     """One LHS term per expandable component, summing p_nom across the
     investment periods of its parent element.
 
-    I/O Example:
-        components: name=CQ-NQ_exp_2030, isp_name=CQ-NQ; component_type="Link"
-        -> constraint_id=CQ-NQ, variable_name=CQ-NQ_exp_2030, component=Link,
-           attribute=p_nom, coefficient=1.0, investment_period=NaN
+    I/O Example (component_type="Link"):
+        components:
+            isp_name  name
+            CQ-NQ     CQ-NQ_exp_2030
+            CQ-NQ     CQ-NQ_exp_2040
+
+        returns:
+            constraint_id  variable_name   component  attribute  coefficient  investment_period
+            CQ-NQ          CQ-NQ_exp_2030  Link       p_nom      1.0          NaN
+            CQ-NQ          CQ-NQ_exp_2040  Link       p_nom      1.0          NaN
     """
     lhs = components.loc[:, ["isp_name", "name"]].copy()
     lhs = lhs.rename(columns={"isp_name": "constraint_id", "name": "variable_name"})
@@ -1091,10 +1102,22 @@ def _finalise_lhs_and_rhs(
     (constraint, period, timeslice) RHS rows, and sets the final PyPSA
     friendly column orders.
 
-    I/O Example:
-        lhs: constraint_id=SWQLD1, ...  rhs: constraint_id=SWQLD1, ...
-        -> lhs.columns == _LHS_COLUMNS, rhs.columns == _RHS_COLUMNS, both
-           keyed by constraint_name=SWQLD1
+    I/O Example (non-key columns abridged — see _LHS_COLUMNS and _RHS_COLUMNS):
+        lhs:
+            constraint_id  variable_name     coefficient
+            SWQLD1         NSW-QLD_existing  0.84
+
+        rhs:
+            constraint_id  timeslice        rhs
+            SWQLD1         qld_peak_demand  3000
+
+        returns lhs:
+            constraint_name  variable_name     coefficient
+            SWQLD1           NSW-QLD_existing  0.84
+
+        returns rhs:
+            constraint_name  timeslice        rhs
+            SWQLD1           qld_peak_demand  3000
     """
     lhs = lhs.rename(columns={"constraint_id": "constraint_name"})
     rhs = rhs.rename(columns={"constraint_id": "constraint_name"})
@@ -1106,8 +1129,9 @@ def _finalise_lhs_and_rhs(
 
 
 def _raise_on_duplicate_rhs_rows(rhs: pd.DataFrame) -> None:
-    """Raise on duplicate (constraint, period, timeslice) RHS rows — pypsa_build
-    would create two constraints with the same name."""
+    """Raise on duplicate (constraint, period, timeslice) RHS rows. A final check to make
+    sure the constraint translation process hasn't created constraints with overlapping
+    names."""
     keys = ["constraint_name", "investment_period", "timeslice"]
     duplicates = rhs[rhs.duplicated(subset=keys, keep=False)]
     if not duplicates.empty:
