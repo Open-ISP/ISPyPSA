@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ispypsa.config import ModelConfig
-from ispypsa.translator.helpers import _resolve_wildcards
+from ispypsa.translator.helpers import _period_start, _resolve_wildcards
 from ispypsa.translator.mappings import (
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE,
     _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE,
@@ -369,15 +369,15 @@ def _translate_constraint_tables(
 def _investment_period_start_dates(
     investment_periods: list[int], year_type: str
 ) -> dict[int, pd.Timestamp]:
-    """The datetime each investment period starts at.
+    """The datetime each investment period starts at — the same financial or
+    calendar year boundary the snapshots use (see _period_start in
+    ispypsa.translator.helpers).
 
     I/O Example:
         [2030], "fy"       -> {2030: 2029-07-01}  # FY ending nomenclature
         [2030], "calendar" -> {2030: 2030-01-01}
     """
-    if year_type == "fy":
-        return {p: pd.Timestamp(year=p - 1, month=7, day=1) for p in investment_periods}
-    return {p: pd.Timestamp(year=p, month=1, day=1) for p in investment_periods}
+    return {p: _period_start(year_type, p) for p in investment_periods}
 
 
 def _resolve_values_active_at_period_starts(

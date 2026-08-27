@@ -3,19 +3,50 @@ import re
 import pandas as pd
 
 
-def _get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
-    """Get the model start year, end year, and start/end month for iteration, which depend on
-    financial vs calendar year.
+def _period_start(year_type: str, year: int) -> pd.Timestamp:
+    """The datetime a model year starts at.
+
+    Model years are labelled by the calendar year they end in under financial
+    year nomenclature, so FY 2030 starts on 1 July 2029; a calendar year starts
+    on 1 January of its own year. This is the one place that boundary lives:
+    the snapshots (through _get_iteration_start_and_end_time and _period_of)
+    and the custom-constraint date_from resolution all take it from here.
+
+    I/O Example:
+        ("fy", 2030)       -> 2029-07-01
+        ("calendar", 2030) -> 2030-01-01
     """
     if year_type == "fy":
-        start_year = start_year - 1
-        end_year = end_year
-        month = 7
-    else:
-        start_year = start_year
-        end_year = end_year + 1
-        month = 1
-    return start_year, end_year, month
+        return pd.Timestamp(year=year - 1, month=7, day=1)
+    return pd.Timestamp(year=year, month=1, day=1)
+
+
+def _period_of(year_type: str, timestamps: pd.Series) -> pd.Series:
+    """The model year each timestamp falls in — the inverse of _period_start.
+
+    I/O Example:
+        ("fy",       [2029-06-30 23:00, 2029-07-01 00:00]) -> [2029, 2030]
+        ("calendar", [2029-06-30 23:00, 2029-07-01 00:00]) -> [2029, 2029]
+    """
+    years = timestamps.dt.year.astype("int64")
+    if year_type == "fy":
+        return years + (timestamps.dt.month >= 7).astype("int64")
+    return years
+
+
+def _get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
+    """The (start_year, end_year, month) triple the snapshot builders iterate
+    over: the calendar year and month the first model year starts in, and the
+    calendar year the model year after end_year starts in (an exclusive end).
+    Both boundaries come from _period_start.
+
+    I/O Example:
+        ("fy", 2025, 2030)       -> (2024, 2030, 7)   # 2024-07-01 up to 2030-07-01
+        ("calendar", 2025, 2030) -> (2025, 2031, 1)   # 2025-01-01 up to 2031-01-01
+    """
+    first = _period_start(year_type, start_year)
+    end = _period_start(year_type, end_year + 1)
+    return first.year, end.year, first.month
 
 
 def _annuitised_investment_costs(
