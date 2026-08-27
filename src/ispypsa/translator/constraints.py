@@ -116,17 +116,9 @@ def _translate_custom_constraints(
     network_expansion_options.yaml and
     network_transmission_path_expansion_costs.yaml).
 
-    Everything time-varying is quantised forward onto the investment-period
-    sequence, mirroring how PyPSA's multi-investment-period optimisation treats
-    the components themselves. A dated LHS or RHS value takes effect at the
-    first period whose start falls on or after its date_from (the boundary
-    is inclusive), so a change landing mid-period defers to the next period
-    rather than reaching back into the one it landed in. A term is kept in
-    exactly the periods PyPSA activates its component — build_year <= period
-    < build_year + lifetime, compared against the period labels — so a
-    component built between two periods joins the constraint at the next
-    label, one retiring between two periods leaves at the next label, and
-    the constraint never counts capacity or dispatch the model doesn't have.
+    How time-varying inputs land on the investment periods — the forward
+    quantisation of date_from, build_year and lifetime — is described on
+    _translate_constraint_tables.
 
     In the output tables, a blank investment_period means the row applies in
     every period. A named timeslice scopes the RHS to the snapshots inside that
@@ -256,12 +248,24 @@ def _translate_constraint_tables(
     and one RHS row per constraint, investment period and (RHS only)
     timeslice, still keyed by constraint_id.
 
+    Everything time-varying is quantised forward onto the investment-period
+    sequence, mirroring how PyPSA's multi-investment-period optimisation
+    treats the components themselves. A dated LHS or RHS value takes effect
+    at the first period whose start falls on or after its date_from (the
+    boundary is inclusive), so a change landing mid-period defers to the
+    next period rather than reaching back into the one it landed in. A term
+    is kept in exactly the periods PyPSA activates its component —
+    build_year <= period < build_year + lifetime, compared against the
+    period labels — so a component built between two periods joins the
+    constraint at the next label, one retiring between two periods leaves at
+    the next label, and the constraint never counts capacity or dispatch the
+    model doesn't have.
+
     The translation steps:
 
         - the LHS and RHS values active during each investment period are
-        determined: each group keeps the value with the most recent date_from
-        falling on or before the period's start, blank date_from rows acting
-        as the earliest values.
+        resolved per the date_from quantisation above, blank date_from rows
+        acting as the earliest values.
         - term_type values are mapped to PyPSA component and attribute
         combinations.
         - every LHS term must resolve to a component in the model. A term naming a
@@ -278,16 +282,11 @@ def _translate_constraint_tables(
         the "load_<bus>" Load component at its demand node — a data term whose
         p_set attribute pypsa_build resolves from the demand trace, not an
         optimisation variable.
-        - each term is then dropped in the investment periods before its
-        component's build year, so a per-build-year component only enters the
-        constraint from its build year onward. Existing components' build years
-        precede the horizon and load terms have no build year, so both apply in
-        every period.
-        - terms are likewise dropped from their component's retirement year
-        onward — build_year + lifetime, the exclusive bound at which PyPSA
-        deactivates the component — so a unit retiring in a period's label
-        year contributes nothing to that period. Components with an infinite
-        lifetime never retire.
+        - each term is then dropped in the investment periods outside its
+        component's in-service window, per the activity quantisation above.
+        Existing components' build years precede the horizon, an infinite
+        lifetime never retires, and load terms carry neither year — all of
+        these apply in every period.
         - LHS and RHS rows are dropped in investment periods where the constraint does
         not have both LHS terms and an RHS value. This happens when date_from coverage
         differs between the two sides (including a side whose earliest date_from falls
