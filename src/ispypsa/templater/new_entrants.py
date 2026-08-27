@@ -401,6 +401,9 @@ def _aggregate_by_geo_id(
     )[value_columns].mean()
 
 
+# TODO (coming in next PR): fix this to keep naming convention from AEMO sources even when
+# granularity collapses. NOTE: IASR names have slightly different order/
+# convention than trace names, but for VRE (REZ-based) so less important here.
 def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
     """Sets 'name' on merged rows to "{geo_id} {technology}".
 

@@ -318,7 +318,7 @@ _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
 # REZ sub-zone ids used by some existing/planned generators that don't appear in
 # renewable_energy_zones (only their parent REZ does, e.g. "Q8" not "Q8a"/"Q8b"/
 # "Q8c"). Same gap class as _NON_REZ_PLACEHOLDER_GEO_IDS (#133), different cause.
-# TODO: ADDRESS THIS
+# NOTE: placeholder fix for now - will be properly addressed in future PR (next up)
 _MISSING_REZ_SUBZONE_GEO_IDS = {"Q8a", "Q8b", "Q8c"}
 
 # Per-reference-year window patterns decoded from the shipped RefYear5000
