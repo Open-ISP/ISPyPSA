@@ -99,6 +99,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_expansion_costs",
     "timeslices",
     "costs_connection",
+    "generators_existing_planned",
     "generators_new_entrant",
     "storage_new_entrant",
     "custom_constraints",

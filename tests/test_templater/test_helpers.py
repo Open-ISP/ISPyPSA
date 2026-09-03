@@ -585,6 +585,20 @@ def test_map_geo_id_to_granularity_single_region(csv_str_to_df):
     pd.testing.assert_series_equal(result, expected)
 
 
+def test_map_geo_id_to_granularity_raise_unknown_granularity(csv_str_to_df, caplog):
+    sub_regional_geography = csv_str_to_df("""
+            geo_id,  geo_type,   region_id
+            CNSW,    subregion,  NSW
+            Q1,      rez,        QLD
+        """)
+    geo_id = pd.Series(["CNSW", "Q1"])
+
+    with pytest.raises(
+        ValueError, match=r"Unknown regional_granularity: 'solar_system'"
+    ):
+        _map_geo_id_to_granularity(geo_id, "solar_system", sub_regional_geography)
+
+
 # --- _is_subregion_geo_id ---
 
 

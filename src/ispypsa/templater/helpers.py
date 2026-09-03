@@ -475,7 +475,8 @@ def _map_geo_id_to_granularity(
         geo_id.loc[is_subregion] = geo_id[is_subregion].map(
             _build_geo_region_lookup(sub_regional_geography)
         )
-    return geo_id
+        return geo_id
+    raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
 
 
 def _is_subregion_geo_id(
