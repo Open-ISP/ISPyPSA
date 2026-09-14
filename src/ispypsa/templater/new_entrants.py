@@ -34,18 +34,24 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.geography import _build_geo_region_lookup
 from ispypsa.templater.helpers import (
+    _apply_known_value_replacement,
+    _assert_table_valid,
+    _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
+    _get_property_value_map,
+    _group_properties_by_source,
     _is_battery_row,
     _is_pumped_hydro_row,
     _is_storage_row,
-    _pick_location,
+    _is_subregion_geo_id,
+    _map_geo_id_to_granularity,
+    _required_property_columns,
+    _set_geo_id,
 )
 from ispypsa.templater.mappings import (
     _COMMON_NEW_ENTRANT_PROPERTY_MAP,
     _GENERATORS_NEW_ENTRANT_PROPERTY_MAP,
-    _SINGLE_REGION_ID,
     _STORAGE_BATTERY_PROPERTY_MAP,
     _STORAGE_PHES_PROPERTY_MAP,
 )
@@ -132,9 +138,14 @@ _BOTN_CETHANA_DETAILS = {
     "technology": "Pumped Hydro (24hrs storage)",  # its generic tech in new_entrants_summary
 }
 
-_PHES_PROPERTY_KEY_RENAMES = {
-    _BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]
-}
+# The pumped-hydro table is the lone table that keys BOTN by its full spelling
+# (pumped_hydro_new_entrant_properties); every other table -- and BOTN's overridden
+# 'technology' (see _override_botn_technology) -- uses the bare name.
+_PHES_BOTN_KEY_FIX = dict(
+    table_name="pumped_hydro_new_entrant_properties",
+    column="Power Station / Technology",
+    replacements={_BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]},
+)
 
 # Typo(?) in 'Regional build cost zone' for PHES rows in NSA subregion: see Open-ISP/ISPyPSA#131.
 _KNOWN_BUILD_COST_ZONE_TYPOS = {
@@ -279,9 +290,9 @@ def _merge_properties(
 ) -> pd.DataFrame:
     """Merges every property in ``property_map`` onto ``new_entrants``.
 
-    Groups properties by their source (table, technology_col) — see
-    ``_group_by_source_key`` — so a table that contributes several properties (e.g.
-    ``battery_properties`` feeds six) is validated and fuzzy-matched against
+    Groups properties by their source (table, key_col) — see
+    ``_group_properties_by_source`` — so a table that contributes several properties
+    (e.g. ``battery_properties`` feeds six) is validated and fuzzy-matched against
     ``new_entrants``' 'technology' once per property map.
 
     I/O Example (property_map = _STORAGE_BATTERY_PROPERTY_MAP, abbreviated):
@@ -294,7 +305,7 @@ def _merge_properties(
             NQ Battery - 2h  Battery Storage (2hrs storage)   2.0            92.0               ...
     """
     new_entrants = new_entrants.copy()
-    for (table_name, technology_col), props in _group_by_source_key(
+    for (table_name, key_col), props in _group_properties_by_source(
         property_map
     ).items():
         table = iasr_tables[table_name]
@@ -306,133 +317,12 @@ def _merge_properties(
         )
         matched_technology = _fuzzy_map_to_allowed_values(
             new_entrants["technology"],
-            table[technology_col],
+            table[key_col],
             task_desc=f"merging new entrant properties from '{table_name}'",
         )
         for new_col, attrs in props.items():
             property_values = _get_property_value_map(table, attrs)
             new_entrants[new_col] = matched_technology.map(property_values)
-    return new_entrants
-
-
-def _group_by_source_key(property_map: dict[str, dict]) -> dict[tuple[str, str], dict]:
-    """Groups a property map's entries by their source (table, technology_col).
-
-    I/O Example:
-        property_map:
-            storage_hours:
-                {table: battery_properties, technology_col: Technology, value_col: Energy capacity_Hours}
-            efficiency_charge:
-                {table: battery_properties, technology_col: Technology, value_col: Charge efficiency_%}
-            lifetime_technical:
-                {table: lead_time_and_project_life, technology_col: Technology, value_col: Technical life (years)}
-
-        returns:
-            (battery_properties, Technology): {
-                storage_hours: { ... },
-                efficiency_charge: { ... },
-            }
-            (lead_time_and_project_life, Technology): {
-                lifetime_technical: { ... },
-            }
-            where { ... } indicates contents remain unchanged from inputs.
-    """
-    groups = {}
-    for property_name, attrs in property_map.items():
-        source_key = (attrs["table"], attrs["technology_col"])
-        groups.setdefault(source_key, {})[property_name] = attrs
-    return groups
-
-
-def _required_property_columns(props: dict[str, dict]) -> set[str]:
-    """Returns every ``value_col``/``technology_col`` named across a source's properties.
-
-    I/O Example:
-        props:
-            fom: {table: fixed_opex_new_entrants, technology_col: Technology, value_col: Base value}
-            vom: {table: variable_opex_new_entrants, technology_col: Generator, value_col: Base value}
-
-        returns:
-            {"Technology", "Generator", "Base value"}
-    """
-    return {d[col] for col in ["value_col", "technology_col"] for d in props.values()}
-
-
-def _get_property_value_map(
-    table: pd.DataFrame, attrs: dict[str, str | float]
-) -> pd.Series:
-    """Returns one property's value, keyed by technology and scaled.
-
-    Raises:
-        ValueError: if ``value_col`` contains anything ``pd.to_numeric`` can't parse,
-            e.g. a stray typo in the IASR table.
-
-    I/O Example:
-        table:
-            Technology  Base value
-            Wind        2.0
-            CCGT        5.0
-
-        attrs: {technology_col: Technology, value_col: Base value, scale: 1000.0}
-
-        returns (indexed by Technology):
-            Wind    2000.0
-            CCGT    5000.0
-    """
-    value_map = pd.to_numeric(
-        table.set_index(attrs["technology_col"])[attrs["value_col"]], errors="raise"
-    )
-    value_map *= float(attrs.get("scale", 1.0))
-    return value_map
-
-
-def _assert_table_valid(
-    table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
-) -> None:
-    """Asserts a source table has every required column and isn't empty.
-
-    Shared precondition check for every IASR table merged in this module — guards
-    against two silent-failure modes: a missing column producing a KeyError, and
-    an empty table merges to an all-NaN column with no warning.
-
-    Args:
-        table: the source table to validate, e.g. ``iasr_tables["battery_properties"]``.
-        table_name: ``table``'s IASR table name, used to name it in error messages.
-        required_cols: every column the downstream merge reads from ``table``.
-        merge_desc: short description of what would be merged, named in the
-            empty-table error, e.g. ``"properties '['fom']'"`` or ``"'lcf_build'"``.
-
-    Raises:
-        ValueError: if any of ``required_cols`` is missing from ``table``, or if
-            ``table`` has no rows.
-
-    I/O Example:
-        table:
-            Technology  Base value  Extra Column
-            Wind        2.0         unused_info
-
-        table_name: "fixed_opex_new_entrants"
-        required_cols: {"Technology", "Base value"}
-        merge_desc: "properties '['fom']'"
-
-        # No ValueError raised: table has rows, both required columns present.
-    """
-    missing_cols = required_cols - set(table.columns)
-    if missing_cols:
-        raise ValueError(
-            f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
-        )
-    if table.empty:
-        raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
-
-
-def _set_geo_id(new_entrants: pd.DataFrame) -> pd.DataFrame:
-    """Adds 'geo_id' column to new_entrants containing REZ ID with Sub-region fallback.
-
-    Applies ``_pick_location`` helper to each row of the new_entrants table to
-    set their 'geo_id'. Simple wrapper for readability.
-    """
-    new_entrants["geo_id"] = new_entrants.apply(_pick_location, axis=1)
     return new_entrants
 
 
@@ -499,15 +389,6 @@ def _collapse_geo_id_to_granularity(
     return pd.concat([unchanged, collapsed], ignore_index=True)[new_entrants.columns]
 
 
-# NOTE: maybe move to helpers.py in future?
-def _is_subregion_geo_id(
-    geo_id: pd.Series, sub_regional_geography: pd.DataFrame
-) -> pd.Series:
-    """Boolean mask of ``geo_id`` values that are sub-region-located (not REZ)."""
-    geo_type_by_geo_id = sub_regional_geography.set_index("geo_id")["geo_type"]
-    return geo_id.map(geo_type_by_geo_id) == "subregion"
-
-
 def _aggregate_by_geo_id(
     new_entrants: pd.DataFrame,
     group_key_columns: list[str],
@@ -520,15 +401,9 @@ def _aggregate_by_geo_id(
     )[value_columns].mean()
 
 
-def _map_geo_id_to_granularity(
-    geo_id: pd.Series, regional_granularity: str, sub_regional_geography: pd.DataFrame
-) -> pd.Series:
-    """Maps sub-region geo_ids to their region_id ("nem_regions") or "NEM" ("single_region")."""
-    if regional_granularity == "single_region":
-        return pd.Series(_SINGLE_REGION_ID, index=geo_id.index)
-    return geo_id.map(_build_geo_region_lookup(sub_regional_geography))
-
-
+# TODO (coming in next PR): fix this to keep naming convention from AEMO sources even when
+# granularity collapses. NOTE: IASR names have slightly different order/
+# convention than trace names, but for VRE (REZ-based) so less important here.
 def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
     """Sets 'name' on merged rows to "{geo_id} {technology}".
 
@@ -732,34 +607,21 @@ def _merge_phes_properties(
     BOTN - Cethana's 'technology' is first overridden to its own name so it draws its own
     published property rows rather than the generic PHES archetype's (see
     ``_override_botn_technology``). The pumped-hydro table is the lone table that keys BOTN
-    by its full spelling, so its key is normalised to the bare name (see
-    ``_normalise_phes_botn_key``) before a plain technology-keyed merge. The table gives
-    storage_hours and a single round-trip efficiency directly; charge/discharge efficiency
-    are then derived from it (see ``_derive_phes_symmetric_efficiency``). The round-trip
-    column is dropped by the orchestrator's final select.
+    by its full spelling, so its key is corrected to the bare name (``_PHES_BOTN_KEY_FIX``)
+    before a plain technology-keyed merge. The table gives storage_hours and a single
+    round-trip efficiency directly; charge/discharge efficiency are then derived from it
+    (see ``_derive_phes_symmetric_efficiency``). The round-trip column is dropped by the
+    orchestrator's final select.
     """
     phes = phes.copy()
     phes["technology"] = _override_botn_technology(phes)
     phes = _merge_properties(
-        phes, _normalise_phes_botn_key(iasr_tables), _STORAGE_PHES_PROPERTY_MAP
+        phes,
+        _apply_known_value_replacement(iasr_tables, _PHES_BOTN_KEY_FIX),
+        _STORAGE_PHES_PROPERTY_MAP,
     )
     phes = _derive_phes_symmetric_efficiency(phes)
     return phes
-
-
-def _normalise_phes_botn_key(
-    iasr_tables: dict[str, pd.DataFrame],
-) -> dict[str, pd.DataFrame]:
-    """Returns ``iasr_tables`` with the pumped-hydro table's BOTN key set to the bare name.
-
-    Renames the lone full-spelling BOTN key (see ``_PHES_PROPERTY_KEY_RENAMES``) in the
-    pumped-hydro table so it matches BOTN's overridden 'technology'. Returns a shallow copy
-    of the dict with only that table replaced — the shared ``iasr_tables`` is left untouched.
-    """
-    table_name = "pumped_hydro_new_entrant_properties"
-    key_col = _STORAGE_PHES_PROPERTY_MAP["storage_hours"]["technology_col"]
-    normalised = iasr_tables[table_name].replace({key_col: _PHES_PROPERTY_KEY_RENAMES})
-    return {**iasr_tables, table_name: normalised}
 
 
 def _override_botn_technology(phes: pd.DataFrame) -> pd.Series:
@@ -797,29 +659,6 @@ def _assert_botn_technology_expected(phes: pd.DataFrame) -> None:
             f"'BOTN - Cethana' technology should be '{expected}': "
             f"got {sorted(unexpected, key=str)} in 'new_entrants_summary' table."
         )
-
-
-def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
-    """Splits the round-trip 'round_trip_efficiency' (%) into charge and discharge legs.
-
-    The IASR PHES table gives only a single round-trip efficiency. Assuming symmetric
-    legs, each one-way efficiency is its square root, so e.g. a 76% round trip becomes
-    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872).
-
-    I/O Example:
-        phes:
-            name                 round_trip_efficiency
-            NQ Pumped Hydro-10h  76.0
-
-        returns (adds the two efficiency columns):
-            name                 round_trip_efficiency  efficiency_charge  efficiency_discharge
-            NQ Pumped Hydro-10h  76.0                   87.18              87.18
-    """
-    phes = phes.copy()
-    one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
-    phes["efficiency_charge"] = one_way_efficiency
-    phes["efficiency_discharge"] = one_way_efficiency
-    return phes
 
 
 # --- generator-specific helpers ---

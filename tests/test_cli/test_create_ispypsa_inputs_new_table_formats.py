@@ -311,6 +311,16 @@ _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75 = {
 # REZ location (state-wide VRE/DER). See Open-ISP/ISPyPSA#133
 _NON_REZ_PLACEHOLDER_GEO_IDS = {"N0", "V0"}
 
+# Drift-detection only — no collapse step for existing/planned generators (unlike
+# new entrant), so this is the same at every granularity.
+_EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
+
+# REZ sub-zone ids used by some existing/planned generators that don't appear in
+# renewable_energy_zones (only their parent REZ does, e.g. "Q8" not "Q8a"/"Q8b"/
+# "Q8c"). Same gap class as _NON_REZ_PLACEHOLDER_GEO_IDS (#133), different cause.
+# NOTE: placeholder fix for now - will be properly addressed in future PR (next up)
+_MISSING_REZ_SUBZONE_GEO_IDS = {"Q8a", "Q8b", "Q8c"}
+
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
 # granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
@@ -364,6 +374,7 @@ def test_create_ispypsa_inputs_new_format(
     costs_connection = pd.read_csv(output_dir / "costs_connection.csv")
     gens_new_entrant = pd.read_csv(output_dir / "generators_new_entrant.csv")
     storage_new_entrant = pd.read_csv(output_dir / "storage_new_entrant.csv")
+    gens_existing_planned = pd.read_csv(output_dir / "generators_existing_planned.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert len(geo) == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75
@@ -421,6 +432,16 @@ def test_create_ispypsa_inputs_new_format(
     )
     assert storage_new_entrant["name"].is_unique
     assert set(storage_new_entrant["geo_id"]) <= set(geo["geo_id"])
+
+    # generators_existing_planned — one row per existing/planned generating unit,
+    # no collapse step (unlike new entrant) so the row count doesn't vary by
+    # granularity. geo_ids are real network_geography entries, except the two
+    # pre-existing gaps noted above ("Non-REZ" placeholders and REZ sub-zones).
+    assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
+    assert gens_existing_planned["name"].is_unique
+    assert set(gens_existing_planned["geo_id"]) <= (
+        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS | _MISSING_REZ_SUBZONE_GEO_IDS
+    )
 
     # costs_connection - every new entrant technology + geo_id + year has a row
     # geo_id's are real network_geography entries + _NON_REZ_PLACEHOLDER_GEO_IDS
