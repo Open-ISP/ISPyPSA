@@ -5,6 +5,8 @@ from ispypsa.templater.existing_planned import (
     _format_commissioning_date,
     _is_existing_planned_storage_row,
     _merge_minimum_load,
+    _merge_other_storage_properties,
+    _merge_storage_type_split_properties,
     _merge_unit_keyed_properties,
     _resolve_unit_keys,
     _template_generators_existing_planned,
@@ -26,14 +28,14 @@ def test_is_existing_planned_storage_row(csv_str_to_df):
     phes_properties = csv_str_to_df("""
         Power Station
         Wivenhoe
-        Borumba
+        QEJP - Borumba
     """)
 
     result = _is_existing_planned_storage_row(summary, phes_properties)
 
     # Wivenhoe routes to storage by PHES-table presence despite being labelled plain
     # "Hydro"; Q8 Battery routes by technology; Tarong is neither; QEJP - Borumba
-    # routes by technology AND is matched to Borumba in phes_properties.
+    # routes by technology AND is matched by Power Station
     expected = pd.Series([True, False, True, True])
     pd.testing.assert_series_equal(result, expected)
 
@@ -85,13 +87,11 @@ def test_validate_phes_routing_tolerates_lower_tumut(csv_str_to_df):
     summary = csv_str_to_df("""
         Power Station,  Technology Type
         Tumut 3,        Hydro
-        QEJP - Borumba, Pumped Hydro (24hrs storage)
         Tarong,         Steam Sub Critical
     """)
     phes_properties = csv_str_to_df("""
         Power Station
         Lower Tumut
-        Borumba
     """)
 
     _validate_phes_routing(summary, phes_properties)  # no error
@@ -182,6 +182,93 @@ def test_merge_unit_keyed_properties_single_table_multiple_columns(csv_str_to_df
     """)
 
     pd.testing.assert_frame_equal(result, expected_result)
+
+
+# --- _merge_storage_type_split_properties ---
+
+
+@pytest.mark.parametrize(
+    "empty_option",
+    ["full", "empty", "battery_only", "phes_only"],
+)
+def test_merge_storage_type_split_properties(empty_option, csv_str_to_df):
+    # Checks the split-merge-concat behaviour across different 'storage' input scenarios
+    # -> both PHES+Battery, fully empty, battery rows only, phes rows only.
+    storage = csv_str_to_df("""
+        name,    power_station, technology
+        W/HOE#1, Wivenhoe,      Hydro
+        ORANA,   Orana BESS,    Battery Storage (2hrs storage)
+    """)
+    empty_options = {
+        "full": storage.copy(),
+        "empty": pd.DataFrame(columns=storage.columns),
+        "battery_only": storage[storage["name"] == "ORANA"].copy(),
+        "phes_only": storage[storage["name"] == "W/HOE#1"].copy(),
+    }
+    iasr_tables = {
+        "battery_properties": csv_str_to_df("""
+            Technology,                      Charge efficiency_%, Discharge efficiency_%
+            Battery storage (2hrs storage),  92.0,                92.0
+        """),
+        "pumped_hydro_existing_committed_anticipated_additional_properties": csv_str_to_df("""
+            Power Station,  Pumping efficiency (%)
+            Wivenhoe,       64.0
+        """),
+    }
+    storage_table = empty_options[empty_option]
+
+    result = _merge_storage_type_split_properties(storage_table, iasr_tables)
+
+    expected = csv_str_to_df("""
+        name,    power_station, technology,                     efficiency_charge,  efficiency_discharge
+        W/HOE#1, Wivenhoe,      Hydro,                          80.0,               80.0
+        ORANA,   Orana BESS,    Battery Storage (2hrs storage), 92.0,               92.0
+    """)
+    expected_options = {
+        "full": expected.copy(),
+        "empty": pd.DataFrame(columns=expected.columns),
+        "battery_only": expected[expected["name"] == "ORANA"].copy(),
+        "phes_only": expected[expected["name"] == "W/HOE#1"].copy(),
+    }
+    pd.testing.assert_frame_equal(
+        result.sort_values("name").reset_index(drop=True),
+        expected_options[empty_option].sort_values("name").reset_index(drop=True),
+        check_exact=False,
+    )
+
+
+# --- __merge_other_storage_properties ---
+
+
+def test_merge_other_storage_properties(csv_str_to_df):
+    # check that the generic 'summary_key' input correctly sets the column-to-map
+    # onto the 'storage' input dataframe.
+    storage = csv_str_to_df("""
+        name,       power_station,  technology,     fuel_type,  other_col
+        BESS1_1,    Big Battery 1,  Battery - 1h,   Battery,    Storage
+        BESS1_2,    Big Battery 1,  Battery - 2h,   Battery,    Storage
+        Sample_1h,  Sample 1,       Battery - 1h,   Battery,    Storage
+        Sample_PH,  Sample 1,       Pumped Hydro,   Water,      Storage
+        Test_PH,    Tester Hydro,   Pumped Hydro,   Water,      Storage
+    """)
+    iasr_tables = {
+        "technology_properties": csv_str_to_df("""
+            Technology Name,    Efficiency
+            Battery - 1h,       90.0
+            Battery - 2h,       95.0
+            Pumped Hydro,       85.0
+        """),
+        "power_station_properties": csv_str_to_df("""
+            Power Station,  Total Capacity
+            Big Battery 1,  100.0
+            Sample 1,       4000.0
+        """),
+        "fuel_type_properties": csv_str_to_df("""
+            Fuel Label,  Total Capacity
+            Big Battery 1,  100.0
+            Sample 1,       4000.0
+        """),
+    }
 
 
 # --- _format_commissioning_date ---
@@ -458,44 +545,97 @@ def test_template_generators_existing_planned_empty(csv_str_to_df):
 
 
 def test_template_storage_existing_planned(csv_str_to_df):
+    # Wiring only - the behaviour behind each column is covered by the per-helper
+    # tests above. Columns are compared in order: this is the only test that pins
+    # _STORAGE_COLUMNS' schema ordering (elsewhere it's compared as a set).
     summary = csv_str_to_df("""
-        IASR ID / DLT names,  Power Station,  Technology Type
-        BW01,                 Bayswater,      Steam Sub Critical
-        WHOE1,                Wivenhoe,       Hydro
-        Q8_BATT_2H,           Q8 Battery,     Battery Storage (2hrs storage)
+        IASR ID / DLT names,    Power Station,  Technology Type,                REZ ID,         Sub-region, Fuel type
+        W/HOE#1,                Wivenhoe,       Hydro,                          Not Applicable, SQ,         Water
+        ORANA,                  Orana BESS,     Battery Storage (2hrs storage), N3,             CNSW,       Battery
     """)
     phes_properties = csv_str_to_df("""
-        Power Station
-        Wivenhoe
+        Power Station,  Installed capacity (MW),Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                    10.0,                       70
+    """)
+    battery_properties = csv_str_to_df("""
+        Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
+        Battery storage (2hrs storage),  2.0,                   92.0,                92.0,                   100,                             0,                               1.8
+    """)
+    maximum_capacity = csv_str_to_df("""
+        IASR ID,        Installed capacity (MW),    Storage Capacity (MWh),  Commissioning date
+        W/HOE#1,        285.0,                      3000.0,
+        ORANA,          415.0,                      1660.0,                 2026-06-01
+    """)
+    closure_years = csv_str_to_df("""
+        IASR ID,    Expected Closure Year (Calendar year)
+        W/HOE#1,    2084
+        ORANA,      2066
     """)
     iasr_tables = {
         "existing_committed_anticipated_additional_generator_summary": summary,
         "pumped_hydro_existing_committed_anticipated_additional_properties": phes_properties,
+        "maximum_capacity_existing_committed_anticipated_additional_generators": maximum_capacity,
+        "expected_closure_years": closure_years,
+        "battery_properties": battery_properties,
     }
 
-    storage = _template_storage_existing_planned(iasr_tables)
-
-    expected_storage = csv_str_to_df("""
-        name,        power_station,  technology
-        WHOE1,       Wivenhoe,       Hydro
-        Q8_BATT_2H,  Q8 Battery,     Battery Storage (2hrs storage)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,   region_id
+        SQ,         subregion,  QLD
+        N3,         rez,        NSW
     """)
-    pd.testing.assert_frame_equal(storage.reset_index(drop=True), expected_storage)
+
+    result = _template_storage_existing_planned(
+        iasr_tables, "sub_regions", sub_regional_geography
+    )
+    assert list(result.columns) == [
+        "name",
+        "power_station",
+        "technology",
+        "geo_id",
+        "fuel_type",
+        "capacity",
+        "storage_capacity",
+        "efficiency_charge",
+        "efficiency_discharge",
+        "commissioning_date",
+        "closure_year",
+    ]
+    assert len(result) == 2
 
 
 def test_template_storage_existing_planned_empty(csv_str_to_df):
-    summary = pd.DataFrame(
-        columns=["IASR ID / DLT names", "Power Station", "Technology Type"]
-    )
-    phes_properties = pd.DataFrame(columns=["Power Station"])
+    summary = csv_str_to_df("""
+        IASR ID / DLT names,    Power Station,  Technology Type,                REZ ID,         Sub-region, Fuel type
+    """)
+    phes_properties = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),Storage capacity (hours),   Pumping efficiency (%)
+    """)
+    battery_properties = csv_str_to_df("""
+        Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
+    """)
+    maximum_capacity = csv_str_to_df("""
+        IASR ID,        Installed capacity (MW),    Storage Capacity (MWh),  Commissioning date
+    """)
+    closure_years = csv_str_to_df("""
+        IASR ID,    Expected Closure Year (Calendar year)
+    """)
     iasr_tables = {
         "existing_committed_anticipated_additional_generator_summary": summary,
         "pumped_hydro_existing_committed_anticipated_additional_properties": phes_properties,
+        "maximum_capacity_existing_committed_anticipated_additional_generators": maximum_capacity,
+        "expected_closure_years": closure_years,
+        "battery_properties": battery_properties,
     }
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,     geo_type,   region_id
+    """)
 
-    storage = _template_storage_existing_planned(iasr_tables)
+    result = _template_storage_existing_planned(
+        iasr_tables, "sub_regions", sub_regional_geography
+    )
 
     expected_storage = csv_str_to_df("""
-        name,  power_station,  technology
+        name,  power_station,  technology, geo_id, fuel_type, capacity, storage_capacity, efficiency_charge, efficiency_discharge, commissioning_date, closure_year
     """)
-    pd.testing.assert_frame_equal(storage, expected_storage, check_dtype=False)
+    pd.testing.assert_frame_equal(result, expected_storage, check_dtype=False)

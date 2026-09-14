@@ -537,43 +537,51 @@ def _assert_table_valid(
         raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
 
 
-def _apply_known_value_replacement(
-    iasr_tables: dict[str, pd.DataFrame], correction: dict
+def _apply_known_value_replacements(
+    iasr_tables: dict[str, pd.DataFrame], corrections: list[dict]
 ) -> dict[str, pd.DataFrame]:
     """Returns ``iasr_tables`` with a known correction applied to one table's column.
 
     Shared shape for a small, explicitly declared fix (a documented typo or naming
     mismatch) to a single column of a single source table. ``correction`` bundles the
     fix's specifics (``table_name``, ``column``, ``replacements``). Returns a shallow
-    copy of ``iasr_tables`` with only that table replaced.
+    copy of ``iasr_tables`` with only listed tables replaced.
 
     Note: while fuzzy-matching is used to standardise names or other ID strings,
     some typos/diffs are too 'big' to pass any safe fuzzy-match threshold (see
     example below - fuzz.ratio("KiataWF1", "KIATAWF1") == 50). This function
     explicitly handles those known instances where this is the case.
 
-    I/O Example (correction = existing_planned._MAXIMUM_CAPACITY_ID_TYPO_FIX):
+    I/O Example (correction = [existing_planned._MAXIMUM_CAPACITY_ID_TYPO_FIX]):
         iasr_tables["maximum_capacity_..."]:
             IASR ID   Power Station    Installed capacity (MW)
             KiataWF1  Kiata Wind Farm  31.05
             BW01      Bayswater        660.0
 
-        correction:
+        corrections (single dict element in list):
             table_name:   "maximum_capacity_..."
             column:       "IASR ID"
             replacements: {"KiataWF1": "KIATAWF1"}
 
-        returns copy of iasr_tables with only that one table edited:
+        returns copy of iasr_tables with only listed tables edited:
             iasr_tables["maximum_capacity_..."]:
                 IASR ID   Power Station    Installed capacity (MW)
                 KIATAWF1  Kiata Wind Farm  31.05
                 BW01      Bayswater        660.0
     """
-    table_name = correction["table_name"]
-    corrected = iasr_tables[table_name].replace(
-        {correction["column"]: correction["replacements"]}
-    )
-    return {**iasr_tables, table_name: corrected}
+    corrected_tables = iasr_tables  # shallow copy
+    for correction in corrections:
+        table_name = correction["table_name"]
+        col_to_fix = correction["column"]
+        replacements = correction["replacements"]
+        if col_to_fix not in iasr_tables[table_name].columns:
+            logging.warning(
+                f"Missing expected column '{col_to_fix}' in table '{table_name}' "
+                f"- replacement '{replacements}' not applied."
+            )
+        corrected = iasr_tables[table_name].replace({col_to_fix: replacements})
+        corrected_tables = {**corrected_tables, table_name: corrected}
+    return corrected_tables
 
 
 def _group_properties_by_source(
@@ -707,14 +715,14 @@ def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
             NQ Pumped Hydro-10h  76.0
 
         returns (adds the two efficiency columns):
-            name                 round_trip_efficiency  efficiency_charge  efficiency_discharge
-            NQ Pumped Hydro-10h  76.0                   87.18              87.18
+            name                 efficiency_charge  efficiency_discharge
+            NQ Pumped Hydro-10h  87.18              87.18
     """
     phes = phes.copy()
     one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
     phes["efficiency_charge"] = one_way_efficiency
     phes["efficiency_discharge"] = one_way_efficiency
-    return phes
+    return phes.drop(columns=["round_trip_efficiency"])
 
 
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:

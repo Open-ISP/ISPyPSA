@@ -41,17 +41,25 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacement,
+    _apply_known_value_replacements,
     _assert_table_valid,
+    _derive_phes_symmetric_efficiency,
+    _fuzzy_map_to_allowed_values,
     _fuzzy_match_names,
     _get_property_value_map,
     _group_properties_by_source,
+    _is_battery_row,
     _is_storage_row,
     _map_geo_id_to_granularity,
     _required_property_columns,
     _set_geo_id,
 )
-from ispypsa.templater.mappings import _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP
+from ispypsa.templater.mappings import (
+    _BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP,
+    _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP,
+    _PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP,
+    _STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP,
+)
 
 # Source (IASR existing_committed_anticipated_additional_generator_summary) column
 # names → schema output column names.
@@ -79,6 +87,20 @@ _GENERATOR_COLUMNS = [
     "minimum_load",
 ]
 
+_STORAGE_COLUMNS = [
+    "name",
+    "power_station",
+    "technology",
+    "geo_id",
+    "fuel_type",
+    "capacity",
+    "storage_capacity",
+    "efficiency_charge",
+    "efficiency_discharge",
+    "commissioning_date",
+    "closure_year",
+]
+
 _COMMISSIONING_DATE_SCHEMA_FORMAT = "%d/%m/%Y"
 
 # minimum_load property table spec:
@@ -94,11 +116,6 @@ _GAS_MINIMUM_LOAD_PROPERTY = dict(
     value_col="Min Stable Level (MW)",
 )
 
-# The PHES properties table keys Borumba by its short project name; the summary lists
-# it under its full project name. TODO: implement as a 'known_value_replacement' when
-# storage property merge is implemented.
-_BORUMBA_FULL_NAME_MAP = {"Borumba": "QEJP - Borumba"}
-
 # Tumut 3 has a real pump/non-pump unit split that the summary and phes_properties
 # tables can't currently be reconciled on by name. _validate_phes_routing tolerates
 # this as known unmatched (rather than renaming units to assign as PHES) as part of
@@ -106,15 +123,23 @@ _BORUMBA_FULL_NAME_MAP = {"Borumba": "QEJP - Borumba"}
 # See Open-ISP/ISPyPSA#131 comment thread.
 _KNOWN_UNMATCHED_PHES_STATIONS = {"Lower Tumut"}
 
-# Case mismatch between maximum_capacity's IASR ID and the summary's: the 'safe'
-# fuzzy-matching threshold (90) would miss (fuzz.ratio("KiataWF1", "KIATAWF1") == 50).
-# TODO: rename to use a generic name like IASR_TYPO_FIXES per comment on #143.
-_MAXIMUM_CAPACITY_ID_TYPO_FIX = dict(
-    table_name="maximum_capacity_existing_committed_anticipated_additional_generators",
-    column="IASR ID",
-    replacements={"KiataWF1": "KIATAWF1"},
-)
 
+_KNOWN_IASR_TABLE_REPLACEMENTS = [
+    # The PHES properties table keys Borumba by its short project name; the summary lists
+    # it under its full project name. This is a mapping convenience/consistency fix
+    dict(
+        table_name="pumped_hydro_existing_committed_anticipated_additional_properties",
+        column="Power Station",
+        replacements={"Borumba": "QEJP - Borumba"},
+    ),
+    # Case mismatch between maximum_capacity's IASR ID and the summary's: the 'safe'
+    # fuzzy-matching threshold (90) would miss (fuzz.ratio("KiataWF1", "KIATAWF1") == 50).
+    dict(
+        table_name="maximum_capacity_existing_committed_anticipated_additional_generators",
+        column="IASR ID",
+        replacements={"KiataWF1": "KIATAWF1"},
+    ),
+]
 
 # --- public orchestrators ---
 
@@ -159,6 +184,9 @@ def _template_generators_existing_planned(
             BW01  Bayswater      NSW     660.0     NaN      # CNSW -> NSW via sub_regional_geography
     """
     logging.info("Creating a template for existing and planned generators")
+    iasr_tables = _apply_known_value_replacements(
+        iasr_tables, _KNOWN_IASR_TABLE_REPLACEMENTS
+    )
     summary = iasr_tables["existing_committed_anticipated_additional_generator_summary"]
     phes_properties = iasr_tables[
         "pumped_hydro_existing_committed_anticipated_additional_properties"
@@ -175,7 +203,7 @@ def _template_generators_existing_planned(
     non_generator_names = set(summary.loc[is_storage, "name"])
     generators = _merge_unit_keyed_properties(
         generators,
-        _apply_known_value_replacement(iasr_tables, _MAXIMUM_CAPACITY_ID_TYPO_FIX),
+        iasr_tables,
         _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP,
         non_generator_names,
     )
@@ -186,6 +214,8 @@ def _template_generators_existing_planned(
 
 def _template_storage_existing_planned(
     iasr_tables: dict[str, pd.DataFrame],
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates the existing and planned (ECAA) storage table from the IASR summary.
 
@@ -208,13 +238,27 @@ def _template_storage_existing_planned(
             Q8 Battery - 2h  Q8 Battery     Battery Storage (2hrs storage)
     """
     logging.info("Creating a template for existing and planned storage")
+    iasr_tables = _apply_known_value_replacements(
+        iasr_tables, _KNOWN_IASR_TABLE_REPLACEMENTS
+    )
     summary = iasr_tables["existing_committed_anticipated_additional_generator_summary"]
     phes_properties = iasr_tables[
         "pumped_hydro_existing_committed_anticipated_additional_properties"
     ]
     is_storage = _is_existing_planned_storage_row(summary, phes_properties)
-    storage = summary[is_storage].copy()
-    return storage.rename(columns=_SUMMARY_COLUMN_RENAMES)
+    storage = summary[is_storage].copy().rename(columns=_SUMMARY_COLUMN_RENAMES)
+    storage = _set_geo_id(storage)
+    storage["geo_id"] = _map_geo_id_to_granularity(
+        storage["geo_id"], regional_granularity, sub_regional_geography
+    )
+    storage = _merge_unit_keyed_properties(
+        storage,
+        iasr_tables,
+        _STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP,
+    )
+    storage = _merge_storage_type_split_properties(storage, iasr_tables)
+    storage = _format_commissioning_date(storage)
+    return storage[_STORAGE_COLUMNS]
 
 
 # --- generator/storage split ---
@@ -260,8 +304,8 @@ def _validate_phes_routing(
 ) -> None:
     """Raises if a phes_properties station's name doesn't exist anywhere in the summary.
 
-    Checked after correcting the known Borumba name mismatch
-    (``_BORUMBA_FULL_NAME_MAP``) and excusing the one known, documented gap
+    Checked after correcting the known Borumba name mismatch (see
+    ``_apply_known_value_replacements``) and excusing the one known, documented gap
     (``_KNOWN_UNMATCHED_PHES_STATIONS`` — Tumut 3's "Lower Tumut"). Any other
     unmatched name means a real PHES station would otherwise be silently
     misclassified as a generator.
@@ -276,7 +320,7 @@ def _validate_phes_routing(
         phes_properties:
             Power Station
             Wivenhoe        # matches
-            Borumba         # matches after _BORUMBA_FULL_NAME_MAP
+            QEJP - Borumba  # already 'fixed' by _PHES_PROPERTIES_BORUMBA_FIX
             Lower Tumut     # excused by _KNOWN_UNMATCHED_PHES_STATIONS
 
         -> no error
@@ -286,9 +330,7 @@ def _validate_phes_routing(
                         ['Some New Station']
     """
 
-    phes_stations = set(
-        phes_properties["Power Station"].replace(_BORUMBA_FULL_NAME_MAP)
-    )
+    phes_stations = set(phes_properties["Power Station"])
     known_stations = set(summary["Power Station"]) | _KNOWN_UNMATCHED_PHES_STATIONS
     unmatched = phes_stations - known_stations
     if unmatched:
@@ -301,12 +343,12 @@ def _validate_phes_routing(
 
 
 def _merge_unit_keyed_properties(
-    generators: pd.DataFrame,
+    summary: pd.DataFrame,
     iasr_tables: dict[str, pd.DataFrame],
     property_map: dict[str, dict],
     exclude_unit_keys: set[str] = set(),
 ) -> pd.DataFrame:
-    """Merges every property in ``property_map`` onto ``generators``, keyed on IASR ID = name.
+    """Merges every property in ``property_map`` onto ``summary``, keyed on IASR ID = name.
 
     Groups properties by source (table, key_col) — see ``_group_properties_by_source``
     — so a table contributing several columns (e.g. maximum_capacity_... feeds
@@ -353,16 +395,16 @@ def _merge_unit_keyed_properties(
             BW01     Bayswater             660.0     NaN                 10.05
             HUNTER1  Hunter Power Station  375.0     2025-08-01          10.93
     """
-    if generators.empty:
+    if summary.empty:
         # Make sure all expected columns still get added
         # Leaving defensive check for empty df ATM -> because it's a subset of a
         # templater input table that **could** be empty after splitting. See comments
         # on #143.
-        return generators.assign(
+        return summary.assign(
             **{new_col: pd.Series(dtype="object") for new_col in property_map}
         )
 
-    generators = generators.copy()
+    summary = summary.copy()
     for (table_name, key_col), props in _group_properties_by_source(
         property_map
     ).items():
@@ -374,12 +416,13 @@ def _merge_unit_keyed_properties(
             f"{sorted(props.keys())}",
         )
         resolved_keys = _resolve_unit_keys(
-            generators["name"], table[key_col], table_name, exclude_unit_keys
+            summary["name"], table[key_col], table_name, exclude_unit_keys
         )
+        resolved_keys = _resolve_unit_keys(summary["name"], table[key_col], table_name)
         for new_col, attrs in props.items():
             property_values = _get_property_value_map(table, attrs)
-            generators[new_col] = resolved_keys.map(property_values)
-    return generators
+            summary[new_col] = resolved_keys.map(property_values)
+    return summary
 
 
 def _resolve_unit_keys(
@@ -422,6 +465,93 @@ def _resolve_unit_keys(
             f"'{table_name}' table missing a row for generator(s): {sorted(unmatched)}"
         )
     return resolved
+
+
+def _merge_storage_type_split_properties(
+    storage: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
+) -> pd.DataFrame:
+    is_battery = _is_battery_row(storage, col_to_check="technology")
+    battery_only = storage[is_battery].copy()
+    phes_only = storage[~is_battery].copy()
+
+    battery_only = _merge_other_storage_properties(
+        battery_only,
+        iasr_tables,
+        _BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP,
+        "technology",
+        "battery",
+    )
+    phes_only = _merge_other_storage_properties(
+        phes_only,
+        iasr_tables,
+        _PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP,
+        "power_station",
+        "PHES",
+    )
+    phes_only = _derive_phes_symmetric_efficiency(phes_only)
+    return pd.concat([battery_only, phes_only], axis=0, ignore_index=True)
+
+
+# NOTE: this will likely be pulled out as a shareable helper for use here and
+# by new_entrants.py to address Open-ISP/ISPyPSA#TBD.
+def _merge_other_storage_properties(
+    storage: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
+    property_map: dict[str, dict],
+    summary_key: str,
+    storage_type: str,
+) -> pd.DataFrame:
+    """Merges every non-unit-keyed property in ``property_map`` onto ``storage``.
+
+    Groups properties by their source (table, key_col) — see
+    ``_group_properties_by_source`` — so a table that contributes several properties
+    (e.g. ``battery_properties`` feeds six) is validated and fuzzy-matched against
+    ``storage``' 'technology' once per property map.
+
+    I/O Example:
+        property_map (abbr.):
+            efficiency_charge:  table="battery_properties",
+                                key_col="Technology",
+                                value_col="Charge efficiency_%"
+        storage:
+            name             technology
+            Liddell BESS     Battery Storage (4hrs storage)
+
+        iasr_tables['battery_properties']:
+            Technology                              Charge efficiency_%
+            Battery Storage (4hrs storage)          92.5
+
+        summary_key = "technology"
+        storage_type = "battery"
+
+        returns (adds one column per map key):
+            name             technology                       efficiency_charge  ...
+            Liddell BESS     Battery Storage (4hrs storage)   92.5               ...
+    """
+    if storage.empty:
+        return storage.assign(
+            **{new_col: pd.Series(dtype="object") for new_col in property_map}
+        )
+    storage = storage.copy()
+    for (table_name, key_col), props in _group_properties_by_source(
+        property_map
+    ).items():
+        table = iasr_tables[table_name]
+        _assert_table_valid(
+            table,
+            table_name,
+            _required_property_columns(props),
+            f"{sorted(props.keys())}",
+        )
+        matched_key_col = _fuzzy_map_to_allowed_values(
+            storage[summary_key],
+            table[key_col],
+            task_desc=f"merging {storage_type} properties from '{table_name}'",
+        )
+        for new_col, attrs in props.items():
+            property_values = _get_property_value_map(table, attrs)
+            storage[new_col] = matched_key_col.map(property_values)
+    return storage
 
 
 def _format_commissioning_date(generators: pd.DataFrame) -> pd.DataFrame:

@@ -815,3 +815,52 @@ _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP = {
         value_col="Expected Closure Year (Calendar year)",
     ),
 }
+
+# NOTE: the following property maps are currently separated based on the column
+# on which they map to the summary df (UNIT=name, TECH=technology, STATION=power_station).
+# NEXT STEP will involve a gentle refactor that touches both new_entrant and existing_planned
+# templating to pull out shareable merging functions into helpers.py
+_STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP = {
+    "capacity": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Installed capacity (MW)",
+    ),
+    "storage_capacity": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Storage Capacity (MWh)",
+    ),
+    "commissioning_date": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Commissioning date",
+        numeric=False,
+    ),
+    "closure_year": dict(
+        table="expected_closure_years",
+        key_col="IASR ID",
+        value_col="Expected Closure Year (Calendar year)",
+    ),
+}
+
+_BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP = {
+    "efficiency_charge": dict(
+        table="battery_properties",
+        key_col="Technology",
+        value_col="Charge efficiency_%",
+    ),
+    "efficiency_discharge": dict(
+        table="battery_properties",
+        key_col="Technology",
+        value_col="Discharge efficiency_%",
+    ),
+}
+
+_PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP = {
+    "round_trip_efficiency": dict(
+        table="pumped_hydro_existing_committed_anticipated_additional_properties",
+        key_col="Power Station",
+        value_col="Pumping efficiency (%)",
+    ),
+}

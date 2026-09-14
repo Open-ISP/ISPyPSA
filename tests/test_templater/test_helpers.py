@@ -1,8 +1,11 @@
+import logging
+import re
+
 import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacement,
+    _apply_known_value_replacements,
     _assert_table_valid,
     _build_geo_region_lookup,
     _derive_phes_symmetric_efficiency,
@@ -478,8 +481,23 @@ def test_derive_phes_symmetric_efficiency(csv_str_to_df):
     result = _derive_phes_symmetric_efficiency(phes)
 
     expected = csv_str_to_df("""
-        name,                  round_trip_efficiency, efficiency_charge, efficiency_discharge
-        NQ Pumped Hydro - 24h, 81.0,                  90.0,              90.0
+        name,                  efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, 90.0,              90.0
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
+
+
+def test_derive_phes_symmetric_efficiency_empty(csv_str_to_df):
+    # A single round-trip efficiency becomes equal charge and discharge legs, each its
+    # square root: sqrt(0.81) = 0.9 -> 90.0%.
+    phes = csv_str_to_df("""
+        name,                  round_trip_efficiency
+    """)
+
+    result = _derive_phes_symmetric_efficiency(phes)
+
+    expected = csv_str_to_df("""
+        name,                  efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
 
@@ -616,42 +634,96 @@ def test_is_subregion_geo_id(csv_str_to_df):
     pd.testing.assert_series_equal(result, expected)
 
 
-# --- _apply_known_value_replacement ---
+# --- _apply_known_value_replacements ---
 
 
-def test_apply_known_value_replacement(csv_str_to_df):
+def test_apply_known_value_replacements(csv_str_to_df):
     maximum_capacity = csv_str_to_df("""
         IASR ID,   Installed capacity (MW)
         KiataWF1,  30.0
         BW01,      660.0
     """)
+    phes_properties = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        Borumba,        1998,                       24.0,                       76
+    """)
     iasr_tables = {
         "maximum_capacity": maximum_capacity,
+        "phes_properties": phes_properties,
         "some_other_table": pd.DataFrame({"col": [1]}),
     }
 
-    correction = dict(
-        table_name="maximum_capacity",
-        column="IASR ID",
-        replacements={"KiataWF1": "KIATAWF1"},
-    )
-    result = _apply_known_value_replacement(iasr_tables, correction)
+    corrections = [
+        dict(
+            table_name="maximum_capacity",
+            column="IASR ID",
+            replacements={"KiataWF1": "KIATAWF1"},
+        ),
+        dict(
+            table_name="phes_properties",
+            column="Power Station",
+            replacements={"Borumba": "QEJP - Borumba"},
+        ),
+    ]
+    result = _apply_known_value_replacements(iasr_tables, corrections)
 
-    expected = csv_str_to_df("""
+    expected_capacity = csv_str_to_df("""
         IASR ID,   Installed capacity (MW)
         KIATAWF1,  30.0
         BW01,      660.0
     """)
-    pd.testing.assert_frame_equal(result["maximum_capacity"], expected)
+    expected_phes_props = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        QEJP - Borumba, 1998,                       24.0,                       76
+    """)
+    pd.testing.assert_frame_equal(result["maximum_capacity"], expected_capacity)
+    pd.testing.assert_frame_equal(result["phes_properties"], expected_phes_props)
 
     # Other tables pass through untouched; input dict itself isn't mutated.
     assert result["some_other_table"] is iasr_tables["some_other_table"]
-    unmutated = csv_str_to_df("""
+
+    unmutated_capacity = csv_str_to_df("""
         IASR ID,   Installed capacity (MW)
         KiataWF1,  30.0
         BW01,      660.0
     """)
-    pd.testing.assert_frame_equal(iasr_tables["maximum_capacity"], unmutated)
+    unmutated_phes_props = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        Borumba,        1998,                       24.0,                       76
+    """)
+    pd.testing.assert_frame_equal(iasr_tables["maximum_capacity"], unmutated_capacity)
+    pd.testing.assert_frame_equal(iasr_tables["phes_properties"], unmutated_phes_props)
+
+
+def test_apply_known_value_replacements_missing_expected_col(csv_str_to_df, caplog):
+    maximum_capacity = csv_str_to_df("""
+        unit_name, Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    iasr_tables = {
+        "maximum_capacity": maximum_capacity,
+    }
+    corrections = [
+        dict(
+            table_name="maximum_capacity",
+            column="IASR ID",
+            replacements={"KiataWF1": "KIATAWF1"},
+        ),
+    ]
+    with caplog.at_level(logging.WARNING):
+        _apply_known_value_replacements(iasr_tables, corrections)
+
+    assert (
+        "Missing expected column 'IASR ID' in table 'maximum_capacity' "
+        "- replacement '{'KiataWF1': 'KIATAWF1'}' not applied."
+    ) in caplog.text
 
 
 # --- _group_properties_by_source ---

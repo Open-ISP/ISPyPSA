@@ -35,7 +35,7 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacement,
+    _apply_known_value_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
@@ -638,7 +638,7 @@ def _merge_phes_properties(
     phes["technology"] = _override_botn_technology(phes)
     phes = _merge_properties(
         phes,
-        _apply_known_value_replacement(iasr_tables, _PHES_BOTN_KEY_FIX),
+        _apply_known_value_replacements(iasr_tables, [_PHES_BOTN_KEY_FIX]),
         _STORAGE_PHES_PROPERTY_MAP,
     )
     phes = _derive_phes_symmetric_efficiency(phes)
