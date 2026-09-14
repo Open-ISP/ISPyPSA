@@ -267,9 +267,9 @@ def test_merge_phes_properties(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name,                  technology,                    storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
-        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  24.0,          64.0,                  80.0,              80.0
-        BOTN - Cethana - 20h,  BOTN - Cethana,                20.0,          81.0,                  90.0,              90.0
+        name,                  technology,                    storage_hours, efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  24.0,          80.0,              80.0
+        BOTN - Cethana - 20h,  BOTN - Cethana,                20.0,          90.0,              90.0
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
 
@@ -334,7 +334,7 @@ def test_merge_phes_properties_empty(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name, technology, storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
+        name, technology, storage_hours, efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
