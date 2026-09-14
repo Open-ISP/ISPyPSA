@@ -15,6 +15,7 @@ from ispypsa.templater.new_entrants import (
     _merge_phes_properties,
     _merge_properties,
     _override_botn_technology,
+    _rekey_names_to_collapsed_geo_id,
     _reshape_technology_specific_lcfs,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -406,7 +407,7 @@ def test_collapse_geo_id_to_granularity_averages_across_sub_regions(csv_str_to_d
     expected = csv_str_to_df("""
         name,                   technology,     geo_id, value
         Q1_WH,                  Wind,           Q1,     999.0
-        NSW OCGT,               OCGT,           NSW,    102.0
+        NSW OCGT Small,         OCGT,           NSW,    102.0
         BOTN - Cethana - 20h,   BOTN - Cethana, TAS,    100.0
     """)
     pd.testing.assert_frame_equal(
@@ -440,7 +441,7 @@ def test_collapse_geo_id_to_granularity_single_region_maps_to_nem(csv_str_to_df)
 
     expected = csv_str_to_df("""
         name,                   technology,     geo_id, value
-        NEM OCGT,               OCGT,           NEM,    106.0
+        NEM OCGT Small,         OCGT,           NEM,    106.0
         BOTN - Cethana - 20h,   BOTN - Cethana, NEM,    100.0
     """)
     pd.testing.assert_frame_equal(
@@ -471,6 +472,37 @@ def test_collapse_geo_id_to_granularity_empty_input(csv_str_to_df):
         name,   technology,     geo_id,     value
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_rekey_names_to_collapsed_geo_id(csv_str_to_df):
+    # Specifically checks that the 'same prefix, different geo_id' case correctly
+    # re-keys based on the corresponding row-specific geo_id value, and that
+    # 'unknown' (not 'old' geo_id values) prefixed names pass through unchanged.
+
+    # only necessary columns - abbreviated input
+    new_entrants = csv_str_to_df("""
+        name,                       geo_id
+        NSA Pumped Hydro - 10h,     SA
+        WOO CCGT,                   NSW
+        NQ OCGT Small,              QLD
+        NQ Biomass,                 VIC
+        Named Generator,            TAS
+    """)
+
+    known_prefixes = {"NSA", "WOO", "NQ"}
+    result = _rekey_names_to_collapsed_geo_id(new_entrants, known_prefixes)
+
+    expected = pd.Series(
+        [
+            "SA Pumped Hydro - 10h",
+            "NSW CCGT",
+            "QLD OCGT Small",
+            "VIC Biomass",
+            "Named Generator",
+        ],
+        name="name",
+    )
+    pd.testing.assert_series_equal(result, expected)
 
 
 # --- _add_resource_type (generator-specific) ---

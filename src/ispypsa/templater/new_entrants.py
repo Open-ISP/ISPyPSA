@@ -152,6 +152,10 @@ _KNOWN_BUILD_COST_ZONE_TYPOS = {
     ("NSA", "CSA"),  # (geo_id, Regional build cost zone)
 }
 
+# Allowed 'extra' subregion (not in sub_regional_geography) present in the names of
+# some new entrant gas plant; see Open-ISP/ISPyPSA#131
+_EXTRA_SUBREGION_IN_NAMES = {"WOO"}
+
 # Data scale diff for 'BOTN - Cethana' in LCF table: see first comment on Open-ISP/ISPyPSA#131.
 _LCF_COLUMNS_IN_PERCENT = ["BOTN - Cethana"]
 
@@ -342,8 +346,9 @@ def _collapse_geo_id_to_granularity(
         1. Splits ``new_entrants`` into REZ rows (left untouched) and subregion rows.
         2. Subregion rows get grouped by ``group_key_columns`` + the re-keyed geo_id and
             averaged over ``value_columns``.
-        3. Aggregated rows' 'name' set to "{geo_id} {technology}" (except BOTN - see
-            ``_name_collapsed_rows``).
+        3. Aggregated rows keep the first 'name' picked by the groupby, with any stale
+            leading sub-region-style token (a real geo_id, or a known extra like "WOO")
+            replaced by the new, collapsed geo_id — see ``_rekey_names_to_collapsed_geo_id``.
         4. Returns concatted REZ rows and aggregated rows.
 
     Args:
@@ -368,8 +373,8 @@ def _collapse_geo_id_to_granularity(
             SNW     subregion  NSW
 
         returns:
-            name                 technology       geo_id  lcf_build
-            NSW OCGT (small GT)  OCGT (small GT)  NSW     102.0  # mean(104, 100)
+            name             technology       geo_id  lcf_build
+            NSW OCGT Small   OCGT (small GT)  NSW     102.0  # mean(104, 100)
     """
     if regional_granularity == "sub_regions":
         return new_entrants
@@ -380,11 +385,17 @@ def _collapse_geo_id_to_granularity(
     if to_collapse.empty:
         return new_entrants
 
-    to_collapse["geo_id"] = _map_geo_id_to_granularity(
-        to_collapse["geo_id"], regional_granularity, sub_regional_geography
+    old_geo_ids = to_collapse["geo_id"].copy()
+    new_geo_ids = _map_geo_id_to_granularity(
+        old_geo_ids, regional_granularity, sub_regional_geography
     )
-    collapsed = _aggregate_by_geo_id(to_collapse, group_key_columns, value_columns)
-    collapsed = _name_collapsed_rows(collapsed)
+    collapsed = _aggregate_by_geo_id(
+        to_collapse.assign(geo_id=new_geo_ids), group_key_columns, value_columns
+    )
+    collapsed["name"] = _rekey_names_to_collapsed_geo_id(
+        collapsed,
+        set(old_geo_ids) | _EXTRA_SUBREGION_IN_NAMES,
+    )
 
     return pd.concat([unchanged, collapsed], ignore_index=True)[new_entrants.columns]
 
@@ -394,38 +405,48 @@ def _aggregate_by_geo_id(
     group_key_columns: list[str],
     value_columns: list[str],
 ) -> pd.DataFrame:
-    """Groups by ``group_key_columns`` + 'geo_id' and averages ``value_columns``."""
-    # 'dropna=False' set to keep thermal generator rows (w/ NaN 'resource_type')
+    """Groups by ``group_key_columns`` + 'geo_id', averages ``value_columns``, keeps
+    the first instance of 'name' for each group."""
     return new_entrants.groupby(
         group_key_columns + ["geo_id"], dropna=False, as_index=False
-    )[value_columns].mean()
+    ).agg({"name": "first", **{col: "mean" for col in value_columns}})
 
 
-# TODO (coming in next PR): fix this to keep naming convention from AEMO sources even when
-# granularity collapses. NOTE: IASR names have slightly different order/
-# convention than trace names, but for VRE (REZ-based) so less important here.
-def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
-    """Sets 'name' on merged rows to "{geo_id} {technology}".
+def _rekey_names_to_collapsed_geo_id(
+    new_entrants: pd.DataFrame, known_name_prefixes: set[str]
+) -> pd.Series:
+    """Replaces a stale leading sub-region-style token in each name with the row's
+    (post-collapse) geo_id.
 
-    The lone documented exception is BOTN - Cethana (see ``_BOTN_CETHANA_DETAILS``):
-    a named, site-specific project rather than a generic technology archetype, which
-    keeps its original 'name'.
+    Runs on the already-aggregated frame, after ``.groupby(...).first()`` has picked
+    one 'name' per group — so it doesn't matter which row's name survived the pick;
+    every stale geo_id-like prefix gets normalised to the same, correct new geo_id.
 
     I/O Example:
-        collapsed:
-            technology       geo_id
-            OCGT (small GT)  NSW
-            BOTN - Cethana   TAS
+        df:
+            name                    technology          geo_id  ...
+            NQ OCGT Small           OCGT (small GT)     NEM    ...
+            WOO OCGT Large          OCGT (large GT)     NEM     ...
+            BOTN - Cethana - 20h    BOTN - Cethana      NEM     ...
+
+        known_name_prefixes:  {"NQ", "WOO", "SNW", ...}   # real sub_regions + "WOO"
 
         returns:
-            technology       geo_id  name
-            OCGT (small GT)  NSW     NSW OCGT (small GT)
-            BOTN - Cethana   TAS     BOTN - Cethana - 20h  # original name kept
+            name
+            NEM OCGT Small
+            NEM OCGT Large
+            BOTN - Cethana - 20h
+
+        # BOTN doesn't start with any known prefix, so it's untouched - no special case needed.
     """
-    fresh_name = collapsed["geo_id"] + " " + collapsed["technology"]
-    is_botn = collapsed["technology"] == _BOTN_CETHANA_DETAILS["name"]
-    collapsed["name"] = fresh_name.mask(is_botn, _BOTN_CETHANA_DETAILS["full_name"])
-    return collapsed
+
+    parts = new_entrants["name"].str.partition()
+    parts.columns = ["old_prefix", "separator", "rest_of_name"]
+
+    rekeyed_names = new_entrants["geo_id"].str.cat(parts[["separator", "rest_of_name"]])
+    is_known_prefix = parts["old_prefix"].isin(known_name_prefixes)
+
+    return new_entrants["name"].where(~is_known_prefix, rekeyed_names)
 
 
 # --- locational cost factor (LCF) helpers ---
