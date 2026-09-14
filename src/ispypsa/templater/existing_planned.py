@@ -26,8 +26,7 @@ Building generators_existing_planned:
     2. Renames the carried-over spine/identity columns to their schema names, derives
        geo_id (REZ ID with Sub-region fallback — see helpers._set_geo_id) and relabels
        it to ``regional_granularity`` (REZ-located rows stay untouched at every
-       granularity, matching new_entrants.py's convention — see
-       _relabel_geo_id_to_granularity).
+       granularity).
     3. Merges in unit-level properties (mappings.py). Each generator's
        ``name`` is resolved against a source table's own IASR ID column — exact
        matches first, small typos fuzzy-corrected. Every existing/planned unit is
@@ -48,7 +47,6 @@ from ispypsa.templater.helpers import (
     _get_property_value_map,
     _group_properties_by_source,
     _is_storage_row,
-    _is_subregion_geo_id,
     _map_geo_id_to_granularity,
     _required_property_columns,
     _set_geo_id,
@@ -110,6 +108,7 @@ _KNOWN_UNMATCHED_PHES_STATIONS = {"Lower Tumut"}
 
 # Case mismatch between maximum_capacity's IASR ID and the summary's: the 'safe'
 # fuzzy-matching threshold (90) would miss (fuzz.ratio("KiataWF1", "KIATAWF1") == 50).
+# TODO: rename to use a generic name like IASR_TYPO_FIXES per comment on #143.
 _MAXIMUM_CAPACITY_ID_TYPO_FIX = dict(
     table_name="maximum_capacity_existing_committed_anticipated_additional_generators",
     column="IASR ID",
@@ -137,18 +136,27 @@ def _template_generators_existing_planned(
         sub_regional_geography: network_geography templated at "sub_regions"
             granularity; columns used: 'geo_id', 'geo_type', 'region_id'.
 
-    I/O Example (subset of columns; regional_granularity="sub_regions"):
-        existing_committed_anticipated_additional_generator_summary:
-            IASR ID / DLT names  Power Station  Technology Type      REZ ID  Sub-region
-            BW01                 Bayswater      Steam Sub Critical   NA      CNSW
+    I/O Example (subset of columns):
+        iasr_tables:
+            existing_committed_anticipated_additional_generator_summary:
+                IASR ID / DLT names  Power Station  Technology Type      REZ ID  Sub-region
+                BW01                 Bayswater      Steam Sub Critical   NA      CNSW
 
-        maximum_capacity_existing_committed_anticipated_additional_generators:
-            IASR ID  Installed capacity (MW)  Commissioning date
-            BW01     660.0                    NaN
+            maximum_capacity_existing_committed_anticipated_additional_generators:
+                IASR ID  Installed capacity (MW)  Commissioning date
+                BW01     660.0                    NaN
+
+            ... plus the other property tables (see _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP)
+
+        regional_granularity: "nem_regions"
+
+        sub_regional_geography:
+            geo_id  geo_type    region_id
+            CNSW    subregion   NSW
 
         returns:
             name  power_station  geo_id  capacity  commissioning_date
-            BW01  Bayswater      CNSW    660.0     NaN
+            BW01  Bayswater      NSW     660.0     NaN      # CNSW -> NSW via sub_regional_geography
     """
     logging.info("Creating a template for existing and planned generators")
     summary = iasr_tables["existing_committed_anticipated_additional_generator_summary"]
@@ -157,15 +165,19 @@ def _template_generators_existing_planned(
     ]
 
     is_storage = _is_existing_planned_storage_row(summary, phes_properties)
-    generators = summary[~is_storage].copy().rename(columns=_SUMMARY_COLUMN_RENAMES)
+    summary = summary.rename(columns=_SUMMARY_COLUMN_RENAMES)
+    generators = summary[~is_storage].copy()
     generators = _set_geo_id(generators)
     generators["geo_id"] = _map_geo_id_to_granularity(
         generators["geo_id"], regional_granularity, sub_regional_geography
     )
+
+    non_generator_names = set(summary.loc[is_storage, "name"])
     generators = _merge_unit_keyed_properties(
         generators,
         _apply_known_value_replacement(iasr_tables, _MAXIMUM_CAPACITY_ID_TYPO_FIX),
         _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP,
+        non_generator_names,
     )
     generators = _format_commissioning_date(generators)
     generators = _merge_minimum_load(generators, iasr_tables)
@@ -273,8 +285,6 @@ def _validate_phes_routing(
             ValueError: PHES properties station(s) not found in the summary:
                         ['Some New Station']
     """
-    if summary.empty:
-        return None
 
     phes_stations = set(
         phes_properties["Power Station"].replace(_BORUMBA_FULL_NAME_MAP)
@@ -294,6 +304,7 @@ def _merge_unit_keyed_properties(
     generators: pd.DataFrame,
     iasr_tables: dict[str, pd.DataFrame],
     property_map: dict[str, dict],
+    exclude_unit_keys: set[str] = set(),
 ) -> pd.DataFrame:
     """Merges every property in ``property_map`` onto ``generators``, keyed on IASR ID = name.
 
@@ -305,6 +316,11 @@ def _merge_unit_keyed_properties(
     values are mapped.
 
     I/O Example:
+        generators:
+            name     power_station
+            BW01     Bayswater
+            HUNTER1  Hunter Power Station
+
         property_map (abbr.):
             capacity:           table="maximum_capacity_...",
                                 key_col="IASR ID",
@@ -316,20 +332,21 @@ def _merge_unit_keyed_properties(
                                 key_col="IASR ID",
                                 value_col="Heat rate (GJ/MWh)"
 
-        generators:
-            name     power_station
-            BW01     Bayswater
-            HUNTER1  Hunter Power Station
+        iasr_tables:
+            maximum_capacity_...:   # one source, two properties -> resolved once
+                IASR ID  Installed capacity (MW)  Commissioning date
+                BW01     660.0                    NaN
+                HUNTER1  375.0                    2025-08-01
+                ORANA    100.0                    2027-08-1
 
-        maximum_capacity_...:   # one source, two properties -> resolved once
-            IASR ID  Installed capacity (MW)  Commissioning date
-            BW01     660.0                    NaN
-            HUNTER1  375.0                    2025-08-01
+            heat_rates_...:
+                IASR ID  Heat rate (GJ/MWh)
+                BW01     10.05
+                HUNTER1  10.93
 
-        heat_rates_...:
-            IASR ID  Heat rate (GJ/MWh)
-            BW01     10.05
-            HUNTER1  10.93
+        exclude_unit_keys: {"ORANA"}    # storage unit name - excluded from the set
+                                        # of unit names in maximum_capacity_...
+                                        # when fuzzy-matching generator 'name's
 
         returns (one new column per property_map key):
             name     power_station         capacity  commissioning_date  heat_rate
@@ -338,6 +355,9 @@ def _merge_unit_keyed_properties(
     """
     if generators.empty:
         # Make sure all expected columns still get added
+        # Leaving defensive check for empty df ATM -> because it's a subset of a
+        # templater input table that **could** be empty after splitting. See comments
+        # on #143.
         return generators.assign(
             **{new_col: pd.Series(dtype="object") for new_col in property_map}
         )
@@ -354,7 +374,7 @@ def _merge_unit_keyed_properties(
             f"{sorted(props.keys())}",
         )
         resolved_keys = _resolve_unit_keys(
-            generators["name"], table[key_col], table_name
+            generators["name"], table[key_col], table_name, exclude_unit_keys
         )
         for new_col, attrs in props.items():
             property_values = _get_property_value_map(table, attrs)
@@ -363,14 +383,19 @@ def _merge_unit_keyed_properties(
 
 
 def _resolve_unit_keys(
-    names: pd.Series, table_keys: pd.Series, table_name: str
+    names: pd.Series,
+    table_keys: pd.Series,
+    table_name: str,
+    exclude_unit_keys: set[str] = set(),
 ) -> pd.Series:
     """Fuzzy-resolves ``names`` to ``table_keys``' strings; raises on any miss.
 
     Standardises small differences (e.g. a single typo'd character) between a
     unit's ``name`` and the spelling used in a property table's 'key' column.
     ``table_keys`` is a lookup pool, so its order is irrelevant; the result carries
-    one value per name, in ``names``' order, spelled as in ``table_keys``.
+    one value per name, in ``names``' order, spelled as in ``table_keys``. A set
+    of unit keys (names) that are known to be out of scope for a given property
+    merge can be passed to tighten the fuzzy-matching.
 
     Raises:
         ValueError: if any unit has no plausible match (above a fuzz ratio threshold
@@ -378,18 +403,20 @@ def _resolve_unit_keys(
 
     I/O Example:
         names:      pd.Series(["HUNTER1", "BW01", "SOMESTATION1"])
-        table_keys: pd.Series(["SOMESTATIONl", "BW01", "HUNTER1"])
+        table_keys: pd.Series(["SOMESTATIONl", "BW01", "HUNTER1", "B001"])
         table_name: "heat_rates_..."
+        exclude_unit_keys: {"B001"}    # removed from table_keys before fuzzy-matching
 
         returns:    pd.Series(["HUNTER1", "BW01", "SOMESTATIONl"])
     """
+    table_keys_minus_exclusions = set(table_keys) - exclude_unit_keys
     resolved = _fuzzy_match_names(
         names,
-        table_keys,
+        table_keys_minus_exclusions,
         task_desc=f"merging existing/planned properties from '{table_name}'",
         threshold=90,
     )
-    unmatched = resolved[~resolved.isin(table_keys)]
+    unmatched = resolved[~resolved.isin(table_keys_minus_exclusions)]
     if not unmatched.empty:
         raise ValueError(
             f"'{table_name}' table missing a row for generator(s): {sorted(unmatched)}"
@@ -415,20 +442,21 @@ def _merge_minimum_load(
     every other row is legitimately left NaN (schema nan_fill: 0.0 applies
     downstream). Each is merged separately (see ``_merge_minimum_load_property``).
 
-    I/O Example (coal value_col abbreviated, see _COAL_MINIMUM_LOAD_PROPERTY):
+    I/O Example:
         generators:
             name    technology
             BW01    Steam Sub Critical
             ANGAS1  Reciprocating engine
             Q1G1    Large scale Solar PV
 
-        coal_minimum_stable_level:
-            IASR ID  Technology Type     ..._Typical Lowest Band
-            BW01     Steam Sub Critical  260
+        iasr_tables:
+            coal_minimum_stable_level:
+                IASR ID  Technology Type     Minimum Stable Level (MW)_Typical Lowest Band
+                BW01     Steam Sub Critical  260
 
-        gpg_min_stable_level_existing_generators:
-            IASR ID  Technology Type       Min Stable Level (MW)
-            ANGAS1   Reciprocating engine  3.0
+            gpg_min_stable_level_existing_generators:
+                IASR ID  Technology Type       Min Stable Level (MW)
+                ANGAS1   Reciprocating engine  3.0
 
         returns (adds minimum_load):
             name    technology            minimum_load
@@ -458,20 +486,25 @@ def _merge_minimum_load_property(
     """Assigns minimum_load from one technology-specific table, bounded to its own technologies.
 
     Only generators whose ``technology`` appears in the table's own 'Technology Type'
-    column are fuzzy-matched and
+    column are fuzzy-matched and have values mapped in the new 'minimum_load' column.
 
-    I/O Example (property_spec = _COAL_MINIMUM_LOAD_PROPERTY; value_col abbreviated,
-    see the constant for its real name):
+    I/O Example (coal):
         generators:
             name    technology            minimum_load
             BW01    Steam Sub Critical    NaN
             ANGAS1  Reciprocating engine  NaN
             Q1G1    Large scale Solar PV  NaN
 
-        coal_minimum_stable_level:
-            IASR ID  Technology Type     ..._Typical Lowest Band
-            BW01     Steam Sub Critical  260
-            ER01     Steam Sub Critical  182
+        iasr_tables:
+            coal_minimum_stable_level:
+                IASR ID  Technology Type     Minimum Stable Level (MW)_Typical Lowest Band
+                BW01     Steam Sub Critical  260
+                ER01     Steam Sub Critical  182
+
+        property_spec:  # _COAL_MINIMUM_LOAD_PROPERTY
+            table="coal_minimum_stable_level"
+            key_col="IASR ID"
+            value_col="Minimum Stable Level (MW)_Typical Lowest Band"
 
         returns:
             name    technology            minimum_load

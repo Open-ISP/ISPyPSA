@@ -781,6 +781,9 @@ rather than the technology-level fuzzy grouping the new entrant maps need.
     `numeric`: whether the merged value should be coerced with ``pd.to_numeric``
         (catches a stray non-numeric typo in the source table). Defaults to True;
         set False for non-numeric columns, e.g. commissioning_date.
+
+See issue: Open-ISP/ISPyPSA#145 for discussion on replacing `dtype` field
+to replace the `numeric` field here.
 """
 
 _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP = {

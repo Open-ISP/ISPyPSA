@@ -74,10 +74,8 @@ def test_is_existing_planned_storage_row_empty_summary_with_phes_properties(
         Wivenhoe
     """)
 
-    result = _is_existing_planned_storage_row(summary, phes_properties)
-    expected = pd.Series([])
-
-    pd.testing.assert_series_equal(result, expected, check_dtype=False)
+    with pytest.raises(ValueError, match=r"\['Wivenhoe'\]"):
+        _validate_phes_routing(summary, phes_properties)
 
 
 # --- _validate_phes_routing ---
@@ -121,10 +119,15 @@ def test_validate_phes_routing_raises_on_unrecognised_station(csv_str_to_df):
 def test_resolve_unit_keys():
     # A single-character typo in the table's key is close enough (threshold=90) to
     # resolve -- the *table's* spelling is returned, but in `names` order.
+    # A non-empty exclude_unit_keys correctly removes known out-of-scope table_keys
+    # before fuzzy-matching ("BAYSWATER02").
     names = pd.Series(["BW01", "BW02", "BAYSWATER01"])
-    table_keys = pd.Series(["BW01", "bAYSWATER01", "BW02"])
+    table_keys = pd.Series(["BW01", "bAYSWATER01", "BW02", "BAYSWATER02"])
 
-    result = _resolve_unit_keys(names, table_keys, "heat_rates_...")
+    # if "BAYSWATER02" were not excluded it would win the fuzzy-match (incorrectly)
+    exclude_unit_keys = set(["BAYSWATER02"])
+
+    result = _resolve_unit_keys(names, table_keys, "heat_rates_...", exclude_unit_keys)
 
     expected_result = pd.Series(["BW01", "BW02", "bAYSWATER01"])
     pd.testing.assert_series_equal(result, expected_result)
