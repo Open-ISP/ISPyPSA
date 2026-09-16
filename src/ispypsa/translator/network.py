@@ -398,7 +398,7 @@ def _enabled_expansion_element_ids(
     ``transmission_expansion`` gates flow paths between (sub)regions;
     ``rez_transmission_expansion`` gates REZ connection paths. The result is the
     enabled expansion_id set the options and costs tables are filtered to (see
-    _keep_rows_for_enabled_elements) and then resolved against, so an option or
+    _keep_rows_for_expansion_ids) and then resolved against, so an option or
     cost for a disabled or non-modelled element drops out before resolution.
 
     I/O Example:
@@ -462,7 +462,7 @@ def _resolve_expansion_options(
     # not dropped, so they are set aside before wildcard resolution (which would
     # otherwise raise on them).
     options = options[options["expansion_type"] != "constraint_relaxation"]
-    options = _keep_rows_for_enabled_elements(options, enabled_ids)
+    options = _keep_rows_for_expansion_ids(options, enabled_ids)
     allowed_values = {
         "expansion_id": enabled_ids,
         "expansion_type": ["forward", "reverse"],
@@ -477,22 +477,23 @@ def _resolve_expansion_options(
     return options
 
 
-def _keep_rows_for_enabled_elements(
-    table: pd.DataFrame, enabled_ids: list[str]
+def _keep_rows_for_expansion_ids(
+    table: pd.DataFrame, expansion_ids: list[str]
 ) -> pd.DataFrame:
-    """Keeps rows whose expansion_id is an enabled element or blank (a wildcard).
+    """Keeps rows whose expansion_id is one of the given ids or blank (a wildcard).
 
-    Selecting the enabled elements is config-driven, so it happens before
-    wildcard resolution rather than inside it. Rows for disabled or non-modelled
-    elements drop out here, as do rows for constraint groups (their expansion_ids
-    are constraint_ids, routed to ispypsa.translator.constraints instead).
+    Which ids to keep is a config-driven selection made by the caller — the
+    enabled paths here, the constraints in the model in
+    ispypsa.translator.constraints — so it happens before wildcard resolution
+    rather than inside it. Rows for any other id drop out; the blank rows are
+    kept because they are wildcards that resolve against the given ids.
 
     I/O Example:
-        table:                                enabled_ids = ["CQ-NQ"]
+        table:                                expansion_ids = ["CQ-NQ"]
             expansion_id  year  cost
             CQ-NQ         2026  1000000
-            Q1-NQ         2026  500000    # disabled element: dropped
-            SWQLD1        2026  400000    # constraint group: dropped
+            Q1-NQ         2026  500000    # not in expansion_ids: dropped
+            SWQLD1        2026  400000    # not in expansion_ids: dropped
                           2026  900000    # blank: a wildcard, kept
 
         returns:
@@ -501,7 +502,7 @@ def _keep_rows_for_enabled_elements(
                           2026  900000
     """
     ids = table["expansion_id"]
-    keep = ids.isna() | ids.isin(enabled_ids)
+    keep = ids.isna() | ids.isin(expansion_ids)
     return table[keep]
 
 
@@ -591,19 +592,20 @@ def _prepare_expansion_costs(
     wacc: float,
     asset_lifetime: int,
 ) -> pd.DataFrame:
-    """Resolves the expansion-cost wildcards to the enabled elements and
+    """Resolves the expansion-cost wildcards to the given expansion ids and
     investment periods, then annuitises them.
 
     Blank expansion_id or year cells are wildcards (see the
     network_transmission_path_expansion_costs schema): an empty expansion_id is a
     table-wide default cost, an empty year a static cost across the investment
-    periods. Costs for disabled elements, constraint groups (routed to
-    ispypsa.translator.constraints) and years outside the investment periods are
-    all designed selection, filtered out first. _resolve_wildcards
-    then expands the blanks against the enabled elements and the investment
-    periods. A blank cost then resolves to free — the nan_fill the schema
-    declares for the cost column. Year values are labels matched against the
-    config's investment periods as ints — no financial vs calendar year
+    periods. The caller decides which ids the costs are for — the enabled paths
+    here, the constraints in the model in ispypsa.translator.constraints — so
+    rows for any other id, and rows for years that are not investment periods,
+    are dropped before resolution: they are selection, not bad data.
+    _resolve_wildcards then expands the blanks against the given ids and the
+    investment periods. A blank cost then resolves to free — the nan_fill the
+    schema declares for the cost column. Year values are labels matched against
+    the config's investment periods as ints — no financial vs calendar year
     interpretation happens here; the config's year_type decides what span of
     time the labels denote, so the table just has to label years the same way
     the config does (templated tables carry financial-year ending years).
@@ -622,7 +624,7 @@ def _prepare_expansion_costs(
             CQ-NQ         2026  annuitise(1000)   # the static row fills 2026
             CQ-NQ         2028  annuitise(1200)   # the 2028 override beats the static row
     """
-    costs = _keep_rows_for_enabled_elements(expansion_costs, enabled_ids)
+    costs = _keep_rows_for_expansion_ids(expansion_costs, enabled_ids)
     costs = _keep_rows_for_investment_period_years(costs, investment_periods)
     allowed_values = {"expansion_id": enabled_ids, "year": investment_periods}
     costs = _resolve_wildcards(costs, allowed_values, ["cost"])

@@ -156,9 +156,12 @@ from the output. The templater raises if a future model starts using it.
 date_from is retained so time-varying coefficients carry through to the
 output.
 
-TODO: switch the IASR ID lookup to a templated generator-summary table once
-one exists -- matching against the raw table currently also matches DER/CER
-rows that ISPyPSA may not template.
+TODO: switch the IASR ID lookup to the templated generator and storage
+tables once the existing-unit ones exist -- matching against the raw summary
+tables currently also matches DER/CER rows that ISPyPSA may not template.
+The custom_constraints_lhs schema's variable_names_resolve_by_term_type rule
+declares that end state; note the new-entrant templater renames units to
+"<geo_id> <technology>", which the lookup here will need to follow.
 
 TODO: emitted timeslices are region-prefixed (qld_peak_demand etc.) while
 the rest of the templater still emits the bare canonical names

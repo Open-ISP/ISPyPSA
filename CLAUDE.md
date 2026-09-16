@@ -72,8 +72,11 @@ Conventions:
 
 - Use a plain CSV-like table format for DataFrame inputs and outputs — no need to
   wrap in runnable `csv_str_to_df` calls, since this is illustrative, not a doctest.
-- Abbreviate long column names when they would otherwise overflow the line; point at
-  the relevant constants for the real names.
+- Always lay DataFrame examples out as full tables — a header row plus example rows,
+  each table in its own block — even when a single row would do. Never condense a
+  table into `column=value` prose. Abbreviated column sets, row sets and column
+  names are fine when the full table would otherwise be large; point at the
+  relevant constants for the real names.
 - Cover representative edge cases in the same example, with trailing `# comment`
   notes on the rows that demonstrate each case.
 - For trivial utility functions, one-line input → output cases are enough.
