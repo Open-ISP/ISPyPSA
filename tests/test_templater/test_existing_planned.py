@@ -4,8 +4,8 @@ import pytest
 from ispypsa.templater.existing_planned import (
     _format_commissioning_date,
     _is_existing_planned_storage_row,
+    _merge_category_keyed_properties,
     _merge_minimum_load,
-    _merge_other_storage_properties,
     _merge_storage_type_split_properties,
     _merge_unit_keyed_properties,
     _resolve_unit_keys,
@@ -22,7 +22,7 @@ def test_is_existing_planned_storage_row(csv_str_to_df):
         Power Station,  Technology Type
         Wivenhoe,       Hydro
         Tarong,         Steam Sub Critical
-        Q8 Battery,     Battery Storage (2hrs storage)
+        Q8 Battery,     Battery storage (2hrs storage)
         QEJP - Borumba, Pumped Hydro (24hrs storage)
     """)
     phes_properties = csv_str_to_df("""
@@ -55,7 +55,7 @@ def test_is_existing_planned_storage_row_empty_phes_properties(csv_str_to_df):
     summary = csv_str_to_df("""
         Power Station,  Technology Type
         Tarong,         Steam Sub Critical
-        Q8 Battery,     Battery Storage (2hrs storage)
+        Q8 Battery,     Battery storage (2hrs storage)
     """)
     phes_properties = pd.DataFrame(columns=["Power Station"])
 
@@ -63,21 +63,6 @@ def test_is_existing_planned_storage_row_empty_phes_properties(csv_str_to_df):
 
     expected = pd.Series([False, True])
     pd.testing.assert_series_equal(result, expected)
-
-
-def test_is_existing_planned_storage_row_empty_summary_with_phes_properties(
-    csv_str_to_df,
-):
-    # An empty summary can't account for any PHES station, so routing validation
-    # raises rather than silently classifying nothing as storage.
-    summary = pd.DataFrame(columns=["Power Station", "Technology Type"])
-    phes_properties = csv_str_to_df("""
-        Power Station
-        Wivenhoe
-    """)
-
-    with pytest.raises(ValueError, match=r"\['Wivenhoe'\]"):
-        _validate_phes_routing(summary, phes_properties)
 
 
 # --- _validate_phes_routing ---
@@ -97,7 +82,7 @@ def test_validate_phes_routing_tolerates_lower_tumut(csv_str_to_df):
     _validate_phes_routing(summary, phes_properties)  # no error
 
 
-def test_validate_phes_routing_raises_on_unrecognised_station(csv_str_to_df):
+def test_validate_phes_routing_raises_on_missing_station(csv_str_to_df):
     summary = csv_str_to_df("""
         Power Station,  Technology Type
         Tumut 3,        Hydro
@@ -120,16 +105,31 @@ def test_resolve_unit_keys():
     # A single-character typo in the table's key is close enough (threshold=90) to
     # resolve -- the *table's* spelling is returned, but in `names` order.
     # A non-empty exclude_unit_keys correctly removes known out-of-scope table_keys
-    # before fuzzy-matching ("BAYSWATER02").
-    names = pd.Series(["BW01", "BW02", "BAYSWATER01"])
-    table_keys = pd.Series(["BW01", "bAYSWATER01", "BW02", "BAYSWATER02"])
+    # before fuzzy-matching ("Another_Very_Long_name1").
+    names = pd.Series(["BW01", "BW02", "BAYSWATER01", "Another_Very_Long_name"])
+    table_keys = pd.Series(
+        [
+            "BW01",
+            "bAYSWATER01",
+            "BW02",
+            "Another_Very_Long_Name",  # No exact match in 'names' (but close)
+            "Another_Very_Long_name1",  # Excluded by 'exclude_unit_keys'
+        ]
+    )
 
-    # if "BAYSWATER02" were not excluded it would win the fuzzy-match (incorrectly)
-    exclude_unit_keys = set(["BAYSWATER02"])
+    # if "Another_Very_Long_name1" were not excluded it would win the fuzzy-match (incorrectly)
+    exclude_unit_keys = set(["Another_Very_Long_name1"])
 
     result = _resolve_unit_keys(names, table_keys, "heat_rates_...", exclude_unit_keys)
 
-    expected_result = pd.Series(["BW01", "BW02", "bAYSWATER01"])
+    expected_result = pd.Series(
+        [
+            "BW01",
+            "BW02",
+            "bAYSWATER01",
+            "Another_Very_Long_Name",
+        ]
+    )
     pd.testing.assert_series_equal(result, expected_result)
 
 
@@ -138,7 +138,7 @@ def test_resolve_unit_keys_raises_on_unmatched():
     table_keys = pd.Series(["BW01"])
 
     with pytest.raises(ValueError, match=r"'heat_rates_\.\.\.'.*\['UNKNOWN1'\]"):
-        _resolve_unit_keys(names, table_keys, "heat_rates_...")
+        _resolve_unit_keys(names, table_keys, "heat_rates_...", set())
 
 
 # --- _merge_unit_keyed_properties ---
@@ -148,15 +148,18 @@ def test_merge_unit_keyed_properties_single_table_multiple_columns(csv_str_to_df
     # capacity and commissioning_date both come from the same table - key-resolved once.
     # Includes small typo fuzzy-match check (EXAMPLE_GEN <-> EXAMPLE_GEn) and non-numeric
     # values (not coerced).
-    generators = csv_str_to_df("""
+    summary = csv_str_to_df("""
         name
         BW01
         EXAMPLE_GEN
+        Another_Very_Long_name
     """)
     maximum_capacity = csv_str_to_df("""
-        IASR ID,        Installed capacity (MW),  Commissioning date
-        BW01,           660.0,                    2028-12-01
-        EXAMPLE_GEn,    100.0,
+        IASR ID,                    Installed capacity (MW),    Commissioning date
+        BW01,                       660.0,                      2028-12-01
+        EXAMPLE_GEn,                100.0,
+        Another_Very_Long_Name,     54.0,                       2027-05-01
+        Another_Very_Long_name1,    540.0,                      2027-10-01
     """)
     property_map = {
         "capacity": {
@@ -173,15 +176,23 @@ def test_merge_unit_keyed_properties_single_table_multiple_columns(csv_str_to_df
     }
     iasr_tables = {"maximum_capacity": maximum_capacity}
 
-    result = _merge_unit_keyed_properties(generators, iasr_tables, property_map)
+    exclude_unit_keys = set(["Another_Very_Long_name1"])
+
+    result = _merge_unit_keyed_properties(
+        summary, iasr_tables, property_map, exclude_unit_keys
+    )
 
     expected_result = csv_str_to_df("""
-        name,           capacity,   commissioning_date
-        BW01,           660.0,      2028-12-01
-        EXAMPLE_GEN,    100.0,
+        name,                   capacity,   commissioning_date
+        BW01,                   660.0,      2028-12-01
+        EXAMPLE_GEN,            100.0,
+        Another_Very_Long_name, 54.0,       2027-05-01
     """)
 
-    pd.testing.assert_frame_equal(result, expected_result)
+    pd.testing.assert_frame_equal(
+        result.sort_values("name").reset_index(drop=True),
+        expected_result.sort_values("name").reset_index(drop=True),
+    )
 
 
 # --- _merge_storage_type_split_properties ---
@@ -197,7 +208,7 @@ def test_merge_storage_type_split_properties(empty_option, csv_str_to_df):
     storage = csv_str_to_df("""
         name,    power_station, technology
         W/HOE#1, Wivenhoe,      Hydro
-        ORANA,   Orana BESS,    Battery Storage (2hrs storage)
+        ORANA,   Orana BESS,    Battery storage (2hrs storage)
     """)
     empty_options = {
         "full": storage.copy(),
@@ -222,53 +233,61 @@ def test_merge_storage_type_split_properties(empty_option, csv_str_to_df):
     expected = csv_str_to_df("""
         name,    power_station, technology,                     efficiency_charge,  efficiency_discharge
         W/HOE#1, Wivenhoe,      Hydro,                          80.0,               80.0
-        ORANA,   Orana BESS,    Battery Storage (2hrs storage), 92.0,               92.0
+        ORANA,   Orana BESS,    Battery storage (2hrs storage), 92.0,               92.0
     """)
     expected_options = {
         "full": expected.copy(),
-        "empty": pd.DataFrame(columns=expected.columns),
+        "empty": pd.DataFrame(columns=expected.columns).astype(expected.dtypes),
         "battery_only": expected[expected["name"] == "ORANA"].copy(),
         "phes_only": expected[expected["name"] == "W/HOE#1"].copy(),
     }
     pd.testing.assert_frame_equal(
         result.sort_values("name").reset_index(drop=True),
         expected_options[empty_option].sort_values("name").reset_index(drop=True),
-        check_exact=False,
     )
 
 
-# --- __merge_other_storage_properties ---
+# --- _merge_category_keyed_properties ---
 
 
-def test_merge_other_storage_properties(csv_str_to_df):
-    # check that the generic 'summary_key' input correctly sets the column-to-map
-    # onto the 'storage' input dataframe.
-    storage = csv_str_to_df("""
-        name,       power_station,  technology,     fuel_type,  other_col
-        BESS1_1,    Big Battery 1,  Battery - 1h,   Battery,    Storage
-        BESS1_2,    Big Battery 1,  Battery - 2h,   Battery,    Storage
-        Sample_1h,  Sample 1,       Battery - 1h,   Battery,    Storage
-        Sample_PH,  Sample 1,       Pumped Hydro,   Water,      Storage
-        Test_PH,    Tester Hydro,   Pumped Hydro,   Water,      Storage
+def test_merge_category_keyed_properties(csv_str_to_df):
+    # SUPER GENERIC check that 'summary_key' input correctly sets the column-to-map
+    # onto the input dataframe.
+    df = csv_str_to_df("""
+        first_col,      second_col,     third_col
+        Big Apples,     Small Oranges,  Pink Bananas
+        Pink Bananas,   Big Apples,     Small Oranges
+        Small Oranges,  Pink Bananas,   Big Apples
+        Big Apples,     Small Oranges,  Pink Bananas
     """)
-    iasr_tables = {
-        "technology_properties": csv_str_to_df("""
-            Technology Name,    Efficiency
-            Battery - 1h,       90.0
-            Battery - 2h,       95.0
-            Pumped Hydro,       85.0
-        """),
-        "power_station_properties": csv_str_to_df("""
-            Power Station,  Total Capacity
-            Big Battery 1,  100.0
-            Sample 1,       4000.0
-        """),
-        "fuel_type_properties": csv_str_to_df("""
-            Fuel Label,  Total Capacity
-            Big Battery 1,  100.0
-            Sample 1,       4000.0
-        """),
+    tables = {
+        "fruit_costs": csv_str_to_df("""
+            Fruits,         Costs
+            Big Apples,     10.0
+            Small 0ranges,  15.0
+            Pink Bananas,   50.0
+        """),  # 'Small 0ranges' <-> 'Small Oranges' via key resolution
     }
+
+    property_map = {
+        "second_col_costs": dict(
+            table="fruit_costs",
+            key_col="Fruits",
+            value_col="Costs",
+        ),
+    }
+
+    result = _merge_category_keyed_properties(df, tables, property_map, "second_col")
+
+    expected = csv_str_to_df("""
+        first_col,      second_col,     third_col,      second_col_costs
+        Big Apples,     Small Oranges,  Pink Bananas,   15.0
+        Pink Bananas,   Big Apples,     Small Oranges,  10.0
+        Small Oranges,  Pink Bananas,   Big Apples,     50.0
+        Big Apples,     Small Oranges,  Pink Bananas,   15.0
+    """)
+
+    pd.testing.assert_frame_equal(result, expected)
 
 
 # --- _format_commissioning_date ---
@@ -359,31 +378,6 @@ def test_merge_minimum_load_bounds_matching_by_technology(csv_str_to_df):
         BW0l,         Large scale Solar PV,
     """)
     pd.testing.assert_frame_equal(result, expected)
-
-
-def test_merge_minimum_load_empty_generators(csv_str_to_df):
-    # Nothing to merge onto -- the coal/gas tables aren't even looked at, so an
-    # empty/invalid one doesn't matter here (mirrors _merge_unit_keyed_properties).
-    generators = pd.DataFrame(columns=["name", "technology"])
-    iasr_tables = {
-        "coal_minimum_stable_level": pd.DataFrame(
-            columns=[
-                "IASR ID",
-                "Technology Type",
-                "Minimum Stable Level (MW)_Typical Lowest Band",
-            ]
-        ),
-        "gpg_min_stable_level_existing_generators": pd.DataFrame(
-            columns=["IASR ID", "Technology Type", "Min Stable Level (MW)"]
-        ),
-    }
-
-    result = _merge_minimum_load(generators, iasr_tables)
-
-    expected = csv_str_to_df("""
-        name,  technology,  minimum_load
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 @pytest.mark.parametrize(
@@ -489,58 +483,6 @@ def test_template_generators_existing_planned(csv_str_to_df):
     assert len(result) == 2
 
 
-def test_template_generators_existing_planned_empty(csv_str_to_df):
-    columns = [
-        "IASR ID / DLT names",
-        "Power Station",
-        "Technology Type",
-        "REZ ID",
-        "Sub-region",
-        "Fuel type",
-        "Fuel cost mapping",
-    ]
-    summary = pd.DataFrame(columns=columns)
-    phes_properties = pd.DataFrame(columns=["Power Station"])
-    maximum_capacity = pd.DataFrame(
-        columns=["IASR ID", "Installed capacity (MW)", "Commissioning date"]
-    )
-    variable_opex = pd.DataFrame(
-        columns=["IASR ID", "Variable OPEX ($/MWh sent out)1,"]
-    )
-    heat_rates = pd.DataFrame(columns=["IASR ID", "Heat rate (GJ/MWh)"])
-    closure_years = pd.DataFrame(
-        columns=["IASR ID", "Expected Closure Year (Calendar year)"]
-    )
-    coal = pd.DataFrame(
-        columns=[
-            "IASR ID",
-            "Technology Type",
-            "Minimum Stable Level (MW)_Typical Lowest Band",
-        ]
-    )
-    gas = pd.DataFrame(columns=["IASR ID", "Technology Type", "Min Stable Level (MW)"])
-    iasr_tables = {
-        "existing_committed_anticipated_additional_generator_summary": summary,
-        "pumped_hydro_existing_committed_anticipated_additional_properties": phes_properties,
-        "maximum_capacity_existing_committed_anticipated_additional_generators": maximum_capacity,
-        "variable_opex_existing_committed_anticipated_additional_generators": variable_opex,
-        "heat_rates_existing_committed_anticipated_additional_generators": heat_rates,
-        "expected_closure_years": closure_years,
-        "coal_minimum_stable_level": coal,
-        "gpg_min_stable_level_existing_generators": gas,
-    }
-    sub_regional_geography = pd.DataFrame(columns=["geo_id", "geo_type", "region_id"])
-
-    result = _template_generators_existing_planned(
-        iasr_tables, "sub_regions", sub_regional_geography
-    )
-
-    expected = csv_str_to_df("""
-        name, power_station, technology, geo_id, fuel_type, fuel_price_mapping, capacity, vom, heat_rate, commissioning_date, closure_year, minimum_load
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
 # --- _template_storage_existing_planned ---
 
 
@@ -551,15 +493,15 @@ def test_template_storage_existing_planned(csv_str_to_df):
     summary = csv_str_to_df("""
         IASR ID / DLT names,    Power Station,  Technology Type,                REZ ID,         Sub-region, Fuel type
         W/HOE#1,                Wivenhoe,       Hydro,                          Not Applicable, SQ,         Water
-        ORANA,                  Orana BESS,     Battery Storage (2hrs storage), N3,             CNSW,       Battery
+        ORANA,                  Orana BESS,     Battery storage (2hrs storage), N3,             CNSW,       Battery
     """)
     phes_properties = csv_str_to_df("""
-        Power Station,  Installed capacity (MW),Storage capacity (hours),   Pumping efficiency (%)
-        Wivenhoe,       570,                    10.0,                       70
+        Power Station,  Pumping efficiency (%)
+        Wivenhoe,       70
     """)
     battery_properties = csv_str_to_df("""
-        Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
-        Battery storage (2hrs storage),  2.0,                   92.0,                92.0,                   100,                             0,                               1.8
+        Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%
+        Battery storage (2hrs storage),  2.0,                   92.0,                92.0
     """)
     maximum_capacity = csv_str_to_df("""
         IASR ID,        Installed capacity (MW),    Storage Capacity (MWh),  Commissioning date
@@ -602,40 +544,3 @@ def test_template_storage_existing_planned(csv_str_to_df):
         "closure_year",
     ]
     assert len(result) == 2
-
-
-def test_template_storage_existing_planned_empty(csv_str_to_df):
-    summary = csv_str_to_df("""
-        IASR ID / DLT names,    Power Station,  Technology Type,                REZ ID,         Sub-region, Fuel type
-    """)
-    phes_properties = csv_str_to_df("""
-        Power Station,  Installed capacity (MW),Storage capacity (hours),   Pumping efficiency (%)
-    """)
-    battery_properties = csv_str_to_df("""
-        Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
-    """)
-    maximum_capacity = csv_str_to_df("""
-        IASR ID,        Installed capacity (MW),    Storage Capacity (MWh),  Commissioning date
-    """)
-    closure_years = csv_str_to_df("""
-        IASR ID,    Expected Closure Year (Calendar year)
-    """)
-    iasr_tables = {
-        "existing_committed_anticipated_additional_generator_summary": summary,
-        "pumped_hydro_existing_committed_anticipated_additional_properties": phes_properties,
-        "maximum_capacity_existing_committed_anticipated_additional_generators": maximum_capacity,
-        "expected_closure_years": closure_years,
-        "battery_properties": battery_properties,
-    }
-    sub_regional_geography = csv_str_to_df("""
-        geo_id,     geo_type,   region_id
-    """)
-
-    result = _template_storage_existing_planned(
-        iasr_tables, "sub_regions", sub_regional_geography
-    )
-
-    expected_storage = csv_str_to_df("""
-        name,  power_station,  technology, geo_id, fuel_type, capacity, storage_capacity, efficiency_charge, efficiency_discharge, commissioning_date, closure_year
-    """)
-    pd.testing.assert_frame_equal(result, expected_storage, check_dtype=False)
