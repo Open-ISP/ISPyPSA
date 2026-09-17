@@ -49,13 +49,13 @@ from ispypsa.templater.helpers import (
     _apply_iasr_table_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
-    _fuzzy_map_to_allowed_values,
     _fuzzy_match_names,
     _get_property_value_map,
     _group_properties_by_source,
     _is_battery_row,
     _is_storage_row,
     _map_geo_id_to_granularity,
+    _merge_category_keyed_properties,
     _required_property_columns,
     _set_geo_id,
 )
@@ -530,72 +530,16 @@ def _merge_storage_type_split_properties(
         battery_only,
         iasr_tables,
         _BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP,
-        "technology",
+        df_key_col="technology",
     )
     phes_only = _merge_category_keyed_properties(
         phes_only,
         iasr_tables,
         _PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP,
-        "power_station",
+        df_key_col="power_station",
     )
     phes_only = _derive_phes_symmetric_efficiency(phes_only)
     return pd.concat([battery_only, phes_only], axis=0, ignore_index=True)
-
-
-# NOTE: plan to pull this out as a shareable helper for use here and
-# by new_entrants.py to address Open-ISP/ISPyPSA#TBD.
-def _merge_category_keyed_properties(
-    summary: pd.DataFrame,
-    iasr_tables: dict[str, pd.DataFrame],
-    property_map: dict[str, dict],
-    summary_key: str,
-) -> pd.DataFrame:
-    """Merges every non-unit-keyed property in ``property_map`` onto ``summary``.
-
-    Groups properties by their source (table, key_col) — see
-    ``_group_properties_by_source`` — so a table that contributes several properties
-    (e.g. ``battery_properties`` feeds six) is validated and fuzzy-matched against
-    ``summary_key`` values once per property map.
-
-    I/O Example:
-        property_map (abbr.):
-            efficiency_charge:  table="battery_properties",
-                                key_col="Technology",
-                                value_col="Charge efficiency_%"
-        summary:
-            name             technology
-            Liddell BESS     Battery Storage (4hrs storage)
-
-        iasr_tables['battery_properties']:
-            Technology                              Charge efficiency_%
-            Battery Storage (4hrs storage)          92.5
-
-        summary_key = "technology"
-
-        returns (adds one column per map key):
-            name             technology                       efficiency_charge  ...
-            Liddell BESS     Battery Storage (4hrs storage)   92.5               ...
-    """
-    summary = summary.copy()
-    for (table_name, key_col), props in _group_properties_by_source(
-        property_map
-    ).items():
-        table = iasr_tables[table_name]
-        _assert_table_valid(
-            table,
-            table_name,
-            _required_property_columns(props),
-            f"{sorted(props.keys())}",
-        )
-        matched_key_col = _fuzzy_map_to_allowed_values(
-            summary[summary_key],
-            table[key_col],
-            task_desc=f"merging properties from '{table_name}'",
-        )
-        for new_col, attrs in props.items():
-            property_values = _get_property_value_map(table, attrs)
-            summary[new_col] = matched_key_col.map(property_values)
-    return summary
 
 
 def _format_commissioning_date(summary: pd.DataFrame) -> pd.DataFrame:

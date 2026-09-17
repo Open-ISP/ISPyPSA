@@ -666,7 +666,7 @@ _CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 """
 New entrant property columns (keys) mapped to the IASR table and columns that contain
 property values and the technology for which the values apply. Consumed by
-``ispypsa.templater.new_entrants`` via ``_merge_properties``.
+``ispypsa.templater.new_entrants`` via ``_merge_category_keyed_properties``.
 
     `table`: IASR table name holding the named property (key)
     `key_col`: column in the IASR table that contains the 'technology' string.
@@ -766,12 +766,12 @@ _STORAGE_PHES_PROPERTY_MAP = {
 }
 
 """
-Existing/planned (ECAA) generator property columns (keys) mapped to the IASR table and
-column that contains their values. Consumed by
+Existing/planned (ECAA) generator and storage unit-level property columns (keys) mapped
+to the IASR table and column that contains their values. Consumed by
 ``ispypsa.templater.existing_planned`` via ``_merge_unit_keyed_properties``.
 
 Shaped like the new entrant maps above, but every entry here shares the same
-``key_col`` (``IASR ID``) — each generator's ``name`` is resolved against it via
+``key_col`` (``IASR ID``) — each unit's ``name`` is resolved against it via
 fuzzy matching (small typos only; see ``existing_planned._resolve_unit_keys``)
 rather than the technology-level fuzzy grouping the new entrant maps need.
 
@@ -839,6 +839,20 @@ _STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP = {
         value_col="Expected Closure Year (Calendar year)",
     ),
 }
+
+"""
+Existing/planned (ECAA) storage properties that aren't published per unit, mapped to
+the IASR table and column that contains their values. Consumed by
+``ispypsa.templater.existing_planned`` via ``_merge_storage_type_split_properties``,
+which merges each map onto its own subset of storage rows with
+``helpers._merge_category_keyed_properties``.
+
+Each map is keyed on a different category shared by many units:
+    - batteries on ``technology`` (``battery_properties``' ``Technology``)
+    - PHES on ``power_station`` (the PHES properties table's ``Power Station``)
+
+Entries use the same fields as the unit-level maps above.
+"""
 
 _BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP = {
     "efficiency_charge": dict(
