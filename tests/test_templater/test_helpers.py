@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacements,
+    _apply_iasr_table_replacements,
     _assert_table_valid,
     _build_geo_region_lookup,
     _derive_phes_symmetric_efficiency,
@@ -488,8 +488,6 @@ def test_derive_phes_symmetric_efficiency(csv_str_to_df):
 
 
 def test_derive_phes_symmetric_efficiency_empty(csv_str_to_df):
-    # A single round-trip efficiency becomes equal charge and discharge legs, each its
-    # square root: sqrt(0.81) = 0.9 -> 90.0%.
     phes = csv_str_to_df("""
         name,                  round_trip_efficiency
     """)
@@ -634,10 +632,10 @@ def test_is_subregion_geo_id(csv_str_to_df):
     pd.testing.assert_series_equal(result, expected)
 
 
-# --- _apply_known_value_replacements ---
+# --- _apply_iasr_table_replacements ---
 
 
-def test_apply_known_value_replacements(csv_str_to_df):
+def test_apply_iasr_table_replacements(csv_str_to_df):
     maximum_capacity = csv_str_to_df("""
         IASR ID,   Installed capacity (MW)
         KiataWF1,  30.0
@@ -667,7 +665,7 @@ def test_apply_known_value_replacements(csv_str_to_df):
             replacements={"Borumba": "QEJP - Borumba"},
         ),
     ]
-    result = _apply_known_value_replacements(iasr_tables, corrections)
+    result = _apply_iasr_table_replacements(iasr_tables, corrections)
 
     expected_capacity = csv_str_to_df("""
         IASR ID,   Installed capacity (MW)
@@ -701,7 +699,9 @@ def test_apply_known_value_replacements(csv_str_to_df):
     pd.testing.assert_frame_equal(iasr_tables["phes_properties"], unmutated_phes_props)
 
 
-def test_apply_known_value_replacements_missing_expected_col(csv_str_to_df, caplog):
+def test_apply_iasr_table_replacements_missing_expected_col(csv_str_to_df):
+    # Checks that replacement only applies to specified columns, and no error if a
+    # named column is missing. Column presence is asserted later by _assert_table_valid
     maximum_capacity = csv_str_to_df("""
         unit_name, Installed capacity (MW)
         KiataWF1,  30.0
@@ -717,13 +717,17 @@ def test_apply_known_value_replacements_missing_expected_col(csv_str_to_df, capl
             replacements={"KiataWF1": "KIATAWF1"},
         ),
     ]
-    with caplog.at_level(logging.WARNING):
-        _apply_known_value_replacements(iasr_tables, corrections)
+    result = _apply_iasr_table_replacements(iasr_tables, corrections)
 
-    assert (
-        "Missing expected column 'IASR ID' in table 'maximum_capacity' "
-        "- replacement '{'KiataWF1': 'KIATAWF1'}' not applied."
-    ) in caplog.text
+    expected_unchanged = csv_str_to_df("""
+        unit_name, Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    pd.testing.assert_frame_equal(
+        result["maximum_capacity"].sort_values("unit_name").reset_index(drop=True),
+        expected_unchanged.sort_values("unit_name").reset_index(drop=True),
+    )
 
 
 # --- _group_properties_by_source ---

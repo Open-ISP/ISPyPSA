@@ -816,10 +816,6 @@ _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP = {
     ),
 }
 
-# NOTE: the following property maps are currently separated based on the column
-# on which they map to the summary df (UNIT=name, TECH=technology, STATION=power_station).
-# NEXT STEP will involve a gentle refactor that touches both new_entrant and existing_planned
-# templating to pull out shareable merging functions into helpers.py
 _STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP = {
     "capacity": dict(
         table="maximum_capacity_existing_committed_anticipated_additional_generators",

@@ -74,7 +74,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           20.0,                     $
             Large scale Solar PV,           15.0,                     $
             OCGT (small GT),                17.0,                     $
-            Battery Storage (2hrs storage), 13.5,                     $
+            Battery storage (2hrs storage), 13.5,                     $
             Pumped Hydro (24hrs storage),   78.5,                     $
             BOTN - Cethana,                 78.5,                     $
         """),
@@ -89,7 +89,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           5,                      30
             Large scale Solar PV,           25,                     30
             OCGT (small GT),                25,                     40
-            Battery Storage (2hrs storage), 20,                     20
+            Battery storage (2hrs storage), 20,                     20
             Pumped Hydro (24hrs storage),   40,                     90
             BOTN - Cethana,                 40,                     90
         """),
@@ -104,7 +104,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           0.0
             Large scale Solar PV,           0.0
             OCGT (small GT),                50.0
-            Battery Storage (2hrs storage), 0.0
+            Battery storage (2hrs storage), 0.0
             Pumped Hydro (24hrs storage),   40.0
             BOTN - Cethana,                 40.0
         """),
@@ -118,7 +118,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             BOTN - Cethana - 20h,          20,                       80
         """),
         "technology_specific_lcfs": csv_str_to_df("""
-            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs storage), Pumped Hydro (24hrs storage), BOTN - Cethana
+            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Battery storage (2hrs storage), Pumped Hydro (24hrs storage), BOTN - Cethana
             Q1,                 Far North QLD,          1.05,           1.08,                 Not Applicable,  Not Applicable,                 Not Applicable,               Not Applicable
             CNSW,               Subregional Ref Node,   Not Applicable, Not Applicable,       1.04,            1.03,                           Not Applicable,               Not Applicable
             SNW,                Subregional Ref Node,   Not Applicable, Not Applicable,       1.00,            1.01,                           Not Applicable,               Not Applicable
@@ -149,7 +149,7 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         BW01,                 Bayswater,      Steam Sub Critical,             Not Applicable,  CNSW,        Black Coal, Bayswater
         Q1G1,                 Solar Farm,     Large scale Solar PV,           Q1,              NQ,          Solar,      Solar Farm
         W/HOE#1,              Wivenhoe,       Hydro,                          Not Applicable, NQ,           Water,      Hydro
-        ORANA,                Orana BESS,     Battery Storage (2hrs storage), N3,             CNSW,         Battery,    Battery
+        ORANA,                Orana BESS,     Battery storage (2hrs storage), N3,             CNSW,         Battery,    Battery
     """)
     return {
         "existing_committed_anticipated_additional_generator_summary": summary,
@@ -694,10 +694,10 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
         SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
         NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
+        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -887,10 +887,10 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
         SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
         NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
+        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
