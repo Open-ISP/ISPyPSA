@@ -584,7 +584,7 @@ def _group_properties_by_source(
 ) -> dict[tuple[str, str], dict]:
     """Groups a property map's entries by their source (table, key_col).
 
-    Shared by ``new_entrants._merge_properties`` and
+    Shared by ``_merge_category_keyed_properties`` and
     ``existing_planned._merge_unit_keyed_properties`` so a table contributing several
     properties (e.g. ``battery_properties`` feeds six) is validated and key-resolved
     once per source, not once per property.
@@ -663,6 +663,64 @@ def _get_property_value_map(
         # TODO: 'year' type cols become floats from this transform - leave for
         # validator to type-correct or edit handling here? See Open-ISP/ISPyPSA#145
     return value_map
+
+
+def _merge_category_keyed_properties(
+    df: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
+    property_map: dict[str, dict],
+    df_key_col: str,
+) -> pd.DataFrame:
+    """Merges every non-unit-keyed property in ``property_map`` onto ``df``.
+
+    Groups properties by their source (table, key_col) — see
+    ``_group_properties_by_source`` — so a table that contributes several properties
+    (e.g. ``battery_properties`` feeds six new entrant storage properties) is
+    validated and fuzzy-matched against ``df_key_col`` values once per property map.
+
+    I/O Example:
+        An abbreviated example merging the 'efficiency_charge' property into an
+        'existing_planned_storage' summary table.
+
+        df:
+            name             technology
+            Liddell BESS     Battery storage (4hrs storage)
+
+        df_key_col = "technology"
+
+        property_map:
+            efficiency_charge:  table="battery_properties",
+                                key_col="Technology",
+                                value_col="Charge efficiency_%"
+
+        iasr_tables['battery_properties']:
+            Technology                              Charge efficiency_%
+            Battery storage (4hrs storage)          92.5
+
+        returns (adds one column per map key):
+            name             technology                       efficiency_charge
+            Liddell BESS     Battery storage (4hrs storage)   92.5
+    """
+    df = df.copy()
+    for (table_name, key_col), props in _group_properties_by_source(
+        property_map
+    ).items():
+        table = iasr_tables[table_name]
+        _assert_table_valid(
+            table,
+            table_name,
+            _required_property_columns(props),
+            f"{sorted(props.keys())}",
+        )
+        matched_key_col = _fuzzy_map_to_allowed_values(
+            df[df_key_col],
+            table[key_col],
+            task_desc=f"merging properties from '{table_name}'",
+        )
+        for new_col, attrs in props.items():
+            property_values = _get_property_value_map(table, attrs)
+            df[new_col] = matched_key_col.map(property_values)
+    return df
 
 
 def _is_battery_row(

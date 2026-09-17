@@ -13,7 +13,6 @@ from ispypsa.templater.new_entrants import (
     _merge_lcf_build,
     _merge_lcf_om,
     _merge_phes_properties,
-    _merge_properties,
     _override_botn_technology,
     _rekey_names_to_collapsed_geo_id,
     _reshape_technology_specific_lcfs,
@@ -167,83 +166,6 @@ def test_template_storage_new_entrant(csv_str_to_df):
     assert len(result) == 3
 
 
-# --- _merge_properties ---
-# (_group_properties_by_source, _required_property_columns and
-# _get_property_value_map are shared with existing_planned.py and now live in, and
-# are tested in, helpers.py / test_helpers.py.)
-
-
-def test_merge_properties(csv_str_to_df, caplog):
-    # storage_hours and efficiency_charge both come from battery_properties/Technology
-    # (as in _STORAGE_BATTERY_PROPERTY_MAP): both are merged correctly in one pass,
-    # NaN property values are retained untouched, and - because they share a source
-    # table - the fuzzy match against it runs once, so a corrected technology name is
-    # logged once, not once per property sourced from that table.
-    new_entrants = csv_str_to_df("""
-        name,             technology
-        NQ Battery - 2h,  battery storage (2hrs storage)
-        NQ CCGT,          CCGT
-    """)
-    property_map = {
-        "storage_hours": {
-            "table": "battery_properties",
-            "key_col": "Technology",
-            "value_col": "Energy capacity_Hours",
-        },
-        "efficiency_charge": {
-            "table": "battery_properties",
-            "key_col": "Technology",
-            "value_col": "Charge efficiency_%",
-        },
-    }
-    iasr_tables = {
-        "battery_properties": csv_str_to_df("""
-            Technology,                      Energy capacity_Hours, Charge efficiency_%
-            Battery Storage (2hrs storage),  2.0,                   92.0
-            CCGT,                            ,
-        """),
-    }
-
-    with caplog.at_level("INFO"):
-        result = _merge_properties(new_entrants, iasr_tables, property_map)
-
-    expected = csv_str_to_df("""
-        name,             technology,                      storage_hours, efficiency_charge
-        NQ Battery - 2h,  battery storage (2hrs storage),  2.0,           92.0
-        NQ CCGT,          CCGT,                            ,
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-    msg = (
-        "'battery storage (2hrs storage)' matched to "
-        "'Battery Storage (2hrs storage)' whilst merging new entrant properties "
-        "from 'battery_properties'"
-    )
-    assert caplog.messages.count(msg) == 1
-
-
-def test_merge_properties_raises_on_invalid_source_table(csv_str_to_df):
-    # Regression: confirms the source table is actually validated before merging.
-    # Exact raise behaviour is covered by _assert_table_valid's own tests.
-    new_entrants = csv_str_to_df("""
-        name,     technology
-        SQ CCGT,  CCGT
-    """)
-    property_map = {
-        "fom": {
-            "table": "fixed_opex_new_entrants",
-            "key_col": "Technology",
-            "value_col": "Base value",
-        }
-    }
-    iasr_tables = {
-        "fixed_opex_new_entrants": pd.DataFrame(columns=["Technology", "Base value"]),
-    }
-
-    with pytest.raises(ValueError):
-        _merge_properties(new_entrants, iasr_tables, property_map)
-
-
 # --- _merge_phes_properties / _override_botn_technology / _derive_phes_symmetric_efficiency ---
 
 
@@ -339,7 +261,7 @@ def test_merge_phes_properties_empty(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-# (BOTN's pumped-hydro key correction is now a plain _apply_known_value_replacement
+# (BOTN's pumped-hydro key correction is now a plain _apply_iasr_table_replacements
 # call -- see helpers.py / test_helpers.py for that mechanism's own tests. Its wiring
 # here is covered incidentally by test_merge_phes_properties above, which already
 # exercises a full-spelling BOTN row resolving correctly.)

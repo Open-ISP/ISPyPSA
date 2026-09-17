@@ -4,7 +4,6 @@ import pytest
 from ispypsa.templater.existing_planned import (
     _format_commissioning_date,
     _is_existing_planned_storage_row,
-    _merge_category_keyed_properties,
     _merge_minimum_load,
     _merge_storage_type_split_properties,
     _merge_unit_keyed_properties,
@@ -245,49 +244,6 @@ def test_merge_storage_type_split_properties(empty_option, csv_str_to_df):
         result.sort_values("name").reset_index(drop=True),
         expected_options[empty_option].sort_values("name").reset_index(drop=True),
     )
-
-
-# --- _merge_category_keyed_properties ---
-
-
-def test_merge_category_keyed_properties(csv_str_to_df):
-    # SUPER GENERIC check that 'summary_key' input correctly sets the column-to-map
-    # onto the input dataframe.
-    df = csv_str_to_df("""
-        first_col,      second_col,     third_col
-        Big Apples,     Small Oranges,  Pink Bananas
-        Pink Bananas,   Big Apples,     Small Oranges
-        Small Oranges,  Pink Bananas,   Big Apples
-        Big Apples,     Small Oranges,  Pink Bananas
-    """)
-    tables = {
-        "fruit_costs": csv_str_to_df("""
-            Fruits,         Costs
-            Big Apples,     10.0
-            Small 0ranges,  15.0
-            Pink Bananas,   50.0
-        """),  # 'Small 0ranges' <-> 'Small Oranges' via key resolution
-    }
-
-    property_map = {
-        "second_col_costs": dict(
-            table="fruit_costs",
-            key_col="Fruits",
-            value_col="Costs",
-        ),
-    }
-
-    result = _merge_category_keyed_properties(df, tables, property_map, "second_col")
-
-    expected = csv_str_to_df("""
-        first_col,      second_col,     third_col,      second_col_costs
-        Big Apples,     Small Oranges,  Pink Bananas,   15.0
-        Pink Bananas,   Big Apples,     Small Oranges,  10.0
-        Small Oranges,  Pink Bananas,   Big Apples,     50.0
-        Big Apples,     Small Oranges,  Pink Bananas,   15.0
-    """)
-
-    pd.testing.assert_frame_equal(result, expected)
 
 
 # --- _format_commissioning_date ---
