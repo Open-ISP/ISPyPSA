@@ -4,7 +4,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-_TIMESLICE_SNAPSHOT_COLUMNS = ["timeslice_id", "investment_periods", "snapshots"]
+_TIMESLICE_SNAPSHOT_COLUMNS = ["timeslice", "investment_periods", "snapshots"]
 
 
 def _create_timeslice_snapshot_mapping(
@@ -20,14 +20,14 @@ def _create_timeslice_snapshot_mapping(
     Mapping is done on a model year by model year basis:
         - Each model year is mapped to a reference year.
         - Then the timeslice windows for that reference year are used to map each
-          snapshot to a timeslice_id.
+          snapshot to a timeslice.
 
     I/O Example:
         timeslices (each year's windows tile (cover in full) its financial year:
         summer opens in November and wraps past New Year, a peak day interrupts it,
         summer resumes to April, then winter runs April to November, crossing 30
         June into the next financial year):
-            timeslice_id          reference_year  start_month_day  end_month_day
+            timeslice             reference_year  start_month_day  end_month_day
             nsw_summer_typical    2011            11-01            01-31
             nsw_peak_demand       2011            01-31            02-02
             nsw_summer_typical    2011            02-02            04-01
@@ -49,7 +49,7 @@ def _create_timeslice_snapshot_mapping(
             -> FY2025 uses 2011's pattern, FY2026 uses 2018's
 
         returns:
-            timeslice_id          investment_periods  snapshots
+            timeslice             investment_periods  snapshots
             nsw_winter_reference  2025                2024-08-15 12:00:00
             nsw_summer_typical    2025                2025-01-20 12:00:00
             nsw_peak_demand       2025                2025-01-31 12:00:00
@@ -111,14 +111,14 @@ def _tag_snapshots_with_pattern(
             2026                2026-01-07 12:00:00  01-07
 
         pattern (reference year 2018):
-            timeslice_id          start_month_day  end_month_day
+            timeslice             start_month_day  end_month_day
             nsw_summer_typical    11-01            01-07
             nsw_peak_demand       01-07            01-08
             nsw_summer_typical    01-08            04-01
             nsw_winter_reference  04-01            11-01
 
         returns:
-            timeslice_id          investment_periods  snapshots
+            timeslice             investment_periods  snapshots
             nsw_winter_reference  2026                2025-08-15 12:00:00
             nsw_peak_demand       2026                2026-01-07 12:00:00
     """
@@ -154,7 +154,7 @@ def _concat_tagged_snapshots(mapped: list[pd.DataFrame]) -> pd.DataFrame:
     """Combines the per-model-year tagged snapshots into one mapping table,
     in snapshot order."""
     mapping = pd.concat(mapped, ignore_index=True)
-    mapping = mapping.sort_values(["snapshots", "timeslice_id"]).reset_index(drop=True)
+    mapping = mapping.sort_values(["snapshots", "timeslice"]).reset_index(drop=True)
     return mapping.loc[:, _TIMESLICE_SNAPSHOT_COLUMNS]
 
 
@@ -174,7 +174,7 @@ def _log_referenced_timeslices_without_snapshots(
     referenced = set(link_timeslice_limits["timeslice"]) | set(
         custom_constraints_rhs["timeslice"].dropna()
     )
-    without_snapshots = referenced - set(timeslice_snapshots["timeslice_id"])
+    without_snapshots = referenced - set(timeslice_snapshots["timeslice"])
     if without_snapshots:
         logger.warning(
             f"Timeslices referenced by transmission limits or custom constraints "

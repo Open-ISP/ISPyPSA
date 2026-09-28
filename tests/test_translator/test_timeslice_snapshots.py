@@ -14,7 +14,7 @@ def _snapshots(csv_str_to_df, csv_str: str) -> pd.DataFrame:
 
 def test_pattern_expanded_into_every_model_year(csv_str_to_df):
     timeslices = csv_str_to_df("""
-        timeslice_id,     reference_year,  start_month_day,  end_month_day
+        timeslice,        reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,  2024,            01-13,            01-14
     """)
     snapshots = _snapshots(
@@ -38,7 +38,7 @@ def test_pattern_expanded_into_every_model_year(csv_str_to_df):
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         nsw_peak_demand,  2026,                2026-01-13 12:00:00
         nsw_peak_demand,  2026,                2027-01-13 12:00:00
         nsw_peak_demand,  2028,                2028-01-13 12:00:00
@@ -54,7 +54,7 @@ def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(csv_str
     # so every snapshot gets exactly one tag per region; the peak days differ between
     # regions and reference years so the tags visibly diverge.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,    2024,            11-01,            12-14
         nsw_peak_demand,       2024,            12-14,            12-15
         nsw_summer_typical,    2024,            12-15,            04-01
@@ -96,7 +96,7 @@ def test_multiple_regions_and_years_each_snapshot_tagged_once_per_region(csv_str
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,          investment_periods,  snapshots
+        timeslice,             investment_periods,  snapshots
         nsw_winter_reference,  2026,                2025-07-15 12:00:00
         vic_winter_reference,  2026,                2025-07-15 12:00:00
         nsw_peak_demand,       2026,                2025-12-14 12:00:00
@@ -121,7 +121,7 @@ def test_model_year_boundary_snapshot_uses_year_just_ended(csv_str_to_df):
     # is FY2026's last interval, so it takes 2024's window (peak), not 2018's
     # (summer) even though 1 July belongs to FY2027.
     timeslices = csv_str_to_df("""
-        timeslice_id,        reference_year,  start_month_day,  end_month_day
+        timeslice,           reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,     2024,            06-30,            07-01
         nsw_summer_typical,  2018,            06-30,            07-01
     """)
@@ -143,7 +143,7 @@ def test_model_year_boundary_snapshot_uses_year_just_ended(csv_str_to_df):
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         nsw_peak_demand,  2026,                2026-07-01 00:00:00
         """,
     )
@@ -156,7 +156,7 @@ def test_boundary_snapshots_belong_to_the_window_ending_there(csv_str_to_df):
     # earlier window's final interval. Summer is split around the peak day,
     # as the templater emits it.
     timeslices = csv_str_to_df("""
-        timeslice_id,        reference_year,  start_month_day,  end_month_day
+        timeslice,           reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,  2024,            11-01,            01-13
         nsw_peak_demand,     2024,            01-13,            01-14
         nsw_summer_typical,  2024,            01-14,            04-01
@@ -178,7 +178,7 @@ def test_boundary_snapshots_belong_to_the_window_ending_there(csv_str_to_df):
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,        investment_periods,  snapshots
+        timeslice,           investment_periods,  snapshots
         nsw_summer_typical,  2026,                2026-01-13 00:00:00
         nsw_peak_demand,     2026,                2026-01-13 12:00:00
         nsw_peak_demand,     2026,                2026-01-14 00:00:00
@@ -192,7 +192,7 @@ def test_leap_day_windows_in_leap_and_non_leap_years(csv_str_to_df):
     # month-day ranges, so 28 February is always in [02-28, 02-29), and
     # 29 February only exists to be tagged in leap FY2028.
     timeslices = csv_str_to_df("""
-        timeslice_id,     reference_year,  start_month_day,  end_month_day
+        timeslice,        reference_year,  start_month_day,  end_month_day
         vic_peak_demand,  2024,            02-28,            02-29
         nsw_peak_demand,  2024,            02-29,            03-02
     """)
@@ -217,7 +217,7 @@ def test_leap_day_windows_in_leap_and_non_leap_years(csv_str_to_df):
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         vic_peak_demand,  2026,                2026-02-28 12:00:00
         nsw_peak_demand,  2026,                2026-03-01 12:00:00
         vic_peak_demand,  2028,                2028-02-28 12:00:00
@@ -232,7 +232,7 @@ def test_reference_year_without_patterns_leaves_its_model_years_untagged(csv_str
     # configured_reference_years_have_patterns check (not yet enforced) is
     # what would catch this, so here FY2026's snapshot is simply untagged.
     timeslices = csv_str_to_df("""
-        timeslice_id,     reference_year,  start_month_day,  end_month_day
+        timeslice,        reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,  2018,            01-13,            01-14
     """)
     snapshots = _snapshots(
@@ -254,7 +254,7 @@ def test_reference_year_without_patterns_leaves_its_model_years_untagged(csv_str
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         nsw_peak_demand,  2026,                2027-01-13 12:00:00
         """,
     )
@@ -267,7 +267,7 @@ def test_calendar_year_type_switches_pattern_at_new_year(csv_str_to_df):
     # 2018's, so 2018's 01-07 peak day applies but 2024's 12-14 one does not
     # to the (2018-governed) 2027 December.
     timeslices = csv_str_to_df("""
-        timeslice_id,        reference_year,  start_month_day,  end_month_day
+        timeslice,           reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,  2024,            11-01,            12-14
         nsw_peak_demand,     2024,            12-14,            12-15
         nsw_summer_typical,  2024,            12-15,            04-01
@@ -295,7 +295,7 @@ def test_calendar_year_type_switches_pattern_at_new_year(csv_str_to_df):
     expected = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,        investment_periods,  snapshots
+        timeslice,           investment_periods,  snapshots
         nsw_peak_demand,     2026,                2026-12-14 12:00:00
         nsw_peak_demand,     2026,                2027-01-07 12:00:00
         nsw_summer_typical,  2026,                2027-12-14 12:00:00
@@ -306,7 +306,7 @@ def test_calendar_year_type_switches_pattern_at_new_year(csv_str_to_df):
 
 def test_empty_timeslices_table(csv_str_to_df):
     timeslices = pd.DataFrame(
-        columns=["timeslice_id", "reference_year", "start_month_day", "end_month_day"]
+        columns=["timeslice", "reference_year", "start_month_day", "end_month_day"]
     )
     snapshots = _snapshots(
         csv_str_to_df,
@@ -321,7 +321,7 @@ def test_empty_timeslices_table(csv_str_to_df):
     )
 
     expected = csv_str_to_df("""
-        timeslice_id,  investment_periods,  snapshots
+        timeslice,     investment_periods,  snapshots
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
@@ -330,7 +330,7 @@ def test_logs_referenced_timeslices_without_snapshots(csv_str_to_df, caplog):
     timeslice_snapshots = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         nsw_peak_demand,  2026,                2026-01-13 12:00:00
         """,
     )
@@ -361,7 +361,7 @@ def test_no_log_when_all_referenced_timeslices_have_snapshots(csv_str_to_df, cap
     timeslice_snapshots = _snapshots(
         csv_str_to_df,
         """
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         nsw_peak_demand,  2026,                2026-01-13 12:00:00
         """,
     )
