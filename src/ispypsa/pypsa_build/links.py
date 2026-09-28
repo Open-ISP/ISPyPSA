@@ -293,11 +293,17 @@ def _split_pairs_by_uncovered_extent(
     uncovered at every snapshot and those uncovered at only some.
 
     I/O Example:
-        limits_per_snapshot: A p_max_pu at 2 snapshots (both NaN),
-                             A p_min_pu at 2 snapshots (one NaN)
-        uncovered:           the 3 NaN rows
+        limits_per_snapshot (abridged, snapshot columns omitted):
+            name  attribute  value
+            A     p_max_pu            # uncovered
+            A     p_max_pu            # uncovered
+            A     p_min_pu   0.9
+            A     p_min_pu            # uncovered
 
-        returns ([("A", "p_max_pu")], [("A", "p_min_pu")])
+        uncovered: the three uncovered rows above
+
+        returns (at_every, at_some):
+            ([("A", "p_max_pu")], [("A", "p_min_pu")])
     """
     keys = ["name", "attribute"]
     n_snapshots = limits_per_snapshot.groupby(keys).size()

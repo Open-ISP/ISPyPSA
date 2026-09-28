@@ -354,22 +354,23 @@ def _translate_timeslice_limits_to_pu(
 
     I/O Example:
         limits:
-            path_id  direction  timeslice             capacity
-            CQ-NQ    forward    qld_peak_demand       1200
-            CQ-NQ    forward    qld_winter_reference  1400
-            CQ-NQ    reverse    ,                     1000   # NaN-timeslice fallback
+            path_id   direction  timeslice             capacity
+            CQ-NQ     forward    qld_peak_demand       1200
+            CQ-NQ     forward    qld_winter_reference  1400
+            CQ-NQ     reverse    ,                     1000   # NaN-timeslice fallback
+            CNSW-SNW  forward    nsw_peak_demand       0      # new parallel corridor
 
         existing_links (abridged):
-            isp_name  name              p_nom
-            CQ-NQ     CQ-NQ_existing    1400
+            isp_name  name               p_nom
+            CQ-NQ     CQ-NQ_existing     1400
+            CNSW-SNW  CNSW-SNW_existing  0
 
         returns:
-            name            attribute  timeslice             value
-            CQ-NQ_existing  p_max_pu   qld_peak_demand       0.857   # 1200/1400
-            CQ-NQ_existing  p_max_pu   qld_winter_reference  1.0     # 1400/1400
-            CQ-NQ_existing  p_min_pu   ,                     -0.714  # fallback, -1000/1400
-
-        A zero-p_nom link with capacity 0 in a row -> value 0.0 for that row.
+            name               attribute  timeslice             value
+            CQ-NQ_existing     p_max_pu   qld_peak_demand       0.857   # 1200/1400
+            CQ-NQ_existing     p_max_pu   qld_winter_reference  1.0     # 1400/1400
+            CQ-NQ_existing     p_min_pu   ,                     -0.714  # fallback, -1000/1400
+            CNSW-SNW_existing  p_max_pu   nsw_peak_demand       0.0     # zero p_nom: 0/0 defined as 0
     """
     rows = limits.merge(
         existing_links.loc[:, ["isp_name", "name", "p_nom"]],
