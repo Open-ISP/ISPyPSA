@@ -289,21 +289,27 @@ def _raise_if_snapshots_uncovered(limits_per_snapshot: pd.DataFrame) -> None:
 def _split_pairs_by_uncovered_extent(
     limits_per_snapshot: pd.DataFrame, uncovered: pd.DataFrame
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Splits the (link, attribute) pairs with uncovered snapshots into those
-    uncovered at every snapshot and those uncovered at only some.
+    """Splits the (link, attribute) pairs that have uncovered snapshots (value
+    NaN) into those uncovered at every snapshot and those uncovered at only some.
 
     I/O Example:
-        limits_per_snapshot (abridged, snapshot columns omitted):
-            name  attribute  value
-            A     p_max_pu            # uncovered
-            A     p_max_pu            # uncovered
-            A     p_min_pu   0.9
-            A     p_min_pu            # uncovered
+        limits_per_snapshot (investment_periods omitted):
+            name            attribute  snapshots         value
+            CQ-NQ_existing  p_max_pu   2025-01-13 12:00         # uncovered at both snapshots
+            CQ-NQ_existing  p_max_pu   2025-01-15 12:00
+            CQ-NQ_existing  p_min_pu   2025-01-13 12:00  -0.9
+            CQ-NQ_existing  p_min_pu   2025-01-15 12:00         # uncovered at one snapshot
+            SQ-CQ_existing  p_max_pu   2025-01-13 12:00  1.0    # fully covered: in neither list
+            SQ-CQ_existing  p_max_pu   2025-01-15 12:00  1.0
 
-        uncovered: the three uncovered rows above
+        uncovered (the NaN-value rows of limits_per_snapshot):
+            name            attribute  snapshots
+            CQ-NQ_existing  p_max_pu   2025-01-13 12:00
+            CQ-NQ_existing  p_max_pu   2025-01-15 12:00
+            CQ-NQ_existing  p_min_pu   2025-01-15 12:00
 
         returns (at_every, at_some):
-            ([("A", "p_max_pu")], [("A", "p_min_pu")])
+            ([("CQ-NQ_existing", "p_max_pu")], [("CQ-NQ_existing", "p_min_pu")])
     """
     keys = ["name", "attribute"]
     n_snapshots = limits_per_snapshot.groupby(keys).size()
