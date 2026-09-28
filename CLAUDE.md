@@ -16,7 +16,9 @@ helper functions.
 ```python
 def template_network_transmission_paths(iasr_tables, scenario):
     paths = _extract_flow_paths(iasr_tables["flow_path_transfer_capability"])
-    paths = _add_transfer_limits(paths, iasr_tables["interconnector_transfer_capability"])
+    paths = _add_transfer_limits(
+        paths, iasr_tables["interconnector_transfer_capability"]
+    )
     paths = _filter_to_scenario(paths, scenario)
     return paths
 ```
