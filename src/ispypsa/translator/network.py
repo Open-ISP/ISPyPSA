@@ -359,6 +359,7 @@ def _translate_timeslice_limits_to_pu(
             CQ-NQ     forward    qld_winter_reference  1400
             CQ-NQ     reverse    ,                     1000   # NaN-timeslice fallback
             CNSW-SNW  forward    nsw_peak_demand       0      # new parallel corridor
+            CNSW-SNW  reverse    nsw_peak_demand       0
 
         existing_links (abridged):
             isp_name  name               p_nom
@@ -371,6 +372,7 @@ def _translate_timeslice_limits_to_pu(
             CQ-NQ_existing     p_max_pu   qld_winter_reference  1.0     # 1400/1400
             CQ-NQ_existing     p_min_pu   ,                     -0.714  # fallback, -1000/1400
             CNSW-SNW_existing  p_max_pu   nsw_peak_demand       0.0     # zero p_nom: 0/0 defined as 0
+            CNSW-SNW_existing  p_min_pu   nsw_peak_demand       0.0
     """
     rows = limits.merge(
         existing_links.loc[:, ["isp_name", "name", "p_nom"]],
