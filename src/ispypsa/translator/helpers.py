@@ -161,23 +161,38 @@ def _resolve_wildcards(
     allowed_values: dict[str, list],
     value_columns: list[str],
 ) -> pd.DataFrame:
-    """Expand a sparse "wildcard" table into one row per concrete key combination.
+    """Resolve which row of ``table`` applies to each key combination in
+    ``allowed_values``, returning one explicit row per combination.
 
-    A key column may be left blank (NaN) to act as a wildcard that applies to
-    every value of that column. ``allowed_values`` lists, for each wildcardable
-    column, the concrete values it may take — the schema's allowed_values /
-    allowed_values_from, resolved to actual values. Each blank cell in those
-    columns is fanned out to every allowed value; a filled cell must itself be
-    an allowed value — anything else raises. Callers filter their designed
-    selections (e.g. costs for disabled elements or non-investment-period
-    years) out before calling, so an out-of-set value reaching this point is
-    bad input data, not selection. Key columns absent from ``allowed_values``
-    (e.g. timeslice) ride along unchanged.
+    Each row of ``table`` assigns values (the ``value_columns``) to a key
+    (every other column). Rather than write out a row for every key, the user
+    may leave a key cell blank (NaN) to mean the row applies to every value of
+    that column — the network schemas call this a wildcard.
 
-    Once the blanks are filled in, several rows can land on the same key — a
-    specific row and a wildcard one. The row that used the fewest wildcards (the
-    most specific) wins; callers rely on the schema's *_resolve_unambiguously
-    rule to guarantee there is never a tie.
+    ``allowed_values`` lists, for a subset of the key columns, every value the
+    model needs an entry for — e.g. the enabled expansion elements, or the
+    configured investment periods. Together these lists define the full set of
+    key combinations the output must cover. Callers pass the values the model
+    run actually uses, which may be narrower than what the table's schema
+    permits.
+
+    This function resolves the mapping between the two: each row is expanded
+    to one row per combination of ``allowed_values`` across its blank columns
+    — a row with only direction blank becomes one row per direction, while a
+    row with path_id and direction both blank becomes one row per
+    path_id-direction pair — so every row of the output names its full key
+    explicitly. Where several rows land on the same key after expansion, the
+    one that started with fewer blanks wins — a more specific entry overrides
+    a more general one. The schemas'
+    *_resolve_unambiguously checks (e.g. limits_resolve_unambiguously)
+    guarantee no two rows tie.
+
+    Where a row names a key directly instead of leaving it blank, the named
+    value must be one of that column's ``allowed_values`` — a direction of,
+    say, "sideways" raises. Callers remove the rows they mean to exclude
+    before calling, so an unrecognised value here is bad input data, not an
+    intended exclusion. Key columns not in ``allowed_values`` (e.g.
+    timeslice) are left untouched.
 
     I/O Example:
         table (a blank cell is a wildcard):
