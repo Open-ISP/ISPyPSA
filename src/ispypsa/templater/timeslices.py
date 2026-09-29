@@ -21,7 +21,7 @@ import pandas as pd
 from ispypsa.templater.custom_constraints_from_plexos import _tag_to_timeslice
 
 _TIMESLICE_COLUMNS = [
-    "timeslice_id",
+    "timeslice",
     "reference_year",
     "start_month_day",
     "end_month_day",
@@ -90,7 +90,7 @@ def _template_timeslices(
             2026           2015
 
         returns:
-            timeslice_id     reference_year  start_month_day  end_month_day
+            timeslice        reference_year  start_month_day  end_month_day
             nsw_peak_demand  2015            11-18            11-20  # end exclusive
     """
     events = _parse_calendar_events(timeslice_calendar)
@@ -115,12 +115,12 @@ def _parse_calendar_events(calendar: pd.DataFrame) -> pd.DataFrame:
 
     I/O Example:
         DATETIME=18/11/2021, NAME="NSW Hot Day", TIMESLICE=-1
-        -> DATETIME=2021-11-18, timeslice_id="nsw_peak_demand", TIMESLICE=-1
+        -> DATETIME=2021-11-18, timeslice="nsw_peak_demand", TIMESLICE=-1
     """
     events = calendar.copy()
     events["DATETIME"] = pd.to_datetime(events["DATETIME"], dayfirst=True)
-    events["timeslice_id"] = events["NAME"].map(_tag_to_timeslice)
-    return events.sort_values(["timeslice_id", "DATETIME"])
+    events["timeslice"] = events["NAME"].map(_tag_to_timeslice)
+    return events.sort_values(["timeslice", "DATETIME"])
 
 
 def _add_next_event_columns(events: pd.DataFrame) -> pd.DataFrame:
@@ -128,16 +128,16 @@ def _add_next_event_columns(events: pd.DataFrame) -> pd.DataFrame:
     same timeslice (NaN/NaT on each timeslice's last event).
 
     I/O Example:
-        timeslice_id     DATETIME    TIMESLICE
+        timeslice        DATETIME    TIMESLICE
         nsw_peak_demand  2021-11-18  -1
         nsw_peak_demand  2021-11-20  0
 
         ->
-        timeslice_id     DATETIME    TIMESLICE  next_date   next_state
+        timeslice        DATETIME    TIMESLICE  next_date   next_state
         nsw_peak_demand  2021-11-18  -1         2021-11-20  0
         nsw_peak_demand  2021-11-20  0          NaT         NaN
     """
-    grouped = events.groupby("timeslice_id")
+    grouped = events.groupby("timeslice")
     events["next_date"] = grouped["DATETIME"].shift(-1)
     events["next_state"] = grouped["TIMESLICE"].shift(-1)
     return events
@@ -163,19 +163,19 @@ def _extract_windows(events: pd.DataFrame) -> pd.DataFrame:
     """Turns each on event into a window row ending at the paired off event.
 
     I/O Example:
-        timeslice_id     DATETIME    TIMESLICE  next_date   next_state
+        timeslice        DATETIME    TIMESLICE  next_date   next_state
         nsw_peak_demand  2021-11-18  -1         2021-11-20  0
         nsw_peak_demand  2021-11-20  0          NaT         NaN
 
         returns:
-            timeslice_id     start_date  end_date
+            timeslice        start_date  end_date
             nsw_peak_demand  2021-11-18  2021-11-20
     """
     windows = events[events["TIMESLICE"] == -1]
     windows = windows.rename(
         columns={"DATETIME": "start_date", "next_date": "end_date"}
     )
-    return windows[["timeslice_id", "start_date", "end_date"]].reset_index(drop=True)
+    return windows[["timeslice", "start_date", "end_date"]].reset_index(drop=True)
 
 
 def _drop_horizon_truncated_planning_years(windows: pd.DataFrame) -> pd.DataFrame:
@@ -187,7 +187,7 @@ def _drop_horizon_truncated_planning_years(windows: pd.DataFrame) -> pd.DataFram
     nothing is lost by dropping the year entirely.
 
     I/O Example:
-        timeslice_id          start_date  end_date    planning_year
+        timeslice             start_date  end_date    planning_year
         nsw_peak_demand       2057-11-18  2057-11-20  2058           # dropped: shares
         nsw_winter_reference  2058-04-01  NaT         2058           # the truncated year
         nsw_peak_demand       2056-11-18  2056-11-20  2057           # kept
@@ -228,7 +228,7 @@ def _extend_sequence_to_horizon(
             2027           2011
 
         windows (only planning_year is read):
-            timeslice_id     start_date  end_date    planning_year
+            timeslice        start_date  end_date    planning_year
             nsw_peak_demand  2028-11-18  2028-11-20  2029
 
         returns:
@@ -256,17 +256,17 @@ def _convert_windows_to_month_days(windows: pd.DataFrame) -> pd.DataFrame:
     next calendar year, and winter's 04-01 -> 10-01 extends past 30 June).
 
     I/O Example:
-        timeslice_id     start_date  end_date    planning_year  reference_year
+        timeslice        start_date  end_date    planning_year  reference_year
         nsw_peak_demand  2025-11-18  2025-11-20  2026           2015
 
         ->
-        timeslice_id     reference_year  planning_year  start_month_day  end_month_day
+        timeslice        reference_year  planning_year  start_month_day  end_month_day
         nsw_peak_demand  2015            2026           11-18            11-20
     """
     windows["start_month_day"] = windows["start_date"].dt.strftime("%m-%d")
     windows["end_month_day"] = windows["end_date"].dt.strftime("%m-%d")
     return windows[
-        ["timeslice_id", "reference_year", "planning_year"]
+        ["timeslice", "reference_year", "planning_year"]
         + ["start_month_day", "end_month_day"]
     ]
 
@@ -278,7 +278,7 @@ def _raise_on_inconsistent_reference_year_patterns(patterns: pd.DataFrame) -> No
     decoding one pattern per reference year would silently lose windows."""
     occurrences = patterns.groupby(["reference_year", "planning_year"]).apply(
         lambda x: frozenset(
-            zip(x["timeslice_id"], x["start_month_day"], x["end_month_day"])
+            zip(x["timeslice"], x["start_month_day"], x["end_month_day"])
         ),
         include_groups=False,
     )
@@ -296,12 +296,12 @@ def _keep_first_occurrence_per_reference_year(patterns: pd.DataFrame) -> pd.Data
     occurrences are identical — validated before this is called).
 
     I/O Example:
-        timeslice_id     reference_year  planning_year  start_month_day  end_month_day
+        timeslice        reference_year  planning_year  start_month_day  end_month_day
         nsw_peak_demand  2015            2026           11-18            11-20
         nsw_peak_demand  2015            2031           11-18            11-20
 
         returns:
-            timeslice_id     reference_year  start_month_day  end_month_day
+            timeslice        reference_year  start_month_day  end_month_day
             nsw_peak_demand  2015            11-18            11-20
     """
     first_occurrence = patterns.groupby("reference_year")["planning_year"].transform(
@@ -316,12 +316,12 @@ def _raise_unless_windows_tile_the_year(timeslices: pd.DataFrame) -> None:
     """Raise unless, within every region and reference year, the windows tile
     the year exactly — no day left uncovered and none covered twice. A gap there
     would let a snapshot fall in no timeslice (silently taking a base limit); an
-    overlap would let it fall in two. The region is the timeslice_id prefix
+    overlap would let it fall in two. The region is the timeslice prefix
     before the first underscore.
     """
-    # add a region column from the timeslice_id prefix (nsw_peak_demand -> nsw)
+    # add a region column from the timeslice prefix (nsw_peak_demand -> nsw)
     # to group by, so each region's windows are checked for tiling independently
-    tagged = timeslices.assign(region=timeslices["timeslice_id"].str.split("_").str[0])
+    tagged = timeslices.assign(region=timeslices["timeslice"].str.split("_").str[0])
     not_tiling = sorted(
         (region, int(year))
         for (region, year), windows in tagged.groupby(["region", "reference_year"])
@@ -371,8 +371,8 @@ def _raise_unless_only_winter_crosses_financial_year(timeslices: pd.DataFrame) -
         ),
         axis=1,
     )
-    is_winter = timeslices["timeslice_id"].str.endswith("_winter_reference")
-    crossing = sorted(timeslices.loc[spans_july & ~is_winter, "timeslice_id"].unique())
+    is_winter = timeslices["timeslice"].str.endswith("_winter_reference")
+    crossing = sorted(timeslices.loc[spans_july & ~is_winter, "timeslice"].unique())
     if crossing:
         raise ValueError(
             f"Only winter_reference windows may cross the 1 July financial-year "
@@ -403,8 +403,8 @@ def _raise_unless_winter_is_constant_per_region(timeslices: pd.DataFrame) -> Non
     reference years, so which reference year owns its end never changes its
     value. This is the assumption documented on _template_timeslices.
     """
-    winter = timeslices[timeslices["timeslice_id"].str.endswith("_winter_reference")]
-    winter = winter.assign(region=winter["timeslice_id"].str.split("_").str[0])
+    winter = timeslices[timeslices["timeslice"].str.endswith("_winter_reference")]
+    winter = winter.assign(region=winter["timeslice"].str.split("_").str[0])
     varying = sorted(
         region
         for region, group in winter.groupby("region")

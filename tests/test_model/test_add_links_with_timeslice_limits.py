@@ -48,7 +48,7 @@ def test_named_timeslices_overlay_the_fallback(csv_str_to_df):
         CQ-NQ_existing,  p_min_pu,   ,                 -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
         qld_peak_demand,  2025,                2025-01-01 02:00:00
     """)
@@ -79,7 +79,7 @@ def test_fallback_only_attribute_gets_the_fallback_at_every_snapshot(csv_str_to_
         CQ-NQ_existing,  p_min_pu,   ,                 -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
 
@@ -114,7 +114,7 @@ def test_fallback_only_limits_with_no_timeslices_apply_at_every_snapshot(csv_str
         CQ-NQ_existing,  p_min_pu,   ,           0.0
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,  investment_periods,  snapshots
+        timeslice,  investment_periods,  snapshots
     """)
 
     _add_links_to_network(
@@ -141,7 +141,7 @@ def test_named_timeslices_that_tile_the_snapshots_need_no_fallback(csv_str_to_df
         CQ-NQ_existing,  p_min_pu,   ,                      -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,          investment_periods,  snapshots
+        timeslice,             investment_periods,  snapshots
         qld_winter_reference,  2025,                2025-01-01 00:00:00
         qld_peak_demand,       2025,                2025-01-01 01:00:00
         qld_peak_demand,       2025,                2025-01-01 02:00:00
@@ -172,7 +172,7 @@ def test_named_timeslice_with_no_snapshots_leaves_the_fallback(csv_str_to_df):
         CQ-NQ_existing,  p_min_pu,   ,                 -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,  investment_periods,  snapshots
+        timeslice,  investment_periods,  snapshots
     """)
 
     _add_links_to_network(
@@ -198,7 +198,7 @@ def test_snapshot_covered_by_neither_named_timeslice_nor_fallback_raises(csv_str
         CQ-NQ_existing,  p_min_pu,   ,                 -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
 
@@ -226,7 +226,7 @@ def test_existing_link_with_no_timeslice_limits_raises(csv_str_to_df):
         name,  attribute,  timeslice,  value
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,  investment_periods,  snapshots
+        timeslice,  investment_periods,  snapshots
     """)
 
     with pytest.raises(ValueError) as excinfo:
@@ -252,7 +252,7 @@ def test_existing_link_missing_one_attribute_raises(csv_str_to_df):
         CQ-NQ_existing,  p_max_pu,   ,                 1.0
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
 
@@ -286,7 +286,7 @@ def test_expansion_links_keep_their_static_values(csv_str_to_df):
         CQ-NQ_existing,  p_min_pu,   ,                 -0.714
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
 
@@ -341,7 +341,7 @@ def test_expand_limits_to_snapshots(csv_str_to_df):
         NQ-CQ_other,     p_max_pu,   ,                 0.8
     """)
     timeslice_snapshots = csv_str_to_df("""
-        timeslice_id,     investment_periods,  snapshots
+        timeslice,        investment_periods,  snapshots
         qld_peak_demand,  2025,                2025-01-01 01:00:00
     """)
     snapshots = pd.MultiIndex.from_arrays(

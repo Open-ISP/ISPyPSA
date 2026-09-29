@@ -454,7 +454,7 @@ def test_create_ispypsa_inputs_new_format(
     # RefYear5000 calendar, identical at every granularity.
     timeslices = pd.read_csv(output_dir / "timeslices.csv")
     assert len(timeslices) == _NUM_TIMESLICE_PATTERN_ROWS_75
-    assert timeslices["timeslice_id"].nunique() == _NUM_TIMESLICE_IDS_75
+    assert timeslices["timeslice"].nunique() == _NUM_TIMESLICE_IDS_75
     assert timeslices["reference_year"].nunique() == _NUM_REFERENCE_YEARS_75
 
     # custom_constraints — populated at sub_regions, header-only elsewhere (see
