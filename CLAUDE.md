@@ -45,6 +45,11 @@ def template_network_transmission_paths(iasr_tables, scenario):
 - **Prefer explicit data over clever detection.** If the set of special cases is small and
   stable, declare them as data rather than building logic to infer them from surrounding
   context.
+- **Say "investment period", never bare "period".** On its own, "period" reads as a
+  snapshot or time window. In prose (docstrings, comments, schema descriptions, I/O
+  Example notes) write "investment period", or name the `investment_period` column
+  ("a row with a blank investment_period", not "a blank-period row"). Bare `period` is
+  fine only where it is a literal name, such as PyPSA's snapshot index level.
 
 ### Control flow
 

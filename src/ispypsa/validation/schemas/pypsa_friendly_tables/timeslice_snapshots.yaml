@@ -1,0 +1,40 @@
+table: timeslice_snapshots
+required: false
+unique:
+  - [timeslice, investment_periods, snapshots]
+custom_validation:
+  - name: snapshots_are_in_the_snapshots_table
+    description: >
+      Every (investment_periods, snapshots) pair must be a row of the
+      pypsa-friendly snapshots table, which pypsa_build sets the network's
+      snapshots from. The translator builds this table from those same
+      snapshots, so the check guards the contract rather than a known gap;
+      pypsa_build selects model variables at these snapshots and would fail on
+      one the network doesn't have.
+description: >
+  Which snapshots each timeslice is active at: one row per (timeslice,
+  snapshot) pair. A snapshot appears once per region's timeslice active at it,
+  since each region's timeslice windows tile the year.
+
+  Produced by ispypsa.translator.timeslices, which re-sequences the templated
+  timeslice window patterns onto the model's snapshots. Consumed by
+  ispypsa.pypsa_build.links (per-timeslice link limits) and
+  ispypsa.pypsa_build.custom_constraints (named-timeslice custom constraints).
+
+  If absent (or empty):
+  No snapshot belongs to a named timeslice, so only the fallback rows (blank
+  timeslice) of link_timeslice_limits and custom_constraints_rhs apply.
+columns:
+  timeslice:
+    type: string
+    required: true
+    description: Timeslice active at the snapshot, e.g. qld_peak_demand.
+  investment_periods:
+    type: int
+    required: true
+    description: Investment period of the snapshot.
+  snapshots:
+    type: date
+    required: true
+    format: "%Y-%m-%d %H:%M:%S"
+    description: The snapshot's timestamp.

@@ -326,7 +326,18 @@ def test_empty_timeslices_table(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-def test_logs_referenced_timeslices_without_snapshots(csv_str_to_df, caplog):
+_LINK_TIMESLICE_LIMIT_COLUMNS = ["name", "attribute", "timeslice", "value"]
+_CUSTOM_CONSTRAINTS_RHS_COLUMNS = [
+    "constraint_name",
+    "investment_period",
+    "timeslice",
+    "rhs",
+    "constraint_type",
+]
+
+
+def test_logs_link_timeslices_without_snapshots(csv_str_to_df, caplog):
+    # The blank-timeslice fallback row isn't a timeslice, so it isn't reported.
     timeslice_snapshots = _snapshots(
         csv_str_to_df,
         """
@@ -338,11 +349,42 @@ def test_logs_referenced_timeslices_without_snapshots(csv_str_to_df, caplog):
         name,            attribute,  timeslice,        value
         CQ-NQ_existing,  p_max_pu,   nsw_peak_demand,  0.8
         CQ-NQ_existing,  p_max_pu,   tas_peak_demand,  0.9
+        CQ-NQ_existing,  p_max_pu,   ,                 1.0
     """)
+    custom_constraints_rhs = pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_RHS_COLUMNS)
+
+    with caplog.at_level("WARNING"):
+        _log_referenced_timeslices_without_snapshots(
+            timeslice_snapshots, link_timeslice_limits, custom_constraints_rhs
+        )
+
+    assert (
+        "Timeslices referenced by transmission limits but with no snapshots "
+        "in the model (these limits will never apply): ['tas_peak_demand']"
+    ) in caplog.text
+
+
+def test_logs_constraint_timeslices_without_snapshots_in_their_period(
+    csv_str_to_df, caplog
+):
+    # qld_peak_demand has snapshots in 2026 but not 2030 (e.g. representative
+    # weeks missed the peak day), vic_peak_demand has none at all. Blank-timeslice
+    # rows (a fallback and an expansion limit) aren't timeslices, so aren't reported.
+    timeslice_snapshots = _snapshots(
+        csv_str_to_df,
+        """
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2026,                2026-01-13 12:00:00
+        """,
+    )
+    link_timeslice_limits = pd.DataFrame(columns=_LINK_TIMESLICE_LIMIT_COLUMNS)
     custom_constraints_rhs = csv_str_to_df("""
-        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
-        SWQLD1,           2026,               vic_peak_demand,  3000,  <=
-        CQ-NQ_expansion_limit,  ,             ,                 1000,  <=
+        constraint_name,        investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                 2026,               qld_peak_demand,  3000,  <=
+        SWQLD1,                 2030,               qld_peak_demand,  3200,  <=
+        SWQLD1,                 2030,               ,                 3500,  <=
+        VIC1,                   2026,               vic_peak_demand,  2000,  <=
+        CQ-NQ_expansion_limit,  ,                   ,                 1000,  <=
     """)
 
     with caplog.at_level("WARNING"):
@@ -351,13 +393,14 @@ def test_logs_referenced_timeslices_without_snapshots(csv_str_to_df, caplog):
         )
 
     assert (
-        "Timeslices referenced by transmission limits or custom constraints "
-        "but with no snapshots in the model (these limits and constraints "
-        "will never apply): ['tas_peak_demand', 'vic_peak_demand']"
+        "Timeslices referenced by custom constraints but with no snapshots in "
+        "the constraint's investment period (these constraints will never "
+        "apply): [('qld_peak_demand', 2030), ('vic_peak_demand', 2026)]"
     ) in caplog.text
 
 
 def test_no_log_when_all_referenced_timeslices_have_snapshots(csv_str_to_df, caplog):
+    # Fallback rows on both tables must not be mistaken for unmapped timeslices.
     timeslice_snapshots = _snapshots(
         csv_str_to_df,
         """
@@ -368,10 +411,13 @@ def test_no_log_when_all_referenced_timeslices_have_snapshots(csv_str_to_df, cap
     link_timeslice_limits = csv_str_to_df("""
         name,            attribute,  timeslice,        value
         CQ-NQ_existing,  p_max_pu,   nsw_peak_demand,  0.8
+        CQ-NQ_existing,  p_max_pu,   ,                 1.0
     """)
     custom_constraints_rhs = csv_str_to_df("""
-        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
-        SWQLD1,           2026,               nsw_peak_demand,  3000,  <=
+        constraint_name,        investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                 2026,               nsw_peak_demand,  3000,  <=
+        SWQLD1,                 2026,               ,                 3500,  <=
+        CQ-NQ_expansion_limit,  ,                   ,                 1000,  <=
     """)
 
     with caplog.at_level("WARNING"):
