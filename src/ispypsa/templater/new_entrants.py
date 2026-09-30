@@ -394,7 +394,7 @@ def _collapse_geo_id_to_granularity(
     )
     collapsed["name"] = _rekey_names_to_collapsed_geo_id(
         collapsed,
-        set(old_geo_ids) | _EXTRA_SUBREGION_IN_NAMES,
+        set(old_geo_ids),
     )
 
     return pd.concat([unchanged, collapsed], ignore_index=True)[new_entrants.columns]
@@ -407,9 +407,13 @@ def _aggregate_by_geo_id(
 ) -> pd.DataFrame:
     """Groups by ``group_key_columns`` + 'geo_id', averages ``value_columns``, keeps
     the first instance of 'name' for each group."""
+    name_aggregation_rule = {"name": "first"}
+    value_aggregation_rules = {col: "mean" for col in value_columns}
+
+    # 'dropna=False' set to keep thermal generator rows (w/ NaN 'resource_type')
     return new_entrants.groupby(
         group_key_columns + ["geo_id"], dropna=False, as_index=False
-    ).agg({"name": "first", **{col: "mean" for col in value_columns}})
+    ).agg(name_aggregation_rule | value_aggregation_rules)
 
 
 def _rekey_names_to_collapsed_geo_id(
@@ -444,7 +448,9 @@ def _rekey_names_to_collapsed_geo_id(
     parts.columns = ["old_prefix", "separator", "rest_of_name"]
 
     rekeyed_names = new_entrants["geo_id"].str.cat(parts[["separator", "rest_of_name"]])
-    is_known_prefix = parts["old_prefix"].isin(known_name_prefixes)
+    is_known_prefix = parts["old_prefix"].isin(
+        known_name_prefixes | _EXTRA_SUBREGION_IN_NAMES
+    )
 
     return new_entrants["name"].where(~is_known_prefix, rekeyed_names)
 

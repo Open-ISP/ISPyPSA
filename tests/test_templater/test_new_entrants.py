@@ -489,7 +489,9 @@ def test_rekey_names_to_collapsed_geo_id(csv_str_to_df):
         Named Generator,            TAS
     """)
 
-    known_prefixes = {"NSA", "WOO", "NQ"}
+    # 'WOO' prefix is set as constant in _rekey_names_to_collapsed_geo_id
+    # so this should not error
+    known_prefixes = {"NSA", "NQ"}
     result = _rekey_names_to_collapsed_geo_id(new_entrants, known_prefixes)
 
     expected = pd.Series(
