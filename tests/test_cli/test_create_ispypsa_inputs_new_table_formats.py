@@ -315,6 +315,10 @@ _NON_REZ_PLACEHOLDER_GEO_IDS = {"N0", "V0"}
 # new entrant), so this is the same at every granularity.
 _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
 
+# As above - so far no 'Power Station' level collapse implemented so this count
+# remains the same at every granularity.
+_EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
+
 # REZ sub-zone ids used by some existing/planned generators that don't appear in
 # renewable_energy_zones (only their parent REZ does, e.g. "Q8" not "Q8a"/"Q8b"/
 # "Q8c"). Same gap class as _NON_REZ_PLACEHOLDER_GEO_IDS (#133), different cause.
@@ -375,6 +379,7 @@ def test_create_ispypsa_inputs_new_format(
     gens_new_entrant = pd.read_csv(output_dir / "generators_new_entrant.csv")
     storage_new_entrant = pd.read_csv(output_dir / "storage_new_entrant.csv")
     gens_existing_planned = pd.read_csv(output_dir / "generators_existing_planned.csv")
+    storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert len(geo) == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75
@@ -440,6 +445,16 @@ def test_create_ispypsa_inputs_new_format(
     assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
     assert gens_existing_planned["name"].is_unique
     assert set(gens_existing_planned["geo_id"]) <= (
+        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS | _MISSING_REZ_SUBZONE_GEO_IDS
+    )
+
+    # as above - storage_existing_planned — one row per existing/planned storage unit,
+    # no collapse step so the row count doesn't vary. geo_ids are real network_geography
+    # entries, except the two pre-existing gaps noted above ("Non-REZ" placeholders
+    # and REZ sub-zones).
+    assert len(storage_existing_planned) == _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75
+    assert storage_existing_planned["name"].is_unique
+    assert set(storage_existing_planned["geo_id"]) <= (
         set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS | _MISSING_REZ_SUBZONE_GEO_IDS
     )
 
