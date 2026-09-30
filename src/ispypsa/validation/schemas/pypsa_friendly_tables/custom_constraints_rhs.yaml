@@ -3,15 +3,16 @@ required: false
 unique:
   - [constraint_name, investment_period, timeslice]
 custom_validation:
-  - name: blank_period_rows_have_a_blank_timeslice
+  - name: blank_investment_period_rows_have_a_blank_timeslice
     description: >
       A row with a blank investment_period must also have a blank timeslice.
-      A blank period is reserved for constraints that apply regardless of
-      time: in every investment period and at every snapshot, so the timeslice
-      must be blank too. Only the expansion limits take this form. A
-      blank-period row with a named timeslice would match no snapshots, so
-      pypsa_build would skip it and its limit would silently never apply.
-  - name: constraint_periods_have_lhs_terms
+      A blank investment_period is reserved for constraints that apply
+      regardless of time: in every investment period and at every snapshot,
+      so the timeslice must be blank too. Only the expansion limits take this
+      form. A row with a blank investment_period and a named timeslice would
+      match no snapshots, so pypsa_build would skip it and its limit would
+      silently never apply.
+  - name: constraint_investment_periods_have_lhs_terms
     description: >
       Every (constraint_name, investment_period) here must have at least one
       custom_constraints_lhs term on a model variable (anything but a Load

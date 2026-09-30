@@ -13,11 +13,12 @@ custom_validation:
     description: >
       Every (constraint_name, investment_period) here must match a
       custom_constraints_rhs row with the same pair, blank matching blank. So a
-      blank-period term needs its constraint to have a blank-period RHS row, and
-      a period-specific term an RHS row in that period. pypsa_build picks each
+      term with a blank investment_period needs its constraint to have an RHS
+      row with a blank investment_period, and a term with an investment_period
+      an RHS row in that investment period. pypsa_build picks each
       constraint's terms from its RHS rows, so a term with no matching row is
-      silently ignored. The translator drops one-sided constraint periods
-      before this table is written.
+      silently ignored. The translator drops the investment periods in which a
+      constraint has only one side before this table is written.
   - name: variables_name_components_in_the_input_tables
     description: >
       variable_name must name a component in the pypsa-friendly table
@@ -59,8 +60,8 @@ columns:
 
       If absent (or empty):
       The term applies regardless of investment period, joining its
-      constraint's blank-period RHS row. Only the expansion limits take this
-      form (see terms_belong_to_an_rhs_row).
+      constraint's RHS row with a blank investment_period. Only the expansion
+      limits take this form (see terms_belong_to_an_rhs_row).
   variable_name:
     type: string
     required: true

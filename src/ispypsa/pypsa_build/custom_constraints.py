@@ -156,16 +156,16 @@ def _add_custom_constraints_with_temporal_scope(
     - When the timeslice is blank, it acts as a fallback: the constraint
       applies at the snapshots in its investment_period that none of the same
       constraint's named timeslices cover.
-    - A blank investment_period means every period, and only occurs on
-      fallback rows (custom_constraints_rhs schema). The expansion-limit
+    - A blank investment_period means every investment period, and only
+      occurs on fallback rows (custom_constraints_rhs schema). The expansion-limit
       constraints are the case in practice: blank in both, with a p_nom-only
       LHS that has no time dimension.
 
     A linopy constraint's LHS terms are the custom_constraints_lhs rows with
     its constraint_name and the same investment_period, blank matching blank.
-    The translator resolves every dated input to explicit periods, so a blank
-    period only occurs on constraints that apply regardless of period (the
-    expansion limits). Load terms are demand data rather than variables:
+    The translator resolves every dated input to explicit investment periods,
+    so a blank investment_period only occurs on constraints that apply
+    regardless of investment period (the expansion limits). Load terms are demand data rather than variables:
     coefficient x p_set becomes a per-snapshot constant, which linopy moves to
     the right-hand side.
 
@@ -321,9 +321,9 @@ def _fallback_snapshots(
     timeslice_snapshots: pd.DataFrame,
     snapshots: pd.MultiIndex,
 ) -> pd.MultiIndex:
-    """The snapshots in a fallback constraint's investment_period (every period
-    when blank) that none of its constraint_name's named timeslices in that
-    period cover.
+    """The snapshots in a fallback constraint's investment_period (every
+    investment period when blank) that none of its constraint_name's named
+    timeslices in that investment period cover.
 
     I/O Example:
         rhs_row:
@@ -343,7 +343,7 @@ def _fallback_snapshots(
             period  timestep
             2025    2025-01-01 00:00
             2025    2025-01-01 01:00   # covered by SWQLD1's qld_peak_demand
-            2030    2030-01-01 00:00   # other period
+            2030    2030-01-01 00:00   # other investment period
 
         returns:
             period  timestep
@@ -361,16 +361,16 @@ def _timeslices_named_in_period(
     custom_constraints_rhs: pd.DataFrame, rhs_row: tuple
 ) -> list[str]:
     """The timeslices named on rhs_row's constraint_name in its
-    investment_period. None for a blank-period row: only fallback rows leave
-    the period blank (custom_constraints_rhs schema), and a blank period
-    matches nothing here.
+    investment_period. None for a row with a blank investment_period: only
+    fallback rows leave it blank (custom_constraints_rhs schema), and a blank
+    investment_period matches nothing here.
 
     I/O Example:
         custom_constraints_rhs:
             constraint_name  investment_period  timeslice
             SWQLD1           2025               qld_peak_demand
             SWQLD1           2025               ,                    # the fallback itself
-            SWQLD1           2030               qld_summer_typical   # other period
+            SWQLD1           2030               qld_summer_typical   # other investment period
             SWQLD2           2025               qld_summer_typical   # other constraint
 
         rhs_row:
@@ -399,7 +399,7 @@ def _timeslice_snapshots_in_period(
             timeslice           investment_periods  snapshots
             qld_peak_demand     2025                2025-01-01 01:00
             qld_summer_typical  2025                2025-01-01 02:00
-            qld_peak_demand     2030                2030-01-01 01:00   # other period
+            qld_peak_demand     2030                2030-01-01 01:00   # other investment period
             nsw_peak_demand     2025                2025-01-01 01:00   # not listed
 
         timeslices: ["qld_peak_demand", "qld_summer_typical"]
@@ -453,13 +453,14 @@ def _select_lhs_terms(
     custom_constraints_lhs: pd.DataFrame, rhs_row: tuple
 ) -> pd.DataFrame:
     """The LHS terms of a linopy constraint: those with its constraint_name and
-    the same investment_period, a blank period matching only a blank period.
+    the same investment_period, a blank investment_period matching only a
+    blank one.
 
     I/O Example:
         custom_constraints_lhs:
             constraint_name          investment_period  variable_name
             SWQLD1                   2025               KINGASF1
-            SWQLD1                   2030               KINGASF1        # other period: dropped
+            SWQLD1                   2030               KINGASF1        # other investment period: dropped
             SWQLD2                   2025               KINGASF1        # other constraint: dropped
             CQ-NQ_expansion_limit    ,                  CQ-NQ_exp_2025
 

@@ -224,11 +224,12 @@ def test_lhs_terms_apply_only_in_their_own_investment_period(csv_str_to_df):
         SWQLD1,           2025,               ,           3500,  <=
         SWQLD1,           2030,               ,           3500,  <=
     """)
-    # The blank-period term matches neither period-specific RHS row: blank
-    # periods only pair with blank periods (the expansion-limit shape). The
-    # translator doesn't currently emit a blank-period term alongside
-    # period-specific ones; it's included for completeness, to pin down that
-    # such a term is left out rather than added in every period.
+    # The term with a blank investment_period matches neither RHS row, since
+    # both have an investment_period: a blank investment_period only pairs
+    # with a blank one (the expansion-limit shape). The translator doesn't
+    # currently emit a term with a blank investment_period alongside ones with
+    # an investment_period; it's included for completeness, to pin down that
+    # such a term is left out rather than added in every investment period.
     lhs = csv_str_to_df("""
         constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
@@ -628,7 +629,7 @@ def test_expansion_limit_caps_the_build_in_the_solved_model(csv_str_to_df):
     # With no existing link capacity, building the expansion link is far
     # cheaper than running the expensive generator, so unconstrained it would
     # be built to carry the whole 50 MW load. The expansion limit (blank
-    # period and timeslice, p_nom term) caps it at 30.
+    # investment_period and timeslice, p_nom term) caps it at 30.
     network = _two_bus_network(_ONE_PERIOD, load=[50, 50], link_p_nom=0)
     network.add(
         "Link",
