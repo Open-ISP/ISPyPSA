@@ -2,10 +2,11 @@
 summary into generator and storage tables, and builds the generator identity and
 property columns.
 
-Both target tables — see schemas/generators_existing_planned.yaml and
-schemas/storage_existing_planned.yaml — are built from the single IASR
-existing_committed_anticipated_additional_generator_summary table, which already lists
-one row per real generating/storage unit (DUID-level). TODO: finish templating storage.
+Both target tables — see schemas/ispypsa_tables/generators_existing_planned.yaml
+and schemas/ispypsa_tables/storage_existing_planned.yaml — are built from the
+single IASR existing_committed_anticipated_additional_generator_summary table,
+which already lists one row per real generating/storage unit (DUID-level). TODO:
+finish templating storage.
 
     existing_committed_anticipated_additional_generator_summary:
         IASR ID / DLT names  Power Station  Technology Type      REZ ID  Sub-region  Fuel type  Fuel cost mapping
