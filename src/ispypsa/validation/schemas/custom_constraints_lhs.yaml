@@ -11,14 +11,30 @@ description: >
       templater.
 
   Source notes:
-  variable_name uses IASR IDs for generators and batteries and path_ids for
-  links. Generator and battery terms may reference units that are not in the
-  model (e.g. before generator templating lands, or units outside a filtered
-  region); such terms are skipped with a log line when constraints are
-  applied.
+  variable_name uses IASR IDs for generators and batteries, path_ids for links
+  and sub-region codes for loads. The variable_names_resolve_by_term_type rule
+  ties each to its component table, so the translator and pypsa_build take the
+  names as given rather than checking them against the model.
 
   If absent:
   Constraints have no terms, so no custom constraints bind.
+custom_validation:
+  - name: lhs_and_rhs_name_the_same_constraints
+    description: >
+      Every constraint_id with a row here must have at least one row in
+      custom_constraints_rhs, and every constraint_id in custom_constraints_rhs
+      must have at least one row here. A constraint with terms but no limit
+      value, or a limit value but no terms, cannot be applied. This does not
+      require every custom_constraints row to have terms: a catalogued
+      constraint with neither LHS nor RHS rows simply never binds.
+  - name: variable_names_resolve_by_term_type
+    description: >
+      Each row's variable_name must exist in the table its term_type refers to:
+      link_flow -> network_transmission_paths.path_id; generator_output and
+      generator_capacity -> generators_existing_planned.name or
+      generators_new_entrant.name; storage_output -> storage_existing_planned.name
+      or storage_new_entrant.name; load -> network_geography.geo_id. A term
+      naming a component that is not in those tables cannot be applied.
 columns:
   constraint_id:
     type: string
@@ -39,9 +55,19 @@ columns:
     type: string
     required: true
     description: >
-      Name of the component the term's variable belongs to: an IASR ID for
-      generator_output and storage_output terms, a path_id for link_flow
-      terms.
+      Name of the model element the term's variable belongs to: an IASR ID for
+      generator_output, generator_capacity and storage_output terms, a path_id
+      for link_flow terms, a sub-region geo_id for load terms (see
+      custom_validation for the table each resolves against).
+
+      Names refer to whole elements, never to the per-build-year components
+      the translator builds from them, and one term covers every component of
+      its element. A new entrant generator or storage unit is referred to by
+      its name in generators_new_entrant / storage_new_entrant (its location
+      and technology, e.g. "N2 Solar"), and the term applies to the unit in
+      every build year. A path is referred to by its path_id (e.g. "NSW-QLD"),
+      and the term applies to the path's existing link and each of its
+      expansion links.
   coefficient:
     type: float
     required: true
