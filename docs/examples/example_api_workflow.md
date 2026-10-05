@@ -4,5 +4,5 @@ edit the code to point at an ispypsa_config.yaml file of your choice, then run t
 Python script.
 
 ```Python
---8<-- "example_workflow.py"
+--8 < --"example_workflow.py"
 ```
