@@ -590,16 +590,34 @@ def _reshape_technology_specific_lcfs(
 def _merge_phes_properties(
     phes: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
-    """Merges the pumped-hydro storage properties onto the PHES rows.
+    """Merges storage_hours and charge/discharge efficiency onto the PHES rows.
 
-    BOTN - Cethana's 'technology' is first overridden to its own name so it draws its own
-    published property rows rather than the generic PHES archetype's (see
-    ``_override_botn_technology``). The pumped-hydro table is the lone table that keys BOTN
-    by its full spelling, so its key is corrected to the bare name (``_PHES_BOTN_KEY_FIX``)
-    before a plain technology-keyed merge. The table gives storage_hours and a single
-    round-trip efficiency directly; charge/discharge efficiency are then derived from it
-    (see ``_derive_phes_symmetric_efficiency``). The round-trip column is dropped by the
-    orchestrator's final select.
+    Both properties come from ``pumped_hydro_new_entrant_properties``, merged by
+    technology. BOTN - Cethana should get its own row from that table, not the row for
+    the generic archetype it's labelled with in new_entrants_summary. So before the
+    merge, both sides are re-keyed to the bare name "BOTN - Cethana": the PHES row's
+    'technology' (``_override_botn_technology``) and the table's "BOTN - Cethana - 20h"
+    key (``_PHES_BOTN_KEY_FIX``).
+
+    The IASR table only publishes a round-trip efficiency, which is then split into
+    equal charge and discharge efficiencies , replacing the intermediate
+    'round_trip_efficiency' column (``_derive_phes_symmetric_efficiency``).
+
+    I/O Example:
+        phes:
+            name                   technology
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)
+            BOTN - Cethana - 20h   Pumped Hydro (24hrs storage)
+
+        pumped_hydro_new_entrant_properties:
+            Power Station / Technology    Storage capacity (hours)  Pumping efficiency (%)
+            Pumped Hydro (24hrs storage)  24                        64
+            BOTN - Cethana - 20h          20                        81
+
+        returns (efficiency_charge and efficiency_discharge are equal, shown as one column):
+            name                   technology                    storage_hours  efficiency_charge/discharge
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)  24.0           80.0  # sqrt(64%)
+            BOTN - Cethana - 20h   BOTN - Cethana                20.0           90.0  # BOTN's own row - sqrt(81%)
     """
     phes = phes.copy()
     phes["technology"] = _override_botn_technology(phes)
