@@ -316,7 +316,7 @@ def _is_existing_planned_storage_row(
         phes_properties:
             Power Station
             Wivenhoe
-            Borumba
+            QEJP - Borumba
 
         returns: pd.Series([True, True, False, True])
     """
@@ -381,7 +381,7 @@ def _merge_unit_keyed_properties(
     Groups properties by source (table, key_col) — see ``_group_properties_by_source``
     — so a table contributing several columns (e.g. maximum_capacity_... feeds
     capacity and commissioning_date) is validated and key-resolved once. Each
-    generator's ``name`` is resolved against the property table's own 'key' column (see
+    unit's ``name`` is resolved against the property table's own 'key' column (see
     ``_resolve_unit_keys``); the resolved series becomes the key on which property
     values are mapped.
 
