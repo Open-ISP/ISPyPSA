@@ -152,6 +152,11 @@ _CUSTOM_CONSTRAINT_TERM_TYPE_TO_COMPONENT_TYPE = {
     "generator_capacity": "Generator",
     "generator_output": "Generator",
     "load_consumption": "Load",
+    # "load" is the new-format vocabulary for "load_consumption" (PLEXOS Node
+    # Load Coefficient terms). A load term is a data term — the demand (p_set)
+    # at the term's demand node, scaled by the coefficient — rather than a
+    # term on an optimisation variable.
+    "load": "Load",
     "storage_output": "Storage",
 }
 
@@ -159,7 +164,8 @@ _CUSTOM_CONSTRAINT_TERM_TYPE_TO_ATTRIBUTE_TYPE = {
     "link_flow": "p",
     "generator_capacity": "p_nom",
     "generator_output": "p",
-    "load_consumption": "p",
+    "load_consumption": "p_set",
+    "load": "p_set",
     "storage_output": "p",
 }
 
