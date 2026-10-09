@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 
+from ispypsa.templater.geography import _NON_REZ_GEOGRAPHIES
 from ispypsa.templater.helpers import _build_geo_region_lookup
 from ispypsa.templater.mappings import _CANONICAL_TIMESLICES, _SINGLE_REGION_ID
 
@@ -605,10 +606,18 @@ def _log_rez_paths_absent_from_limits(
     """Logs REZ paths whose REZ ID has no row in initial_transmission_limits.
 
     These paths get NaN capacity rows from the left-merge, are collapsed by
-    ``_collapse_paths_with_no_limits``, and receive a default downstream.
+    ``_collapse_paths_with_no_limits``, and receive a default downstream. Non-REZ
+    geo_ids that have been added to 'renewable_energy_zones' (N0 and V0, see
+    ``geography._add_non_rez_geographies_to_rez_table``) are expected to have no
+    initial limit, so are excluded from this log.
     """
     rez_with_limits = set(initial_transmission_limits["REZ ID"])
-    missing = sorted(set(rez_connection_rows["geo_from"]) - rez_with_limits)
+    known_non_rezs_with_no_limits = {row["ID"] for row in _NON_REZ_GEOGRAPHIES}
+    missing = sorted(
+        set(rez_connection_rows["geo_from"])
+        - rez_with_limits
+        - known_non_rezs_with_no_limits
+    )
     if missing:
         logging.warning(
             f"REZs absent from initial_transmission_limits "

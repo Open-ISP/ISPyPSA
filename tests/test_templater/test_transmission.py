@@ -404,17 +404,30 @@ def test_logs_rez_paths_absent_from_initial_limits(csv_str_to_df, caplog):
         ID,  Name,             NEM region,  ISP sub-region
         Q1,  Far North QLD,    QLD,         NQ
         N3,  Central-West,     NSW,         CNSW
+        N0,  NSW Non-REZ,      NSW,         CNSW
+        V0,  VIC Non-REZ,      VIC,         SEV
     """)
+
+    # add non-REZs to sub_regional_geography stub to avoid 'Path geos missing' error
+    sub_regional_geography = _sub_regional_geography()
+    non_rezs = csv_str_to_df("""
+        geo_id, geo_type,   region_id,  subregion_id
+        N0,     rez,        NSW,        CNSW
+        V0,     rez,        VIC,        SEV
+    """)
+    sub_regional_geo_with_non_rezs = pd.concat(
+        [sub_regional_geography, non_rezs], axis=0, ignore_index=True
+    )
 
     with caplog.at_level("WARNING"):
         _template_network_transmission(
             flow_paths,
             initial_limits,
             renewable_energy_zones,
-            _sub_regional_geography(),
+            sub_regional_geo_with_non_rezs,
             "sub_regions",
         )
-
+    # known exceptions 'N0' and 'V0' should not be logged here - only 'N3'
     assert (
         "REZs absent from initial_transmission_limits "
         "(default will be applied downstream): ['N3']"
