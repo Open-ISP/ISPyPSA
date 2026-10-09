@@ -233,12 +233,14 @@ def test_create_ispypsa_inputs_task_new_format(
 _NUM_SUBREGIONS_75 = 15
 _NUM_REGIONS_75 = 5
 _NUM_REZS_75 = 47
+_NUM_NON_REZS_75 = 2
 _NUM_FLOW_PATHS_75 = 18
 
 # REZs whose row in `initial_transmission_limits` has all-NaN limit columns.
 # Each collapses to a single placeholder row in network_transmission_path_limits
 # instead of the usual `NUM_TIMESLICES × NUM_DIRECTIONS` rows.
-_NUM_REZS_WITHOUT_LIMITS_75 = 15
+# All non-REZ geographies (N0/V0) have no limits so counts are added here.
+_NUM_REZS_WITHOUT_LIMITS_75 = 15 + _NUM_NON_REZS_75
 
 # Flow paths in the 7.5 input whose augmentation key has no exact match in
 # `flow_path_transfer_capability` and that therefore get a synthetic
@@ -276,10 +278,13 @@ _GEOS_PER_GRANULARITY_75 = {
 
 _PATHS_PER_GRANULARITY_75 = {
     "sub_regions": (
-        _NUM_FLOW_PATHS_75 + _NUM_REZS_75 + _NUM_PARALLEL_PATHS_INJECTED_75_SUB_REGIONS
+        _NUM_FLOW_PATHS_75
+        + _NUM_REZS_75
+        + _NUM_NON_REZS_75
+        + _NUM_PARALLEL_PATHS_INJECTED_75_SUB_REGIONS
     ),
-    "nem_regions": _NUM_INTER_REGIONAL_FLOW_PATHS_75 + _NUM_REZS_75,
-    "single_region": _NUM_REZS_75,
+    "nem_regions": _NUM_INTER_REGIONAL_FLOW_PATHS_75 + _NUM_REZS_75 + _NUM_NON_REZS_75,
+    "single_region": _NUM_REZS_75 + _NUM_NON_REZS_75,
 }
 
 # Drift-detection only — per-option year coverage varies.
@@ -307,10 +312,6 @@ _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75 = {
     "single_region": 135,
 }
 
-# "Non-REZ" placeholder REZ IDs used by generation technologies with no specific
-# REZ location (state-wide VRE/DER). See Open-ISP/ISPyPSA#133
-_NON_REZ_PLACEHOLDER_GEO_IDS = {"N0", "V0"}
-
 # Drift-detection only — no collapse step for existing/planned generators (unlike
 # new entrant), so this is the same at every granularity.
 _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
@@ -321,8 +322,7 @@ _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
 
 # REZ sub-zone ids used by some existing/planned generators that don't appear in
 # renewable_energy_zones (only their parent REZ does, e.g. "Q8" not "Q8a"/"Q8b"/
-# "Q8c"). Same gap class as _NON_REZ_PLACEHOLDER_GEO_IDS (#133), different cause.
-# NOTE: placeholder fix for now - will be properly addressed in future PR (next up)
+# "Q8c"). NOTE: placeholder fix for now - will be properly addressed in future PR (next up)
 _MISSING_REZ_SUBZONE_GEO_IDS = {"Q8a", "Q8b", "Q8c"}
 
 # Per-reference-year window patterns decoded from the shipped RefYear5000
@@ -382,7 +382,10 @@ def test_create_ispypsa_inputs_new_format(
     storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
-    assert len(geo) == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75
+    assert (
+        len(geo)
+        == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75 + _NUM_NON_REZS_75
+    )
     assert geo["geo_id"].is_unique
 
     # network_transmission_paths — derived from named structural quantities:
@@ -423,14 +426,12 @@ def test_create_ispypsa_inputs_new_format(
     # generators_new_entrant / storage_new_entrant — row counts drop at coarser
     # granularities as sub-region-located technology options merge into one row
     # per region (REZ-located rows are unaffected). geo_ids are real network_geography
-    # entries, except the pre-existing "Non-REZ" placeholder gap (ISPyPSA#133)
+    # entries.
     assert (
         len(gens_new_entrant) == _EXPECTED_GENERATORS_NEW_ENTRANT_ROWS_75[granularity]
     )
     assert gens_new_entrant["name"].is_unique
-    assert set(gens_new_entrant["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
-    )
+    assert set(gens_new_entrant["geo_id"]) <= (set(geo["geo_id"]))
 
     assert (
         len(storage_new_entrant) == _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75[granularity]
@@ -440,30 +441,27 @@ def test_create_ispypsa_inputs_new_format(
 
     # generators_existing_planned — one row per existing/planned generating unit,
     # no collapse step (unlike new entrant) so the row count doesn't vary by
-    # granularity. geo_ids are real network_geography entries, except the two
-    # pre-existing gaps noted above ("Non-REZ" placeholders and REZ sub-zones).
+    # granularity. geo_ids are real network_geography entries, except the
+    # pre-existing gap noted above (REZ sub-zones).
     assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
     assert gens_existing_planned["name"].is_unique
     assert set(gens_existing_planned["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS | _MISSING_REZ_SUBZONE_GEO_IDS
+        set(geo["geo_id"]) | _MISSING_REZ_SUBZONE_GEO_IDS
     )
 
     # as above - storage_existing_planned — one row per existing/planned storage unit,
     # no collapse step so the row count doesn't vary. geo_ids are real network_geography
-    # entries, except the two pre-existing gaps noted above ("Non-REZ" placeholders
-    # and REZ sub-zones).
+    # entries, except the pre-existing gap noted above (REZ sub-zones).
     assert len(storage_existing_planned) == _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75
     assert storage_existing_planned["name"].is_unique
     assert set(storage_existing_planned["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS | _MISSING_REZ_SUBZONE_GEO_IDS
+        set(geo["geo_id"]) | _MISSING_REZ_SUBZONE_GEO_IDS
     )
 
     # costs_connection - every new entrant technology + geo_id + year has a row
-    # geo_id's are real network_geography entries + _NON_REZ_PLACEHOLDER_GEO_IDS
+    # geo_id's are real network_geography entries
     assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
-    assert set(costs_connection["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
-    )
+    assert set(costs_connection["geo_id"]) <= set(geo["geo_id"])
 
     # timeslices — per-reference-year patterns decoded from the shipped
     # RefYear5000 calendar, identical at every granularity.
