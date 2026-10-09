@@ -11,8 +11,9 @@ There are two independent public orchestrators, one per output table. Each one:
     3. Derives geo_id (REZ ID or sub-region)
     4. (Generators only) Derives resource_type from the VRE code in the IASR ID
     5. Merges in per-technology property values — each a single number looked up by
-       technology, via _merge_properties (see the property merge maps in mappings.py,
-       e.g. _GENERATORS_NEW_ENTRANT_PROPERTY_MAP). Generators and storage share a common
+       technology, via helpers._merge_category_keyed_properties (see the property
+       merge maps in mappings.py, e.g. _GENERATORS_NEW_ENTRANT_PROPERTY_MAP).
+       Generators and storage share a common
        set of these (_COMMON_NEW_ENTRANT_PROPERTY_MAP). Storage additionally splits
        into battery and pumped-hydro (PHES) rows, which take their storage-specific
        properties from different IASR tables, then recombines them before merging
@@ -35,18 +36,16 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacement,
+    _apply_iasr_table_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
-    _get_property_value_map,
-    _group_properties_by_source,
     _is_battery_row,
     _is_pumped_hydro_row,
     _is_storage_row,
     _is_subregion_geo_id,
     _map_geo_id_to_granularity,
-    _required_property_columns,
+    _merge_category_keyed_properties,
     _set_geo_id,
 )
 from ispypsa.templater.mappings import (
@@ -207,7 +206,9 @@ def _template_generators_new_entrant(
     gens = gens.rename(columns=_SUMMARY_COLUMN_RENAMES)
     gens = _set_geo_id(gens)
     gens = _add_resource_type(gens)
-    gens = _merge_properties(gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP)
+    gens = _merge_category_keyed_properties(
+        gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP, df_key_col="technology"
+    )
     _assert_build_cost_zone_matches_geo_id(gens)
     gens = _merge_lcf_build(gens, iasr_tables["technology_specific_lcfs"])
     gens = _merge_lcf_om(gens, iasr_tables["locational_cost_factors"])
@@ -261,16 +262,22 @@ def _template_storage_new_entrant(
     storage = new_entrants_summary[_is_storage_row(new_entrants_summary)].copy()
     storage = storage.rename(columns=_SUMMARY_COLUMN_RENAMES)
     storage = _set_geo_id(storage)
-    batteries = _merge_properties(
+    batteries = _merge_category_keyed_properties(
         storage[_is_battery_row(storage, col_to_check="technology")],
         iasr_tables,
         _STORAGE_BATTERY_PROPERTY_MAP,
+        df_key_col="technology",
     )
     phes = _merge_phes_properties(
         storage[_is_pumped_hydro_row(storage, col_to_check="technology")], iasr_tables
     )
     storage = pd.concat([batteries, phes], ignore_index=True)
-    storage = _merge_properties(storage, iasr_tables, _COMMON_NEW_ENTRANT_PROPERTY_MAP)
+    storage = _merge_category_keyed_properties(
+        storage,
+        iasr_tables,
+        _COMMON_NEW_ENTRANT_PROPERTY_MAP,
+        df_key_col="technology",
+    )
     _assert_build_cost_zone_matches_geo_id(storage)
     storage = _merge_lcf_build(storage, iasr_tables["technology_specific_lcfs"])
     storage = _merge_lcf_om(storage, iasr_tables["locational_cost_factors"])
@@ -282,52 +289,6 @@ def _template_storage_new_entrant(
         _STORAGE_GEO_ID_GROUP_KEYS,
         _STORAGE_PROPERTY_COLUMNS,
     )
-
-
-# --- shared helpers ---
-
-
-def _merge_properties(
-    new_entrants: pd.DataFrame,
-    iasr_tables: dict[str, pd.DataFrame],
-    property_map: dict[str, dict],
-) -> pd.DataFrame:
-    """Merges every property in ``property_map`` onto ``new_entrants``.
-
-    Groups properties by their source (table, key_col) — see
-    ``_group_properties_by_source`` — so a table that contributes several properties
-    (e.g. ``battery_properties`` feeds six) is validated and fuzzy-matched against
-    ``new_entrants``' 'technology' once per property map.
-
-    I/O Example (property_map = _STORAGE_BATTERY_PROPERTY_MAP, abbreviated):
-        new_entrants:
-            name             technology
-            NQ Battery - 2h  Battery Storage (2hrs storage)
-
-        returns (adds one column per map key):
-            name             technology                      storage_hours  efficiency_charge  ...
-            NQ Battery - 2h  Battery Storage (2hrs storage)   2.0            92.0               ...
-    """
-    new_entrants = new_entrants.copy()
-    for (table_name, key_col), props in _group_properties_by_source(
-        property_map
-    ).items():
-        table = iasr_tables[table_name]
-        _assert_table_valid(
-            table,
-            table_name,
-            _required_property_columns(props),
-            f"{sorted(props.keys())}",
-        )
-        matched_technology = _fuzzy_map_to_allowed_values(
-            new_entrants["technology"],
-            table[key_col],
-            task_desc=f"merging new entrant properties from '{table_name}'",
-        )
-        for new_col, attrs in props.items():
-            property_values = _get_property_value_map(table, attrs)
-            new_entrants[new_col] = matched_technology.map(property_values)
-    return new_entrants
 
 
 # --- regional granularity collapse ---
@@ -629,23 +590,42 @@ def _reshape_technology_specific_lcfs(
 def _merge_phes_properties(
     phes: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
-    """Merges the pumped-hydro storage properties onto the PHES rows.
+    """Merges storage_hours and charge/discharge efficiency onto the PHES rows.
 
-    BOTN - Cethana's 'technology' is first overridden to its own name so it draws its own
-    published property rows rather than the generic PHES archetype's (see
-    ``_override_botn_technology``). The pumped-hydro table is the lone table that keys BOTN
-    by its full spelling, so its key is corrected to the bare name (``_PHES_BOTN_KEY_FIX``)
-    before a plain technology-keyed merge. The table gives storage_hours and a single
-    round-trip efficiency directly; charge/discharge efficiency are then derived from it
-    (see ``_derive_phes_symmetric_efficiency``). The round-trip column is dropped by the
-    orchestrator's final select.
+    Both properties come from ``pumped_hydro_new_entrant_properties``, merged by
+    technology. BOTN - Cethana should get its own row from that table, not the row for
+    the generic archetype it's labelled with in new_entrants_summary. So before the
+    merge, both sides are re-keyed to the bare name "BOTN - Cethana": the PHES row's
+    'technology' (``_override_botn_technology``) and the table's "BOTN - Cethana - 20h"
+    key (``_PHES_BOTN_KEY_FIX``).
+
+    The IASR table only publishes a round-trip efficiency, which is then split into
+    equal charge and discharge efficiencies , replacing the intermediate
+    'round_trip_efficiency' column (``_derive_phes_symmetric_efficiency``).
+
+    I/O Example:
+        phes:
+            name                   technology
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)
+            BOTN - Cethana - 20h   Pumped Hydro (24hrs storage)
+
+        pumped_hydro_new_entrant_properties:
+            Power Station / Technology    Storage capacity (hours)  Pumping efficiency (%)
+            Pumped Hydro (24hrs storage)  24                        64
+            BOTN - Cethana - 20h          20                        81
+
+        returns (efficiency_charge and efficiency_discharge are equal, shown as one column):
+            name                   technology                    storage_hours  efficiency_charge/discharge
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)  24.0           80.0  # sqrt(64%)
+            BOTN - Cethana - 20h   BOTN - Cethana                20.0           90.0  # BOTN's own row - sqrt(81%)
     """
     phes = phes.copy()
     phes["technology"] = _override_botn_technology(phes)
-    phes = _merge_properties(
+    phes = _merge_category_keyed_properties(
         phes,
-        _apply_known_value_replacement(iasr_tables, _PHES_BOTN_KEY_FIX),
+        _apply_iasr_table_replacements(iasr_tables, [_PHES_BOTN_KEY_FIX]),
         _STORAGE_PHES_PROPERTY_MAP,
+        df_key_col="technology",
     )
     phes = _derive_phes_symmetric_efficiency(phes)
     return phes
