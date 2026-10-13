@@ -320,11 +320,6 @@ _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
 # remains the same at every granularity.
 _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
 
-# REZ sub-zone ids used by some existing/planned generators that don't appear in
-# renewable_energy_zones (only their parent REZ does, e.g. "Q8" not "Q8a"/"Q8b"/
-# "Q8c"). NOTE: placeholder fix for now - will be properly addressed in future PR (next up)
-_MISSING_REZ_SUBZONE_GEO_IDS = {"Q8a", "Q8b", "Q8c"}
-
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
 # granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
@@ -445,18 +440,14 @@ def test_create_ispypsa_inputs_new_format(
     # pre-existing gap noted above (REZ sub-zones).
     assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
     assert gens_existing_planned["name"].is_unique
-    assert set(gens_existing_planned["geo_id"]) <= (
-        set(geo["geo_id"]) | _MISSING_REZ_SUBZONE_GEO_IDS
-    )
+    assert set(gens_existing_planned["geo_id"]) <= set(geo["geo_id"])
 
     # as above - storage_existing_planned — one row per existing/planned storage unit,
     # no collapse step so the row count doesn't vary. geo_ids are real network_geography
     # entries, except the pre-existing gap noted above (REZ sub-zones).
     assert len(storage_existing_planned) == _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75
     assert storage_existing_planned["name"].is_unique
-    assert set(storage_existing_planned["geo_id"]) <= (
-        set(geo["geo_id"]) | _MISSING_REZ_SUBZONE_GEO_IDS
-    )
+    assert set(storage_existing_planned["geo_id"]) <= set(geo["geo_id"])
 
     # costs_connection - every new entrant technology + geo_id + year has a row
     # geo_id's are real network_geography entries
