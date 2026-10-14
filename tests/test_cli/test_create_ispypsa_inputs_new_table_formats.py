@@ -436,21 +436,20 @@ def test_create_ispypsa_inputs_new_format(
 
     # generators_existing_planned — one row per existing/planned generating unit,
     # no collapse step (unlike new entrant) so the row count doesn't vary by
-    # granularity. geo_ids are real network_geography entries, except the
-    # pre-existing gap noted above (REZ sub-zones).
+    # granularity. geo_ids are real network_geography entries.
     assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
     assert gens_existing_planned["name"].is_unique
     assert set(gens_existing_planned["geo_id"]) <= set(geo["geo_id"])
 
     # as above - storage_existing_planned — one row per existing/planned storage unit,
     # no collapse step so the row count doesn't vary. geo_ids are real network_geography
-    # entries, except the pre-existing gap noted above (REZ sub-zones).
+    # entries.
     assert len(storage_existing_planned) == _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75
     assert storage_existing_planned["name"].is_unique
     assert set(storage_existing_planned["geo_id"]) <= set(geo["geo_id"])
 
     # costs_connection - every new entrant technology + geo_id + year has a row
-    # geo_id's are real network_geography entries
+    # geo_id's are real network_geography entries.
     assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
     assert set(costs_connection["geo_id"]) <= set(geo["geo_id"])
 
