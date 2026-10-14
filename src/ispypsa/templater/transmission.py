@@ -2,9 +2,12 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.geography import _NON_REZ_GEOGRAPHIES
 from ispypsa.templater.helpers import _build_geo_region_lookup
-from ispypsa.templater.mappings import _CANONICAL_TIMESLICES, _SINGLE_REGION_ID
+from ispypsa.templater.mappings import (
+    _CANONICAL_TIMESLICES,
+    _NON_REZ_GEOGRAPHIES,
+    _SINGLE_REGION_ID,
+)
 
 _HVDC_PATH_IDS = {"NNSW-SQ_Terranora", "WNV-CSA_Murraylink", "TAS-SEV"}
 
@@ -612,7 +615,7 @@ def _log_rez_paths_absent_from_limits(
     initial limit, so are excluded from this log.
     """
     rez_with_limits = set(initial_transmission_limits["REZ ID"])
-    known_non_rezs_with_no_limits = {row["ID"] for row in _NON_REZ_GEOGRAPHIES}
+    known_non_rezs_with_no_limits = set(_NON_REZ_GEOGRAPHIES["ID"])
     missing = sorted(
         set(rez_connection_rows["geo_from"])
         - rez_with_limits

@@ -111,7 +111,7 @@ def test_template_network_geography_single_region(csv_str_to_df):
 # --- _add_non_rez_geographies_to_rez_table ---
 
 
-def test_add_non_rez_geographies_to_rez_table(csv_str_to_df):
+def test_add_non_rez_geographies_to_rez_table(csv_str_to_df, caplog):
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,                 NEM region,  ISP sub-region
         Q1,   Far North QLD,        QLD,         NQ
@@ -126,7 +126,8 @@ def test_add_non_rez_geographies_to_rez_table(csv_str_to_df):
         """),
     }
 
-    updated_tables = _add_non_rez_geographies_to_rez_table(iasr_tables)
+    with caplog.at_level("INFO"):
+        updated_tables = _add_non_rez_geographies_to_rez_table(iasr_tables)
 
     # check that returned renewable_energy_zones table has extra rows
     expected_rez = csv_str_to_df("""
@@ -139,6 +140,13 @@ def test_add_non_rez_geographies_to_rez_table(csv_str_to_df):
     pd.testing.assert_frame_equal(
         updated_tables["renewable_energy_zones"], expected_rez
     )
+
+    # and that the additions were logged:
+    msg = (
+        "IASR TABLE EDIT: Added non-REZ geographies to 'renewable_energy_zones' "
+        "IASR table: ['N0', 'V0']"
+    )
+    assert msg in caplog.text
 
     # and that the other table passed through untouched
     assert updated_tables["another_table"] is iasr_tables["another_table"]
