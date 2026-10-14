@@ -663,6 +663,29 @@ _SINGLE_REGION_ID = "NEM"
 # lowercased NEM region id.
 _CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 
+# Two non-REZ areas are defined in the ISP to host lower resource quality new
+# entrant VRE (see IASR 2026, p.164 for ISP reasoning). They are not present in the
+# 'renewable_energy_zones' table in the IASR workbook, so they get manually added
+# by `_add_non_rez_geographies_to_rez_table` before templating, to ensure
+# the corresponding geo_ids exist and are mapped to the correct sub/NEM regions.
+# See Open-ISP/ISPyPSA#133.
+_NON_REZ_GEOGRAPHIES = pd.DataFrame(
+    [
+        {
+            "ID": "N0",
+            "Name": "New South Wales Non-REZ",
+            "NEM region": "NSW",
+            "ISP sub-region": "CNSW",
+        },
+        {
+            "ID": "V0",
+            "Name": "Victoria Non-REZ",
+            "NEM region": "VIC",
+            "ISP sub-region": "SEV",
+        },
+    ]
+)
+
 """
 New entrant property columns (keys) mapped to the IASR table and columns that contain
 property values and the technology for which the values apply. Consumed by

@@ -1,6 +1,12 @@
+import logging
+
 import pandas as pd
 
-from ispypsa.templater.mappings import _NEM_REGION_IDS, _SINGLE_REGION_ID
+from ispypsa.templater.mappings import (
+    _NEM_REGION_IDS,
+    _NON_REZ_GEOGRAPHIES,
+    _SINGLE_REGION_ID,
+)
 
 
 def _template_network_geography(
@@ -274,3 +280,69 @@ def _rez_rows_for_single_region(
 def _extract_subregion_id(series: pd.Series) -> pd.Series:
     """Extract subregion ID from 'Name (ID)' format, e.g. 'Northern Queensland (NQ)' -> 'NQ'."""
     return series.str.extract(r"\(([A-Z]+)\)", expand=False)
+
+
+# --- non-REZ geographies ---
+
+
+def _add_non_rez_geographies_to_rez_table(
+    iasr_tables: dict[str, pd.DataFrame],
+) -> dict[str, pd.DataFrame]:
+    """Returns a shallow copy of iasr_tables with non-REZ areas N0 and V0 appended
+    to renewable_energy_zones.
+
+    Raises:
+        ValueError: if any non-REZ ID is already present in renewable_energy_zones.
+
+    I/O Example:
+        _NON_REZ_GEOGRAPHIES (constant, mappings.py):
+            ID,  Name,                     NEM region,  ISP sub-region
+            N0,  New South Wales Non-REZ,  NSW,         CNSW
+            V0,  Victoria Non-REZ,         VIC,         SEV
+
+        iasr_tables["renewable_energy_zones"]:
+            ID,  Name,         NEM region,  ISP sub-region
+            Q1,  Far North,    QLD,         NQ
+            N3,  Central-West, NSW,         CNSW
+
+        returns:
+            iasr_tables["renewable_energy_zones"]:
+                ID,  Name,                      NEM region,  ISP sub-region
+                Q1,  Far North,                 QLD,         NQ
+                N3,  Central-West,              NSW,         CNSW
+                N0,  New South Wales Non-REZ,   NSW,         CNSW   # added
+                V0,  Victoria Non-REZ,          VIC,         SEV    # added
+
+            All other iasr_tables are returned unchanged.
+    """
+    _assert_non_rezs_dont_exist(iasr_tables["renewable_energy_zones"])
+    table = pd.concat(
+        [iasr_tables["renewable_energy_zones"], _NON_REZ_GEOGRAPHIES],
+        axis=0,
+        ignore_index=True,
+    )
+    _log_non_rezs_added_to_rez_table()
+    return {**iasr_tables, "renewable_energy_zones": table}
+
+
+def _assert_non_rezs_dont_exist(table: pd.DataFrame) -> None:
+    """Raises if any non-REZ ID is already in the table, which would duplicate it."""
+    additional_non_rez_ids = set(_NON_REZ_GEOGRAPHIES["ID"])
+    existing_ids = set(table["ID"])
+    already_present = additional_non_rez_ids & existing_ids
+    if already_present:
+        msg = (
+            f"Non-REZ ID(s) {sorted(already_present)} are already defined in "
+            "'renewable_energy_zones' IASR table. Check '_NON_REZ_GEOGRAPHIES' "
+            "is up-to-date."
+        )
+        raise ValueError(msg)
+
+
+def _log_non_rezs_added_to_rez_table() -> None:
+    """Logs non-REZs added to the renewable_energy_zones table."""
+    msg = (
+        "IASR TABLE EDIT: Added non-REZ geographies to 'renewable_energy_zones' "
+        f"IASR table: {sorted(_NON_REZ_GEOGRAPHIES['ID'])}"
+    )
+    logging.info(msg)
