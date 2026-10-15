@@ -26,6 +26,7 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
+from ispypsa.templater.fuel_prices import _template_fuel_prices
 from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
     _template_network_geography,
@@ -103,6 +104,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_expansion_costs",
     "timeslices",
     "costs_connection",
+    "costs_fuel_prices",
     "generators_existing_planned",
     "generators_new_entrant",
     "storage_existing_planned",
@@ -266,6 +268,15 @@ def create_ispypsa_inputs_template(
         )
         template["storage_existing_planned"] = _template_storage_existing_planned(
             iasr_tables, regional_granularity, sub_regional_geography
+        )
+
+        template["costs_fuel_prices"] = _template_fuel_prices(
+            iasr_tables,
+            scenario,
+            sub_regional_geography,
+            regional_granularity,
+            template["generators_new_entrant"],
+            template["generators_existing_planned"],
         )
 
         if regional_granularity == "sub_regions":
