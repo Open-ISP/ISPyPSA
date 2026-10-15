@@ -8,16 +8,15 @@ table: costs_fuel_prices
 # columns/tables needed to calculate SRMC (dynamic) required.
 required: true
 unique:
-  - [fuel_type, fuel_price_mapping, year]
+  - [fuel_type, power_station, technology, geo_id, year]
 description: >
-  Fuel prices by year for generation and storage units.
+  Fuel prices by year for existing and new entrant generation units.
 
   Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
 
   Source tables:
     - `coal_fuel_price`
     - `biomass_fuel_price`
-    - `gas_and_liquid_fuel_prices_consultant_scenario_mapping`
     - `gas_prices_existing_generators`
     - `gas_prices_new_entrants`
     - `liquid_fuel_prices`
@@ -42,19 +41,62 @@ columns:
       There are some fuel types (e.g., Biomethane) that are not used directly by any
       generators in the model, but are used to blend with other fuels to calculate
       final fuel costs.
-  fuel_price_mapping:
+  # fuel_price_mapping:
+  #   type: string
+  #   required: true
+  #   description: >
+  #     Identifier mapping to specific assets or sets of new entrant assets.
+
+  #     For most existing and planned generation, maps to specific power stations.
+  #     For new entrants, maps to technology/location groups.
+
+  #     Source notes:
+  #     For purely 'blending' fuels (e.g. Biomethane) and VRE fuel types (Wind, Solar),
+  #     that don't map to a specific generator, technology, or location this column is
+  #     filled by the `templater` with the corresponding `fuel_type` value.
+  # TODO: revisit this decision and the 'If absent (or empty)' description text below
+  # for the 'wild-card' identifier key columns - I'm not sure yet if this makes sense!
+  power_station:
     type: string
-    required: true
+    required: false
+    allowed_values_from:
+      - generators_existing_planned: power_station
     description: >
-      Identifier mapping to specific assets or sets of new entrant assets.
+      Identifier mapping to a specific named power station.
 
-      For most existing and planned generation, maps to specific power stations.
-      For new entrants, maps to technology/location groups.
+      Most existing and planned thermal generators have a station-level fuel price
+      given in the IASR workbook. The strings in this column should match those in
+      the 'power_station' column of the 'generators_existing_planned' table.
 
-      Source notes:
-      For purely 'blending' fuels (e.g. Biomethane) and VRE fuel types (Wind, Solar),
-      that don't map to a specific generator, technology, or location this column is
-      filled by the `templater` with the corresponding `fuel_type` value.
+      If absent (or empty):
+      This row's price is a fall-back for any generator matching all of the row's
+      other non-empty identification keys (any combination of fuel_type, geo_id,
+      technology).
+  technology:
+    type: string
+    required: false
+    allowed_values_from:
+      - generators_existing_planned: technology
+      - generators_new_entrant: technology
+    description: >
+      The full proper name of the technology type to which this fuel price applies.
+
+      If absent (or empty):
+      This row's price is a fall-back for any generator matching all of the row's
+      other non-empty identification keys (any combination of power_station,
+      fuel_type, geo_id).
+  geo_id:
+    type: string
+    required: false
+    allowed_values_from:
+      - network_geography: geo_id
+    description: >
+      The geography identifier at which this row's fuel price applies.
+
+      If absent (or empty):
+      This row's price is a fall-back for any generator matching all of the row's
+      other non-empty identification keys (any combination of power_station,
+      fuel_type, technology).
   year:
     type: int
     required: true
