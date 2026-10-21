@@ -44,7 +44,15 @@ columns:
     format: "%Y-%m-%dT%H:%M:%S"
     description: >
       Date this row's limit takes effect. For each investment period, the
-      limit active at the period's start applies for the whole period.
+      limit active at the period's start applies for the whole period. A
+      period starts on 1 July of the preceding year when year_type is fy, and
+      on 1 January otherwise.
+
+      Rows supersede each other only within the same constraint_id and
+      timeslice group. A dated limit has no end date: it holds until a later
+      row in its group supersedes it, so reverting to an earlier limit needs
+      its own dated row. A group with no undated row contributes no limit to
+      periods starting before its earliest date_from.
 
       If absent (or empty):
       The limit applies from the start of the model horizon (until another

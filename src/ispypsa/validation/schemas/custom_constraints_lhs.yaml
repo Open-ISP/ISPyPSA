@@ -48,9 +48,10 @@ columns:
     allowed_values: [generator_output, generator_capacity, storage_output, link_flow, load]
     description: >
       Model variable type the term applies to: a generator's dispatch, a
-      generator's installed capacity, a battery's discharge, a transmission
-      path's flow, or a node's load consumption (load terms are not yet
-      modelled and are skipped, with a log line, when constraints are applied).
+      generator's installed capacity, a battery's net dispatch (discharging
+      minus charging), a transmission path's flow, or a node's load
+      consumption. A load term is data rather than a variable: the demand at
+      the node, scaled by the coefficient.
   variable_name:
     type: string
     required: true
@@ -79,7 +80,15 @@ columns:
     description: >
       Date this row's coefficient takes effect. For each investment period,
       the coefficient active at the period's start applies for the whole
-      period.
+      period. A period starts on 1 July of the preceding year when year_type
+      is fy, and on 1 January otherwise.
+
+      Rows supersede each other only within the same constraint_id,
+      term_type, and variable_name group. A dated coefficient has no end
+      date: it holds until a later row in its group supersedes it, so
+      reverting to an earlier coefficient, or removing the term
+      (coefficient 0), needs its own dated row. A group with no undated row contributes no term to periods
+      starting before its earliest date_from.
 
       If absent (or empty):
       The coefficient applies from the start of the model horizon (until
