@@ -13,8 +13,10 @@ description: >
   Source notes:
   variable_name uses IASR IDs for generators and batteries, path_ids for links
   and sub-region codes for loads. The variable_names_resolve_by_term_type rule
-  ties each to its component table, so the translator and pypsa_build take the
-  names as given rather than checking them against the model.
+  checks each name against the input table for its term_type; the translator
+  separately raises on any term whose component the configured model doesn't
+  build (e.g. a link_flow term on a REZ connection path when REZs are attached
+  to their parent nodes).
 
   If absent:
   Constraints have no terms, so no custom constraints bind.
