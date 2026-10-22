@@ -99,8 +99,8 @@ def _translate_custom_constraints(
     becomes constraint_name, and duplicate (constraint, period, timeslice)
     RHS rows across the assembled set raise a ValueError, since pypsa_build
     would build two constraints with the same name from them. Relaxation
-    resolves against the assembled RHS, so a future producer of constraint blocks 
-    (e.g. new entrant build limits) should append before the relaxation step if 
+    resolves against the assembled RHS, so a future producer of constraint blocks
+    (e.g. new entrant build limits) should append before the relaxation step if
     its constraints are to be relaxable.
 
     Input integrity is the table schemas' job, not this module's. The rules the
@@ -275,10 +275,10 @@ def _translate_constraint_tables(
         - LHS terms are expanded from their input IDs into one term per matching
         model component (the constraint-variable-name to PyPSA-model-name mapping
         built from the links, generators, storage and demand_nodes tables): a
-        link_flow term covers its path's existing link and each expansion link, 
-        a term on a new entrant generator or storage unit covers each of its 
-        per-build-year components, and a load term maps to the "load_<bus>" Load 
-        component at its demand node — a data term whose p_set attribute 
+        link_flow term covers its path's existing link and each expansion link,
+        a term on a new entrant generator or storage unit covers each of its
+        per-build-year components, and a load term maps to the "load_<bus>" Load
+        component at its demand node — a data term whose p_set attribute
         pypsa_build resolves from the demand trace, not an optimisation variable.
         - each term is then dropped in the investment periods outside its
         component's in-service window, per the activity quantisation above.
