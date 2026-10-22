@@ -663,8 +663,13 @@ def _sum_load_terms(
 
 
 def _linopy_constraint_name(rhs_row: tuple) -> str:
-    """A name unique to a linopy constraint, built from its constraint_name
-    and whichever of investment_period and timeslice it has.
+    """A linopy constraint's name, built from its constraint_name and
+    whichever of investment_period and timeslice it has.
+
+    The names are only unique because the custom_constraints_rhs schema
+    requires it (linopy_constraint_names_are_unique): underscores can also
+    appear inside constraint names and timeslices, so different rows could
+    otherwise join to the same name.
 
     I/O Example (rhs_row -> returns):
         constraint_name        investment_period  timeslice

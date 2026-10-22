@@ -24,6 +24,13 @@ custom_validation:
       custom_constraints_lhs term on a model variable (anything but a Load
       p_set term) for the same pair, blank matching blank. pypsa_build raises
       on a constraint with no such term, since its LHS would be empty.
+  - name: linopy_constraint_names_are_unique
+    description: >
+      Joining each row's constraint_name, investment_period and timeslice
+      with underscores, skipping blanks, must give a different name for every
+      row. pypsa_build names each linopy constraint this way, so rows like
+      (C, 2025, blank) and (C_2025, blank, blank) would both be named C_2025
+      and the build would fail.
 description: >
   Right-hand side of each custom constraint: one row per linopy constraint
   pypsa_build adds, scoped in time by its investment_period and timeslice.
