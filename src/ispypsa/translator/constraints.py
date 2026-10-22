@@ -117,7 +117,7 @@ def _translate_custom_constraints(
     network_transmission_path_expansion_costs.yaml).
 
     How time-varying inputs land on the investment periods — the forward
-    quantisation of date_from, build_year and lifetime — is described on
+    quantisation of date_from, build_year and lifetime — is described in
     _translate_constraint_tables.
 
     In the output tables, a blank investment_period means the row applies in
