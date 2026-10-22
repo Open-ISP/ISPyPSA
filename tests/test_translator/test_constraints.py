@@ -503,6 +503,8 @@ def test_relaxation_on_greater_equal_constraint_adds_capacity_to_lhs(
         sample_model_config,
     )
 
+    # The expansion-limit rows come from the helper's NSW-QLD and SWQLD1
+    # expansion options.
     expected_lhs = csv_str_to_df("""
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
@@ -867,7 +869,10 @@ def test_generator_terms_dropped_from_retirement_year(
 def test_constraint_with_no_lhs_terms_dropped_and_logged(
     csv_str_to_df, sample_model_config, caplog
 ):
+    """A constraint with RHS rows but no LHS terms has nothing to constrain,
+    so its RHS rows are dropped in every period and logged."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
+    # NQ1 has an RHS but no LHS terms: the helper's LHS only covers SWQLD1.
     ispypsa_tables["custom_constraints"] = csv_str_to_df("""
         constraint_id,  direction
         SWQLD1,         <=
@@ -893,6 +898,8 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
         "Custom constraint RHS rows dropped (no LHS terms in that period): "
         "[('NQ1', 2026), ('NQ1', 2028)]"
     ) in caplog.text
+    # The expansion-limit rows come from the helper's NSW-QLD and SWQLD1
+    # expansion options.
     expected_rhs = csv_str_to_df("""
         constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
         SWQLD1,                   2026,               qld_peak_demand,  3000,  <=
@@ -1250,7 +1257,9 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
     """A blank expansion_id relaxation option (and a blank expansion_id, blank
     year cost) is a default for every constraint in the model; a specific
     row still wins for its own constraint."""
-    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables = {}
+    # Two constraints: SWQLD1 has a specific relaxation option below, NQ1
+    # relies on the wildcard.
     ispypsa_tables["custom_constraints"] = csv_str_to_df("""
         constraint_id,  direction
         SWQLD1,         <=
@@ -1266,6 +1275,9 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         SWQLD1,         qld_peak_demand,  3000,
         NQ1,            qld_peak_demand,  2650,
     """)
+    # SWQLD1's own option (400) wins for SWQLD1; the blank-expansion_id row
+    # (200) is the default for every other constraint, so NQ1 takes it. The
+    # NSW-QLD rows give the link its expansion limit (max(1000, 900)).
     ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
         expansion_id,  expansion_type,         allowed_expansion,  expansion_option
         NSW-QLD,       forward,                1000,               NSW-QLD Option 1
@@ -1273,6 +1285,8 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         SWQLD1,        constraint_relaxation,  400,                SWQLD1 Option 2
         ,              constraint_relaxation,  200,                Default relaxation
     """)
+    # No constraint has its own cost row, so the blank expansion_id, blank
+    # year row (100000) prices every relaxation generator in every period.
     ispypsa_tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
         expansion_id,  year,  cost
         NSW-QLD,       2026,  500000
@@ -1288,9 +1302,11 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         sample_model_config,
     )
 
+    # One relaxation generator per constraint per investment period, all
+    # priced at the wildcard cost.
     expected_generators = csv_str_to_df(f"""
         name,             isp_name,  bus,                             p_nom,  p_nom_extendable,  build_year,  lifetime,  capital_cost
-        NQ1_exp_2026,     NQ1,       bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
+        NQ1_exp_2026,     NQ1,     bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
         NQ1_exp_2028,     NQ1,       bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
         SWQLD1_exp_2026,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2026,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
         SWQLD1_exp_2028,  SWQLD1,    bus_for_custom_constraint_gens,  0.0,    True,              2028,        inf,       {100000 * _ANNUITY_PER_DOLLAR}
@@ -1303,6 +1319,7 @@ def test_wildcard_relaxation_option_and_cost_apply_to_every_constraint(
         rtol=1e-5,
     )
     rhs = result["custom_constraints_rhs"]
+    # SWQLD1 capped at its own option, NQ1 at the wildcard default.
     expected_limits = csv_str_to_df("""
         constraint_name,          investment_period,  timeslice,  rhs,   constraint_type
         NQ1_expansion_limit,      ,                   ,           200,   <=
@@ -1369,7 +1386,11 @@ def test_blank_expansion_type_option_covers_constraint_relaxation(
 def test_relaxation_option_for_constraint_not_in_model_is_dropped(
     csv_str_to_df, sample_model_config
 ):
+    """A relaxation option whose expansion_id names no constraint in the
+    model yields no relaxation generator."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
+    # NQ1 has a relaxation option and cost but isn't a constraint: the
+    # helper's custom_constraints only defines SWQLD1.
     ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
         expansion_id,  expansion_type,         allowed_expansion,  expansion_option
         NSW-QLD,       forward,                1000,               NSW-QLD Option 1
