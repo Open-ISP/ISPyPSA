@@ -12,8 +12,9 @@ There are two independent public orchestrators, one per output table. Each one:
     3. Derives geo_id (REZ ID or sub-region)
     4. (Generators only) Derives resource_type from the VRE code in the IASR ID
     5. Merges in per-technology property values — each a single number looked up by
-       technology, via _merge_properties (see the property merge maps in mappings.py,
-       e.g. _GENERATORS_NEW_ENTRANT_PROPERTY_MAP). Generators and storage share a common
+       technology, via helpers._merge_category_keyed_properties (see the property
+       merge maps in mappings.py, e.g. _GENERATORS_NEW_ENTRANT_PROPERTY_MAP).
+       Generators and storage share a common
        set of these (_COMMON_NEW_ENTRANT_PROPERTY_MAP). Storage additionally splits
        into battery and pumped-hydro (PHES) rows, which take their storage-specific
        properties from different IASR tables, then recombines them before merging
@@ -36,18 +37,16 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_known_value_replacement,
+    _apply_iasr_table_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
-    _get_property_value_map,
-    _group_properties_by_source,
     _is_battery_row,
     _is_pumped_hydro_row,
     _is_storage_row,
     _is_subregion_geo_id,
     _map_geo_id_to_granularity,
-    _required_property_columns,
+    _merge_category_keyed_properties,
     _set_geo_id,
 )
 from ispypsa.templater.mappings import (
@@ -153,6 +152,10 @@ _KNOWN_BUILD_COST_ZONE_TYPOS = {
     ("NSA", "CSA"),  # (geo_id, Regional build cost zone)
 }
 
+# Allowed 'extra' subregion (not in sub_regional_geography) present in the names of
+# some new entrant gas plant; see Open-ISP/ISPyPSA#131
+_EXTRA_SUBREGION_IN_NAMES = {"WOO"}
+
 # Data scale diff for 'BOTN - Cethana' in LCF table: see first comment on Open-ISP/ISPyPSA#131.
 _LCF_COLUMNS_IN_PERCENT = ["BOTN - Cethana"]
 
@@ -204,7 +207,9 @@ def _template_generators_new_entrant(
     gens = gens.rename(columns=_SUMMARY_COLUMN_RENAMES)
     gens = _set_geo_id(gens)
     gens = _add_resource_type(gens)
-    gens = _merge_properties(gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP)
+    gens = _merge_category_keyed_properties(
+        gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP, df_key_col="technology"
+    )
     _assert_build_cost_zone_matches_geo_id(gens)
     gens = _merge_lcf_build(gens, iasr_tables["technology_specific_lcfs"])
     gens = _merge_lcf_om(gens, iasr_tables["locational_cost_factors"])
@@ -258,16 +263,22 @@ def _template_storage_new_entrant(
     storage = new_entrants_summary[_is_storage_row(new_entrants_summary)].copy()
     storage = storage.rename(columns=_SUMMARY_COLUMN_RENAMES)
     storage = _set_geo_id(storage)
-    batteries = _merge_properties(
+    batteries = _merge_category_keyed_properties(
         storage[_is_battery_row(storage, col_to_check="technology")],
         iasr_tables,
         _STORAGE_BATTERY_PROPERTY_MAP,
+        df_key_col="technology",
     )
     phes = _merge_phes_properties(
         storage[_is_pumped_hydro_row(storage, col_to_check="technology")], iasr_tables
     )
     storage = pd.concat([batteries, phes], ignore_index=True)
-    storage = _merge_properties(storage, iasr_tables, _COMMON_NEW_ENTRANT_PROPERTY_MAP)
+    storage = _merge_category_keyed_properties(
+        storage,
+        iasr_tables,
+        _COMMON_NEW_ENTRANT_PROPERTY_MAP,
+        df_key_col="technology",
+    )
     _assert_build_cost_zone_matches_geo_id(storage)
     storage = _merge_lcf_build(storage, iasr_tables["technology_specific_lcfs"])
     storage = _merge_lcf_om(storage, iasr_tables["locational_cost_factors"])
@@ -279,52 +290,6 @@ def _template_storage_new_entrant(
         _STORAGE_GEO_ID_GROUP_KEYS,
         _STORAGE_PROPERTY_COLUMNS,
     )
-
-
-# --- shared helpers ---
-
-
-def _merge_properties(
-    new_entrants: pd.DataFrame,
-    iasr_tables: dict[str, pd.DataFrame],
-    property_map: dict[str, dict],
-) -> pd.DataFrame:
-    """Merges every property in ``property_map`` onto ``new_entrants``.
-
-    Groups properties by their source (table, key_col) — see
-    ``_group_properties_by_source`` — so a table that contributes several properties
-    (e.g. ``battery_properties`` feeds six) is validated and fuzzy-matched against
-    ``new_entrants``' 'technology' once per property map.
-
-    I/O Example (property_map = _STORAGE_BATTERY_PROPERTY_MAP, abbreviated):
-        new_entrants:
-            name             technology
-            NQ Battery - 2h  Battery Storage (2hrs storage)
-
-        returns (adds one column per map key):
-            name             technology                      storage_hours  efficiency_charge  ...
-            NQ Battery - 2h  Battery Storage (2hrs storage)   2.0            92.0               ...
-    """
-    new_entrants = new_entrants.copy()
-    for (table_name, key_col), props in _group_properties_by_source(
-        property_map
-    ).items():
-        table = iasr_tables[table_name]
-        _assert_table_valid(
-            table,
-            table_name,
-            _required_property_columns(props),
-            f"{sorted(props.keys())}",
-        )
-        matched_technology = _fuzzy_map_to_allowed_values(
-            new_entrants["technology"],
-            table[key_col],
-            task_desc=f"merging new entrant properties from '{table_name}'",
-        )
-        for new_col, attrs in props.items():
-            property_values = _get_property_value_map(table, attrs)
-            new_entrants[new_col] = matched_technology.map(property_values)
-    return new_entrants
 
 
 # --- regional granularity collapse ---
@@ -343,8 +308,9 @@ def _collapse_geo_id_to_granularity(
         1. Splits ``new_entrants`` into REZ rows (left untouched) and subregion rows.
         2. Subregion rows get grouped by ``group_key_columns`` + the re-keyed geo_id and
             averaged over ``value_columns``.
-        3. Aggregated rows' 'name' set to "{geo_id} {technology}" (except BOTN - see
-            ``_name_collapsed_rows``).
+        3. Aggregated rows keep the first 'name' picked by the groupby, with any stale
+            leading sub-region-style token (a real geo_id, or a known extra like "WOO")
+            replaced by the new, collapsed geo_id — see ``_rekey_names_to_collapsed_geo_id``.
         4. Returns concatted REZ rows and aggregated rows.
 
     Args:
@@ -369,8 +335,8 @@ def _collapse_geo_id_to_granularity(
             SNW     subregion  NSW
 
         returns:
-            name                 technology       geo_id  lcf_build
-            NSW OCGT (small GT)  OCGT (small GT)  NSW     102.0  # mean(104, 100)
+            name             technology       geo_id  lcf_build
+            NSW OCGT Small   OCGT (small GT)  NSW     102.0  # mean(104, 100)
     """
     if regional_granularity == "sub_regions":
         return new_entrants
@@ -381,11 +347,17 @@ def _collapse_geo_id_to_granularity(
     if to_collapse.empty:
         return new_entrants
 
-    to_collapse["geo_id"] = _map_geo_id_to_granularity(
-        to_collapse["geo_id"], regional_granularity, sub_regional_geography
+    old_geo_ids = to_collapse["geo_id"].copy()
+    new_geo_ids = _map_geo_id_to_granularity(
+        old_geo_ids, regional_granularity, sub_regional_geography
     )
-    collapsed = _aggregate_by_geo_id(to_collapse, group_key_columns, value_columns)
-    collapsed = _name_collapsed_rows(collapsed)
+    collapsed = _aggregate_by_geo_id(
+        to_collapse.assign(geo_id=new_geo_ids), group_key_columns, value_columns
+    )
+    collapsed["name"] = _rekey_names_to_collapsed_geo_id(
+        collapsed,
+        set(old_geo_ids),
+    )
 
     return pd.concat([unchanged, collapsed], ignore_index=True)[new_entrants.columns]
 
@@ -395,38 +367,54 @@ def _aggregate_by_geo_id(
     group_key_columns: list[str],
     value_columns: list[str],
 ) -> pd.DataFrame:
-    """Groups by ``group_key_columns`` + 'geo_id' and averages ``value_columns``."""
+    """Groups by ``group_key_columns`` + 'geo_id', averages ``value_columns``, keeps
+    the first instance of 'name' for each group."""
+    name_aggregation_rule = {"name": "first"}
+    value_aggregation_rules = {col: "mean" for col in value_columns}
+
     # 'dropna=False' set to keep thermal generator rows (w/ NaN 'resource_type')
     return new_entrants.groupby(
         group_key_columns + ["geo_id"], dropna=False, as_index=False
-    )[value_columns].mean()
+    ).agg(name_aggregation_rule | value_aggregation_rules)
 
 
-# TODO (coming in next PR): fix this to keep naming convention from AEMO sources even when
-# granularity collapses. NOTE: IASR names have slightly different order/
-# convention than trace names, but for VRE (REZ-based) so less important here.
-def _name_collapsed_rows(collapsed: pd.DataFrame) -> pd.DataFrame:
-    """Sets 'name' on merged rows to "{geo_id} {technology}".
+def _rekey_names_to_collapsed_geo_id(
+    new_entrants: pd.DataFrame, known_name_prefixes: set[str]
+) -> pd.Series:
+    """Replaces a stale leading sub-region-style token in each name with the row's
+    (post-collapse) geo_id.
 
-    The lone documented exception is BOTN - Cethana (see ``_BOTN_CETHANA_DETAILS``):
-    a named, site-specific project rather than a generic technology archetype, which
-    keeps its original 'name'.
+    Runs on the already-aggregated frame, after ``.groupby(...).first()`` has picked
+    one 'name' per group — so it doesn't matter which row's name survived the pick;
+    every stale geo_id-like prefix gets normalised to the same, correct new geo_id.
 
     I/O Example:
-        collapsed:
-            technology       geo_id
-            OCGT (small GT)  NSW
-            BOTN - Cethana   TAS
+        df:
+            name                    technology          geo_id  ...
+            NQ OCGT Small           OCGT (small GT)     NEM    ...
+            WOO OCGT Large          OCGT (large GT)     NEM     ...
+            BOTN - Cethana - 20h    BOTN - Cethana      NEM     ...
+
+        known_name_prefixes:  {"NQ", "WOO", "SNW", ...}   # real sub_regions + "WOO"
 
         returns:
-            technology       geo_id  name
-            OCGT (small GT)  NSW     NSW OCGT (small GT)
-            BOTN - Cethana   TAS     BOTN - Cethana - 20h  # original name kept
+            name
+            NEM OCGT Small
+            NEM OCGT Large
+            BOTN - Cethana - 20h
+
+        # BOTN doesn't start with any known prefix, so it's untouched - no special case needed.
     """
-    fresh_name = collapsed["geo_id"] + " " + collapsed["technology"]
-    is_botn = collapsed["technology"] == _BOTN_CETHANA_DETAILS["name"]
-    collapsed["name"] = fresh_name.mask(is_botn, _BOTN_CETHANA_DETAILS["full_name"])
-    return collapsed
+
+    parts = new_entrants["name"].str.partition()
+    parts.columns = ["old_prefix", "separator", "rest_of_name"]
+
+    rekeyed_names = new_entrants["geo_id"].str.cat(parts[["separator", "rest_of_name"]])
+    is_known_prefix = parts["old_prefix"].isin(
+        known_name_prefixes | _EXTRA_SUBREGION_IN_NAMES
+    )
+
+    return new_entrants["name"].where(~is_known_prefix, rekeyed_names)
 
 
 # --- locational cost factor (LCF) helpers ---
@@ -603,23 +591,42 @@ def _reshape_technology_specific_lcfs(
 def _merge_phes_properties(
     phes: pd.DataFrame, iasr_tables: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
-    """Merges the pumped-hydro storage properties onto the PHES rows.
+    """Merges storage_hours and charge/discharge efficiency onto the PHES rows.
 
-    BOTN - Cethana's 'technology' is first overridden to its own name so it draws its own
-    published property rows rather than the generic PHES archetype's (see
-    ``_override_botn_technology``). The pumped-hydro table is the lone table that keys BOTN
-    by its full spelling, so its key is corrected to the bare name (``_PHES_BOTN_KEY_FIX``)
-    before a plain technology-keyed merge. The table gives storage_hours and a single
-    round-trip efficiency directly; charge/discharge efficiency are then derived from it
-    (see ``_derive_phes_symmetric_efficiency``). The round-trip column is dropped by the
-    orchestrator's final select.
+    Both properties come from ``pumped_hydro_new_entrant_properties``, merged by
+    technology. BOTN - Cethana should get its own row from that table, not the row for
+    the generic archetype it's labelled with in new_entrants_summary. So before the
+    merge, both sides are re-keyed to the bare name "BOTN - Cethana": the PHES row's
+    'technology' (``_override_botn_technology``) and the table's "BOTN - Cethana - 20h"
+    key (``_PHES_BOTN_KEY_FIX``).
+
+    The IASR table only publishes a round-trip efficiency, which is then split into
+    equal charge and discharge efficiencies , replacing the intermediate
+    'round_trip_efficiency' column (``_derive_phes_symmetric_efficiency``).
+
+    I/O Example:
+        phes:
+            name                   technology
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)
+            BOTN - Cethana - 20h   Pumped Hydro (24hrs storage)
+
+        pumped_hydro_new_entrant_properties:
+            Power Station / Technology    Storage capacity (hours)  Pumping efficiency (%)
+            Pumped Hydro (24hrs storage)  24                        64
+            BOTN - Cethana - 20h          20                        81
+
+        returns (efficiency_charge and efficiency_discharge are equal, shown as one column):
+            name                   technology                    storage_hours  efficiency_charge/discharge
+            NQ Pumped Hydro - 24h  Pumped Hydro (24hrs storage)  24.0           80.0  # sqrt(64%)
+            BOTN - Cethana - 20h   BOTN - Cethana                20.0           90.0  # BOTN's own row - sqrt(81%)
     """
     phes = phes.copy()
     phes["technology"] = _override_botn_technology(phes)
-    phes = _merge_properties(
+    phes = _merge_category_keyed_properties(
         phes,
-        _apply_known_value_replacement(iasr_tables, _PHES_BOTN_KEY_FIX),
+        _apply_iasr_table_replacements(iasr_tables, [_PHES_BOTN_KEY_FIX]),
         _STORAGE_PHES_PROPERTY_MAP,
+        df_key_col="technology",
     )
     phes = _derive_phes_symmetric_efficiency(phes)
     return phes

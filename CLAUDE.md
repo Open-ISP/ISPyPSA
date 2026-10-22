@@ -77,8 +77,11 @@ Conventions:
 
 - Use a plain CSV-like table format for DataFrame inputs and outputs — no need to
   wrap in runnable `csv_str_to_df` calls, since this is illustrative, not a doctest.
-- Abbreviate long column names when they would otherwise overflow the line; point at
-  the relevant constants for the real names.
+- Always lay DataFrame examples out as full tables — a header row plus example rows,
+  each table in its own block — even when a single row would do. Never condense a
+  table into `column=value` prose. Abbreviated column sets, row sets and column
+  names are fine when the full table would otherwise be large; point at the
+  relevant constants for the real names.
 - Cover representative edge cases in the same example, with trailing `# comment`
   notes on the rows that demonstrate each case.
 - For trivial utility functions, one-line input → output cases are enough.
@@ -310,6 +313,14 @@ Tests follow a strict ordering: **inputs → function call → expected → asse
 Use the `csv_str_to_df` fixture to create readable DataFrame inputs and expected outputs. Place
 each `assert_frame_equal` immediately after its expected DataFrame definition. Only include
 columns in test inputs that the code actually accesses.
+
+When a test's expected output follows from several inputs combining, or from rows that live
+only in a shared baseline helper (e.g. `_constraint_tables`), add a brief comment above the
+relevant table that names the specific rows and values and the output they produce. Prefer
+`# Q1-NQ has no limit row, so it takes the default (500)` over `# default applies`. Use
+Python comments, since `csv_str_to_df` doesn't strip `#` inside the CSV. Skip comments the
+test name or docstring already covers, and don't call a baseline helper whose tables the
+test fully overwrites.
 
 **Always assert with `pd.testing.assert_frame_equal` against a full expected DataFrame.** Don't
 substitute row-count checks, set membership on a column, per-cell `iloc[...]` lookups, or

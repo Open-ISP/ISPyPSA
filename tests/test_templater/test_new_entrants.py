@@ -13,8 +13,8 @@ from ispypsa.templater.new_entrants import (
     _merge_lcf_build,
     _merge_lcf_om,
     _merge_phes_properties,
-    _merge_properties,
     _override_botn_technology,
+    _rekey_names_to_collapsed_geo_id,
     _reshape_technology_specific_lcfs,
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -166,83 +166,6 @@ def test_template_storage_new_entrant(csv_str_to_df):
     assert len(result) == 3
 
 
-# --- _merge_properties ---
-# (_group_properties_by_source, _required_property_columns and
-# _get_property_value_map are shared with existing_planned.py and now live in, and
-# are tested in, helpers.py / test_helpers.py.)
-
-
-def test_merge_properties(csv_str_to_df, caplog):
-    # storage_hours and efficiency_charge both come from battery_properties/Technology
-    # (as in _STORAGE_BATTERY_PROPERTY_MAP): both are merged correctly in one pass,
-    # NaN property values are retained untouched, and - because they share a source
-    # table - the fuzzy match against it runs once, so a corrected technology name is
-    # logged once, not once per property sourced from that table.
-    new_entrants = csv_str_to_df("""
-        name,             technology
-        NQ Battery - 2h,  battery storage (2hrs storage)
-        NQ CCGT,          CCGT
-    """)
-    property_map = {
-        "storage_hours": {
-            "table": "battery_properties",
-            "key_col": "Technology",
-            "value_col": "Energy capacity_Hours",
-        },
-        "efficiency_charge": {
-            "table": "battery_properties",
-            "key_col": "Technology",
-            "value_col": "Charge efficiency_%",
-        },
-    }
-    iasr_tables = {
-        "battery_properties": csv_str_to_df("""
-            Technology,                      Energy capacity_Hours, Charge efficiency_%
-            Battery Storage (2hrs storage),  2.0,                   92.0
-            CCGT,                            ,
-        """),
-    }
-
-    with caplog.at_level("INFO"):
-        result = _merge_properties(new_entrants, iasr_tables, property_map)
-
-    expected = csv_str_to_df("""
-        name,             technology,                      storage_hours, efficiency_charge
-        NQ Battery - 2h,  battery storage (2hrs storage),  2.0,           92.0
-        NQ CCGT,          CCGT,                            ,
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-    msg = (
-        "'battery storage (2hrs storage)' matched to "
-        "'Battery Storage (2hrs storage)' whilst merging new entrant properties "
-        "from 'battery_properties'"
-    )
-    assert caplog.messages.count(msg) == 1
-
-
-def test_merge_properties_raises_on_invalid_source_table(csv_str_to_df):
-    # Regression: confirms the source table is actually validated before merging.
-    # Exact raise behaviour is covered by _assert_table_valid's own tests.
-    new_entrants = csv_str_to_df("""
-        name,     technology
-        SQ CCGT,  CCGT
-    """)
-    property_map = {
-        "fom": {
-            "table": "fixed_opex_new_entrants",
-            "key_col": "Technology",
-            "value_col": "Base value",
-        }
-    }
-    iasr_tables = {
-        "fixed_opex_new_entrants": pd.DataFrame(columns=["Technology", "Base value"]),
-    }
-
-    with pytest.raises(ValueError):
-        _merge_properties(new_entrants, iasr_tables, property_map)
-
-
 # --- _merge_phes_properties / _override_botn_technology / _derive_phes_symmetric_efficiency ---
 
 
@@ -266,9 +189,9 @@ def test_merge_phes_properties(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name,                  technology,                    storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
-        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  24.0,          64.0,                  80.0,              80.0
-        BOTN - Cethana - 20h,  BOTN - Cethana,                20.0,          81.0,                  90.0,              90.0
+        name,                  technology,                    storage_hours, efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage),  24.0,          80.0,              80.0
+        BOTN - Cethana - 20h,  BOTN - Cethana,                20.0,          90.0,              90.0
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
 
@@ -333,12 +256,12 @@ def test_merge_phes_properties_empty(csv_str_to_df):
     result = _merge_phes_properties(phes, iasr_tables)
 
     expected = csv_str_to_df("""
-        name, technology, storage_hours, round_trip_efficiency, efficiency_charge, efficiency_discharge
+        name, technology, storage_hours, efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-# (BOTN's pumped-hydro key correction is now a plain _apply_known_value_replacement
+# (BOTN's pumped-hydro key correction is now a plain _apply_iasr_table_replacements
 # call -- see helpers.py / test_helpers.py for that mechanism's own tests. Its wiring
 # here is covered incidentally by test_merge_phes_properties above, which already
 # exercises a full-spelling BOTN row resolving correctly.)
@@ -406,7 +329,7 @@ def test_collapse_geo_id_to_granularity_averages_across_sub_regions(csv_str_to_d
     expected = csv_str_to_df("""
         name,                   technology,     geo_id, value
         Q1_WH,                  Wind,           Q1,     999.0
-        NSW OCGT,               OCGT,           NSW,    102.0
+        NSW OCGT Small,         OCGT,           NSW,    102.0
         BOTN - Cethana - 20h,   BOTN - Cethana, TAS,    100.0
     """)
     pd.testing.assert_frame_equal(
@@ -440,7 +363,7 @@ def test_collapse_geo_id_to_granularity_single_region_maps_to_nem(csv_str_to_df)
 
     expected = csv_str_to_df("""
         name,                   technology,     geo_id, value
-        NEM OCGT,               OCGT,           NEM,    106.0
+        NEM OCGT Small,         OCGT,           NEM,    106.0
         BOTN - Cethana - 20h,   BOTN - Cethana, NEM,    100.0
     """)
     pd.testing.assert_frame_equal(
@@ -471,6 +394,39 @@ def test_collapse_geo_id_to_granularity_empty_input(csv_str_to_df):
         name,   technology,     geo_id,     value
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_rekey_names_to_collapsed_geo_id(csv_str_to_df):
+    # Specifically checks that the 'same prefix, different geo_id' case correctly
+    # re-keys based on the corresponding row-specific geo_id value, and that
+    # 'unknown' (not 'old' geo_id values) prefixed names pass through unchanged.
+
+    # only necessary columns - abbreviated input
+    new_entrants = csv_str_to_df("""
+        name,                       geo_id
+        NSA Pumped Hydro - 10h,     SA
+        WOO CCGT,                   NSW
+        NQ OCGT Small,              QLD
+        NQ Biomass,                 VIC
+        Named Generator,            TAS
+    """)
+
+    # 'WOO' prefix is set as constant in _rekey_names_to_collapsed_geo_id
+    # so this should not error
+    known_prefixes = {"NSA", "NQ"}
+    result = _rekey_names_to_collapsed_geo_id(new_entrants, known_prefixes)
+
+    expected = pd.Series(
+        [
+            "SA Pumped Hydro - 10h",
+            "NSW CCGT",
+            "QLD OCGT Small",
+            "VIC Biomass",
+            "Named Generator",
+        ],
+        name="name",
+    )
+    pd.testing.assert_series_equal(result, expected)
 
 
 # --- _add_resource_type (generator-specific) ---

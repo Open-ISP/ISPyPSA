@@ -552,43 +552,46 @@ def _assert_table_valid(
         raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
 
 
-def _apply_known_value_replacement(
-    iasr_tables: dict[str, pd.DataFrame], correction: dict
+def _apply_iasr_table_replacements(
+    iasr_tables: dict[str, pd.DataFrame], corrections: list[dict]
 ) -> dict[str, pd.DataFrame]:
-    """Returns ``iasr_tables`` with a known correction applied to one table's column.
+    """Returns ``iasr_tables`` with 'corrections' applied to input IASR tables.
 
-    Shared shape for a small, explicitly declared fix (a documented typo or naming
-    mismatch) to a single column of a single source table. ``correction`` bundles the
-    fix's specifics (``table_name``, ``column``, ``replacements``). Returns a shallow
-    copy of ``iasr_tables`` with only that table replaced.
+    Shared shape for small, explicitly declared fixes (a documented typo or naming
+    mismatch) to specified locations. ``corrections`` can carry multiple fixes,
+    each with 'fix' specifics (``table_name``, ``column``, ``replacements``) bundled.
+    Returns a shallow copy of ``iasr_tables`` with only listed tables replaced.
 
     Note: while fuzzy-matching is used to standardise names or other ID strings,
     some typos/diffs are too 'big' to pass any safe fuzzy-match threshold (see
     example below - fuzz.ratio("KiataWF1", "KIATAWF1") == 50). This function
     explicitly handles those known instances where this is the case.
 
-    I/O Example (correction = existing_planned._MAXIMUM_CAPACITY_ID_TYPO_FIX):
+    I/O Example:
         iasr_tables["maximum_capacity_..."]:
             IASR ID   Power Station    Installed capacity (MW)
             KiataWF1  Kiata Wind Farm  31.05
             BW01      Bayswater        660.0
 
-        correction:
+        corrections (as a single dict element in list):
             table_name:   "maximum_capacity_..."
             column:       "IASR ID"
             replacements: {"KiataWF1": "KIATAWF1"}
 
-        returns copy of iasr_tables with only that one table edited:
+        returns copy of iasr_tables with only listed tables edited:
             iasr_tables["maximum_capacity_..."]:
                 IASR ID   Power Station    Installed capacity (MW)
                 KIATAWF1  Kiata Wind Farm  31.05
                 BW01      Bayswater        660.0
     """
-    table_name = correction["table_name"]
-    corrected = iasr_tables[table_name].replace(
-        {correction["column"]: correction["replacements"]}
-    )
-    return {**iasr_tables, table_name: corrected}
+    corrected_tables = iasr_tables
+    for correction in corrections:
+        table_name = correction["table_name"]
+        col_to_fix = correction["column"]
+        replacements = correction["replacements"]
+        corrected = iasr_tables[table_name].replace({col_to_fix: replacements})
+        corrected_tables = {**corrected_tables, table_name: corrected}
+    return corrected_tables
 
 
 def _group_properties_by_source(
@@ -596,7 +599,7 @@ def _group_properties_by_source(
 ) -> dict[tuple[str, str], dict]:
     """Groups a property map's entries by their source (table, key_col).
 
-    Shared by ``new_entrants._merge_properties`` and
+    Shared by ``_merge_category_keyed_properties`` and
     ``existing_planned._merge_unit_keyed_properties`` so a table contributing several
     properties (e.g. ``battery_properties`` feeds six) is validated and key-resolved
     once per source, not once per property.
@@ -673,8 +676,66 @@ def _get_property_value_map(
             attrs.get("scale", 1.0)
         )
         # TODO: 'year' type cols become floats from this transform - leave for
-        # validator to type-correct or edit handling here?
+        # validator to type-correct or edit handling here? See Open-ISP/ISPyPSA#145
     return value_map
+
+
+def _merge_category_keyed_properties(
+    df: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
+    property_map: dict[str, dict],
+    df_key_col: str,
+) -> pd.DataFrame:
+    """Merges every non-unit-keyed property in ``property_map`` onto ``df``.
+
+    Groups properties by their source (table, key_col) — see
+    ``_group_properties_by_source`` — so a table that contributes several properties
+    (e.g. ``battery_properties`` feeds six new entrant storage properties) is
+    validated and fuzzy-matched against ``df_key_col`` values once per property map.
+
+    I/O Example:
+        An abbreviated example merging the 'efficiency_charge' property into an
+        'existing_planned_storage' summary table.
+
+        df:
+            name             technology
+            Liddell BESS     Battery storage (4hrs storage)
+
+        df_key_col = "technology"
+
+        property_map:
+            efficiency_charge:  table="battery_properties",
+                                key_col="Technology",
+                                value_col="Charge efficiency_%"
+
+        iasr_tables['battery_properties']:
+            Technology                              Charge efficiency_%
+            Battery storage (4hrs storage)          92.5
+
+        returns (adds one column per map key):
+            name             technology                       efficiency_charge
+            Liddell BESS     Battery storage (4hrs storage)   92.5
+    """
+    df = df.copy()
+    for (table_name, key_col), props in _group_properties_by_source(
+        property_map
+    ).items():
+        table = iasr_tables[table_name]
+        _assert_table_valid(
+            table,
+            table_name,
+            _required_property_columns(props),
+            f"{sorted(props.keys())}",
+        )
+        matched_key_col = _fuzzy_map_to_allowed_values(
+            df[df_key_col],
+            table[key_col],
+            task_desc=f"merging properties from '{table_name}'",
+        )
+        for new_col, attrs in props.items():
+            property_values = _get_property_value_map(table, attrs)
+            df[new_col] = matched_key_col.map(property_values)
+    return df
 
 
 def _is_battery_row(
@@ -714,7 +775,9 @@ def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
 
     The IASR PHES tables give only a single round-trip efficiency. Assuming symmetric
     legs, each one-way efficiency is its square root, so e.g. a 76% round trip becomes
-    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872).
+    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872). The function returns
+    the input `phes` df with two new columns (efficiency_charge and efficiency_discharge),
+    dropping the intermediate round_trip_efficiency column.
 
     I/O Example:
         phes:
@@ -722,14 +785,14 @@ def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
             NQ Pumped Hydro-10h  76.0
 
         returns (adds the two efficiency columns):
-            name                 round_trip_efficiency  efficiency_charge  efficiency_discharge
-            NQ Pumped Hydro-10h  76.0                   87.18              87.18
+            name                 efficiency_charge  efficiency_discharge
+            NQ Pumped Hydro-10h  87.18              87.18
     """
     phes = phes.copy()
     one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
     phes["efficiency_charge"] = one_way_efficiency
     phes["efficiency_discharge"] = one_way_efficiency
-    return phes
+    return phes.drop(columns=["round_trip_efficiency"])
 
 
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:

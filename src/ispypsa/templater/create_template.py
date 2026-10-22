@@ -17,6 +17,7 @@ from ispypsa.templater.energy_policy_targets import (
 )
 from ispypsa.templater.existing_planned import (
     _template_generators_existing_planned,
+    _template_storage_existing_planned,
 )
 from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
@@ -101,6 +102,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "costs_connection",
     "generators_existing_planned",
     "generators_new_entrant",
+    "storage_existing_planned",
     "storage_new_entrant",
     "custom_constraints",
     "custom_constraints_lhs",
@@ -255,6 +257,9 @@ def create_ispypsa_inputs_template(
         )
 
         template["generators_existing_planned"] = _template_generators_existing_planned(
+            iasr_tables, regional_granularity, sub_regional_geography
+        )
+        template["storage_existing_planned"] = _template_storage_existing_planned(
             iasr_tables, regional_granularity, sub_regional_geography
         )
 
