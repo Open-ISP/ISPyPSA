@@ -177,10 +177,13 @@ def _add_custom_constraints_with_temporal_scope(
     so a constraint made only of them, with no load terms, is enforced once.
 
     A linopy constraint whose investment_period and timeslice select no
-    snapshots isn't created. It's expected under snapshot aggregation, and the
-    translator warns about each timeslice with no snapshots in a constraint's
-    investment period
+    snapshots isn't created. For a named timeslice this is expected under
+    snapshot aggregation, and the translator warns about each timeslice with
+    no snapshots in a constraint's investment period
     (ispypsa.translator.timeslices._log_referenced_timeslices_without_snapshots).
+    A fallback with no snapshots isn't warned about: every snapshot in its
+    investment period is already covered by one of the constraint's named
+    timeslices, so no snapshot goes unconstrained.
 
     Unsupported (component, attribute) terms raise, as does a constraint with
     no LHS terms on model variables, since either would silently weaken or
