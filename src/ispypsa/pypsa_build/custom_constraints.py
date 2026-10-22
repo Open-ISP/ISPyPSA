@@ -156,10 +156,11 @@ def _add_custom_constraints_with_temporal_scope(
     - When the timeslice is blank, it acts as a fallback: the constraint
       applies at the snapshots in its investment_period that none of the same
       constraint's named timeslices cover.
-    - A blank investment_period means every investment period, and only
-      occurs on fallback rows (custom_constraints_rhs schema). The expansion-limit
-      constraints are the case in practice: blank in both, with a p_nom-only
-      LHS that has no time dimension.
+    - When the investment_period is blank, the row applies in every
+      investment period. The custom_constraints_rhs schema requires such a
+      row to also have a blank timeslice and to be its constraint's only row.
+      The expansion-limit constraints are the case in practice: a single row,
+      blank in both columns, with a p_nom-only LHS that has no time dimension.
 
     A linopy constraint's LHS terms are the custom_constraints_lhs rows with
     its constraint_name and the same investment_period, blank matching blank.
@@ -361,9 +362,14 @@ def _timeslices_named_in_period(
     custom_constraints_rhs: pd.DataFrame, rhs_row: tuple
 ) -> list[str]:
     """The timeslices named on rhs_row's constraint_name in its
-    investment_period. None for a row with a blank investment_period: only
-    fallback rows leave it blank (custom_constraints_rhs schema), and a blank
-    investment_period matches nothing here.
+    investment_period.
+
+    Empty for a row with a blank investment_period, since a blank matches
+    nothing here. That's only safe because the custom_constraints_rhs schema
+    (blank_investment_period_constraints_have_no_other_rows) gives such a
+    constraint no other rows. If that rule is ever relaxed, a fallback with a
+    blank investment_period would ignore its constraint's named timeslices
+    and bind at their snapshots too.
 
     I/O Example:
         custom_constraints_rhs:

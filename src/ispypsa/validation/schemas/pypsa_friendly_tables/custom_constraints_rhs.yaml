@@ -12,6 +12,12 @@ custom_validation:
       form. A row with a blank investment_period and a named timeslice would
       match no snapshots, so pypsa_build would skip it and its limit would
       silently never apply.
+  - name: blank_investment_period_constraints_have_no_other_rows
+    description: >
+      If a constraint has a row with a blank investment_period, that must be
+      its only row. A blank investment_period is reserved for the
+      expansion-limit constraints, which don't vary over time, so each has
+      just one row.
   - name: constraint_investment_periods_have_lhs_terms
     description: >
       Every (constraint_name, investment_period) here must have at least one
