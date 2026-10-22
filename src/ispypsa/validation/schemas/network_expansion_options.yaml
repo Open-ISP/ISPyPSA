@@ -48,6 +48,14 @@ custom_validation:
       direction and stands alone. This keeps an element's resolved forward and
       reverse tied to the same option, so the single cost keyed on expansion_id
       applies to a coherent pair.
+  - name: relaxation_options_target_inequality_constraints
+    description: >
+      A constraint_relaxation row must not resolve to a constraint whose
+      direction in custom_constraints is "=", whether keyed on the constraint
+      directly or reached through a blank expansion_id or expansion_type
+      wildcard. Relaxation adds a single-signed slack term to the constraint's
+      LHS, which can loosen a "<=" or ">=" but can only move an equality one
+      way.
 columns:
   expansion_id:
     type: string
