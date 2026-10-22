@@ -144,6 +144,13 @@ _IASR_TABLE_REPLACEMENTS = [
         column="IASR ID",
         replacements={"KiataWF1": "KIATAWF1"},
     ),
+    # Sub-REZ IDs Q8(a/b/c) in ECAA summary table 'REZ ID' column are not real REZs,
+    # but IDs used for resource-quality based build limits inside the Q8 REZ.
+    dict(
+        table_name="existing_committed_anticipated_additional_generator_summary",
+        column="REZ ID",
+        replacements={"Q8a": "Q8", "Q8b": "Q8", "Q8c": "Q8"},
+    ),
 ]
 
 # --- public orchestrators ---

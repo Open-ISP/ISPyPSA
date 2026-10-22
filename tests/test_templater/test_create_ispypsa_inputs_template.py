@@ -318,12 +318,14 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # (CNSW-SNW corridor) has valid endpoints in the geography. CQ is included so
     # the CQ-NQ flow path's region prefix resolves (every flow-path endpoint must
     # appear in the geography).
+    # SEV is added to ensure the non-REZ geo V0 has its endpoint present too.
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                        Sub-regional reference node
         Queensland,       Northern Queensland (NQ),              Ross 275 kV
         Queensland,       Central Queensland (CQ),               Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),        Wellington 330 kV
         New South Wales,  Southern New South Wales (SNW),        Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),             Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -452,14 +454,15 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
-    # 4 subregions (NQ + CQ + CNSW + SNW) + 2 REZs.
-    assert len(geography) == 6
+    # 5 subregions (NQ + CQ + CNSW + SNW + SEV) + 2 REZs + 2 non-REZs (N0, V0)
+    assert len(geography) == 9
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
     # CQ-NQ + 2 REZ connections (Q1-NQ, N3-CNSW) + CNSW-SNW_NTH + CNSW-SNW_STH
     # + CNSW-SNW (injected by _new_parallel_path_rows).
-    assert len(paths) == 6
+    # + N0-CNSW and V0-SEV (non-REZ geos)
+    assert len(paths) == 8
     # Specifically pin the new parallel-path row — a regression in the
     # _append_new_parallel_paths wiring would fail this assertion.
     assert "CNSW-SNW" in set(paths["path_id"])
@@ -469,7 +472,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # 3 flow paths × 6 (CQ-NQ + 2 CNSW-SNW siblings) + Q1-NQ × 6 (REZ mirrored)
     # + N3-CNSW × 1 (collapsed, absent from initial_transmission_limits)
     # + CNSW-SNW × 6 zero-capacity rows from _new_parallel_path_rows.
-    assert len(limits) == 31
+    # + N0-CNSW × 1 + V0-SEV × 1
+    assert len(limits) == 33
 
     expansion_options = result["network_expansion_options"]
     assert set(expansion_options.columns) == {
@@ -625,6 +629,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),       Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -748,18 +753,21 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
-    assert len(geography) == 4  # 2 unique NEM regions (QLD, NSW) + 2 REZs
+    # 3 unique NEM regions (QLD, NSW, VIC) + 2 REZs + 2 non-REZs
+    assert len(geography) == 7
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
 
-    # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept; 2 REZ paths kept.
-    assert len(paths) == 3
+    # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept;
+    # 2 REZ and 2 non-REZ paths kept.
+    assert len(paths) == 5
 
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
     # NNSW-SQ -> NSW-QLD: 6 rows. Q1-QLD: 6 rows. N3-NSW: 1 collapsed row.
-    assert len(limits) == 13
+    # N0-NSW: 1 collapsed row. V0-VIC: 1 collapsed row.
+    assert len(limits) == 15
 
     expansion_options = result["network_expansion_options"]
     # CQ-NQ augmentation dropped (intra-QLD); NNSW-SQ re-keyed to NSW-QLD;
@@ -827,6 +835,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         Queensland,       Central Queensland (CQ),         Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),       Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -939,17 +948,18 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
-    assert len(geography) == 3  # 1 NEM row + 2 REZs
+    assert len(geography) == 5  # 1 NEM row + 2 REZs + 2 non-REZs
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
-    # CQ-NQ flow path dropped; only the two REZ-to-NEM paths remain.
-    assert len(paths) == 2
+    # CQ-NQ flow path dropped; only two REZ-to-NEM and two non-REZ-to-NEM paths remain.
+    assert len(paths) == 4
 
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
     # Q1-NEM: 6 rows. N3-NEM: 1 collapsed row.
-    assert len(limits) == 7
+    # N0-NEM: 1 collapsed row. V0-NEM: 1 collapsed row.
+    assert len(limits) == 9
 
     expansion_options = result["network_expansion_options"]
     # CQ-NQ augmentation dropped entirely (no flow paths exist at single_region).
