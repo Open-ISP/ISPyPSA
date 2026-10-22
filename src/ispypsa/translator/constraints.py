@@ -762,9 +762,18 @@ def _drop_one_sided_constraint_periods(
             SWQLD1         2028
             NQ1            2026
 
-        returns:
-            lhs without its NQ1 2028 term (no RHS row that period; logged)
-            rhs without its SWQLD1 2026 row (no LHS terms that period; logged)
+        returns (lhs, rhs):
+            lhs:
+                constraint_id  investment_period
+                SWQLD1         2028
+                NQ1            2026
+                # NQ1 2028 dropped: no RHS row that period (logged)
+
+            rhs:
+                constraint_id  investment_period
+                SWQLD1         2028
+                NQ1            2026
+                # SWQLD1 2026 dropped: no LHS terms that period (logged)
     """
     keys = ["constraint_id", "investment_period"]
     lhs_periods = lhs.loc[:, keys].drop_duplicates()
