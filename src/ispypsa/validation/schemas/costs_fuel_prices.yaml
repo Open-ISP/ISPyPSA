@@ -15,22 +15,26 @@ description: >
   Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
 
   Source tables:
+    - `existing_committed_anticipated_additional_generator_summary`
+    - `new_entrants_summary`
     - `coal_fuel_price`
     - `biomass_fuel_price`
     - `gas_prices_existing_generators`
     - `gas_prices_new_entrants`
     - `liquid_fuel_prices`
-    - `gpg_secondary_fuel_prices` # maybe
+    - `gpg_secondary_fuel_prices`
     - `hydrogen_prices`
     - `biomethane_prices`
 
-  Source notes:
-  The consultant scenario mapping table is used to map between specified ISP
-  scenario names and the gas, liquid fuel, hydrogen and biomenthane price scenario
-  names. This is new in the 2026 ISP (IASR v7.5).
-
-  Rows are also added by the `templater` for VRE fuels (Wind, Solar) with a price
-  of $0.0 for all years.
+  Rows are also added by the `templater` for VRE fuels (Wind, Solar) and Water with
+  a price of $0.0; wild-card resolution applies this to all generators with those
+  fuel types across all years defined in the model.
+custom_validation:
+  - name: costs_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. The combination and
+      wildcard model is outlined in the table description.
 columns:
   fuel_type:
     type: string
@@ -41,21 +45,6 @@ columns:
       There are some fuel types (e.g., Biomethane) that are not used directly by any
       generators in the model, but are used to blend with other fuels to calculate
       final fuel costs.
-  # fuel_price_mapping:
-  #   type: string
-  #   required: true
-  #   description: >
-  #     Identifier mapping to specific assets or sets of new entrant assets.
-
-  #     For most existing and planned generation, maps to specific power stations.
-  #     For new entrants, maps to technology/location groups.
-
-  #     Source notes:
-  #     For purely 'blending' fuels (e.g. Biomethane) and VRE fuel types (Wind, Solar),
-  #     that don't map to a specific generator, technology, or location this column is
-  #     filled by the `templater` with the corresponding `fuel_type` value.
-  # TODO: revisit this decision and the 'If absent (or empty)' description text below
-  # for the 'wild-card' identifier key columns - I'm not sure yet if this makes sense!
   power_station:
     type: string
     required: false
@@ -69,9 +58,8 @@ columns:
       the 'power_station' column of the 'generators_existing_planned' table.
 
       If absent (or empty):
-      This row's price is a fall-back for any generator matching all of the row's
-      other non-empty identification keys (any combination of fuel_type, geo_id,
-      technology).
+      Wildcard — applies to every expandable element no more specific row covers
+      (a table-wide default).
   technology:
     type: string
     required: false
@@ -82,9 +70,8 @@ columns:
       The full proper name of the technology type to which this fuel price applies.
 
       If absent (or empty):
-      This row's price is a fall-back for any generator matching all of the row's
-      other non-empty identification keys (any combination of power_station,
-      fuel_type, geo_id).
+      Wildcard — applies to every expandable element no more specific row covers
+      (a table-wide default).
   geo_id:
     type: string
     required: false
@@ -94,13 +81,17 @@ columns:
       The geography identifier at which this row's fuel price applies.
 
       If absent (or empty):
-      This row's price is a fall-back for any generator matching all of the row's
-      other non-empty identification keys (any combination of power_station,
-      fuel_type, technology).
+      Wildcard — applies to every expandable element no more specific row covers
+      (a table-wide default).
   year:
     type: int
-    required: true
-    description: Year for which the price applies.
+    required: false
+    description: >
+      Year for which the price applies.
+
+      If absent (or empty):
+      Wildcard — applies to every expandable element no more specific row covers
+      (a table-wide default).
   price:
     type: float
     required: true
