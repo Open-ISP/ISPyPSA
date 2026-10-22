@@ -286,9 +286,10 @@ def _translate_constraint_tables(
         lifetime never retires, and load terms carry neither year — all of
         these apply in every period.
         - LHS and RHS rows are dropped in investment periods where the constraint does
-        not have both LHS terms and an RHS value. This happens when date_from coverage
-        differs between the two sides (including a side whose earliest date_from falls
-        after a period's start).
+        not have both an LHS term on a model variable and an RHS value. This happens
+        when date_from coverage differs between the two sides (including a side whose
+        earliest date_from falls after a period's start), or when only load terms are
+        left after the in-service filtering above.
 
     I/O Example (config: investment periods 2026 and 2028):
         ispypsa_tables["custom_constraints"]:
@@ -743,49 +744,86 @@ def _drop_one_sided_constraint_periods(
     lhs: pd.DataFrame, rhs: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Keeps each constraint only in the investment periods where it has both
-    LHS terms and an RHS row, dropping (and logging) the one-sided periods.
+    an LHS term on a model variable and an RHS row, dropping (and logging)
+    the one-sided periods.
 
     A period is one-sided when one side's date_from coverage starts later
     than the other's, leaving the constraint with terms but no limit (or a
     limit but no terms) in the earlier periods, where it can't be applied.
+    It's also one-sided when every term on a model variable has dropped out
+    (say, its generator has retired) and only load terms are left: load terms
+    are demand data, not variables, so there's nothing left to constrain.
 
     I/O Example:
         lhs (abridged):
-            constraint_id  investment_period
-            SWQLD1         2028
-            NQ1            2026
-            NQ1            2028
+            constraint_id  investment_period  component
+            SWQLD1         2028               Generator
+            NQ1            2026               Link
+            NQ1            2028               Link
+            SQ1            2026               Generator
+            SQ1            2026               Load
+            SQ1            2028               Load        # generator retired
 
         rhs (abridged):
             constraint_id  investment_period
             SWQLD1         2026
             SWQLD1         2028
             NQ1            2026
+            SQ1            2026
+            SQ1            2028
 
         returns (lhs, rhs):
             lhs:
-                constraint_id  investment_period
-                SWQLD1         2028
-                NQ1            2026
+                constraint_id  investment_period  component
+                SWQLD1         2028               Generator
+                NQ1            2026               Link
+                SQ1            2026               Generator
+                SQ1            2026               Load
                 # NQ1 2028 dropped: no RHS row that period (logged)
+                # SQ1 2028 dropped: only a load term that period
 
             rhs:
                 constraint_id  investment_period
                 SWQLD1         2028
                 NQ1            2026
+                SQ1            2026
                 # SWQLD1 2026 dropped: no LHS terms that period (logged)
+                # SQ1 2028 dropped: no LHS terms on model variables (logged)
     """
     keys = ["constraint_id", "investment_period"]
     lhs_periods = lhs.loc[:, keys].drop_duplicates()
+    variable_periods = _periods_with_variable_terms(lhs)
     rhs_periods = rhs.loc[:, keys].drop_duplicates()
     _log_one_sided_periods(
-        rhs_periods, lhs_periods, "RHS rows dropped (no LHS terms in that period)"
+        rhs_periods,
+        variable_periods,
+        "RHS rows dropped (no LHS terms on model variables in that period)",
     )
     _log_one_sided_periods(
         lhs_periods, rhs_periods, "LHS terms dropped (no RHS row in that period)"
     )
-    two_sided = lhs_periods.merge(rhs_periods, on=keys)
+    two_sided = variable_periods.merge(rhs_periods, on=keys)
     return lhs.merge(two_sided, on=keys), rhs.merge(two_sided, on=keys)
+
+
+def _periods_with_variable_terms(lhs: pd.DataFrame) -> pd.DataFrame:
+    """The (constraint_id, investment_period) pairs with at least one LHS term
+    on a model variable, i.e. any term but a load term.
+
+    I/O Example:
+        lhs (abridged):
+            constraint_id  investment_period  component
+            SQ1            2026               Generator
+            SQ1            2026               Load
+            SQ1            2028               Load        # load only
+
+        returns:
+            constraint_id  investment_period
+            SQ1            2026
+    """
+    is_variable = lhs["component"] != "Load"
+    keys = ["constraint_id", "investment_period"]
+    return lhs.loc[is_variable, keys].drop_duplicates()
 
 
 def _log_one_sided_periods(

@@ -610,9 +610,12 @@ def test_load_term_resolves_to_the_demand_nodes_load_component(
     load_<bus> Load component at its demand node, whose p_set pypsa_build
     resolves from the demand trace."""
     ispypsa_tables = _constraint_tables(csv_str_to_df)
+    # The KINGASF1 term keeps SWQLD1 from being load-only, which would be
+    # dropped as having nothing to constrain.
     ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
-        constraint_id,  term_type,  variable_name,  coefficient,  date_from
-        SWQLD1,         load,       SQ,             -0.33,
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         load,              SQ,             -0.33,
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
     """)
 
     result = _translate_custom_constraints(
@@ -628,6 +631,8 @@ def test_load_term_resolves_to_the_demand_nodes_load_component(
         constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
         SWQLD1,                   2026,               load_SQ,           Load,       p_set,      -0.33
         SWQLD1,                   2028,               load_SQ,           Load,       p_set,      -0.33
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2028,               KINGASF1,          Generator,  p,          0.14
         SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
         SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
@@ -895,7 +900,8 @@ def test_constraint_with_no_lhs_terms_dropped_and_logged(
         )
 
     assert (
-        "Custom constraint RHS rows dropped (no LHS terms in that period): "
+        "Custom constraint RHS rows dropped "
+        "(no LHS terms on model variables in that period): "
         "[('NQ1', 2026), ('NQ1', 2028)]"
     ) in caplog.text
     # The expansion-limit rows come from the helper's NSW-QLD and SWQLD1
@@ -1014,10 +1020,68 @@ def test_lhs_starting_mid_horizon_drops_rhs_for_earlier_periods_and_logs(
         )
 
     assert (
-        "Custom constraint RHS rows dropped (no LHS terms in that period): "
+        "Custom constraint RHS rows dropped "
+        "(no LHS terms on model variables in that period): "
         "[('SWQLD1', 2026)]"
     ) in caplog.text
     expected_lhs, expected_rhs = _one_sided_period_expected_outputs(csv_str_to_df)
+    _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
+
+
+def test_period_left_with_only_load_terms_is_dropped_and_logged(
+    csv_str_to_df, sample_model_config, caplog
+):
+    """Once a constraint's last term on a model variable retires, only its
+    load terms (demand data) are left, so there's nothing to constrain and
+    the period is dropped like any other one-sided period."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  KINGASF1,       0.14,
+        SWQLD1,         load,              SQ,             -0.33,
+    """)
+    ispypsa_tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_id,  timeslice,        rhs,   date_from
+        SWQLD1,         qld_peak_demand,  3000,
+    """)
+    # KINGASF1 retires in 2028 (2025 + 3), leaving SWQLD1 load-only that period.
+    generators = csv_str_to_df("""
+        isp_name,  name,      build_year,  lifetime
+        KINGASF1,  KINGASF1,  2025,        3
+    """)
+
+    with caplog.at_level("INFO"):
+        result = _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            generators,
+            _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Custom constraint RHS rows dropped "
+        "(no LHS terms on model variables in that period): "
+        "[('SWQLD1', 2028)]"
+    ) in caplog.text
+    # The relaxation generator only enters the 2026 constraint, but both of
+    # its build years still sit in the expansion limit.
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               KINGASF1,          Generator,  p,          0.14
+        SWQLD1,                   2026,               load_SQ,           Load,       p_set,      -0.33
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    expected_rhs = csv_str_to_df("""
+        constraint_name,          investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,                   2026,               qld_peak_demand,  3000,  <=
+        NSW-QLD_expansion_limit,  ,                   ,                 1000,  <=
+        SWQLD1_expansion_limit,   ,                   ,                 400,   <=
+    """)
     _assert_lhs_and_rhs_equal(result, expected_lhs, expected_rhs)
 
 
