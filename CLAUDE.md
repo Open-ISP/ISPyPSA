@@ -236,6 +236,14 @@ Use the `csv_str_to_df` fixture to create readable DataFrame inputs and expected
 each `assert_frame_equal` immediately after its expected DataFrame definition. Only include
 columns in test inputs that the code actually accesses.
 
+When a test's expected output follows from several inputs combining, or from rows that live
+only in a shared baseline helper (e.g. `_constraint_tables`), add a brief comment above the
+relevant table that names the specific rows and values and the output they produce. Prefer
+`# Q1-NQ has no limit row, so it takes the default (500)` over `# default applies`. Use
+Python comments, since `csv_str_to_df` doesn't strip `#` inside the CSV. Skip comments the
+test name or docstring already covers, and don't call a baseline helper whose tables the
+test fully overwrites.
+
 **Always assert with `pd.testing.assert_frame_equal` against a full expected DataFrame.** Don't
 substitute row-count checks, set membership on a column, per-cell `iloc[...]` lookups, or
 `pd.isna(...)` probes — they hide off-by-one, ordering, and stray-column bugs and read worse than
