@@ -111,7 +111,7 @@ def _translate_custom_constraints(
     in generators_existing_planned or generators_new_entrant), no
     constraint_relaxation option on an "=" constraint, and a cost for every
     expandable element in every investment period — are declared in
-    src/ispypsa/validation/schemas (custom_constraints*.yaml,
+    src/ispypsa/validation/schemas/ispypsa_tables (custom_constraints*.yaml,
     network_expansion_options.yaml and
     network_transmission_path_expansion_costs.yaml).
 

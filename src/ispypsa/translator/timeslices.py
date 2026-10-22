@@ -164,20 +164,90 @@ def _log_referenced_timeslices_without_snapshots(
     custom_constraints_rhs: pd.DataFrame,
 ) -> None:
     """Logs the timeslices referenced by a limit or constraint but mapped to
-    no snapshots — those limits and constraints will never apply.
+    no snapshots where they would apply — those limits and constraints will
+    never apply.
 
     This is expected when snapshot aggregation (e.g. representative weeks)
     selects no snapshots inside a timeslice's windows, and for calendar
     timeslices that never activate (tas_peak_demand in the Draft 2026 ISP
     calendar), but the user should know the affected inputs will not bind.
+
+    Transmission limits apply in every investment period, so they are checked
+    against the model as a whole. Custom constraint rows each apply in one
+    investment period, so they are checked period by period: a short
+    timeslice like qld_peak_demand can be caught by the representative weeks
+    in 2025 but missed in 2030.
     """
-    referenced = set(link_timeslice_limits["timeslice"]) | set(
-        custom_constraints_rhs["timeslice"].dropna()
+    _log_link_timeslices_without_snapshots(timeslice_snapshots, link_timeslice_limits)
+    _log_constraint_timeslices_without_snapshots_in_period(
+        timeslice_snapshots, custom_constraints_rhs
     )
+
+
+def _log_link_timeslices_without_snapshots(
+    timeslice_snapshots: pd.DataFrame, link_timeslice_limits: pd.DataFrame
+) -> None:
+    """Logs the named timeslices in link_timeslice_limits with no snapshots in
+    any investment period. Fallback rows (blank timeslice) aren't checked.
+
+    I/O Example:
+        timeslice_snapshots:
+            timeslice        investment_periods  snapshots
+            nsw_peak_demand  2026                2026-01-13 12:00:00
+
+        link_timeslice_limits:
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   nsw_peak_demand  0.8
+            CQ-NQ_existing  p_max_pu   tas_peak_demand  0.9   # never mapped: logged
+            CQ-NQ_existing  p_max_pu   ,                1.0   # fallback: not checked
+
+        logs: [...] will never apply): ['tas_peak_demand']
+    """
+    referenced = set(link_timeslice_limits["timeslice"].dropna())
     without_snapshots = referenced - set(timeslice_snapshots["timeslice"])
     if without_snapshots:
         logger.warning(
-            f"Timeslices referenced by transmission limits or custom constraints "
-            f"but with no snapshots in the model (these limits and constraints "
-            f"will never apply): {sorted(without_snapshots)}"
+            f"Timeslices referenced by transmission limits but with no snapshots "
+            f"in the model (these limits will never apply): "
+            f"{sorted(without_snapshots)}"
+        )
+
+
+def _log_constraint_timeslices_without_snapshots_in_period(
+    timeslice_snapshots: pd.DataFrame, custom_constraints_rhs: pd.DataFrame
+) -> None:
+    """Logs each (timeslice, investment_period) pair named in
+    custom_constraints_rhs with no snapshots in timeslice_snapshots. Fallback
+    rows (blank timeslice) aren't checked; a named timeslice always has an
+    investment_period (custom_constraints_rhs schema).
+
+    I/O Example:
+        timeslice_snapshots:
+            timeslice        investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-31 12:00:00
+
+        custom_constraints_rhs:
+            constraint_name  investment_period  timeslice
+            SWQLD1           2025               qld_peak_demand
+            SWQLD1           2030               qld_peak_demand   # not in 2030: logged
+            SWQLD1           2030               ,                 # fallback: not checked
+
+        logs: [...] will never apply): [('qld_peak_demand', 2030)]
+    """
+    named = custom_constraints_rhs.dropna(subset=["timeslice"])
+    referenced = set(
+        zip(named["timeslice"], named["investment_period"].astype(int).tolist())
+    )
+    mapped = set(
+        zip(
+            timeslice_snapshots["timeslice"],
+            timeslice_snapshots["investment_periods"].tolist(),
+        )
+    )
+    without_snapshots = referenced - mapped
+    if without_snapshots:
+        logger.warning(
+            f"Timeslices referenced by custom constraints but with no snapshots in "
+            f"the constraint's investment period (these constraints will never "
+            f"apply): {sorted(without_snapshots)}"
         )

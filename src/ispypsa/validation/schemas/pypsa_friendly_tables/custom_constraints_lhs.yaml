@@ -1,0 +1,91 @@
+table: custom_constraints_lhs
+required: false
+unique:
+  - [constraint_name, investment_period, variable_name, component, attribute]
+custom_validation:
+  - name: supported_component_attribute_pairs
+    description: >
+      Each row's (component, attribute) must be one pypsa_build maps onto the
+      model: (Link, p), (Link, p_nom), (Generator, p), (Generator, p_nom),
+      (Storage, p) or (Load, p_set). pypsa_build raises on any other pair,
+      listing every unsupported pair found.
+  - name: terms_belong_to_an_rhs_row
+    description: >
+      Every (constraint_name, investment_period) here must match a
+      custom_constraints_rhs row with the same pair, blank matching blank. So a
+      term with a blank investment_period needs its constraint to have an RHS
+      row with a blank investment_period, and a term with an investment_period
+      an RHS row in that investment period. pypsa_build picks each
+      constraint's terms from its RHS rows, so a term with no matching row is
+      silently ignored. The translator drops the investment periods in which a
+      constraint has only one side before this table is written.
+  - name: variables_name_components_in_the_input_tables
+    description: >
+      variable_name must name a component in the pypsa-friendly table
+      pypsa_build builds that component type from: a Link in links.name; a
+      Generator in generators.name or custom_constraints_generators.name (the
+      relaxation generators); a Storage unit in batteries.name; and a Load as
+      "load_<bus>", where <bus> is in buses.name and has a demand trace
+      (demand_traces/<bus>.parquet), since pypsa_build only attaches loads to
+      buses with one. A p_nom term must also name a row with
+      p_nom_extendable true, as only extendable components have a p_nom
+      variable. The translator raises on terms whose component isn't in the
+      model before this table is written.
+description: >
+  Left-hand-side terms of each custom constraint: one row per (constraint,
+  investment period, model component) coefficient.
+
+  Produced by ispypsa.translator.constraints, which expands each templated
+  term from its input ID into one term per matching PyPSA component (e.g. a
+  path's existing and expansion links) in each investment period the component
+  is in service. Consumed by
+  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
+
+  If absent:
+  No custom constraints are added to the model.
+columns:
+  constraint_name:
+    type: string
+    required: true
+    allowed_values_from:
+      - custom_constraints_rhs: constraint_name
+    description: Constraint the term belongs to.
+  investment_period:
+    type: int
+    required: false
+    description: >
+      Investment period the term applies in. A term joins the constraints of
+      the custom_constraints_rhs rows with the same constraint_name and
+      investment_period.
+
+      If absent (or empty):
+      The term applies regardless of investment period, joining its
+      constraint's RHS row with a blank investment_period. Only the expansion
+      limits take this form (see terms_belong_to_an_rhs_row).
+  variable_name:
+    type: string
+    required: true
+    description: >
+      Name of the PyPSA component the term's variable belongs to: a link, a
+      generator, a storage unit, or a load ("load_<bus>").
+  component:
+    type: string
+    required: true
+    allowed_values: [Link, Generator, Storage, Load]
+    description: >
+      Type of the component variable_name names. Storage terms apply to
+      StorageUnit components.
+  attribute:
+    type: string
+    required: true
+    allowed_values: [p, p_nom, p_set]
+    description: >
+      The component's variable the term applies to: p is dispatch (a Link's
+      flow, a Generator's output, or a Storage unit's net dispatch, discharging
+      minus charging), p_nom is installed capacity, and p_set (Load only) is
+      demand. p_set is data rather than a variable: coefficient x demand moves
+      to the constraint's right-hand side at each snapshot.
+  coefficient:
+    type: float
+    required: true
+    description: Coefficient the variable is multiplied by in the constraint.

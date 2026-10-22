@@ -3,7 +3,8 @@
 Both tables are built from the IASR ``new_entrants_summary`` table (for identity
 columns) plus per-technology property tables. This module splits the summary into
 its two subsets and shapes each into the columns of its target schema (see
-schemas/generators_new_entrant.yaml and schemas/storage_new_entrant.yaml).
+schemas/ispypsa_tables/generators_new_entrant.yaml and
+schemas/ispypsa_tables/storage_new_entrant.yaml).
 
 There are two independent public orchestrators, one per output table. Each one:
     1. Filters the summary to its technology group (generators or storage)
