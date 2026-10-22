@@ -62,16 +62,6 @@ columns:
 
       This column is used to define the `carrier` for the generating unit in the
       PyPSA model, and to map to fuel prices.
-  fuel_price_mapping:
-    type: string
-    required: true
-    allowed_values_from:
-      - costs_fuel_prices: fuel_price_mapping
-    description: >
-      The power station name or other identifier used to map fuel prices to the generator.
-
-      Note: for all power stations except for Kogan Gas, this should exactly match
-      the `power_station` column.
   capacity:
     type: float
     required: true
