@@ -13,8 +13,8 @@ one row per real generating/storage unit (DUID-level).
         DALNTH1              Dalrymple BESS Battery Storage...   S4      CSA         -          -
 
     generators_existing_planned (partial):
-        name  power_station  technology            geo_id  fuel_type  fuel_price_mapping  capacity
-        BW01  Bayswater      Steam Sub Critical    CNSW    Coal       Bayswater           660.0
+        name  power_station  technology            geo_id  fuel_type  capacity
+        BW01  Bayswater      Steam Sub Critical    CNSW    Coal       660.0
 
     storage_existing_planned (partial):
         name       power_station    technology          geo_id  fuel_type   capacity    storage_capacity
@@ -64,17 +64,8 @@ from ispypsa.templater.mappings import (
     _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP,
     _PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP,
     _STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP,
+    _SUMMARY_COLUMN_RENAMES,
 )
-
-# Source (IASR existing_committed_anticipated_additional_generator_summary) column
-# names → schema output column names.
-_SUMMARY_COLUMN_RENAMES = {
-    "IASR ID / DLT names": "name",
-    "Power Station": "power_station",
-    "Technology Type": "technology",
-    "Fuel type": "fuel_type",
-    "Fuel cost mapping": "fuel_price_mapping",
-}
 
 # Explicit output order (schema order).
 _GENERATOR_COLUMNS = [
@@ -83,7 +74,6 @@ _GENERATOR_COLUMNS = [
     "technology",
     "geo_id",
     "fuel_type",
-    "fuel_price_mapping",
     "capacity",
     "vom",
     "heat_rate",
