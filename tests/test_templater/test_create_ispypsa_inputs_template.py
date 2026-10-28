@@ -54,10 +54,9 @@ def _stub_custom_constraints_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
-# NOTE: temporary while new entrants not yet fully wired into templater -
-# input tables defined here for brevity until then.
-def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
-    """Per-technology property tables the new_entrant templater merges.
+def _new_entrant_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """Per-technology property tables the new_entrant templater merges and the
+    summary table itself.
 
     Covers every generator/storage technology used across the new-format fixtures
     below (Wind, Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs
@@ -68,7 +67,21 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     merge behaviour is covered in test_new_entrants.py; here they just need to be
     present for the wiring to run.
     """
+    new_entrants_summary = csv_str_to_df("""
+        IASR ID / DLT names,    Power Station,          Technology Type,                Fuel type,  Fuel cost mapping,  REZ ID,         Sub-region, Regional build cost zone
+        Q1_WH_Far North QLD,    Q1_WH_Far North QLD,    Wind,                           Wind,       Wind,               Q1,             NQ,         Q1
+        Q1_SAT_Far North QLD,   Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Solar,              Q1,             NQ,         Q1
+        CNSW OCGT Small,        CNSW OCGT Small,        OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, CNSW,       CNSW
+        SNW OCGT Small,         SNW OCGT Small,         OCGT (small GT),                Gas,        NSW new OCGT,       Not Applicable, SNW,        SNW
+        BOTN - Cethana - 20h,   BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Hydro,              Not Applicable, TAS,        TAS
+        NQ OCGT Small,          NQ OCGT Small,          OCGT (small GT),                Gas,        QLD new OCGT,       Not Applicable, NQ,         NQ
+        CNSW Battery - 2h,      CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Battery,            Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Battery,            Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Battery,            Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Battery,            Q1,             NQ,         Q1
+    """)
     return {
+        "new_entrants_summary": new_entrants_summary,
         "fixed_opex_new_entrants": csv_str_to_df("""
             Technology Type,                Base value ($/kW/year)),  Unit
             Wind,                           20.0,                     $
@@ -136,8 +149,6 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
-# NOTE: temporary while existing/planned storage properties not yet wired into
-# templater - input tables defined here for brevity until then.
 def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """The ECAA summary plus its per-unit property tables, wiring-only fixture.
 
@@ -145,11 +156,13 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     just need to be present for wiring to run.
     """
     summary = csv_str_to_df("""
-        IASR ID / DLT names,  Power Station,  Technology Type,                REZ ID,          Sub-region,  Fuel type,  Fuel cost mapping
-        BW01,                 Bayswater,      Steam Sub Critical,             Not Applicable,  CNSW,        Black Coal, Bayswater
-        Q1G1,                 Solar Farm,     Large scale Solar PV,           Q1,              NQ,          Solar,      Solar Farm
-        W/HOE#1,              Wivenhoe,       Hydro,                          Not Applicable, NQ,           Water,      Hydro
-        ORANA,                Orana BESS,     Battery storage (2hrs storage), N3,             CNSW,         Battery,    Battery
+        IASR ID / DLT names,  Power Station,  Technology Type,                REZ ID,          Sub-region,  Fuel type,      Fuel cost mapping
+        BW01,                 Bayswater,      Steam Sub Critical,             Not Applicable,  CNSW,        Black Coal,     Bayswater
+        TALWA1,               Tallawarra,     CCGT,                           Not Applicable,  SNW,         Gas,            Tallawarra
+        MSTUART1,             Mt Stuart,      OCGT (small GT),                Not Applicable,  NQ,          Liquid Fuel,    Mt Stuart
+        Q1G1,                 Solar Farm,     Large scale Solar PV,           Q1,              NQ,          Solar,          Solar Farm
+        W/HOE#1,              Wivenhoe,       Hydro,                          Not Applicable,  NQ,          Water,          Hydro
+        ORANA,                Orana BESS,     Battery storage (2hrs storage), N3,              CNSW,        Battery,        Battery
     """)
     return {
         "existing_committed_anticipated_additional_generator_summary": summary,
@@ -160,6 +173,8 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         "maximum_capacity_existing_committed_anticipated_additional_generators": csv_str_to_df("""
             IASR ID,  Installed capacity (MW),  Storage Capacity (MWh), Commissioning date
             BW01,     660.0,                    ,
+            TALWA1,   400.0,                    ,
+            MSTUART1, 146.0,                    ,
             Q1G1,     100.0,                    ,                       2028-12-01
             W/HOE#1,  285.0,                    3000.0,
             ORANA,    415.0,                    1660.0,                 2026-06-01
@@ -171,18 +186,22 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         # Built directly - the real column name's trailing "1," is a literal comma
         "variable_opex_existing_committed_anticipated_additional_generators": pd.DataFrame(
             {
-                "IASR ID": ["BW01", "Q1G1"],
-                "Variable OPEX ($/MWh sent out)1,": [8.0, 0.0],
+                "IASR ID": ["BW01", "TALWA1", "MSTUART1", "Q1G1"],
+                "Variable OPEX ($/MWh sent out)1,": [8.0, 11.0, 11.5, 0.0],
             }
         ),
         "heat_rates_existing_committed_anticipated_additional_generators": csv_str_to_df("""
             IASR ID,  Heat rate (GJ/MWh)
             BW01,     10.05
+            TALWA1,   7.21
+            MSTUART1, 12.0
             Q1G1,     0.0
         """),
         "expected_closure_years": csv_str_to_df("""
             IASR ID,  Expected Closure Year (Calendar year)
             BW01,     2033
+            TALWA1,   2043
+            MSTUART1, 2033
             Q1G1,     2100
             W/HOE#1,  2084
             ORANA,    2066
@@ -192,8 +211,47 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             BW01,     Steam Sub Critical,   260.0
         """),
         "gpg_min_stable_level_existing_generators": csv_str_to_df("""
-            IASR ID,              Technology Type,  Min Stable Level (MW)
-            SOME_OTHER_GAS_UNIT,  CCGT,             5.0
+            IASR ID,    Technology Type,  Min Stable Level (MW)
+            TALWA1,     CCGT,             190.0
+            MSTUART1,   OCGT (small GT),  30.0
+        """),
+    }
+
+
+def _fuel_price_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    return {
+        "coal_fuel_price": csv_str_to_df("""
+            Generator,  Scenario,       2024-25,    2025-26
+            Bayswater,  Step Change,    4.0,        3.0
+        """),
+        "gas_prices_existing_generators": csv_str_to_df("""
+            Generator,  Gas price scenario,     2024-25,    2025-26
+            Tallawarra, Step Change,            15.00,      14.00
+        """),
+        "gas_prices_new_entrants": csv_str_to_df("""
+            New generating stations,    Gas price scenario,     2024-25,    2025-26
+            NSW new OCGT,               Step Change,            18.00,      16.50
+            QLD new OCGT,               Step Change,            14.50,      13.50
+        """),
+        "liquid_fuel_prices": csv_str_to_df("""
+            Generator,      Gas price scenario,     2024-25,    2025-26
+            Mt Stuart,      Step Change,            29.50,      29.00
+        """),
+        "gpg_secondary_fuel_prices": csv_str_to_df("""
+            Generator,  Gas price scenario,     2024-25,    2025-26
+            Tallawarra, Step Change,            31.00,      32.00
+        """),
+        "biomass_fuel_price": csv_str_to_df("""
+            Biomass price,  Scenario,       2024-25,    2025-26
+            Biomass,        Step Change,    0.66,       0.66
+        """),
+        "hydrogen_prices": csv_str_to_df("""
+            Hydrogen price, Hydrogen price scenario,    2024-25,    2025-26
+            Hydrogen,       Step Change,                41.80,      41.20
+        """),
+        "biomethane_prices": csv_str_to_df("""
+            Biomethane price,   Biomethane price scenario,  2024-25,    2025-26
+            Biomethane (Waste), Step Change,                26.0,       25.0
         """),
     }
 
@@ -326,6 +384,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         New South Wales,  Central New South Wales (CNSW),        Wellington 330 kV
         New South Wales,  Southern New South Wales (SNW),        Lower Tumut 330 kV
         Victoria,         South East Victoria (SEV),             Hazelwood 500kV
+        Tasmania,         Tasmania (TAS),                        George Town 220 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -385,22 +444,16 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     connection_cost_forecast_other = csv_str_to_df("""
         Generator Type,     Region,  Scenario,     2024-25,   2025-26
         OCGT (small GT),    NSW,     Step Change,  20000000,  22000000
+        OCGT (small GT),    QLD,     Step Change,  23000000,  25000000
     """)
     connection_capacity_non_vre = csv_str_to_df("""
         Region,  Generator Type,    Connection capacity (MVA)
         NSW,     OCGT (small GT),   400
+        QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
         IBR,    10
-    """)
-    new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
-        BOTN - Cethana - 20h,   Pumped Hydro (24hrs storage),   Water,      Not Applicable, TAS,        TAS
     """)
 
     with (
@@ -435,9 +488,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
-                "new_entrants_summary": new_entrants_summary,
-                **_new_entrant_property_tables(csv_str_to_df),
+                **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
+                **_fuel_price_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -454,8 +507,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
-    # 5 subregions (NQ + CQ + CNSW + SNW + SEV) + 2 REZs + 2 non-REZs (N0, V0)
-    assert len(geography) == 9
+    # 6 subregions (NQ + CQ + CNSW + SNW + SEV + TAS) + 2 REZs + 2 non-REZs (N0, V0)
+    assert len(geography) == 10
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -504,9 +557,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (2 subregions)] x 2 years
-    assert set(costs_connection["geo_id"]) == {"Q1", "CNSW", "SNW"}
-    assert len(costs_connection) == 8
+    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (3 subregions) + CQ subregion] x 2 years
+    assert set(costs_connection["geo_id"]) == {"CQ", "NQ", "Q1", "CNSW", "SNW"}
+    assert len(costs_connection) == 12
 
     # At sub_regions, geo_id collapse is a no-op: one row per new-entrant summary
     # row. Detailed collapse behaviour is covered by test_new_entrants.py.
@@ -526,9 +579,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "heat_rate",
         "minimum_stable_level",
     }
-    # Wind + Large scale Solar PV (both Q1) + CNSW OCGT Small + SNW OCGT Small.
-    assert set(generators_new_entrant["geo_id"]) == {"Q1", "CNSW", "SNW"}
-    assert len(generators_new_entrant) == 4
+    # Wind + Large scale Solar PV (both Q1) + CNSW OCGT Small + SNW OCGT Small + NQ OCGT Small
+    assert set(generators_new_entrant["geo_id"]) == {"NQ", "Q1", "CNSW", "SNW"}
+    assert len(generators_new_entrant) == 5
 
     storage_new_entrant = result["storage_new_entrant"]
     assert set(storage_new_entrant.columns) == {
@@ -549,11 +602,12 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "lifetime_economic",
         "degradation_annual",
     }
-    # BOTN - Cethana (Pumped Hydro), the only storage row in the fixture.
-    assert len(storage_new_entrant) == 1
+    # BOTN - Cethana (Pumped Hydro) + 4x batteries
+    assert set(storage_new_entrant["geo_id"]) == {"NQ", "Q1", "CNSW", "SNW", "TAS"}
+    assert len(storage_new_entrant) == 5
 
-    # generators_existing_planned — BW01 (CNSW) and Q1G1 (Q1 REZ); W/HOE#1 and ORANA
-    # excluded (storage)
+    # generators_existing_planned — BW01 (CNSW), TALWA1 (SNW), MSTUART1 (NQ),
+    # and Q1G1 (Q1 REZ). W/HOE#1 and ORANA excluded (storage)
     generators_existing_planned = result["generators_existing_planned"]
     assert set(generators_existing_planned.columns) == {
         "name",
@@ -561,7 +615,6 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "technology",
         "geo_id",
         "fuel_type",
-        "fuel_price_mapping",
         "capacity",
         "vom",
         "heat_rate",
@@ -569,8 +622,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "closure_year",
         "minimum_load",
     }
-    assert set(generators_existing_planned["geo_id"]) == {"CNSW", "Q1"}
-    assert len(generators_existing_planned) == 2
+    assert set(generators_existing_planned["geo_id"]) == {"NQ", "CNSW", "Q1", "SNW"}
+    assert len(generators_existing_planned) == 4
 
     # storage_existing_planned — W/HOE#1 (NQ) and ORANA (N3); BW01 and Q1G1
     # excluded (generation)
@@ -619,6 +672,16 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     }
     assert len(constraints_rhs) == 1
 
+    # Fuel prices templated for named thermal power stations. geo_id matches
+    # regional granularity, excluding (allowed) NaNs.
+    # [ (3 existing gens) + (1 secondary fuel) +
+    #   (3 new-entrant gas subregions) +
+    #   (Biomass + Hydrogen + Biomethane) ]
+    # = 11 x 2 years + 3 x VRE fuel_types
+    costs_fuel_prices = result["costs_fuel_prices"]
+    assert len(costs_fuel_prices) == 23
+    assert set(costs_fuel_prices["geo_id"].dropna()) == {"CNSW", "SNW", "NQ"}
+
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
@@ -630,6 +693,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
         Victoria,         South East Victoria (SEV),       Hazelwood 500kV
+        Tasmania,         Tasmania (TAS),                        George Town 220 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -683,28 +747,17 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     connection_cost_forecast_other = csv_str_to_df("""
         Generator Type,     Region,  Scenario,     2024-25,   2025-26
         OCGT (small GT),    NSW,     Step Change,  20000000,  22000000
+        OCGT (small GT),    QLD,     Step Change,  23000000,  25000000
     """)
     connection_capacity_non_vre = csv_str_to_df("""
         Region,  Generator Type,    Connection capacity (MVA)
         NSW,     OCGT (small GT),   400
+        QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
         IBR,    10
     """)
-    new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
-        NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
-    """)
-
     with (
         patch(
             "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -737,9 +790,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
-                "new_entrants_summary": new_entrants_summary,
-                **_new_entrant_property_tables(csv_str_to_df),
+                **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
+                **_fuel_price_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -753,8 +806,8 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
-    # 3 unique NEM regions (QLD, NSW, VIC) + 2 REZs + 2 non-REZs
-    assert len(geography) == 7
+    # 4 unique NEM regions (QLD, NSW, VIC, TAS) + 2 REZs + 2 non-REZs
+    assert len(geography) == 8
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -795,9 +848,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         "system_strength_cost",
     }
     # REZ geo_ids (Q1) are granularity-invariant, subregions in same region collapse
-    # [(2 VRE x 1 REZ) + (1 non-VRE x 1 subregion)] x 2 years
-    assert set(costs_connection["geo_id"]) == {"Q1", "NSW"}
-    assert len(costs_connection) == 6
+    # [(2 VRE x 1 REZ) + (1 non-VRE x 2 regions)] x 2 years
+    assert set(costs_connection["geo_id"]) == {"Q1", "NSW", "QLD"}
+    assert len(costs_connection) == 8
 
     # REZ rows are untouched, subregions in same region collapse:
     generators_new_entrant = result["generators_new_entrant"]
@@ -806,12 +859,13 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     # REZ rows are untouched, subregions in same region collapse:
     storage_new_entrant = result["storage_new_entrant"]
-    assert len(storage_new_entrant) == 3
+    assert set(storage_new_entrant["geo_id"]) == {"NSW", "QLD", "Q1", "TAS"}
+    assert len(storage_new_entrant) == 4
 
     # generators_existing_planned — CNSW relabels to NSW; Q1 REZ stays untouched.
     generators_existing_planned = result["generators_existing_planned"]
-    assert set(generators_existing_planned["geo_id"]) == {"NSW", "Q1"}
-    assert len(generators_existing_planned) == 2
+    assert set(generators_existing_planned["geo_id"]) == {"NSW", "QLD", "Q1"}
+    assert len(generators_existing_planned) == 4
 
     # storage_existing_planned - NQ relabels to QLD; N3 REZ stays untouched
     storage_existing_planned = result["storage_existing_planned"]
@@ -825,6 +879,16 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     for name, expected in empty_custom_constraint_tables().items():
         pd.testing.assert_frame_equal(result[name], expected)
 
+    # Fuel prices templated for named thermal power stations. geo_id matches
+    # regional granularity, excluding (allowed) NaNs.
+    # [ (3 existing gens) + (1 secondary fuel) +
+    #   (2 new-entrant gas regions) +
+    #   (Biomass + Hydrogen + Biomethane) ]
+    # = 10 x 2 years + 3 x VRE fuel_types
+    costs_fuel_prices = result["costs_fuel_prices"]
+    assert len(costs_fuel_prices) == 21
+    assert set(costs_fuel_prices["geo_id"].dropna()) == {"NSW", "QLD"}
+
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # CQ is included so the CQ-NQ flow path's region prefix resolves at the
@@ -836,6 +900,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
         Victoria,         South East Victoria (SEV),       Hazelwood 500kV
+        Tasmania,         Tasmania (TAS),                  George Town 220 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -880,26 +945,16 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     connection_cost_forecast_other = csv_str_to_df("""
         Generator Type,     Region,  Scenario,     2024-25,   2025-26
         OCGT (small GT),    NSW,     Step Change,  20000000,  22000000
+        OCGT (small GT),    QLD,     Step Change,  23000000,  25000000
     """)
     connection_capacity_non_vre = csv_str_to_df("""
         Region,  Generator Type,    Connection capacity (MVA)
         NSW,     OCGT (small GT),   400
+        QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
         label,  2024-25
         IBR,    10
-    """)
-    new_entrants_summary = csv_str_to_df("""
-        IASR ID / DLT names,    Technology Type,                Fuel type,  REZ ID,         Sub-region, Regional build cost zone
-        Q1_WH_Far North QLD,    Wind,                           Wind,       Q1,             NQ,         Q1
-        Q1_SAT_Far North QLD,   Large scale Solar PV,           Solar,      Q1,             NQ,         Q1
-        CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
-        SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
-        NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -932,9 +987,9 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
-                "new_entrants_summary": new_entrants_summary,
-                **_new_entrant_property_tables(csv_str_to_df),
+                **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
+                **_fuel_price_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -997,12 +1052,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     # REZ rows untouched, everything else collapses to 'NEM' geo_id
     storage_new_entrant = result["storage_new_entrant"]
-    assert len(storage_new_entrant) == 2
+    assert len(storage_new_entrant) == 3
 
     # generators_existing_planned — CNSW relabels to NEM; Q1 REZ stays untouched.
     generators_existing_planned = result["generators_existing_planned"]
     assert set(generators_existing_planned["geo_id"]) == {"NEM", "Q1"}
-    assert len(generators_existing_planned) == 2
+    assert len(generators_existing_planned) == 4
 
     # storage_existing_planned - NQ relabels to NEM; N3 REZ stays untouched
     storage_existing_planned = result["storage_existing_planned"]
@@ -1015,3 +1070,13 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     mock_template_custom_constraints.assert_not_called()
     for name, expected in empty_custom_constraint_tables().items():
         pd.testing.assert_frame_equal(result[name], expected)
+
+    # Fuel prices templated for named thermal power stations. geo_id matches
+    # regional granularity, excluding (allowed) NaNs.
+    # [ (3 existing gens) + (1 secondary fuel) +
+    #   (1 new-entrant gas 'NEM') +
+    #   (Biomass + Hydrogen + Biomethane) ]
+    # = 8 x 2 years + 3 x VRE fuel_types
+    costs_fuel_prices = result["costs_fuel_prices"]
+    assert len(costs_fuel_prices) == 19
+    assert set(costs_fuel_prices["geo_id"].dropna()) == {"NEM"}

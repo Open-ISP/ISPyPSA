@@ -273,10 +273,8 @@ def create_ispypsa_inputs_template(
         template["costs_fuel_prices"] = _template_fuel_prices(
             iasr_tables,
             scenario,
-            sub_regional_geography,
             regional_granularity,
-            template["generators_new_entrant"],
-            template["generators_existing_planned"],
+            sub_regional_geography,
         )
 
         if regional_granularity == "sub_regions":
