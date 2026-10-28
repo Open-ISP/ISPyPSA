@@ -56,6 +56,14 @@ def test_build_required_tables_new_format():
     # Locational cost factor tables feed lcf_build / lcf_om in both new entrant templates
     assert "technology_specific_lcfs" in result
     assert "locational_cost_factors" in result
+    assert "coal_fuel_price" in result
+    assert "biomass_fuel_price" in result
+    assert "gas_prices_existing_generators" in result
+    assert "gas_prices_new_entrants" in result
+    assert "liquid_fuel_prices" in result
+    assert "gpg_secondary_fuel_prices" in result
+    assert "hydrogen_prices" in result
+    assert "biomethane_prices" in result
 
 
 def test_build_required_tables_old_format():
