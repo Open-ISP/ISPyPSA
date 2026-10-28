@@ -9,6 +9,7 @@ from ispypsa.templater.helpers import (
     _assert_table_valid,
     _build_geo_region_lookup,
     _derive_phes_symmetric_efficiency,
+    _filter_table_by_isp_scenario,
     _get_property_value_map,
     _group_properties_by_source,
     _is_battery_row,
@@ -1016,3 +1017,63 @@ def test_assert_table_valid_raises_empty_table():
             required_cols={"Technology", "Base value"},
             merge_desc="'fom'",
         )
+
+
+# --- _filter_table_by_isp_scenario ---
+
+
+def test_filter_table_by_isp_scenario(csv_str_to_df):
+    # Matching rows kept, non-matching dropped, Scenario col dropped.
+    # NaN values in non-Scenario columns are preserved. Fuzzy matching
+    # applied correctly so small typos are fixed before filtering.
+    table = csv_str_to_df("""
+        Scenario,       REZ ID,    value
+        Step Change,   N1,         100
+        step change,   N2,         150
+        Step Change,   N3,
+        Stop Change,   N4,         175
+        Slower Growth, N1,         200
+    """)
+
+    result = _filter_table_by_isp_scenario(table, "Step Change", "Scenario", "test")
+
+    expected = csv_str_to_df("""
+        REZ ID,    value
+        N1,         100
+        N2,         150
+        N3,
+        N4,         175
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+    )
+
+
+def test_filter_table_by_isp_scenario_no_matching_rows(csv_str_to_df, caplog):
+    # No rows have matching "Scenario" values - return empty df with non-'scenario'
+    # columns.
+    table = csv_str_to_df("""
+        Scenario,       REZ ID,    value
+        Step Change,    N1,         100
+        Slower Growth,  N1,         200
+    """)
+
+    with caplog.at_level("WARNING"):
+        result = _filter_table_by_isp_scenario(
+            table, "Accelerated Transition", "Scenario", "test"
+        )
+
+    expected = csv_str_to_df("""
+        REZ ID,    value
+    """)
+    pd.testing.assert_frame_equal(
+        result.reset_index(drop=True),
+        expected.reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    assert (
+        "No rows matched scenario 'Accelerated Transition' in test table "
+        "— filtered table will be empty"
+    ) in caplog.text
