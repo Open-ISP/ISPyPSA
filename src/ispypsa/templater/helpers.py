@@ -419,7 +419,8 @@ def _pick_location(row: pd.Series) -> str:
 def _set_geo_id(df: pd.DataFrame) -> pd.DataFrame:
     """Adds 'geo_id' column: REZ ID with Sub-region fallback (see ``_pick_location``)."""
     df = df.copy()
-    df["geo_id"] = df.apply(_pick_location, axis=1)
+    # apply() returns float64 on an empty frame; geo_id always holds strings
+    df["geo_id"] = df.apply(_pick_location, axis=1).astype("object")
     return df
 
 

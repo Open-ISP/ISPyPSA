@@ -530,7 +530,7 @@ def test_set_geo_id_empty_input(csv_str_to_df):
     expected = csv_str_to_df("""
         technology, REZ ID, Sub-region, geo_id
     """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+    pd.testing.assert_frame_equal(result, expected)
 
 
 # --- _build_geo_region_lookup ---
