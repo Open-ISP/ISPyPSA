@@ -1,91 +1,139 @@
-# TODO: also add emissions_reduction templating to this file? It's related?
+import logging
 
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _filter_table_by_isp_scenario,
     _financial_year_string_to_end_year_int,
-    _fuzzy_match_names,
     _looks_like_financial_year,
+    _map_geo_id_to_granularity,
+    _set_geo_id,
 )
-from ispypsa.templater.mappings import _SINGLE_REGION_ID
+from ispypsa.templater.mappings import _SUMMARY_COLUMN_RENAMES
 
-# notes to self - helper lists to have in one place
-# TODO delete before pushing
-_EXPECTED_COLUMNS = [
+_FUEL_PRICE_COLUMNS = [
     "fuel_type",
     "power_station",
     "technology",
     "geo_id",
-    # "fuel_price_mapping",     # maybe don't need this in the end?
     "year",
     "price",
 ]
 
-_FUEL_PRICE_ID_COLS = ["fuel_type", "power_station", "technology", "geo_id"]
+_NEW_ENTRANT_KEY_COLS = ["fuel_type", "technology", "geo_id"]
+_STATION_KEY_COLS = _NEW_ENTRANT_KEY_COLS + ["power_station"]
 
-_SOURCE_TABLES = [
+# IASR fuel price tables read by this module
+_FUEL_PRICE_TABLES = [
     "coal_fuel_price",
-    "biomass_fuel_price",
     "gas_prices_existing_generators",
     "gas_prices_new_entrants",
     "liquid_fuel_prices",
-    "gpg_secondary_fuel_prices",  # maybe
+    "gpg_secondary_fuel_prices",
+    "biomass_fuel_price",
     "hydrogen_prices",
     "biomethane_prices",
 ]
-# don't need consultant's scenario mapping table in the end - scenarios listed in
-# fuel price tables match allowed scenario strings already
 
-# this orchestrator is WIRED IN to create_template for DEBUGGING purposes
+# Raw IASR fuel price table headers → names used in this module. Each table has one
+# scenario column, plus one key column holding either a generator's fuel cost mapping
+# (station and new entrant tables) or the fuel type itself (biomass, hydrogen,
+# biomethane).
+_PRICE_TABLE_COLUMN_RENAMES = {
+    "Scenario": "scenario",
+    "Gas price scenario": "scenario",
+    "Hydrogen price scenario": "scenario",
+    "Biomethane price scenario": "scenario",
+    "Generator": "fuel_cost_mapping",
+    "New generating stations": "fuel_cost_mapping",
+    "Biomass price": "fuel_type",
+    "Hydrogen price": "fuel_type",
+    "Biomethane price": "fuel_type",
+}
+
+# Brigalow GT primary fuel (gas) is priced with the 'QLD new OCGT' new-entrant key,
+# and has no secondary fuel price row in the gpg_secondary_fuel_prices table. It
+# gets excluded and logged (see `_exclude_gpg_with_no_2nd_fuel_price`) when templating
+# secondary liquid fuels.
+_GPG_WITH_NO_2ND_FUEL_PRICE = ["Brigalow GT"]
+
+# Three options are given in v7.5 workbook for biomethane prices: 'Biomethane (Waste)',
+# 'Biomethane (Landfill gas)' and 'Biomethane (Crop residue)'. The corresponding
+# note in the workbook says: "Note: Fuel price calculation for gas powered generators
+# uses Biomethane (Waste) price".
+_BIOMETHANE_PRICE_TYPE = "Biomethane (Waste)"
+
+_ZERO_COST_FUEL_TYPES = ["Solar", "Wind", "Water"]
 
 
 def _template_fuel_prices(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
-    sub_regional_geography: pd.DataFrame,
     regional_granularity: str,
-    generators_new_entrant: pd.DataFrame,
-    generators_existing_planned: pd.DataFrame,
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
-
-    coal_prices = _template_coal_prices(
-        iasr_tables["coal_fuel_price"], scenario, generators_existing_planned
+    logging.info(
+        "Creating a template for fuel prices for existing and new entrant generators"
     )
 
-    gas_prices = _template_gas_prices(
-        iasr_tables["gas_prices_existing_generators"],
-        iasr_tables["gas_prices_new_entrants"],
-        scenario,
-        generators_existing_planned,
-        generators_new_entrant,
-        sub_regional_geography,
+    summary_existing = _prepare_existing_summary(
+        iasr_tables["existing_committed_anticipated_additional_generator_summary"],
         regional_granularity,
+        sub_regional_geography,
     )
 
-    liquid_fuel_prices = _template_liquid_fuel_prices(
-        iasr_tables["liquid_fuel_prices"],
-        iasr_tables["gpg_secondary_fuel_prices"],
-        generators_existing_planned,
-        scenario,
+    # prep price tables all together:
+    price_tables = _prepare_price_tables(iasr_tables, scenario)
+
+    # existing stations
+    coal_prices = _template_station_keyed_prices(
+        price_tables["coal_fuel_price"],
+        summary_existing,
+        ["Black Coal", "Brown Coal"],
+        "coal_fuel_price",
+    )
+    gas_prices = _template_station_keyed_prices(
+        _combine_gas_price_tables(price_tables),
+        summary_existing,
+        ["Gas"],
+        "gas_prices_existing_generators / gas_prices_new_entrants",
+    )
+    liquid_fuel_prices = _template_station_keyed_prices(
+        price_tables["liquid_fuel_prices"],
+        summary_existing,
+        ["Liquid Fuel"],
+        "liquid_fuel_prices",
+    )
+    secondary_liquid_fuel_prices = _template_secondary_liquid_fuel_prices(
+        price_tables["gpg_secondary_fuel_prices"], summary_existing
     )
 
-    biomass_prices = _template_biomass_prices(
-        iasr_tables["biomass_fuel_price"], scenario
+    # new entrants
+    new_entrant_gas_prices = _template_new_entrant_gas_prices(
+        price_tables["gas_prices_new_entrants"],
+        iasr_tables["new_entrants_summary"],
+        regional_granularity,
+        sub_regional_geography,
     )
 
-    hydrogen_prices = _template_hydrogen_prices(
-        iasr_tables["hydrogen_prices"], scenario
+    # fuel-wide prices
+    biomass_prices = _melt_fuel_prices_to_long(
+        price_tables["biomass_fuel_price"],
+        ["fuel_type"],
     )
-
-    biomethane_prices = _template_biomethane_prices(
-        iasr_tables["biomethane_prices"], scenario
+    hydrogen_prices = _melt_fuel_prices_to_long(
+        price_tables["hydrogen_prices"],
+        ["fuel_type"],
     )
+    biomethane_prices = _template_biomethane_prices(price_tables["biomethane_prices"])
 
     result = pd.concat(
         [
             coal_prices,
             gas_prices,
             liquid_fuel_prices,
+            secondary_liquid_fuel_prices,
+            new_entrant_gas_prices,
             biomass_prices,
             hydrogen_prices,
             biomethane_prices,
@@ -94,271 +142,215 @@ def _template_fuel_prices(
         axis=0,
         ignore_index=True,
     )
+    return result[_FUEL_PRICE_COLUMNS]
 
-    return result[_EXPECTED_COLUMNS]
+
+# --- input prep ---
 
 
-def _template_standardised_fuel_price_table(
-    table: pd.DataFrame, scenario: str
+def _prepare_existing_summary(
+    summary_existing: pd.DataFrame,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
-    # filter
-    filtered = table[table["scenario"] == scenario]
-    # select id and year columns
-    id_cols = [c for c in table.columns if c in _FUEL_PRICE_ID_COLS]
+    # existing summary is shared by four sub-templates, so running geo_id prep once.
+    # NOTE: relies on fuel prices only existing for thermal gens that aren't defined
+    # in REZs, atm, so that IASR table replacements don't need to be applied first.
+    # See Open-ISP/ISPyPSA#152 for planned refactor.
+    summary_existing = _set_geo_id(summary_existing)
+    summary_existing["geo_id"] = _map_geo_id_to_granularity(
+        summary_existing["geo_id"], regional_granularity, sub_regional_geography
+    )
+    return summary_existing
+
+
+def _prepare_price_tables(
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
+) -> dict[str, pd.DataFrame]:
+    return {
+        name: _filter_table_by_isp_scenario(
+            iasr_tables[name].rename(columns=_PRICE_TABLE_COLUMN_RENAMES),
+            scenario,
+            "scenario",
+            name,
+        )
+        for name in _FUEL_PRICE_TABLES
+    }
+
+
+# --- existing station prices ---
+
+
+def _template_station_keyed_prices(
+    prices: pd.DataFrame,
+    summary_existing: pd.DataFrame,
+    fuel_types: list[str],
+    price_table_name: str,
+) -> pd.DataFrame:
+    generators = _select_generator_keys(summary_existing, fuel_types)
+    merged = _merge_prices_onto_generators(prices, generators, price_table_name)
+    return _melt_fuel_prices_to_long(merged, _STATION_KEY_COLS)
+
+
+def _combine_gas_price_tables(price_tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    # Brigalow GT (in summary_existing) is priced off the new-entrant 'QLD new OCGT' key
+    return pd.concat(
+        [
+            price_tables["gas_prices_existing_generators"],
+            price_tables["gas_prices_new_entrants"],
+        ],
+    )
+
+
+def _template_secondary_liquid_fuel_prices(
+    prices: pd.DataFrame,
+    summary_existing: pd.DataFrame,
+) -> pd.DataFrame:
+    # NOTE: this isn't actually used yet in the demo setup, but it's easy to do here
+    # and could be easy to use to tweak fuel prices in input tables so leaving for now.
+    generators = _select_generator_keys(summary_existing, ["Gas"])
+    generators = _exclude_gpg_with_no_2nd_fuel_price(generators)
+
+    # strip suffix so keys match primary mapping ('Bairnsdale_2nd_Fuel'->'Bairnsdale')
+    prices = prices.assign(
+        fuel_cost_mapping=prices["fuel_cost_mapping"].str.removesuffix("_2nd_Fuel")
+    )
+    merged = _merge_prices_onto_generators(
+        prices, generators, "gpg_secondary_fuel_prices"
+    )
+    # manually set fuel_type -> otherwise would be 'Gas' from the merge still.
+    merged = merged.assign(fuel_type="Liquid Fuel")
+    return _melt_fuel_prices_to_long(
+        merged,
+        _STATION_KEY_COLS,
+    )
+
+
+def _exclude_gpg_with_no_2nd_fuel_price(generators: pd.DataFrame) -> pd.DataFrame:
+    generators = generators[
+        ~generators["power_station"].isin(_GPG_WITH_NO_2ND_FUEL_PRICE)
+    ]
+    # log for full record - currently only Brigalow GT
+    logging.info(
+        f"KNOWN EXCLUSION: power station(s) {sorted(_GPG_WITH_NO_2ND_FUEL_PRICE)} "
+        "excluded while templating secondary fuel prices for named GPG."
+    )
+    return generators
+
+
+# --- new entrant prices ---
+
+
+def _template_new_entrant_gas_prices(
+    prices: pd.DataFrame,
+    summary_new_entrant: pd.DataFrame,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+) -> pd.DataFrame:
+    generators = (
+        # set geo_id before merge+melt, then apply granularity collapse
+        _select_generator_keys(_set_geo_id(summary_new_entrant), ["Gas"])
+        .drop(columns="power_station")
+        .drop_duplicates()
+    )
+    merged = _merge_prices_onto_generators(
+        prices,
+        generators,
+        "gas_prices_new_entrants",
+    )
+    long = _melt_fuel_prices_to_long(
+        merged,
+        _NEW_ENTRANT_KEY_COLS,
+    )
+    return _collapse_new_entrant_gas_prices_to_granularity(
+        long, regional_granularity, sub_regional_geography
+    )
+
+
+def _collapse_new_entrant_gas_prices_to_granularity(
+    prices: pd.DataFrame,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+) -> pd.DataFrame:
+    prices = prices.copy()
+    prices["geo_id"] = _map_geo_id_to_granularity(
+        prices["geo_id"], regional_granularity, sub_regional_geography
+    )
+    return (
+        prices.groupby(_NEW_ENTRANT_KEY_COLS + ["year"])["price"].mean().reset_index()
+    )
+
+
+# --- fuel-wide prices ---
+
+
+def _template_biomethane_prices(
+    prices: pd.DataFrame,
+) -> pd.DataFrame:
+    # Filter for the specific 'Biomethane price'-type specified in IASR note:
+    prices = prices[prices["fuel_type"] == _BIOMETHANE_PRICE_TYPE]
+    prices = prices.assign(fuel_type="Biomethane")
+    return _melt_fuel_prices_to_long(prices, ["fuel_type"])
+
+
+def _zero_cost_rows() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "fuel_type": _ZERO_COST_FUEL_TYPES,
+            "price": 0.0,
+        },
+    )
+
+
+# --- shared steps ---
+
+
+def _select_generator_keys(
+    summary: pd.DataFrame, fuel_types: list[str]
+) -> pd.DataFrame:
+    renamed = summary.rename(columns=_SUMMARY_COLUMN_RENAMES)
+    filtered = renamed[renamed["fuel_type"].isin(fuel_types)]
+    # Gas stations listed under two technologies keep a row for each, so every
+    # key column stays filled for wildcard matching.
+    return filtered[_STATION_KEY_COLS + ["fuel_cost_mapping"]].drop_duplicates()
+
+
+def _merge_prices_onto_generators(
+    prices: pd.DataFrame,
+    generators: pd.DataFrame,
+    price_table_name: str,
+) -> pd.DataFrame:
+    # raises if any generator has no price; unused price rows are ignored
+    merged = generators.merge(
+        prices,
+        how="left",
+        on="fuel_cost_mapping",
+        indicator=True,
+    )
+    # TODO revisit logging unused rows; sticking point is gas w/ combined ecaa/new entrants
+    _raise_on_unpriced_generators(
+        merged,
+        f"Generator fuel cost mappings with no price in {price_table_name}",
+    )
+    return merged.drop(columns="_merge")
+
+
+def _raise_on_unpriced_generators(merged: pd.DataFrame, message: str) -> None:
+    unmatched = sorted(
+        merged.loc[merged["_merge"] == "left_only", "fuel_cost_mapping"].unique()
+    )
+    if unmatched:
+        raise ValueError(f"{message}: {unmatched}")
+
+
+def _melt_fuel_prices_to_long(table: pd.DataFrame, id_cols: list[str]) -> pd.DataFrame:
     year_cols = [c for c in table.columns if _looks_like_financial_year(c)]
-    # reshape to long
-    long = filtered.melt(
+    long = table.melt(
         id_vars=id_cols,
         value_vars=year_cols,
         var_name="year",
         value_name="price",
     )
-    # apply FY -> int processing
-    long["year"] = long["year"].apply(_financial_year_string_to_end_year_int)
-    # enforce numeric price
-    long["price"] = pd.to_numeric(long["price"], errors="raise")
+    long["year"] = long["year"].map(_financial_year_string_to_end_year_int)
+    long["price"] = pd.to_numeric(long["price"])
     return long
-
-
-def _template_coal_prices(
-    coal_prices: pd.DataFrame,
-    scenario: str,
-    generators_existing_planned: pd.DataFrame,
-) -> pd.DataFrame:
-
-    coal_generators = generators_existing_planned[
-        generators_existing_planned["fuel_type"].str.contains("coal", case=False)
-    ].drop_duplicates(subset=["power_station", "fuel_type"])
-    power_station_to_fuel_type = dict(
-        zip(coal_generators["power_station"], coal_generators["fuel_type"])
-    )
-
-    # clean up table: rename key columns and align power_station names with canonical
-    _COAL_PRICE_COLS = {"Generator": "power_station", "Scenario": "scenario"}
-    coal_prices = coal_prices.rename(columns=_COAL_PRICE_COLS)
-    coal_prices["power_station"] = _fuzzy_match_names(
-        coal_prices["power_station"],
-        coal_generators["power_station"],
-        "templating coal fuel prices for existing power stations",
-    )
-    coal_prices["fuel_type"] = coal_prices["power_station"].map(
-        power_station_to_fuel_type
-    )
-
-    return _template_standardised_fuel_price_table(coal_prices, scenario)
-
-
-def _template_gas_prices(
-    gas_existing: pd.DataFrame,
-    gas_new_entrant: pd.DataFrame,
-    scenario: str,
-    generators_existing_planned: pd.DataFrame,
-    generators_new_entrant: pd.DataFrame,  # this could be from IASR table, not templated?
-    sub_regional_geography: pd.DataFrame,
-    regional_granularity: str,
-) -> pd.DataFrame:
-
-    # 1. Existing/planned generators
-    existing_gas_gens = generators_existing_planned[
-        generators_existing_planned["fuel_type"] == "Gas"
-    ].drop_duplicates(subset=["power_station"])
-
-    _GAS_EXISTING_COLS = {
-        "Generator": "power_station",
-        "Gas price scenario": "scenario",
-    }
-    gas_existing = gas_existing.rename(columns=_GAS_EXISTING_COLS)
-    gas_existing["power_station"] = _fuzzy_match_names(
-        gas_existing["power_station"],
-        existing_gas_gens["power_station"],
-        "templating gas fuel prices for existing power stations",
-    )
-    # STILL NEED TO MANUALLY HANDLE THE KOGAN GAS/BRIGALOW GT THING!!
-    gas_existing = _template_standardised_fuel_price_table(gas_existing, scenario)
-
-    # 2. New entrant generators
-    new_entrant_gas_technologies = generators_new_entrant[
-        generators_new_entrant["fuel_type"] == "Gas"
-    ].drop_duplicates(subset="technology")
-    new_entrant_gas_technologies["gt_type"] = new_entrant_gas_technologies[
-        "technology"
-    ].str.extract(r"^([OC]CGT).*")
-
-    _GAS_NEW_ENTRANT_COLS = {
-        "Gas price scenario": "scenario",
-    }
-    gas_new_entrant = gas_new_entrant.rename(columns=_GAS_NEW_ENTRANT_COLS)
-    key_col_pattern = r"^(?P<geo_id>[A-Z]+) new (?P<gt_type>[OC]CGT)$"
-    gas_new_entrant = gas_new_entrant.assign(
-        **gas_new_entrant["New generating stations"].str.extract(
-            key_col_pattern, expand=True
-        )
-    )
-    gas_new_entrant = gas_new_entrant.merge(
-        new_entrant_gas_technologies[["gt_type", "technology"]],
-        how="left",
-        on="gt_type",
-    )
-    gas_new_entrant = _template_standardised_fuel_price_table(gas_new_entrant, scenario)
-    if regional_granularity == "nem_regions":
-        pass
-    elif regional_granularity == "single_region":
-        gas_new_entrant = (
-            gas_new_entrant.groupby(["technology", "year"], dropna=False)["price"]
-            .mean()
-            .reset_index()
-        )
-        gas_new_entrant["geo_id"] = _SINGLE_REGION_ID
-    elif regional_granularity == "sub_regions":
-        gas_new_entrant = gas_new_entrant.rename(columns={"geo_id": "region_id"})
-        regions_to_subregions = sub_regional_geography[
-            sub_regional_geography["geo_type"] == "subregion"
-        ][["region_id", "geo_id"]]
-        gas_new_entrant = gas_new_entrant.merge(
-            regions_to_subregions, how="left", on="region_id"
-        ).drop(columns=["region_id"])
-    else:
-        raise ValueError("invalid regional_granularity")
-
-    # filter by scenario
-    # (
-    # pull apart nem_region and technology(ish) from name column (- potentially could
-    # map this from raw iasr new_entrants_summary table? for Gas, match on fuel_cost_mapping?)
-    # explode to all gas technologies in new entrants (hard code or infer?) (?)
-    # )
-    # handle regional granularity variations: either explode to subregion or avg to NEM
-    # melt to long form
-    # convert 'year' column to int
-    # enforce numeric (float) on price column
-    # set fuel_type = 'Gas'
-
-    # concat([1,2])
-    gas_prices = pd.concat([gas_existing, gas_new_entrant], axis=0, ignore_index=True)
-    gas_prices["fuel_type"] = "Gas"
-    return gas_prices
-
-
-def _template_liquid_fuel_prices(
-    liquid_fuel: pd.DataFrame,
-    secondary_fuel: pd.DataFrame,
-    generators_existing_planned: pd.DataFrame,
-    scenario: str,
-) -> pd.DataFrame:
-
-    # 1. Liquid fuel
-    _LIQUID_FUEL_COLS = {"Generator": "power_station", "Gas price scenario": "scenario"}
-    liquid_fuel_generators = generators_existing_planned[
-        generators_existing_planned["fuel_type"] == "Liquid Fuel"
-    ]
-
-    # clean up table: rename key columns and align power_station names with canonical
-    liquid_fuel_prices = liquid_fuel.rename(columns=_LIQUID_FUEL_COLS)
-    liquid_fuel_prices["power_station"] = _fuzzy_match_names(
-        liquid_fuel_prices["power_station"],
-        set(liquid_fuel_generators["power_station"]),
-        "templating liquid fuel prices for existing power stations",
-    )
-    liquid_fuel_prices = _template_standardised_fuel_price_table(
-        liquid_fuel_prices, scenario
-    )
-    # filter df by scenario
-    # melt to long-form
-    # convert 'year' column to int (from FY format)
-    # enforce numeric (float) on price column
-    # set fuel_type = 'liquid fuel' (whatever the match in generators is)
-
-    # 2. Secondary fuel - liquid fuel for gas generators
-    # NOTE: all existing/planned gas generators have liquid fuel prices defined
-    # EXCEPT FOR BRIGALOW GT -> no 'new entrant' fuel-mapped prices for liquid fuels.
-    existing_gas_gens = generators_existing_planned[
-        generators_existing_planned["fuel_type"] == "Gas"
-    ]
-    _GAS_EXISTING_COLS = {
-        "Generator": "power_station",
-        "Gas price scenario": "scenario",
-    }
-    secondary_fuel_prices = secondary_fuel.rename(columns=_LIQUID_FUEL_COLS)
-
-    # split the additional "_2nd_Fuel" off the end of the power_station string
-    secondary_fuel_prices["power_station"] = (
-        secondary_fuel_prices["power_station"].str.split("_2nd_Fuel").str[0]
-    )
-
-    secondary_fuel_prices["power_station"] = _fuzzy_match_names(
-        secondary_fuel_prices["power_station"],
-        set(secondary_fuel_prices["power_station"]),
-        "templating secondary (liquid) fuel prices for existing Gas power stations",
-    )
-    secondary_fuel_prices = _template_standardised_fuel_price_table(
-        secondary_fuel_prices, scenario
-    )
-    # filter df by scenario
-    # clean names (remove 'Secondary')
-    # melt to long-form
-    # convert 'year' column to int (from FY format)
-    # enforce numeric (float) on price column
-    # set fuel_type = 'liquid fuel' (whatever the match in generators is)
-
-    combined = pd.concat(
-        [liquid_fuel_prices, secondary_fuel_prices], axis=0, ignore_index=True
-    )
-    combined["fuel_type"] = "Liquid Fuel"
-    return combined
-
-
-def _template_biomass_prices(
-    biomass: pd.DataFrame,
-    scenario: str,
-) -> pd.DataFrame:
-
-    _BIOMASS_PRICE_COLS = {"Biomass price": "fuel_type", "Scenario": "scenario"}
-    biomass = biomass.rename(columns=_BIOMASS_PRICE_COLS)
-
-    return _template_standardised_fuel_price_table(biomass, scenario)
-
-
-def _template_hydrogen_prices(
-    hydrogen: pd.DataFrame,
-    scenario: str,
-) -> pd.DataFrame:
-
-    _HYDROGEN_PRICE_COLS = {
-        "Hydrogen price": "fuel_type",
-        "Hydrogen price scenario": "scenario",
-    }
-    hydrogen = hydrogen.rename(columns=_HYDROGEN_PRICE_COLS)
-
-    return _template_standardised_fuel_price_table(hydrogen, scenario)
-
-
-def _template_biomethane_prices(
-    biomethane: pd.DataFrame,
-    scenario: str,
-) -> pd.DataFrame:
-
-    _BIOMETHANE_PRICE_COLS = {
-        "Biomethane price": "fuel_type",
-        "Biomethane price scenario": "scenario",
-    }
-    biomethane = biomethane.rename(columns=_BIOMETHANE_PRICE_COLS)
-    biomethane = biomethane[biomethane["fuel_type"] == "Biomethane (Waste)"]
-    biomethane["fuel_type"] = "Biomethane"
-
-    return _template_standardised_fuel_price_table(biomethane, scenario)
-
-
-def _zero_cost_rows() -> pd.DataFrame:
-    _ZERO_COST_FUEL_TYPES = ["Solar", "Wind", "Water"]
-    # log the 'extra' fuels being added with price=$0.0 for all years/techs/geo_ids
-    # corresponding to teh fuel type (with no other named/id-key matches)
-    num_fuel_types = len(_ZERO_COST_FUEL_TYPES)
-    return pd.DataFrame(
-        {
-            "fuel_type": _ZERO_COST_FUEL_TYPES,
-            "power_station": [pd.NA] * num_fuel_types,
-            "technology": [pd.NA] * num_fuel_types,
-            "geo_id": [pd.NA] * num_fuel_types,
-            "year": [pd.NA] * num_fuel_types,
-            "price": [0.0] * num_fuel_types,
-        },
-    )
