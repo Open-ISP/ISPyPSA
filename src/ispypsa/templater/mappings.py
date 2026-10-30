@@ -686,6 +686,10 @@ _NON_REZ_GEOGRAPHIES = pd.DataFrame(
     ]
 )
 
+# Sub-REZ IDs Q8(a/b/c) in ECAA summary table 'REZ ID' column are not real REZs,
+# but IDs used for resource-quality based build limits inside the Q8 REZ.
+_SUB_REZ_AREA_TO_REZ_ID = {"Q8a": "Q8", "Q8b": "Q8", "Q8c": "Q8"}
+
 # IASR `*_summary` table column names → schema column names.
 # Shared by the existing/planned, new entrant and fuel price templaters, which all read
 # the raw summary tables.

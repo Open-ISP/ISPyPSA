@@ -281,9 +281,6 @@ def _prepare_existing_summary(
             Power Station  REZ ID          Sub-region  geo_id   ...
             Bayswater      Not Applicable  CNSW        NSW
     """
-    # NOTE: relies on fuel prices only existing for thermal gens that aren't defined
-    # in REZs, atm, so that IASR table replacements don't need to be applied first.
-    # See Open-ISP/ISPyPSA#152 for planned refactor.
     summary_existing = _set_geo_id(summary_existing)
     summary_existing["geo_id"] = _map_geo_id_to_granularity(
         summary_existing["geo_id"], regional_granularity, sub_regional_geography

@@ -417,10 +417,29 @@ def _pick_location(row: pd.Series) -> str:
 
 
 def _set_geo_id(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds 'geo_id' column: REZ ID with Sub-region fallback (see ``_pick_location``)."""
+    """Adds 'geo_id': REZ ID with Sub-region fallback (see ``_pick_location``), with
+    sub-REZ areas mapped to their parent REZ (``_SUB_REZ_AREA_TO_REZ_ID``).
+
+    I/O Example:
+        df:
+            REZ ID          Sub-region
+            N3              CNSW
+            Not Applicable  NQ
+            Q8a             SQ
+
+        returns:
+            REZ ID          Sub-region  geo_id
+            N3              CNSW        N3
+            Not Applicable  NQ          NQ
+            Q8a             SQ          Q8      # sub-area of the Q8 REZ
+    """
+    # Deferred import to avoid a circular import - see _map_geo_id_to_granularity.
+    from ispypsa.templater.mappings import _SUB_REZ_AREA_TO_REZ_ID
+
     df = df.copy()
     # apply() returns float64 on an empty frame; geo_id always holds strings
     df["geo_id"] = df.apply(_pick_location, axis=1).astype("object")
+    df["geo_id"] = df["geo_id"].replace(_SUB_REZ_AREA_TO_REZ_ID)
     return df
 
 
