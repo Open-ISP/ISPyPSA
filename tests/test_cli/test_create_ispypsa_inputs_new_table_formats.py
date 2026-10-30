@@ -381,9 +381,7 @@ def test_create_ispypsa_inputs_new_format(
     storage_new_entrant = pd.read_csv(output_dir / "storage_new_entrant.csv")
     gens_existing_planned = pd.read_csv(output_dir / "generators_existing_planned.csv")
     storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
-    costs_fuel_prices = pd.read_csv(
-        output_dir / "costs_fuel_prices.csv"
-    )  # TODO add tests
+    costs_fuel_prices = pd.read_csv(output_dir / "costs_fuel_prices.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert (
@@ -462,9 +460,9 @@ def test_create_ispypsa_inputs_new_format(
     assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
     assert set(costs_connection["geo_id"]) <= set(geo["geo_id"])
 
-    # costs_fuel_prices - detailed content covered by #TODO fill. geo_ids should
-    # match granularity, but NaNs are allowed (wildcard) so dropped before comparing.
-    # Otherwise drift-detection only.
+    # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
+    # should match granularity, but NaNs are allowed (wildcard) so dropped before
+    # comparing. Otherwise drift-detection only.
     assert len(costs_fuel_prices) == _EXPECTED_COSTS_FUEL_PRICES_ROWS_75[granularity]
     assert set(costs_fuel_prices["geo_id"].dropna()) <= set(geo["geo_id"])
 
