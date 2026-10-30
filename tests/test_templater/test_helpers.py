@@ -506,10 +506,13 @@ def test_derive_phes_symmetric_efficiency_empty(csv_str_to_df):
 
 
 def test_set_geo_id(csv_str_to_df):
+    # Tests the subregion vs. REZ ID choice, and the mapping sub-REZ areas to their
+    # respective REZ ID (Q8a -> Q8).
     new_entrants = csv_str_to_df("""
         technology,                     REZ ID,         Sub-region
         Wind,                           N3,             CNSW
         OCGT (small GT),                Not Applicable, NQ
+        Large scale Solar PV,           Q8a,            SQ
     """)
 
     result = _set_geo_id(new_entrants)
@@ -518,6 +521,7 @@ def test_set_geo_id(csv_str_to_df):
         technology,                     REZ ID,         Sub-region, geo_id
         Wind,                           N3,             CNSW,       N3
         OCGT (small GT),                Not Applicable, NQ,         NQ
+        Large scale Solar PV,           Q8a,            SQ,         Q8
     """)
     pd.testing.assert_frame_equal(result, expected)
 
