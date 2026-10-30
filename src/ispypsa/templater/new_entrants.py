@@ -53,6 +53,7 @@ from ispypsa.templater.mappings import (
     _GENERATORS_NEW_ENTRANT_PROPERTY_MAP,
     _STORAGE_BATTERY_PROPERTY_MAP,
     _STORAGE_PHES_PROPERTY_MAP,
+    _SUMMARY_COLUMN_RENAMES,
 )
 
 _GENERATOR_IDENTITY_COLUMNS = [
@@ -103,12 +104,6 @@ _STORAGE_PROPERTY_COLUMNS = [
 _GENERATOR_GEO_ID_GROUP_KEYS = ["technology", "resource_type", "fuel_type"]
 _STORAGE_GEO_ID_GROUP_KEYS = ["technology", "fuel_type"]
 
-# Source (IASR new_entrants_summary) column names → schema output column names.
-_SUMMARY_COLUMN_RENAMES = {
-    "IASR ID / DLT names": "name",
-    "Technology Type": "technology",
-    "Fuel type": "fuel_type",
-}
 
 # TODO(revisit): Distributed Resources Solar currently gets no resource_type; add a
 # mapping for it if/when resource_limits templating requires one.

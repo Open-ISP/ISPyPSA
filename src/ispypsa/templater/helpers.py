@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from thefuzz import fuzz
 
+from ispypsa.templater.lists import _ISP_SCENARIOS_NEW
+
 
 def _fuzzy_match_names(
     name_series: pd.Series,
@@ -417,7 +419,8 @@ def _pick_location(row: pd.Series) -> str:
 def _set_geo_id(df: pd.DataFrame) -> pd.DataFrame:
     """Adds 'geo_id' column: REZ ID with Sub-region fallback (see ``_pick_location``)."""
     df = df.copy()
-    df["geo_id"] = df.apply(_pick_location, axis=1)
+    # apply() returns float64 on an empty frame; geo_id always holds strings
+    df["geo_id"] = df.apply(_pick_location, axis=1).astype("object")
     return df
 
 
@@ -888,3 +891,49 @@ def _rez_name_to_id_mapping(
     )
 
     return series_fixed_rez_names.replace(rez_name_to_id)
+
+
+def _filter_table_by_isp_scenario(
+    table: pd.DataFrame, scenario: str, scenario_col_name: str, table_desc: str
+) -> pd.DataFrame:
+    """Filters an IASR table to rows matching ``scenario`` and drops the scenario column.
+
+    Fuzzy-matches scenario names to handle minor spelling variations in the raw data.
+
+    I/O Example:
+        table:
+            Region      Scenario        2025-26     2026-27
+            NSW         Step Change     100         150
+            NSW         Slower Growth   200         300
+
+        scenario = "Step Change", scenario_col_name = "Scenario"
+
+        returns:
+            Region      2025-26     2026-27
+            NSW         100         150
+    """
+    table = table.copy()
+    table[scenario_col_name] = _fuzzy_map_to_allowed_values(
+        table[scenario_col_name],
+        _ISP_SCENARIOS_NEW,
+        task_desc=f"filtering {table_desc} table by ISP scenario",
+        threshold=80,
+    )
+    filtered = (
+        table.loc[table[scenario_col_name] == scenario]
+        .drop(columns=[scenario_col_name])
+        .reset_index(drop=True)
+    )
+    _warn_if_no_scenario_rows(filtered, scenario, table_desc)
+    return filtered
+
+
+def _warn_if_no_scenario_rows(
+    filtered_table: pd.DataFrame, scenario: str, table_desc: str
+) -> None:
+    """Logs a WARNING if filtering a table by scenario produced no matching rows."""
+    if filtered_table.empty:
+        logging.warning(
+            f"No rows matched scenario '{scenario}' in {table_desc} table "
+            "— filtered table will be empty"
+        )

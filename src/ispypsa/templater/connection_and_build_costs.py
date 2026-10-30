@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _filter_table_by_isp_scenario,
     _financial_year_string_to_end_year_int,
     _fuzzy_map_to_allowed_values,
     _looks_like_financial_year,
     _where_any_substring_appears,
 )
-from ispypsa.templater.lists import _ISP_SCENARIOS_NEW
 
 _VRE_COLUMN_RENAMES = {
     "REZ ID": "geo_id",
@@ -889,51 +889,3 @@ def _warn_nan_connection_costs(
         f"NaN connection cost after per-MW calculation for: {all_nan_costs} "
         "— no additional connection cost will be applied here"
     )
-
-
-# temp define here helper function for scenario filtering
-# todo: consider move into helper.py file if useful in other places?
-def _filter_table_by_isp_scenario(
-    table: pd.DataFrame, scenario: str, scenario_col_name: str, table_desc: str
-) -> pd.DataFrame:
-    """Filters an IASR table to rows matching ``scenario`` and drops the scenario column.
-
-    Fuzzy-matches scenario names to handle minor spelling variations in the raw data.
-
-    I/O Example:
-        table:
-            Region      Scenario        2025-26     2026-27
-            NSW         Step Change     100         150
-            NSW         Slower Growth   200         300
-
-        scenario = "Step Change", scenario_col_name = "Scenario"
-
-        returns:
-            Region      2025-26     2026-27
-            NSW         100         150
-    """
-    table = table.copy()
-    table[scenario_col_name] = _fuzzy_map_to_allowed_values(
-        table[scenario_col_name],
-        _ISP_SCENARIOS_NEW,
-        task_desc=f"filtering {table_desc} table by ISP scenario",
-        threshold=80,
-    )
-    filtered = (
-        table.loc[table[scenario_col_name] == scenario]
-        .drop(columns=[scenario_col_name])
-        .reset_index(drop=True)
-    )
-    _warn_if_no_scenario_rows(filtered, scenario, table_desc)
-    return filtered
-
-
-def _warn_if_no_scenario_rows(
-    filtered_table: pd.DataFrame, scenario: str, table_desc: str
-) -> None:
-    """Logs a WARNING if filtering a table by scenario produced no matching rows."""
-    if filtered_table.empty:
-        logging.warning(
-            f"No rows matched scenario '{scenario}' in {table_desc} table "
-            "— filtered table will be empty"
-        )
