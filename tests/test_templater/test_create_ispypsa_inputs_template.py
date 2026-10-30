@@ -219,6 +219,11 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
 
 
 def _fuel_price_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The eight IASR fuel price tables, with their real raw headers, pricing the
+    thermal stations and new entrant gas options in the fixtures above.
+
+    Detailed pricing behaviour is covered in test_fuel_prices.py.
+    """
     return {
         "coal_fuel_price": csv_str_to_df("""
             Generator,  Scenario,       2024-25,    2025-26
@@ -238,8 +243,8 @@ def _fuel_price_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Mt Stuart,      Step Change,            29.50,      29.00
         """),
         "gpg_secondary_fuel_prices": csv_str_to_df("""
-            Generator,  Gas price scenario,     2024-25,    2025-26
-            Tallawarra, Step Change,            31.00,      32.00
+            Generator,              Gas price scenario,     2024-25,    2025-26
+            Tallawarra_2nd_Fuel,    Step Change,            31.00,      32.00
         """),
         "biomass_fuel_price": csv_str_to_df("""
             Biomass price,  Scenario,       2024-25,    2025-26
@@ -557,7 +562,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (3 subregions) + CQ subregion] x 2 years
+    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (4 subregions: CNSW, SNW, NQ, CQ)] x 2 years,
+    # since region costs expand to every sub-region
     assert set(costs_connection["geo_id"]) == {"CQ", "NQ", "Q1", "CNSW", "SNW"}
     assert len(costs_connection) == 12
 
@@ -677,8 +683,16 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # [ (3 existing gens) + (1 secondary fuel) +
     #   (3 new-entrant gas subregions) +
     #   (Biomass + Hydrogen + Biomethane) ]
-    # = 11 x 2 years + 3 x VRE fuel_types
+    # = 10 x 2 years + 3 zero-cost fuel types
     costs_fuel_prices = result["costs_fuel_prices"]
+    assert set(costs_fuel_prices.columns) == {
+        "fuel_type",
+        "power_station",
+        "technology",
+        "geo_id",
+        "year",
+        "price",
+    }
     assert len(costs_fuel_prices) == 23
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"CNSW", "SNW", "NQ"}
 
@@ -862,7 +876,8 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(storage_new_entrant["geo_id"]) == {"NSW", "QLD", "Q1", "TAS"}
     assert len(storage_new_entrant) == 4
 
-    # generators_existing_planned — CNSW relabels to NSW; Q1 REZ stays untouched.
+    # generators_existing_planned — CNSW and SNW relabel to NSW, NQ to QLD; Q1 REZ
+    # stays untouched.
     generators_existing_planned = result["generators_existing_planned"]
     assert set(generators_existing_planned["geo_id"]) == {"NSW", "QLD", "Q1"}
     assert len(generators_existing_planned) == 4
@@ -884,7 +899,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # [ (3 existing gens) + (1 secondary fuel) +
     #   (2 new-entrant gas regions) +
     #   (Biomass + Hydrogen + Biomethane) ]
-    # = 10 x 2 years + 3 x VRE fuel_types
+    # = 9 x 2 years + 3 zero-cost fuel types
     costs_fuel_prices = result["costs_fuel_prices"]
     assert len(costs_fuel_prices) == 21
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"NSW", "QLD"}
@@ -1054,7 +1069,8 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 3
 
-    # generators_existing_planned — CNSW relabels to NEM; Q1 REZ stays untouched.
+    # generators_existing_planned — CNSW, SNW and NQ relabel to NEM; Q1 REZ stays
+    # untouched.
     generators_existing_planned = result["generators_existing_planned"]
     assert set(generators_existing_planned["geo_id"]) == {"NEM", "Q1"}
     assert len(generators_existing_planned) == 4
@@ -1076,7 +1092,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # [ (3 existing gens) + (1 secondary fuel) +
     #   (1 new-entrant gas 'NEM') +
     #   (Biomass + Hydrogen + Biomethane) ]
-    # = 8 x 2 years + 3 x VRE fuel_types
+    # = 8 x 2 years + 3 zero-cost fuel types
     costs_fuel_prices = result["costs_fuel_prices"]
     assert len(costs_fuel_prices) == 19
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"NEM"}

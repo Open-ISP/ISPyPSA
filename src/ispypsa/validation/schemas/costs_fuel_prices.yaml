@@ -14,6 +14,12 @@ description: >
 
   Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
 
+  The 'key' columns (power_station, technology, geo_id and year) identify the generator
+  and year that a fuel price applies to. Any combination of keys may be left empty to act
+  as a wildcard, matching generators on a 'most-specific wins' basis. The
+  custom_validation rules require the wildcard resolution to be both unambiguous
+  and complete.
+
   Source tables:
     - `existing_committed_anticipated_additional_generator_summary`
     - `new_entrants_summary`
@@ -27,14 +33,20 @@ description: >
     - `biomethane_prices`
 
   Rows are also added by the `templater` for VRE fuels (Wind, Solar) and Water with
-  a price of $0.0; wild-card resolution applies this to all generators with those
-  fuel types across all years defined in the model.
+  a price of $0.0 and every key column empty; wildcard resolution applies this to all
+  generators with those fuel types across all years defined in the model.
 custom_validation:
   - name: costs_resolve_unambiguously
     description: >
       No combination may be matched by two rows tied for the fewest wildcards —
       resolution must have a single most-specific winner. The combination and
       wildcard model is outlined in the table description.
+  - name: costs_cover_every_generator_and_year
+    description: >
+      Coverage spans every generator (in generators_existing_planned and
+      generators_new_entrant) and every model year: each must resolve to a row for
+      its fuel_type once wildcards resolve. A row with every key column empty
+      covers all generators of that fuel_type in every year.
 columns:
   fuel_type:
     type: string
@@ -58,8 +70,8 @@ columns:
       the 'power_station' column of the 'generators_existing_planned' table.
 
       If absent (or empty):
-      Wildcard — applies to every expandable element no more specific row covers
-      (a table-wide default).
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
   technology:
     type: string
     required: false
@@ -70,8 +82,8 @@ columns:
       The full proper name of the technology type to which this fuel price applies.
 
       If absent (or empty):
-      Wildcard — applies to every expandable element no more specific row covers
-      (a table-wide default).
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
   geo_id:
     type: string
     required: false
@@ -81,8 +93,8 @@ columns:
       The geography identifier at which this row's fuel price applies.
 
       If absent (or empty):
-      Wildcard — applies to every expandable element no more specific row covers
-      (a table-wide default).
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
   year:
     type: int
     required: false
@@ -90,8 +102,8 @@ columns:
       Year for which the price applies.
 
       If absent (or empty):
-      Wildcard — applies to every expandable element no more specific row covers
-      (a table-wide default).
+      Wildcard — applies to every model year that no more specific row covers (a
+      table-wide default).
   price:
     type: float
     required: true
