@@ -32,6 +32,7 @@ from ispypsa.templater.geography import (
     _template_network_geography,
 )
 from ispypsa.templater.helpers import _build_geo_region_lookup
+from ispypsa.templater.iasr_table_edits import _apply_edits_to_iasr_tables
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
     _extract_flow_path_options_from_iasr,
@@ -189,6 +190,7 @@ def create_ispypsa_inputs_template(
     # templater path) and inline this branch.
     if FEATURE_FLAGS["use_new_table_format"]:
         template = {}
+        iasr_tables = _apply_edits_to_iasr_tables(iasr_tables, iasr_workbook_version)
         # Explicitly add N0/V0 rows to the 'renewable_energy_zones' IASR table
         iasr_tables = _add_non_rez_geographies_to_rez_table(iasr_tables)
         sub_regional_geography = _template_network_geography(

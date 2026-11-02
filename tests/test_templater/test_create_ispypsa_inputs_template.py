@@ -504,7 +504,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).
@@ -812,7 +812,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).
@@ -1010,7 +1010,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).
