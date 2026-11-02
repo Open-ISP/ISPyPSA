@@ -117,12 +117,12 @@ def _add_custom_constraints(
             )
 
 
-# The linopy model variables each supported (component, attribute) LHS term
-# sums, with the sign each enters at. A Storage "p" term is net dispatch:
+# The variable types each supported (component, attribute) LHS term sums,
+# with the sign each enters at. A Storage "p" term is net dispatch:
 # discharging counts positive and charging negative, matching PLEXOS's paired
 # battery Generation (+c) and Load (-c) Coefficients. Load "p_set" terms aren't
 # listed because they are demand data, not variables — see _sum_load_terms.
-_TERM_TO_MODEL_VARIABLES = pd.DataFrame(
+_TERM_TO_VARIABLE_TYPES = pd.DataFrame(
     [
         ("Link", "p", "Link-p", 1.0),
         ("Link", "p_nom", "Link-p_nom", 1.0),
@@ -131,7 +131,7 @@ _TERM_TO_MODEL_VARIABLES = pd.DataFrame(
         ("Storage", "p", "StorageUnit-p_dispatch", 1.0),
         ("Storage", "p", "StorageUnit-p_store", -1.0),
     ],
-    columns=["component", "attribute", "model_variable", "sign"],
+    columns=["component", "attribute", "variable_type", "sign"],
 )
 
 _LOAD_COMPONENT = "Load"
@@ -253,9 +253,7 @@ def _raise_on_unsupported_terms(custom_constraints_lhs: pd.DataFrame) -> None:
         (component, attribute): [('Bus', 'p')]"
     """
     supported = set(
-        zip(
-            _TERM_TO_MODEL_VARIABLES["component"], _TERM_TO_MODEL_VARIABLES["attribute"]
-        )
+        zip(_TERM_TO_VARIABLE_TYPES["component"], _TERM_TO_VARIABLE_TYPES["attribute"])
     ) | {(_LOAD_COMPONENT, _LOAD_ATTRIBUTE)}
     lhs = custom_constraints_lhs
     unsupported = sorted(set(zip(lhs["component"], lhs["attribute"])) - supported)
@@ -519,17 +517,17 @@ def _build_lhs_expression(
             0.84 Link-p[t, NSW-QLD_existing] - 0.33 p_set[t, load_SQ]
     """
     is_load = terms["component"] == _LOAD_COMPONENT
-    variable_terms = _expand_terms_to_model_variables(terms[~is_load])
+    variable_terms = _expand_terms_to_variable_types(terms[~is_load])
     _raise_if_no_variable_terms(variable_terms, name)
     expression = _sum_variable_terms(network.model, variable_terms, scope)
     return expression + _sum_load_terms(network, terms[is_load], scope)
 
 
-def _expand_terms_to_model_variables(terms: pd.DataFrame) -> pd.DataFrame:
-    """Maps each variable term to the model variable(s) it sums, folding each
-    variable's sign into the coefficient.
+def _expand_terms_to_variable_types(terms: pd.DataFrame) -> pd.DataFrame:
+    """Maps each variable term to the variable type(s) it sums, folding each
+    type's sign into the coefficient.
 
-    Every term's (component, attribute) must be in _TERM_TO_MODEL_VARIABLES,
+    Every term's (component, attribute) must be in _TERM_TO_VARIABLE_TYPES,
     so load terms are split off before this is called. The orchestrator
     guarantees the rest with _raise_on_unsupported_terms; an unmatched term
     would be dropped by the merge.
@@ -540,13 +538,13 @@ def _expand_terms_to_model_variables(terms: pd.DataFrame) -> pd.DataFrame:
             Q8 Battery - 2h  Storage    p          0.43
 
         returns:
-            variable_name    model_variable          coefficient
+            variable_name    variable_type           coefficient
             Q8 Battery - 2h  StorageUnit-p_dispatch  0.43
             Q8 Battery - 2h  StorageUnit-p_store     -0.43
     """
-    expanded = terms.merge(_TERM_TO_MODEL_VARIABLES, on=["component", "attribute"])
+    expanded = terms.merge(_TERM_TO_VARIABLE_TYPES, on=["component", "attribute"])
     expanded["coefficient"] = expanded["coefficient"] * expanded["sign"]
-    return expanded.loc[:, ["variable_name", "model_variable", "coefficient"]]
+    return expanded.loc[:, ["variable_name", "variable_type", "coefficient"]]
 
 
 def _raise_if_no_variable_terms(variable_terms: pd.DataFrame, name: str) -> None:
@@ -556,7 +554,7 @@ def _raise_if_no_variable_terms(variable_terms: pd.DataFrame, name: str) -> None
 
     I/O Example:
         variable_terms:
-            variable_name  model_variable  coefficient   # no rows
+            variable_name  variable_type  coefficient   # no rows
 
         name: "SWQLD1_2025_qld_peak_demand"
 
@@ -575,18 +573,17 @@ def _sum_variable_terms(
     """Sums coefficient x variable over the terms, restricting time-indexed
     variables to the snapshots in scope.
 
-    The terms are summed one type of model variable at a time (all the
-    Link-p terms together, then all the Link-p_nom terms) rather than term
-    by term. Each linopy operation on a time-indexed variable costs tens of
+    The terms are summed one variable type at a time (all the Link-p terms
+    together, then all the Link-p_nom terms) rather than term by term. Each linopy operation on a time-indexed variable costs tens of
     milliseconds, so working per type keeps a constraint to a handful of
     operations however many terms it has.
 
     I/O Example:
         variable_terms:
-            variable_name     model_variable  coefficient
-            NSW-QLD_existing  Link-p          0.84
-            CQ-NQ_existing    Link-p          -0.5
-            NSW-QLD_exp_2025  Link-p_nom      -1.0
+            variable_name     variable_type  coefficient
+            NSW-QLD_existing  Link-p         0.84
+            CQ-NQ_existing    Link-p         -0.5
+            NSW-QLD_exp_2025  Link-p_nom     -1.0
 
         scope:
             investment_periods  snapshots
@@ -597,24 +594,24 @@ def _sum_variable_terms(
             - 1.0 Link-p_nom[NSW-QLD_exp_2025]
     """
     expressions = [
-        _sum_terms_on_model_variable(model, model_variable, terms, scope)
-        for model_variable, terms in variable_terms.groupby("model_variable")
+        _sum_terms_of_variable_type(model, variable_type, terms, scope)
+        for variable_type, terms in variable_terms.groupby("variable_type")
     ]
     return linopy.merge(expressions, cls=linopy.LinearExpression)
 
 
-def _sum_terms_on_model_variable(
+def _sum_terms_of_variable_type(
     model: linopy.Model,
-    model_variable: str,
+    variable_type: str,
     terms: pd.DataFrame,
     scope: pd.MultiIndex,
 ) -> linopy.LinearExpression:
-    """Sums coefficient x variable over the terms on one type of model
-    variable (e.g. Link-p), in a single selection and weighted sum. A component listed twice has its
-    coefficients added together.
+    """Sums coefficient x variable over the terms of one variable type (e.g.
+    Link-p), in a single selection and weighted sum. A component listed twice
+    has its coefficients added together.
 
     I/O Example:
-        model_variable: "Link-p"
+        variable_type: "Link-p"
 
         terms:
             variable_name     coefficient
@@ -631,33 +628,33 @@ def _sum_terms_on_model_variable(
     """
     coefficients = terms.groupby("variable_name")["coefficient"].sum()
     weights = coefficients.rename_axis("name").to_xarray()
-    variable = _select_model_variable(
-        model, model_variable, list(coefficients.index), scope
+    variable = _select_variables_of_type(
+        model, variable_type, list(coefficients.index), scope
     )
     return (variable * weights).sum(dim="name")
 
 
-def _select_model_variable(
+def _select_variables_of_type(
     model: linopy.Model,
-    model_variable: str,
+    variable_type: str,
     component_names: list[str],
     scope: pd.MultiIndex,
 ) -> linopy.Variable:
-    """One type of model variable (e.g. Link-p), restricted to the given
-    components and, when it's time-indexed, to the snapshots in scope.
+    """The variables of one variable type (e.g. Link-p) for the given
+    components, restricted to the snapshots in scope when it's time-indexed.
 
     I/O Example:
         scope:
             investment_periods  snapshots
             2025                2025-01-01 01:00
 
-        model_variable: "Link-p", component_names: ["NSW-QLD_existing"]
+        variable_type: "Link-p", component_names: ["NSW-QLD_existing"]
         returns: Link-p[(2025, 2025-01-01 01:00), NSW-QLD_existing]
 
-        model_variable: "Link-p_nom", component_names: ["NSW-QLD_exp_2025"]
+        variable_type: "Link-p_nom", component_names: ["NSW-QLD_exp_2025"]
         returns: Link-p_nom[NSW-QLD_exp_2025]   # no snapshot dimension
     """
-    variable = model.variables[model_variable].sel(name=component_names)
+    variable = model.variables[variable_type].sel(name=component_names)
     if "snapshot" in variable.dims:
         variable = variable.sel(snapshot=scope)
     return variable

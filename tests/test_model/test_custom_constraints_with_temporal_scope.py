@@ -322,12 +322,12 @@ def test_storage_term_is_net_dispatch(csv_str_to_df):
     )
 
 
-def test_terms_on_the_same_model_variable_keep_their_own_coefficients(
+def test_terms_of_the_same_variable_type_keep_their_own_coefficients(
     csv_str_to_df,
 ):
-    """Terms are summed one model variable at a time, so both links' Link-p
+    """Terms are summed one variable type at a time, so both links' Link-p
     terms go through one weighted sum; each must keep its own coefficient,
-    alongside the generator's term on a different model variable."""
+    alongside the generator's term on a different variable type."""
     network = _network()
     rhs = csv_str_to_df("""
         constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
