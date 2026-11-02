@@ -387,6 +387,40 @@ def test_load_term_offsets_the_rhs_at_each_snapshot(csv_str_to_df):
     )
 
 
+def test_load_terms_each_offset_the_rhs_by_their_own_coefficient(csv_str_to_df):
+    network = _network()
+    # Added after the model is built: a load term only reads the load's
+    # demand, so it doesn't need to be in the model.
+    nq_demand = pd.Series([100.0, 200.0, 300.0, 400.0], index=network.snapshots)
+    network.add("Load", "load_NQ", bus="NQ", p_set=nq_demand)
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,   constraint_type
+        SWQLD1,           2025,               ,           3000,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2025,               load_SQ,           Load,       p_set,      -0.33
+        SWQLD1,           2025,               load_NQ,           Load,       p_set,      0.5
+    """)
+    timeslice_snapshots = pd.DataFrame(
+        columns=["timeslice", "investment_periods", "snapshots"]
+    )
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    # 3000 + 0.33 x load_SQ - 0.5 x load_NQ: 3000 + 198 - 50 at 00:00, and
+    # 3000 + 231 - 100 at 01:00.
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3148
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3131
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected, check_dtype=False
+    )
+
+
 def test_load_term_gives_a_p_nom_only_constraint_a_snapshot_dimension(
     csv_str_to_df,
 ):

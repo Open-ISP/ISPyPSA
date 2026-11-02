@@ -665,7 +665,8 @@ def _sum_load_terms(
 ) -> pd.Series | float:
     """Sums coefficient x p_set over the load terms at each snapshot in scope.
     Returns 0 when there are none, so a p_nom-only constraint doesn't gain a
-    snapshot dimension.
+    snapshot dimension. A load listed twice has its coefficients added
+    together, as in _sum_terms_of_variable_type.
 
     I/O Example:
         load_terms:
@@ -692,13 +693,9 @@ def _sum_load_terms(
     # expression a snapshot dimension.
     if load_terms.empty:
         return 0.0
-    # Demand table: one row per snapshot in scope, one column per load term
-    # (in load_terms' order, repeating a load listed twice).
-    p_set = network.loads_t.p_set.loc[scope, load_terms["variable_name"]]
-    # Scale each column by its term's coefficient. to_numpy() multiplies by
-    # position, so duplicate load columns each get their own coefficient;
-    # then sum across the loads to one value per snapshot.
-    offset = (p_set * load_terms["coefficient"].to_numpy()).sum(axis=1)
+    coefficients = load_terms.groupby("variable_name")["coefficient"].sum()
+    p_set = network.loads_t.p_set.loc[scope, coefficients.index]
+    offset = (p_set * coefficients).sum(axis=1)
     # linopy turns the index into a dimension named after it. Unnamed, it
     # becomes "dim_0" when the expression has no snapshot dimension of its
     # own (a p_nom-only constraint with a load term), so name it "snapshot".
