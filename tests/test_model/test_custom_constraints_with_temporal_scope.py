@@ -322,6 +322,43 @@ def test_storage_term_is_net_dispatch(csv_str_to_df):
     )
 
 
+def test_terms_on_the_same_model_variable_keep_their_own_coefficients(
+    csv_str_to_df,
+):
+    """Terms are summed one model variable at a time, so both links' Link-p
+    terms go through one weighted sum; each must keep its own coefficient,
+    alongside the generator's term on a different model variable."""
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2025,               NSW-QLD_exp_2025,  Link,       p,          0.5
+        SWQLD1,           2025,               KINGASF1,          Generator,  p,          0.14
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2025,                2025-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 01:00:00,  Generator-p[KINGASF1],     0.14,         <=,    3000
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3000
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_exp_2025],  0.5,          <=,    3000
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025_qld_peak_demand"),
+        expected,
+        check_dtype=False,
+    )
+
+
 def test_load_term_offsets_the_rhs_at_each_snapshot(csv_str_to_df):
     network = _network()
     rhs = csv_str_to_df("""

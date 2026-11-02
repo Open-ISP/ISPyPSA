@@ -575,10 +575,17 @@ def _sum_variable_terms(
     """Sums coefficient x variable over the terms, restricting time-indexed
     variables to the snapshots in scope.
 
+    The terms are summed one type of model variable at a time (all the
+    Link-p terms together, then all the Link-p_nom terms) rather than term
+    by term. Each linopy operation on a time-indexed variable costs tens of
+    milliseconds, so working per type keeps a constraint to a handful of
+    operations however many terms it has.
+
     I/O Example:
         variable_terms:
             variable_name     model_variable  coefficient
             NSW-QLD_existing  Link-p          0.84
+            CQ-NQ_existing    Link-p          -0.5
             NSW-QLD_exp_2025  Link-p_nom      -1.0
 
         scope:
@@ -586,34 +593,71 @@ def _sum_variable_terms(
             2025                2025-01-01 01:00
 
         returns, at each snapshot t in scope:
-            0.84 Link-p[t, NSW-QLD_existing] - 1.0 Link-p_nom[NSW-QLD_exp_2025]
+            0.84 Link-p[t, NSW-QLD_existing] - 0.5 Link-p[t, CQ-NQ_existing]
+            - 1.0 Link-p_nom[NSW-QLD_exp_2025]
     """
     expressions = [
-        term.coefficient
-        * _select_model_variable(model, term.model_variable, term.variable_name, scope)
-        for term in variable_terms.itertuples()
+        _sum_terms_on_model_variable(model, model_variable, terms, scope)
+        for model_variable, terms in variable_terms.groupby("model_variable")
     ]
     return linopy.merge(expressions, cls=linopy.LinearExpression)
 
 
+def _sum_terms_on_model_variable(
+    model: linopy.Model,
+    model_variable: str,
+    terms: pd.DataFrame,
+    scope: pd.MultiIndex,
+) -> linopy.LinearExpression:
+    """Sums coefficient x variable over the terms on one type of model
+    variable (e.g. Link-p), in a single selection and weighted sum. A component listed twice has its
+    coefficients added together.
+
+    I/O Example:
+        model_variable: "Link-p"
+
+        terms:
+            variable_name     coefficient
+            NSW-QLD_existing  0.84
+            CQ-NQ_existing    -0.5
+            CQ-NQ_existing    -0.25       # listed twice: -0.75 in total
+
+        scope:
+            investment_periods  snapshots
+            2025                2025-01-01 01:00
+
+        returns, at each snapshot t in scope:
+            0.84 Link-p[t, NSW-QLD_existing] - 0.75 Link-p[t, CQ-NQ_existing]
+    """
+    coefficients = terms.groupby("variable_name")["coefficient"].sum()
+    weights = coefficients.rename_axis("name").to_xarray()
+    variable = _select_model_variable(
+        model, model_variable, list(coefficients.index), scope
+    )
+    return (variable * weights).sum(dim="name")
+
+
 def _select_model_variable(
-    model: linopy.Model, model_variable: str, component_name: str, scope: pd.MultiIndex
+    model: linopy.Model,
+    model_variable: str,
+    component_names: list[str],
+    scope: pd.MultiIndex,
 ) -> linopy.Variable:
-    """One component's model variable, restricted to the snapshots in scope when
-    it's time-indexed.
+    """One type of model variable (e.g. Link-p), restricted to the given
+    components and, when it's time-indexed, to the snapshots in scope.
 
     I/O Example:
         scope:
             investment_periods  snapshots
             2025                2025-01-01 01:00
 
-        model_variable: "Link-p", component_name: "NSW-QLD_existing"
+        model_variable: "Link-p", component_names: ["NSW-QLD_existing"]
         returns: Link-p[(2025, 2025-01-01 01:00), NSW-QLD_existing]
 
-        model_variable: "Link-p_nom", component_name: "NSW-QLD_exp_2025"
+        model_variable: "Link-p_nom", component_names: ["NSW-QLD_exp_2025"]
         returns: Link-p_nom[NSW-QLD_exp_2025]   # no snapshot dimension
     """
-    variable = model.variables[model_variable].sel(name=component_name)
+    variable = model.variables[model_variable].sel(name=component_names)
     if "snapshot" in variable.dims:
         variable = variable.sel(snapshot=scope)
     return variable
