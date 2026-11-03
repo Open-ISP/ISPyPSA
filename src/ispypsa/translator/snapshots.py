@@ -7,7 +7,10 @@ import pandas as pd
 
 from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
-from ispypsa.translator.helpers import _get_iteration_start_and_end_time
+from ispypsa.translator.helpers import (
+    _get_iteration_start_and_end_time,
+    _period_of,
+)
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
 
@@ -159,14 +162,7 @@ def _add_investment_periods(
     Returns: pd.DataFrame with column "investment_periods" and "snapshots".
     """
     snapshots = snapshots.copy()
-    snapshots["calendar_year"] = snapshots["snapshots"].dt.year
-    snapshots["effective_year"] = snapshots["calendar_year"].astype("int64")
-
-    if year_type == "fy":
-        mask = snapshots["snapshots"].dt.month >= 7
-        snapshots.loc[mask, "effective_year"] = (
-            snapshots.loc[mask, "effective_year"] + 1
-        )
+    snapshots["effective_year"] = _period_of(year_type, snapshots["snapshots"])
 
     inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
     inv_periods_df = inv_periods_df.sort_values("investment_periods")
