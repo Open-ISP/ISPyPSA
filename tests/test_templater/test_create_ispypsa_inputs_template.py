@@ -59,7 +59,7 @@ def _new_entrant_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     summary table itself.
 
     Covers every generator/storage technology used across the new-format fixtures
-    below (Wind, Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs
+    below (Wind, Large scale Solar PV, OCGT (small GT), Battery storage (2hrs
     storage), Pumped Hydro (24hrs storage)/BOTN - Cethana). technology_specific_lcfs
     and locational_cost_factors additionally cover every geo_id those fixtures use
     (Q1, CNSW, SNW, NQ, TAS), including NQ - used by the nem_regions/single_region
