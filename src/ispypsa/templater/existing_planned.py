@@ -46,7 +46,6 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_iasr_table_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_match_names,
@@ -118,24 +117,6 @@ _GAS_MINIMUM_LOAD_PROPERTY = dict(
 # See Open-ISP/ISPyPSA#131 comment thread.
 _KNOWN_UNMATCHED_PHES_STATIONS = {"Lower Tumut"}
 
-
-_IASR_TABLE_REPLACEMENTS = [
-    # The PHES properties table keys Borumba by its short project name; the summary lists
-    # it under its full project name. This is a mapping convenience/consistency fix
-    dict(
-        table_name="pumped_hydro_existing_committed_anticipated_additional_properties",
-        column="Power Station",
-        replacements={"Borumba": "QEJP - Borumba"},
-    ),
-    # Case mismatch between maximum_capacity's IASR ID and the summary's: the 'safe'
-    # fuzzy-matching threshold (90) would miss (fuzz.ratio("KiataWF1", "KIATAWF1") == 50).
-    dict(
-        table_name="maximum_capacity_existing_committed_anticipated_additional_generators",
-        column="IASR ID",
-        replacements={"KiataWF1": "KIATAWF1"},
-    ),
-]
-
 # --- public orchestrators ---
 
 
@@ -179,7 +160,6 @@ def _template_generators_existing_planned(
             BW01  Bayswater      NSW     660.0     NaN      # CNSW -> NSW via sub_regional_geography
     """
     logging.info("Creating a template for existing and planned generators")
-    iasr_tables = _apply_iasr_table_replacements(iasr_tables, _IASR_TABLE_REPLACEMENTS)
     summary = iasr_tables["existing_committed_anticipated_additional_generator_summary"]
     phes_properties = iasr_tables[
         "pumped_hydro_existing_committed_anticipated_additional_properties"
@@ -254,7 +234,6 @@ def _template_storage_existing_planned(
     """
 
     logging.info("Creating a template for existing and planned storage")
-    iasr_tables = _apply_iasr_table_replacements(iasr_tables, _IASR_TABLE_REPLACEMENTS)
     summary = iasr_tables["existing_committed_anticipated_additional_generator_summary"]
     phes_properties = iasr_tables[
         "pumped_hydro_existing_committed_anticipated_additional_properties"
@@ -322,11 +301,11 @@ def _validate_phes_routing(
 ) -> None:
     """Raises if a phes_properties station's name doesn't exist anywhere in the summary.
 
-    Checked after correcting the known Borumba name mismatch (see
-    ``_apply_iasr_table_replacements``) and excusing the one known, documented gap
-    (``_KNOWN_UNMATCHED_PHES_STATIONS`` — Tumut 3's "Lower Tumut"). Any other
-    unmatched name means a real PHES station would otherwise be silently
-    misclassified as a generator.
+    Excuses the one known, documented gap (``_KNOWN_UNMATCHED_PHES_STATIONS`` —
+    Tumut 3's "Lower Tumut"). Known name mismatches (e.g. Borumba, which v7.5's
+    phes_properties lists without the summary's "QEJP - " prefix) are corrected by
+    IASR table edits before this runs. Any other unmatched name means a real PHES
+    station would otherwise be silently misclassified as a generator.
 
     I/O Example:
         summary:
@@ -338,7 +317,7 @@ def _validate_phes_routing(
         phes_properties:
             Power Station
             Wivenhoe        # matches
-            QEJP - Borumba  # already 'fixed' (see _IASR_TABLE_REPLACEMENTS)
+            QEJP - Borumba  # 'Borumba' in v7.5, corrected by an IASR table edit
             Lower Tumut     # excused by _KNOWN_UNMATCHED_PHES_STATIONS
 
         -> no error

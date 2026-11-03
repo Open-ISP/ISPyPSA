@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
-    _apply_iasr_table_replacements,
     _assert_table_valid,
     _build_geo_region_lookup,
     _derive_phes_symmetric_efficiency,
@@ -636,104 +635,6 @@ def test_is_subregion_geo_id(csv_str_to_df):
 
     expected = pd.Series([True, False])
     pd.testing.assert_series_equal(result, expected)
-
-
-# --- _apply_iasr_table_replacements ---
-
-
-def test_apply_iasr_table_replacements(csv_str_to_df):
-    maximum_capacity = csv_str_to_df("""
-        IASR ID,   Installed capacity (MW)
-        KiataWF1,  30.0
-        BW01,      660.0
-    """)
-    phes_properties = csv_str_to_df("""
-        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
-        Wivenhoe,       570,                        10.0,                       70
-        Shoalhaven,     240,                        64.0,                       70
-        Borumba,        1998,                       24.0,                       76
-    """)
-    iasr_tables = {
-        "maximum_capacity": maximum_capacity,
-        "phes_properties": phes_properties,
-        "some_other_table": pd.DataFrame({"col": [1]}),
-    }
-
-    corrections = [
-        dict(
-            table_name="maximum_capacity",
-            column="IASR ID",
-            replacements={"KiataWF1": "KIATAWF1"},
-        ),
-        dict(
-            table_name="phes_properties",
-            column="Power Station",
-            replacements={"Borumba": "QEJP - Borumba"},
-        ),
-    ]
-    result = _apply_iasr_table_replacements(iasr_tables, corrections)
-
-    expected_capacity = csv_str_to_df("""
-        IASR ID,   Installed capacity (MW)
-        KIATAWF1,  30.0
-        BW01,      660.0
-    """)
-    expected_phes_props = csv_str_to_df("""
-        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
-        Wivenhoe,       570,                        10.0,                       70
-        Shoalhaven,     240,                        64.0,                       70
-        QEJP - Borumba, 1998,                       24.0,                       76
-    """)
-    pd.testing.assert_frame_equal(result["maximum_capacity"], expected_capacity)
-    pd.testing.assert_frame_equal(result["phes_properties"], expected_phes_props)
-
-    # Other tables pass through untouched; input dict itself isn't mutated.
-    assert result["some_other_table"] is iasr_tables["some_other_table"]
-
-    unmutated_capacity = csv_str_to_df("""
-        IASR ID,   Installed capacity (MW)
-        KiataWF1,  30.0
-        BW01,      660.0
-    """)
-    unmutated_phes_props = csv_str_to_df("""
-        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
-        Wivenhoe,       570,                        10.0,                       70
-        Shoalhaven,     240,                        64.0,                       70
-        Borumba,        1998,                       24.0,                       76
-    """)
-    pd.testing.assert_frame_equal(iasr_tables["maximum_capacity"], unmutated_capacity)
-    pd.testing.assert_frame_equal(iasr_tables["phes_properties"], unmutated_phes_props)
-
-
-def test_apply_iasr_table_replacements_missing_expected_col(csv_str_to_df):
-    # Checks that replacement only applies to specified columns, and no error if a
-    # named column is missing. Column presence is asserted later by _assert_table_valid
-    maximum_capacity = csv_str_to_df("""
-        unit_name, Installed capacity (MW)
-        KiataWF1,  30.0
-        BW01,      660.0
-    """)
-    iasr_tables = {
-        "maximum_capacity": maximum_capacity,
-    }
-    corrections = [
-        dict(
-            table_name="maximum_capacity",
-            column="IASR ID",
-            replacements={"KiataWF1": "KIATAWF1"},
-        ),
-    ]
-    result = _apply_iasr_table_replacements(iasr_tables, corrections)
-
-    expected_unchanged = csv_str_to_df("""
-        unit_name, Installed capacity (MW)
-        KiataWF1,  30.0
-        BW01,      660.0
-    """)
-    pd.testing.assert_frame_equal(
-        result["maximum_capacity"].sort_values("unit_name").reset_index(drop=True),
-        expected_unchanged.sort_values("unit_name").reset_index(drop=True),
-    )
 
 
 # --- _group_properties_by_source ---

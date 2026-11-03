@@ -103,7 +103,7 @@ def _storage_property_tables(csv_str_to_df):
         "pumped_hydro_new_entrant_properties": csv_str_to_df("""
             Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
             Pumped Hydro (24hrs storage),  24,                       76
-            BOTN - Cethana - 20h,          20,                       80
+            BOTN - Cethana,                20,                       80
         """),
         "fixed_opex_new_entrants": csv_str_to_df("""
             Technology Type,                 Base value ($/kW/year)),  Unit
@@ -171,8 +171,8 @@ def test_template_storage_new_entrant(csv_str_to_df):
 
 def test_merge_phes_properties(csv_str_to_df):
     # storage_hours is merged by technology after BOTN's technology is overridden to its own
-    # name and the pumped-hydro table's BOTN key normalised to match; charge/discharge
-    # efficiency are derived from the single round-trip pumping efficiency.
+    # name, which picks up BOTN's own row; charge/discharge efficiency are derived from
+    # the single round-trip pumping efficiency.
     phes = csv_str_to_df("""
         name,                  technology
         NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
@@ -182,7 +182,7 @@ def test_merge_phes_properties(csv_str_to_df):
         "pumped_hydro_new_entrant_properties": csv_str_to_df("""
             Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
             Pumped Hydro (24hrs storage),  24,                       64
-            BOTN - Cethana - 20h,          20,                       81
+            BOTN - Cethana,                20,                       81
         """)
     }
 
@@ -259,12 +259,6 @@ def test_merge_phes_properties_empty(csv_str_to_df):
         name, technology, storage_hours, efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# (BOTN's pumped-hydro key correction is now a plain _apply_iasr_table_replacements
-# call -- see helpers.py / test_helpers.py for that mechanism's own tests. Its wiring
-# here is covered incidentally by test_merge_phes_properties above, which already
-# exercises a full-spelling BOTN row resolving correctly.)
 
 
 # --- _collapse_geo_id_to_granularity ---
