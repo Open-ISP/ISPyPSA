@@ -141,17 +141,9 @@ _PHES_BOTN_KEY_FIX = dict(
     replacements={_BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]},
 )
 
-# Typo(?) in 'Regional build cost zone' for PHES rows in NSA subregion: see Open-ISP/ISPyPSA#131.
-_KNOWN_BUILD_COST_ZONE_TYPOS = {
-    ("NSA", "CSA"),  # (geo_id, Regional build cost zone)
-}
-
 # Allowed 'extra' subregion (not in sub_regional_geography) present in the names of
 # some new entrant gas plant; see Open-ISP/ISPyPSA#131
 _EXTRA_SUBREGION_IN_NAMES = {"WOO"}
-
-# Data scale diff for 'BOTN - Cethana' in LCF table: see first comment on Open-ISP/ISPyPSA#131.
-_LCF_COLUMNS_IN_PERCENT = ["BOTN - Cethana"]
 
 
 # --- public orchestrators ---
@@ -417,27 +409,24 @@ def _rekey_names_to_collapsed_geo_id(
 def _assert_build_cost_zone_matches_geo_id(new_entrants: pd.DataFrame) -> None:
     """Asserts the LCF lookup key (geo_id) matches the IASR's 'Regional build cost zone'.
 
-    LCFs are keyed on geo_id here, which equals each unit's cost zone. v7.5 (and 7.8) breaks
-    that rule for three NSA pumped-hydro rows, mislabelling them with the CSA cost zone
-    (``_KNOWN_BUILD_COST_ZONE_TYPOS``); we accept that known typo and key on geo_id (NSA)
-    regardless. Any *other* divergence is unexpected — possibly a real cost-zone split
-    rather than a typo — so this function raises if any other diffs are seen.
+    LCFs are keyed on geo_id here, which equals each unit's cost zone. A divergence could
+    be a real cost-zone split rather than a typo, so this raises rather than picking one.
+    Known typos (e.g. three NSA pumped-hydro rows labelled CSA in v7.5) are corrected by
+    IASR table edits before this runs.
 
     Raises:
-        ValueError: if geo_id and 'Regional build cost zone' diverge for any
-            (geo_id, cost zone) pair not in ``_KNOWN_BUILD_COST_ZONE_TYPOS``.
+        ValueError: if geo_id and 'Regional build cost zone' differ on any row.
     """
     divergent = new_entrants[
         new_entrants["geo_id"] != new_entrants["Regional build cost zone"]
     ]
-    unexpected = (
-        set(zip(divergent["geo_id"], divergent["Regional build cost zone"]))
-        - _KNOWN_BUILD_COST_ZONE_TYPOS
+    divergent_pairs = set(
+        zip(divergent["geo_id"], divergent["Regional build cost zone"])
     )
-    if unexpected:
+    if divergent_pairs:
         raise ValueError(
-            "Unexpected divergence between geo_id and 'Regional build cost zone' in "
-            f"new_entrants_summary: {sorted(unexpected, key=str)}."
+            "geo_id differs from 'Regional build cost zone' in new_entrants_summary: "
+            f"{sorted(divergent_pairs, key=str)}."
         )
 
 
@@ -462,7 +451,7 @@ def _merge_lcf_build(
             Cost zone / REZ ID  REZ name / Description  Wind            OCGT (small GT)  BOTN - Cethana
             Q1                  Far North QLD           1.0860          Not Applicable   Not Applicable
             NQ                  Subregional Ref Node    Not Applicable  1.0801           Not Applicable
-            TAS                 Subregional Ref Node    1.0325          Not Applicable   100
+            TAS                 Subregional Ref Node    1.0325          Not Applicable   1.0
 
         returns (adds lcf_build):
             name                  ...  lcf_build
@@ -537,21 +526,20 @@ def _reshape_technology_specific_lcfs(
 
     Each source row is a cost zone (a REZ ID or sub-region — i.e. a geo_id) and each column
     after the description is a technology's precomputed LCF. Factors are converted to
-    percentages (×100), except the bespoke columns already published as percentages
-    (``_LCF_COLUMNS_IN_PERCENT``). "Not Applicable"/blank cells become NaN and are dropped,
-    so only fully defined (geo_id, technology) pairs remain.
+    percentages (×100). "Not Applicable"/blank cells become NaN and are dropped, so only
+    fully defined (geo_id, technology) pairs remain.
 
     I/O Example:
         technology_specific_lcfs:
             Cost zone / REZ ID  REZ name / Description  Wind    BOTN - Cethana
             Q1                  Far North QLD           1.0860  Not Applicable
-            TAS                 Subregional Ref Node    1.0325  100
+            TAS                 Subregional Ref Node    1.0325  1.0
 
         returns:
             geo_id  lcf_technology  lcf_build
             Q1      Wind            108.60       # factor ×100
             TAS     Wind            103.25
-            TAS     BOTN - Cethana  100.0        # already % -> left unscaled
+            TAS     BOTN - Cethana  100.0
     """
     # "Cost zone / REZ ID" / "REZ name / Description": literal v7.5 IASR column names.
     zone_col = "Cost zone / REZ ID"
@@ -574,8 +562,7 @@ def _reshape_technology_specific_lcfs(
     long["lcf_build"] = pd.to_numeric(
         long["lcf_build"].replace("Not Applicable", pd.NA), errors="raise"
     )
-    in_factor_form = ~long["lcf_technology"].isin(_LCF_COLUMNS_IN_PERCENT)
-    long.loc[in_factor_form, "lcf_build"] *= 100
+    long["lcf_build"] *= 100
     return long.dropna(subset="lcf_build").reset_index(drop=True)
 
 

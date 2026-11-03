@@ -165,8 +165,9 @@ def create_ispypsa_inputs_template(
         manually_extracted_tables: dictionary of dataframes providing additional
             IASR tables that can't be parsed using `isp_workbook_parser`
         iasr_workbook_version: the IASR workbook version (e.g. `"7.5"`), used
-            to select the PLEXOS extract directory for the custom-constraints
-            templater.
+            to select the version-specific inputs: the IASR table edits, the
+            timeslice calendar, and the PLEXOS extract directory for the
+            custom-constraints templater.
         filter_to_nem_regions: Optional list of NEM region IDs (e.g., ['NSW', 'VIC'])
             to filter the template to. Cannot be specified together with
             filter_to_isp_sub_regions.
