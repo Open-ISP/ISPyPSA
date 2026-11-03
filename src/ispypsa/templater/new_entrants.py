@@ -37,7 +37,6 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
-    _apply_iasr_table_replacements,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
@@ -126,21 +125,12 @@ _RESOURCE_CODE_PATTERN = "_({})_".format(
 )
 
 # BOTN - Cethana is the one named, site-specific PHES project among the generic
-# technologies. These two mappings assist this special case handling through templating.
+# technologies. Its 'technology' is overridden to its own name, after checking it's
+# the expected generic one (see _override_botn_technology).
 _BOTN_CETHANA_DETAILS = {
     "name": "BOTN - Cethana",
-    "full_name": "BOTN - Cethana - 20h",  # pumped_hydro_new_entrant_properties keys it this way
     "technology": "Pumped Hydro (24hrs storage)",  # its generic tech in new_entrants_summary
 }
-
-# The pumped-hydro table is the lone table that keys BOTN by its full spelling
-# (pumped_hydro_new_entrant_properties); every other table -- and BOTN's overridden
-# 'technology' (see _override_botn_technology) -- uses the bare name.
-_PHES_BOTN_KEY_FIX = dict(
-    table_name="pumped_hydro_new_entrant_properties",
-    column="Power Station / Technology",
-    replacements={_BOTN_CETHANA_DETAILS["full_name"]: _BOTN_CETHANA_DETAILS["name"]},
-)
 
 # Allowed 'extra' subregion (not in sub_regional_geography) present in the names of
 # some new entrant gas plant; see Open-ISP/ISPyPSA#131
@@ -578,9 +568,9 @@ def _merge_phes_properties(
     Both properties come from ``pumped_hydro_new_entrant_properties``, merged by
     technology. BOTN - Cethana should get its own row from that table, not the row for
     the generic archetype it's labelled with in new_entrants_summary. So before the
-    merge, both sides are re-keyed to the bare name "BOTN - Cethana": the PHES row's
-    'technology' (``_override_botn_technology``) and the table's "BOTN - Cethana - 20h"
-    key (``_PHES_BOTN_KEY_FIX``).
+    merge, BOTN's 'technology' is overridden to "BOTN - Cethana"
+    (``_override_botn_technology``), the key the table uses for it once IASR table
+    edits have dropped v7.5's "- 20h" suffix.
 
     The IASR table only publishes a round-trip efficiency, which is then split into
     equal charge and discharge efficiencies , replacing the intermediate
@@ -595,7 +585,7 @@ def _merge_phes_properties(
         pumped_hydro_new_entrant_properties:
             Power Station / Technology    Storage capacity (hours)  Pumping efficiency (%)
             Pumped Hydro (24hrs storage)  24                        64
-            BOTN - Cethana - 20h          20                        81
+            BOTN - Cethana                20                        81
 
         returns (efficiency_charge and efficiency_discharge are equal, shown as one column):
             name                   technology                    storage_hours  efficiency_charge/discharge
@@ -606,7 +596,7 @@ def _merge_phes_properties(
     phes["technology"] = _override_botn_technology(phes)
     phes = _merge_category_keyed_properties(
         phes,
-        _apply_iasr_table_replacements(iasr_tables, [_PHES_BOTN_KEY_FIX]),
+        iasr_tables,
         _STORAGE_PHES_PROPERTY_MAP,
         df_key_col="technology",
     )

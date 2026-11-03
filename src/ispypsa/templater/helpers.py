@@ -574,48 +574,6 @@ def _assert_table_valid(
         raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
 
 
-def _apply_iasr_table_replacements(
-    iasr_tables: dict[str, pd.DataFrame], corrections: list[dict]
-) -> dict[str, pd.DataFrame]:
-    """Returns ``iasr_tables`` with 'corrections' applied to input IASR tables.
-
-    Shared shape for small, explicitly declared fixes (a documented typo or naming
-    mismatch) to specified locations. ``corrections`` can carry multiple fixes,
-    each with 'fix' specifics (``table_name``, ``column``, ``replacements``) bundled.
-    Returns a shallow copy of ``iasr_tables`` with only listed tables replaced.
-
-    Note: while fuzzy-matching is used to standardise names or other ID strings,
-    some typos/diffs are too 'big' to pass any safe fuzzy-match threshold (see
-    example below - fuzz.ratio("KiataWF1", "KIATAWF1") == 50). This function
-    explicitly handles those known instances where this is the case.
-
-    I/O Example:
-        iasr_tables["maximum_capacity_..."]:
-            IASR ID   Power Station    Installed capacity (MW)
-            KiataWF1  Kiata Wind Farm  31.05
-            BW01      Bayswater        660.0
-
-        corrections (as a single dict element in list):
-            table_name:   "maximum_capacity_..."
-            column:       "IASR ID"
-            replacements: {"KiataWF1": "KIATAWF1"}
-
-        returns copy of iasr_tables with only listed tables edited:
-            iasr_tables["maximum_capacity_..."]:
-                IASR ID   Power Station    Installed capacity (MW)
-                KIATAWF1  Kiata Wind Farm  31.05
-                BW01      Bayswater        660.0
-    """
-    corrected_tables = iasr_tables
-    for correction in corrections:
-        table_name = correction["table_name"]
-        col_to_fix = correction["column"]
-        replacements = correction["replacements"]
-        corrected = iasr_tables[table_name].replace({col_to_fix: replacements})
-        corrected_tables = {**corrected_tables, table_name: corrected}
-    return corrected_tables
-
-
 def _group_properties_by_source(
     property_map: dict[str, dict],
 ) -> dict[tuple[str, str], dict]:
