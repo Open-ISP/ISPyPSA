@@ -102,3 +102,25 @@
   where: {REZ ID: [N13]}
   replace: {CNSW: SNSW}
   reason: Mis-labelled subregion for new entrants in N13 REZ.
+
+- table: new_entrants_summary
+  column: Technology Type
+  replace:
+    Battery Storage (1hr storage): Battery storage (1hr storage)
+    Battery Storage (2hrs storage): Battery storage (2hrs storage)
+    Battery Storage (4hrs storage): Battery storage (4hrs storage)
+    Battery Storage (8hrs storage): Battery storage (8hrs storage)
+  reason: Capitalised 'Battery Storage' where most tables use 'Battery storage'; the mismatch made fuzzy matches tie. See Open-ISP/ISPyPSA#146.
+
+- table: technology_specific_lcfs
+  rename_columns:
+    Battery Storage (8hrs storage): Battery storage (8hrs storage)
+  reason: Capitalised 'Battery Storage' where most tables use 'Battery storage'; the mismatch made fuzzy matches tie. See Open-ISP/ISPyPSA#146.
+
+# The manually extracted connection_capacity_non_vre.csv is merged exactly with this
+# table on Generator Type, so its matching rows were lowercased by hand (edits can't
+# reach it: it joins iasr_tables after they run).
+- table: connection_cost_forecast_other
+  column: Generator Type
+  replace: {Battery Storage (8hrs storage): Battery storage (8hrs storage)}
+  reason: Capitalised 'Battery Storage' where most tables use 'Battery storage'; the mismatch made fuzzy matches tie. See Open-ISP/ISPyPSA#146.
