@@ -17,6 +17,14 @@ custom_validation:
       expansion-limit constraints, which don't vary over time, so each has
       just one row. For example, a constraint with rows (C, blank, blank) and
       (C, 2025, blank) fails.
+  - name: named_timeslices_of_a_constraint_share_a_region
+    description: >
+      Every named timeslice across a constraint's rows must belong to the
+      same region (the timeslice prefix before the first underscore, as in
+      the timeslices table). Each region's timeslices cover the whole year, so
+      timeslices from two regions overlap, and a constraint naming both would
+      have two limits at the snapshots where they do. For example, a
+      constraint with rows for qld_peak_demand and nsw_summer_typical fails.
   - name: constraint_investment_periods_have_lhs_terms
     description: >
       Every (constraint_name, investment_period) here must have at least one

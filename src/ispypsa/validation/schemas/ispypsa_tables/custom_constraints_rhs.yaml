@@ -11,6 +11,15 @@ description: >
 
   If absent:
   Constraints have no limit values, so no custom constraints bind.
+custom_validation:
+  - name: named_timeslices_of_a_constraint_share_a_region
+    description: >
+      Every named timeslice across a constraint_id's rows must belong to the
+      same region (the timeslice prefix before the first underscore, as in
+      the timeslices table). Each region's timeslices cover the whole year, so
+      timeslices from two regions overlap, and a constraint naming both would
+      have two limits at the snapshots where they do. For example, a
+      constraint with rows for qld_peak_demand and nsw_summer_typical fails.
 columns:
   constraint_id:
     type: string
