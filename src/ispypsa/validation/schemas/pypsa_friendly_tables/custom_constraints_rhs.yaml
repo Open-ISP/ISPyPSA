@@ -6,31 +6,31 @@ custom_validation:
   - name: blank_investment_period_rows_have_a_blank_timeslice
     description: >
       A row with a blank investment_period must also have a blank timeslice.
-      A blank investment_period is reserved for constraints that apply
-      regardless of time: in every investment period and at every snapshot,
-      so the timeslice must be blank too. Only the expansion limits take this
-      form. A row with a blank investment_period and a named timeslice would
-      match no snapshots, so pypsa_build would skip it and its limit would
-      silently never apply.
+      A blank investment_period is reserved for constraints that hold at every
+      snapshot in every investment period (the expansion limits), so a named
+      timeslice contradicts it. For example, (C, blank, qld_peak_demand)
+      fails.
   - name: blank_investment_period_constraints_have_no_other_rows
     description: >
       If a constraint has a row with a blank investment_period, that must be
       its only row. A blank investment_period is reserved for the
       expansion-limit constraints, which don't vary over time, so each has
-      just one row.
+      just one row. For example, a constraint with rows (C, blank, blank) and
+      (C, 2025, blank) fails.
   - name: constraint_investment_periods_have_lhs_terms
     description: >
       Every (constraint_name, investment_period) here must have at least one
       custom_constraints_lhs term on a model variable (anything but a Load
-      p_set term) for the same pair, blank matching blank. pypsa_build raises
-      on a constraint with no such term, since its LHS would be empty.
+      p_set term) for the same pair, blank matching blank. Load terms are
+      demand data, so a constraint made only of them has nothing to
+      constrain. For example, (SQ1, 2028) fails if its only term in 2028 is
+      on load_SQ.
   - name: linopy_constraint_names_are_unique
     description: >
-      Joining each row's constraint_name, investment_period and timeslice
-      with underscores, skipping blanks, must give a different name for every
-      row. pypsa_build names each linopy constraint this way, so rows like
-      (C, 2025, blank) and (C_2025, blank, blank) would both be named C_2025
-      and the build would fail.
+      Every row must give a different linopy constraint name: its
+      constraint_name, investment_period and timeslice joined with
+      underscores, skipping blanks. For example, (C, 2025, blank) and
+      (C_2025, blank, blank) both give C_2025, so together they fail.
 description: >
   Right-hand side of each custom constraint: one row per linopy constraint
   pypsa_build adds, scoped in time by its investment_period and timeslice.

@@ -6,11 +6,8 @@ custom_validation:
   - name: snapshots_are_in_the_snapshots_table
     description: >
       Every (investment_periods, snapshots) pair must be a row of the
-      pypsa-friendly snapshots table, which pypsa_build sets the network's
-      snapshots from. The translator builds this table from those same
-      snapshots, so the check guards the contract rather than a known gap;
-      pypsa_build selects model variables at these snapshots and would fail on
-      one the network doesn't have.
+      pypsa-friendly snapshots table. For example, (2025, 2025-01-01 00:30)
+      fails when the model's snapshots are hourly.
 description: >
   Which snapshots each timeslice is active at: one row per (timeslice,
   snapshot) pair. A snapshot appears once per region's timeslice active at it,

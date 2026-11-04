@@ -5,32 +5,28 @@ unique:
 custom_validation:
   - name: supported_component_attribute_pairs
     description: >
-      Each row's (component, attribute) must be one pypsa_build maps onto the
-      model: (Link, p), (Link, p_nom), (Generator, p), (Generator, p_nom),
-      (Storage, p) or (Load, p_set). pypsa_build raises on any other pair,
-      listing every unsupported pair found.
+      Each row's (component, attribute) must be one of (Link, p),
+      (Link, p_nom), (Generator, p), (Generator, p_nom), (Storage, p) or
+      (Load, p_set). For example, (Load, p) fails.
   - name: terms_belong_to_an_rhs_row
     description: >
       Every (constraint_name, investment_period) here must match a
       custom_constraints_rhs row with the same pair, blank matching blank. So a
       term with a blank investment_period needs its constraint to have an RHS
       row with a blank investment_period, and a term with an investment_period
-      an RHS row in that investment period. pypsa_build picks each
-      constraint's terms from its RHS rows, so a term with no matching row is
-      silently ignored. The translator drops the investment periods in which a
-      constraint has only one side before this table is written.
+      an RHS row in that investment period. For example, a term in
+      (SWQLD1, 2030) fails if SWQLD1's only RHS rows are in 2025.
   - name: variables_name_components_in_the_input_tables
     description: >
-      variable_name must name a component in the pypsa-friendly table
-      pypsa_build builds that component type from: a Link in links.name; a
-      Generator in generators.name or custom_constraints_generators.name (the
-      relaxation generators); a Storage unit in batteries.name; and a Load as
-      "load_<bus>", where <bus> is in buses.name and has a demand trace
-      (demand_traces/<bus>.parquet), since pypsa_build only attaches loads to
-      buses with one. A p_nom term must also name a row with
-      p_nom_extendable true, as only extendable components have a p_nom
-      variable. The translator raises on terms whose component isn't in the
-      model before this table is written.
+      variable_name must name a component in the pypsa-friendly table for its
+      component type: a Link in links.name; a Generator in generators.name or
+      custom_constraints_generators.name (the relaxation generators); a
+      Storage unit in batteries.name; and a Load as "load_<bus>", where <bus>
+      is in buses.name and has a demand trace (demand_traces/<bus>.parquet).
+      A p_nom term must also name a row with p_nom_extendable true, since a
+      component that isn't extendable has a fixed capacity rather than a
+      capacity variable. For example, a p_nom term on an existing generator
+      with p_nom_extendable false fails.
 description: >
   Left-hand-side terms of each custom constraint: one row per (constraint,
   investment period, model component) coefficient.

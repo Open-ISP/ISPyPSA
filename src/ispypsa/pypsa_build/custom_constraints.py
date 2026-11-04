@@ -277,6 +277,11 @@ def _linopy_constraint_snapshots(
     rhs_row is one row of custom_constraints_rhs from itertuples(), so its
     columns are attributes (rhs_row.timeslice).
 
+    A row with a blank investment_period and a named timeslice would select
+    no snapshots, so the orchestrator would skip it and its limit would
+    silently never apply. The custom_constraints_rhs schema rules this out
+    (blank_investment_period_rows_have_a_blank_timeslice).
+
     I/O Example:
         custom_constraints_rhs:
             constraint_name  investment_period  timeslice
@@ -462,6 +467,10 @@ def _select_lhs_terms(
     """The LHS terms of a linopy constraint: those with its constraint_name and
     the same investment_period, a blank investment_period matching only a
     blank one.
+
+    Terms are picked starting from the RHS row, so a term that matches no RHS
+    row is silently left out of every constraint. The custom_constraints_lhs
+    schema rules this out (terms_belong_to_an_rhs_row).
 
     I/O Example:
         custom_constraints_lhs:
