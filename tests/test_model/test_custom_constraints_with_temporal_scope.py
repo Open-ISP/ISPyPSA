@@ -24,17 +24,21 @@ _LHS_COLUMNS = [
 ]
 
 
-def _network() -> pypsa.Network:
-    """Two investment periods of two hourly snapshots, with one of each
-    component a custom constraint term can reference, and the linopy model
-    built so constraints can be added."""
-    periods = [2025, 2025, 2030, 2030]
+def _network(timesteps: tuple[str, ...] = ("00:00", "01:00")) -> pypsa.Network:
+    """Two investment periods (2025 and 2030), each with a snapshot at every
+    timestep on 1 January, with one of each component a custom constraint
+    term can reference, and the linopy model built so constraints can be
+    added.
+
+    load_SQ's demand starts at 600 and rises by 100 a snapshot, so with the
+    default timesteps it is 600 and 700 in 2025, then 800 and 900 in 2030.
+    """
+    periods = [period for period in [2025, 2030] for _ in timesteps]
     snapshots = pd.to_datetime(
         [
-            "2025-01-01 00:00",
-            "2025-01-01 01:00",
-            "2030-01-01 00:00",
-            "2030-01-01 01:00",
+            f"{period}-01-01 {timestep}"
+            for period in [2025, 2030]
+            for timestep in timesteps
         ]
     )
     index = pd.MultiIndex.from_arrays([periods, snapshots])
@@ -50,8 +54,17 @@ def _network() -> pypsa.Network:
         capital_cost=1,
     )
     network.add("Generator", "KINGASF1", bus="SQ", p_nom=100, marginal_cost=1)
+    # A constraint-relaxation generator: extendable, so it has a p_nom variable.
+    network.add(
+        "Generator",
+        "SWQLD1_exp_2025",
+        bus="SQ",
+        p_nom_extendable=True,
+        capital_cost=1,
+    )
     network.add("StorageUnit", "Q8 Battery - 2h", bus="SQ", p_nom=50, max_hours=2)
-    load = pd.Series([600.0, 700.0, 800.0, 900.0], index=network.snapshots)
+    demand = [600.0 + 100 * i for i in range(len(network.snapshots))]
+    load = pd.Series(demand, index=network.snapshots)
     network.add("Load", "load_SQ", bus="SQ", p_set=load)
     network.optimize.create_model(multi_investment_periods=True)
     return network
@@ -217,6 +230,131 @@ def test_fallback_only_constraint_applies_across_its_period(csv_str_to_df):
     )
 
 
+def test_fallback_excludes_every_named_timeslice_of_its_constraint(csv_str_to_df):
+    network = _network(timesteps=("00:00", "01:00", "02:00"))
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,           rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,     3000,  <=
+        SWQLD1,           2025,               qld_summer_typical,  3200,  <=
+        SWQLD1,           2025,               ,                    3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,           investment_periods,  snapshots
+        qld_summer_typical,  2025,                2025-01-01 00:00:00
+        qld_peak_demand,     2025,                2025-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    assert _custom_constraint_names(network) == [
+        "SWQLD1_2025",
+        "SWQLD1_2025_qld_peak_demand",
+        "SWQLD1_2025_qld_summer_typical",
+    ]
+    # qld_summer_typical takes 00:00 and qld_peak_demand 01:00, so the
+    # fallback is left with 02:00 alone.
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 02:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected, check_dtype=False
+    )
+
+
+def test_fallback_ignores_named_timeslices_from_other_investment_periods(
+    csv_str_to_df,
+):
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2030,               ,                 3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2030,               NSW-QLD_existing,  Link,       p,          0.84
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2025,                2025-01-01 01:00:00
+        qld_peak_demand,  2030,                2030-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    # SWQLD1 names qld_peak_demand only in 2025, so its 2030 fallback still
+    # covers 2030's 01:00, where qld_peak_demand is active.
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2030,                2030-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
+        2030,                2030-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2030"), expected, check_dtype=False
+    )
+
+
+def test_fallback_with_no_snapshots_left_is_skipped(csv_str_to_df):
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2025,               ,                 3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+    """)
+    # qld_peak_demand is active at both of 2025's snapshots.
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2025,                2025-01-01 00:00:00
+        qld_peak_demand,  2025,                2025-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    assert _custom_constraint_names(network) == ["SWQLD1_2025_qld_peak_demand"]
+
+
+def test_fallback_covers_a_named_timeslice_with_no_snapshots(csv_str_to_df):
+    # Snapshot aggregation missed 2025's peak: qld_peak_demand only has a
+    # snapshot in 2030. The named row is skipped, and the fallback covers all
+    # of 2025, peak hours included.
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2025,               ,                 3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2030,                2030-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    assert _custom_constraint_names(network) == ["SWQLD1_2025"]
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected, check_dtype=False
+    )
+
+
 def test_lhs_terms_apply_only_in_their_own_investment_period(csv_str_to_df):
     network = _network()
     rhs = csv_str_to_df("""
@@ -359,6 +497,40 @@ def test_terms_of_the_same_variable_type_keep_their_own_coefficients(
     )
 
 
+def test_capacity_term_repeats_at_each_snapshot_of_a_flow_constraint(
+    csv_str_to_df,
+):
+    """The shape of every relaxable constraint: flow terms, which take a value
+    at each snapshot, minus a relaxation generator's p_nom, which takes one.
+    The p_nom term must appear in the constraint's row at every snapshot."""
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,   constraint_type
+        SWQLD1,           2025,               ,           3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2025,               SWQLD1_exp_2025,   Generator,  p_nom,      -1.0
+    """)
+    timeslice_snapshots = pd.DataFrame(
+        columns=["timeslice", "investment_periods", "snapshots"]
+    )
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                         coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Generator-p_nom[SWQLD1_exp_2025],  -1.0,         <=,    3500
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],          0.84,         <=,    3500
+        2025,                2025-01-01 01:00:00,  Generator-p_nom[SWQLD1_exp_2025],  -1.0,         <=,    3500
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],          0.84,         <=,    3500
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected, check_dtype=False
+    )
+
+
 def test_load_term_offsets_the_rhs_at_each_snapshot(csv_str_to_df):
     network = _network()
     rhs = csv_str_to_df("""
@@ -418,6 +590,146 @@ def test_load_terms_each_offset_the_rhs_by_their_own_coefficient(csv_str_to_df):
     """)
     pd.testing.assert_frame_equal(
         _constraint_terms(network, "SWQLD1_2025"), expected, check_dtype=False
+    )
+
+
+def test_load_term_offsets_only_its_rows_own_snapshots(csv_str_to_df):
+    # Each row of the constraint covers part of 2025, and its load offset must
+    # use the demand at its own snapshots: 700 for the peak row at 01:00 and
+    # 600 for the fallback at 00:00, not each other's.
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2025,               ,                 3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,  Link,       p,          0.84
+        SWQLD1,           2025,               load_SQ,           Load,       p_set,      -0.33
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2025,                2025-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    # The peak row at 01:00: 3000 + 0.33 x 700.
+    expected_peak = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3231
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025_qld_peak_demand"),
+        expected_peak,
+        check_dtype=False,
+    )
+    # The fallback at 00:00: 3500 + 0.33 x 600.
+    expected_fallback = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3698
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected_fallback, check_dtype=False
+    )
+
+
+def test_load_term_offsets_the_rhs_under_every_constraint_type(csv_str_to_df):
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,  constraint_type
+        FLOOR,            2025,               ,           10,   >=
+        FIXED,            2025,               ,           20,   ==
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        FLOOR,            2025,               NSW-QLD_existing,  Link,       p,          0.84
+        FLOOR,            2025,               load_SQ,           Load,       p_set,      -0.33
+        FIXED,            2025,               NSW-QLD_existing,  Link,       p,          0.84
+        FIXED,            2025,               load_SQ,           Load,       p_set,      -0.33
+    """)
+    timeslice_snapshots = pd.DataFrame(
+        columns=["timeslice", "investment_periods", "snapshots"]
+    )
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    # rhs + 0.33 x load (600 at 00:00, 700 at 01:00), whatever the sign.
+    expected_floor = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         >=,    208
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         >=,    241
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "FLOOR_2025"), expected_floor, check_dtype=False
+    )
+    expected_fixed = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         =,     218
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],  0.84,         =,     251
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "FIXED_2025"), expected_fixed, check_dtype=False
+    )
+
+
+def test_every_term_type_combines_in_one_constraint(csv_str_to_df):
+    """A constraint as the translator writes one for a path with an expansion
+    option, a battery, a relaxation generator and a demand node, split into a
+    named row and a fallback: each variable type's terms, the battery's two
+    parts, the p_nom term at every snapshot and the load offset must all land
+    on each row's own snapshots."""
+    network = _network()
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,        rhs,   constraint_type
+        SWQLD1,           2025,               qld_peak_demand,  3000,  <=
+        SWQLD1,           2025,               ,                 3500,  <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,       component,  attribute,  coefficient
+        SWQLD1,           2025,               NSW-QLD_existing,    Link,       p,          0.84
+        SWQLD1,           2025,               NSW-QLD_exp_2025,    Link,       p,          0.84
+        SWQLD1,           2025,               Q8__Battery__-__2h,  Storage,    p,          0.43
+        SWQLD1,           2025,               SWQLD1_exp_2025,     Generator,  p_nom,      -1.0
+        SWQLD1,           2025,               load_SQ,             Load,       p_set,      -0.33
+    """)
+    timeslice_snapshots = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2025,                2025-01-01 01:00:00
+    """)
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+
+    assert _custom_constraint_names(network) == [
+        "SWQLD1_2025",
+        "SWQLD1_2025_qld_peak_demand",
+    ]
+    # The peak row at 01:00: 3000 + 0.33 x 700.
+    expected_peak = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                                    coefficient,  sign,  rhs
+        2025,                2025-01-01 01:00:00,  Generator-p_nom[SWQLD1_exp_2025],            -1.0,         <=,    3231
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],                    0.84,         <=,    3231
+        2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_exp_2025],                    0.84,         <=,    3231
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_dispatch[Q8__Battery__-__2h],  0.43,         <=,    3231
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_store[Q8__Battery__-__2h],     -0.43,        <=,    3231
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025_qld_peak_demand"),
+        expected_peak,
+        check_dtype=False,
+    )
+    # The fallback at 00:00: 3500 + 0.33 x 600.
+    expected_fallback = csv_str_to_df("""
+        investment_periods,  snapshots,            variable,                                    coefficient,  sign,  rhs
+        2025,                2025-01-01 00:00:00,  Generator-p_nom[SWQLD1_exp_2025],            -1.0,         <=,    3698
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],                    0.84,         <=,    3698
+        2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_exp_2025],                    0.84,         <=,    3698
+        2025,                2025-01-01 00:00:00,  StorageUnit-p_dispatch[Q8__Battery__-__2h],  0.43,         <=,    3698
+        2025,                2025-01-01 00:00:00,  StorageUnit-p_store[Q8__Battery__-__2h],     -0.43,        <=,    3698
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "SWQLD1_2025"), expected_fallback, check_dtype=False
     )
 
 
@@ -729,6 +1041,49 @@ def test_expansion_limit_caps_the_build_in_the_solved_model(csv_str_to_df):
     built = network.links.loc[["NSW-QLD_exp_2025"], "p_nom_opt"]
     expected = pd.Series([30.0], index=["NSW-QLD_exp_2025"])
     pd.testing.assert_series_equal(built, expected, check_names=False, atol=1e-6)
+
+
+def test_relaxation_capacity_loosens_the_limit_at_every_snapshot_in_the_solved_model(
+    csv_str_to_df,
+):
+    # flow - relaxation p_nom <= 20. Each MW of relaxation costs 50 to build
+    # and saves 99 at each of the two snapshots (cheap instead of expensive
+    # generation), so the model buys 30 MW and the link carries the whole
+    # 50 MW load at both. Were the p_nom term missing from a snapshot's row,
+    # the flow would stay capped at 20 there.
+    network = _two_bus_network(_ONE_PERIOD, load=[50, 50])
+    # On a bus of its own, so it can't serve the load; only its capacity matters.
+    network.add("Bus", "relaxation")
+    network.add(
+        "Generator",
+        "FLOWCAP_exp_2025",
+        bus="relaxation",
+        p_nom_extendable=True,
+        capital_cost=50,
+    )
+    network.optimize.create_model(multi_investment_periods=True)
+    rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,  constraint_type
+        FLOWCAP,          2025,               ,           20,   <=
+    """)
+    lhs = csv_str_to_df("""
+        constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
+        FLOWCAP,          2025,               NSW-QLD_existing,  Link,       p,          1.0
+        FLOWCAP,          2025,               FLOWCAP_exp_2025,  Generator,  p_nom,      -1.0
+    """)
+    timeslice_snapshots = pd.DataFrame(
+        columns=["timeslice", "investment_periods", "snapshots"]
+    )
+
+    _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
+    network.optimize.solve_model()
+
+    built = network.generators.loc[["FLOWCAP_exp_2025"], "p_nom_opt"]
+    expected_built = pd.Series([30.0], index=["FLOWCAP_exp_2025"])
+    pd.testing.assert_series_equal(built, expected_built, check_names=False, atol=1e-6)
+    flows = network.links_t.p0["NSW-QLD_existing"].reset_index(drop=True)
+    expected_flows = pd.Series([50.0, 50.0])
+    pd.testing.assert_series_equal(flows, expected_flows, check_names=False, atol=1e-6)
 
 
 def test_load_term_scales_the_limit_with_demand_in_the_solved_model(
