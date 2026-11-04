@@ -288,8 +288,9 @@ def test_fallback_ignores_named_timeslices_from_other_investment_periods(
 
     _add_custom_constraints_with_temporal_scope(network, rhs, lhs, timeslice_snapshots)
 
-    # SWQLD1 names qld_peak_demand only in 2025, so its 2030 fallback still
-    # covers 2030's 01:00, where qld_peak_demand is active.
+    # SWQLD1's only named row is in 2025. In 2030 it has no named rows, so
+    # its fallback covers all of 2030, including 01:00, even though
+    # qld_peak_demand is active then.
     expected = csv_str_to_df("""
         investment_periods,  snapshots,            variable,                  coefficient,  sign,  rhs
         2030,                2030-01-01 00:00:00,  Link-p[NSW-QLD_existing],  0.84,         <=,    3500
@@ -439,7 +440,7 @@ def test_storage_term_is_net_dispatch(csv_str_to_df):
     """)
     lhs = csv_str_to_df("""
         constraint_name,  investment_period,  variable_name,     component,  attribute,  coefficient
-        SWQLD1,           2025,               Q8__Battery__-__2h,  Storage,    p,          0.43
+        SWQLD1,           2025,               Q8 Battery - 2h,     Storage,    p,          0.43
     """)
     timeslice_snapshots = csv_str_to_df("""
         timeslice,        investment_periods,  snapshots
@@ -450,8 +451,8 @@ def test_storage_term_is_net_dispatch(csv_str_to_df):
 
     expected = csv_str_to_df("""
         investment_periods,  snapshots,            variable,                                    coefficient,  sign,  rhs
-        2025,                2025-01-01 01:00:00,  StorageUnit-p_dispatch[Q8__Battery__-__2h],  0.43,         <=,    3000
-        2025,                2025-01-01 01:00:00,  StorageUnit-p_store[Q8__Battery__-__2h],     -0.43,        <=,    3000
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_dispatch[Q8 Battery - 2h],     0.43,         <=,    3000
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_store[Q8 Battery - 2h],        -0.43,        <=,    3000
     """)
     pd.testing.assert_frame_equal(
         _constraint_terms(network, "SWQLD1_2025_qld_peak_demand"),
@@ -690,7 +691,7 @@ def test_every_term_type_combines_in_one_constraint(csv_str_to_df):
         constraint_name,  investment_period,  variable_name,       component,  attribute,  coefficient
         SWQLD1,           2025,               NSW-QLD_existing,    Link,       p,          0.84
         SWQLD1,           2025,               NSW-QLD_exp_2025,    Link,       p,          0.84
-        SWQLD1,           2025,               Q8__Battery__-__2h,  Storage,    p,          0.43
+        SWQLD1,           2025,               Q8 Battery - 2h,     Storage,    p,          0.43
         SWQLD1,           2025,               SWQLD1_exp_2025,     Generator,  p_nom,      -1.0
         SWQLD1,           2025,               load_SQ,             Load,       p_set,      -0.33
     """)
@@ -711,8 +712,8 @@ def test_every_term_type_combines_in_one_constraint(csv_str_to_df):
         2025,                2025-01-01 01:00:00,  Generator-p_nom[SWQLD1_exp_2025],            -1.0,         <=,    3231
         2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_existing],                    0.84,         <=,    3231
         2025,                2025-01-01 01:00:00,  Link-p[NSW-QLD_exp_2025],                    0.84,         <=,    3231
-        2025,                2025-01-01 01:00:00,  StorageUnit-p_dispatch[Q8__Battery__-__2h],  0.43,         <=,    3231
-        2025,                2025-01-01 01:00:00,  StorageUnit-p_store[Q8__Battery__-__2h],     -0.43,        <=,    3231
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_dispatch[Q8 Battery - 2h],     0.43,         <=,    3231
+        2025,                2025-01-01 01:00:00,  StorageUnit-p_store[Q8 Battery - 2h],        -0.43,        <=,    3231
     """)
     pd.testing.assert_frame_equal(
         _constraint_terms(network, "SWQLD1_2025_qld_peak_demand"),
@@ -725,8 +726,8 @@ def test_every_term_type_combines_in_one_constraint(csv_str_to_df):
         2025,                2025-01-01 00:00:00,  Generator-p_nom[SWQLD1_exp_2025],            -1.0,         <=,    3698
         2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_existing],                    0.84,         <=,    3698
         2025,                2025-01-01 00:00:00,  Link-p[NSW-QLD_exp_2025],                    0.84,         <=,    3698
-        2025,                2025-01-01 00:00:00,  StorageUnit-p_dispatch[Q8__Battery__-__2h],  0.43,         <=,    3698
-        2025,                2025-01-01 00:00:00,  StorageUnit-p_store[Q8__Battery__-__2h],     -0.43,        <=,    3698
+        2025,                2025-01-01 00:00:00,  StorageUnit-p_dispatch[Q8 Battery - 2h],     0.43,         <=,    3698
+        2025,                2025-01-01 00:00:00,  StorageUnit-p_store[Q8 Battery - 2h],        -0.43,        <=,    3698
     """)
     pd.testing.assert_frame_equal(
         _constraint_terms(network, "SWQLD1_2025"), expected_fallback, check_dtype=False
