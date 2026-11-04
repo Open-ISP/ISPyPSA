@@ -166,9 +166,9 @@ def _add_custom_constraints_with_temporal_scope(
     its constraint_name and the same investment_period, blank matching blank.
     The translator resolves every dated input to explicit investment periods,
     so a blank investment_period only occurs on constraints that apply
-    regardless of investment period (the expansion limits). Load terms are demand data rather than variables:
-    coefficient x p_set becomes a per-snapshot constant, which linopy moves to
-    the right-hand side.
+    regardless of investment period (the expansion limits). Load terms are
+    demand data rather than variables: coefficient x p_set becomes a
+    per-snapshot constant, which linopy moves to the right-hand side.
 
     Implementation note (linopy): flow and storage-dispatch variables take a
     value at every snapshot, so a constraint containing one is enforced
@@ -509,11 +509,12 @@ def _build_lhs_expression(
 
         scope:
             investment_periods  snapshots
-            2025                2025-01-01 01:00
+            2025                2025-01-01 01:00   # t1
+            2025                2025-01-01 02:00   # t2
 
         name: "SWQLD1_2025_qld_peak_demand"   # only used in the error message
 
-        returns, at each snapshot t in scope:
+        returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.33 p_set[t, load_SQ]
     """
     is_load = terms["component"] == _LOAD_COMPONENT
@@ -574,9 +575,10 @@ def _sum_variable_terms(
     variables to the snapshots in scope.
 
     The terms are summed one variable type at a time (all the Link-p terms
-    together, then all the Link-p_nom terms) rather than term by term. Each linopy operation on a time-indexed variable costs tens of
-    milliseconds, so working per type keeps a constraint to a handful of
-    operations however many terms it has.
+    together, then all the Link-p_nom terms) rather than term by term. Each
+    linopy operation on a time-indexed variable costs tens of milliseconds,
+    so working per type keeps a constraint to a handful of operations however
+    many terms it has.
 
     I/O Example:
         variable_terms:
@@ -587,9 +589,10 @@ def _sum_variable_terms(
 
         scope:
             investment_periods  snapshots
-            2025                2025-01-01 01:00
+            2025                2025-01-01 01:00   # t1
+            2025                2025-01-01 02:00   # t2
 
-        returns, at each snapshot t in scope:
+        returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.5 Link-p[t, CQ-NQ_existing]
             - 1.0 Link-p_nom[NSW-QLD_exp_2025]
     """
@@ -607,8 +610,7 @@ def _sum_terms_of_variable_type(
     scope: pd.MultiIndex,
 ) -> linopy.LinearExpression:
     """Sums coefficient x variable over the terms of one variable type (e.g.
-    Link-p), in a single selection and weighted sum. A component listed twice
-    has its coefficients added together.
+    Link-p), in a single selection and weighted sum.
 
     I/O Example:
         variable_type: "Link-p"
@@ -616,14 +618,14 @@ def _sum_terms_of_variable_type(
         terms:
             variable_name     coefficient
             NSW-QLD_existing  0.84
-            CQ-NQ_existing    -0.5
-            CQ-NQ_existing    -0.25       # listed twice: -0.75 in total
+            CQ-NQ_existing    -0.75
 
         scope:
             investment_periods  snapshots
-            2025                2025-01-01 01:00
+            2025                2025-01-01 01:00   # t1
+            2025                2025-01-01 02:00   # t2
 
-        returns, at each snapshot t in scope:
+        returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.75 Link-p[t, CQ-NQ_existing]
     """
     coefficients = terms.groupby("variable_name")["coefficient"].sum()
@@ -631,6 +633,8 @@ def _sum_terms_of_variable_type(
     variable = _select_variables_of_type(
         model, variable_type, list(coefficients.index), scope
     )
+    # The weights are matched to the variables by name and repeated at each
+    # snapshot. Summing over "name" alone then leaves one sum per snapshot.
     return (variable * weights).sum(dim="name")
 
 
@@ -646,13 +650,23 @@ def _select_variables_of_type(
     I/O Example:
         scope:
             investment_periods  snapshots
-            2025                2025-01-01 01:00
+            2025                2025-01-01 01:00   # t1
+            2025                2025-01-01 02:00   # t2
 
-        variable_type: "Link-p", component_names: ["NSW-QLD_existing"]
-        returns: Link-p[(2025, 2025-01-01 01:00), NSW-QLD_existing]
+        variable_type: "Link-p"
+        component_names: ["NSW-QLD_existing", "CQ-NQ_existing"]
 
-        variable_type: "Link-p_nom", component_names: ["NSW-QLD_exp_2025"]
-        returns: Link-p_nom[NSW-QLD_exp_2025]   # no snapshot dimension
+        returns, with dims (snapshot, name):
+            snapshot  NSW-QLD_existing              CQ-NQ_existing
+            t1        Link-p[t1, NSW-QLD_existing]  Link-p[t1, CQ-NQ_existing]
+            t2        Link-p[t2, NSW-QLD_existing]  Link-p[t2, CQ-NQ_existing]
+
+        variable_type: "Link-p_nom"
+        component_names: ["NSW-QLD_exp_2025"]
+
+        returns, with dims (name), as p_nom has no snapshot dimension:
+            NSW-QLD_exp_2025
+            Link-p_nom[NSW-QLD_exp_2025]
     """
     variable = model.variables[variable_type].sel(name=component_names)
     if "snapshot" in variable.dims:
@@ -665,8 +679,7 @@ def _sum_load_terms(
 ) -> pd.Series | float:
     """Sums coefficient x p_set over the load terms at each snapshot in scope.
     Returns 0 when there are none, so a p_nom-only constraint doesn't gain a
-    snapshot dimension. A load listed twice has its coefficients added
-    together, as in _sum_terms_of_variable_type.
+    snapshot dimension.
 
     I/O Example:
         load_terms:
