@@ -460,6 +460,14 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    build_costs = csv_str_to_df("""
+        Technology,                     IASR Scenario,      2024-25,    2025-26
+        Wind,                           Step Change,        3412,       3266
+        Large scale Solar PV,           Step Change,        1489,       1398
+        Battery storage (2hrs storage), Step Change,        1238,       1106
+        OCGT (small GT),                Step Change,        2471,       2498
+        BOTN - Cethana,                 Step Change,        3665,       3595
+    """)
 
     with (
         patch(
@@ -493,6 +501,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "build_costs": build_costs,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -696,6 +705,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert len(costs_fuel_prices) == 23
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"CNSW", "SNW", "NQ"}
 
+    # At all granularities: 5x new entrant technologies, 2 years each
+    costs_new_entrant_build = result["costs_new_entrant_build"]
+    assert set(costs_new_entrant_build.columns) == {"technology", "year", "cost"}
+    assert len(costs_new_entrant_build) == 10
+
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
@@ -772,6 +786,14 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    build_costs = csv_str_to_df("""
+        Technology,                     IASR Scenario,      2024-25,    2025-26
+        Wind,                           Step Change,        3412,       3266
+        Large scale Solar PV,           Step Change,        1489,       1398
+        Battery storage (2hrs storage), Step Change,        1238,       1106
+        OCGT (small GT),                Step Change,        2471,       2498
+        BOTN - Cethana,                 Step Change,        3665,       3595
+    """)
     with (
         patch(
             "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -804,6 +826,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "build_costs": build_costs,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -904,6 +927,10 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert len(costs_fuel_prices) == 21
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"NSW", "QLD"}
 
+    # At all granularities: 5x new entrant technologies, 2 years each
+    costs_new_entrant_build = result["costs_new_entrant_build"]
+    assert len(costs_new_entrant_build) == 10
+
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # CQ is included so the CQ-NQ flow path's region prefix resolves at the
@@ -971,6 +998,14 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         label,  2024-25
         IBR,    10
     """)
+    build_costs = csv_str_to_df("""
+        Technology,                     IASR Scenario,      2024-25,    2025-26
+        Wind,                           Step Change,        3412,       3266
+        Large scale Solar PV,           Step Change,        1489,       1398
+        Battery storage (2hrs storage), Step Change,        1238,       1106
+        OCGT (small GT),                Step Change,        2471,       2498
+        BOTN - Cethana,                 Step Change,        3665,       3595
+    """)
 
     with (
         patch(
@@ -1002,6 +1037,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_costs_for_wind_and_solar": connection_costs_for_wind_and_solar,
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
+                "build_costs": build_costs,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -1096,3 +1132,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     costs_fuel_prices = result["costs_fuel_prices"]
     assert len(costs_fuel_prices) == 19
     assert set(costs_fuel_prices["geo_id"].dropna()) == {"NEM"}
+
+    # At all granularities: 5x new entrant technologies, 2 years each
+    costs_new_entrant_build = result["costs_new_entrant_build"]
+    assert len(costs_new_entrant_build) == 10
