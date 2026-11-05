@@ -914,3 +914,17 @@ def _warn_if_no_scenario_rows(
             f"No rows matched scenario '{scenario}' in {table_desc} table "
             "— filtered table will be empty"
         )
+
+
+def _melt_financial_year_columns(
+    wide: pd.DataFrame, id_columns: list[str], value_name: str
+) -> pd.DataFrame:
+    year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
+    long = wide.melt(
+        id_vars=id_columns,
+        value_vars=year_columns,
+        var_name="year",
+        value_name=value_name,
+    )
+    long["year"] = long["year"].apply(_financial_year_string_to_end_year_int)
+    return long

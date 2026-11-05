@@ -64,6 +64,7 @@ def test_build_required_tables_new_format():
     assert "gpg_secondary_fuel_prices" in result
     assert "hydrogen_prices" in result
     assert "biomethane_prices" in result
+    assert "build_costs" in result
 
 
 def test_build_required_tables_old_format():

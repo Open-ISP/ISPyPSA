@@ -8,11 +8,28 @@ description: >
   Contains upfront capital costs for new entrant technologies. For offshore wind,
   build costs include connection costs if sourced from the IASR workbook.
 
+  The 'key' columns (technology and year) identify the new-entrant technology and
+  model year that a build cost applies to. The year column can be left empty to act
+  as a wildcard, essentially becoming as a default build cost for that technology
+  in any model year that doesn't have its own row. The custom_validation rules
+  require the wildcard resolution to be both unambiguous and complete.
+
   Source tables:
     - `build_costs`
 
   This table is required if new entrant generation or storage asset tables are
   present and non-empty.
+custom_validation:
+  - name: costs_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. The combination and
+      wildcard model is outlined in the table description.
+  - name: costs_cover_every_new_entrant_technology_and_year
+    description: >
+      Coverage spans every new-entrant technology type (in generators_new_entrant
+      and storage_new_entrant) and every model year: each must resolve to a row for
+      its build_cost once wildcards resolve.
 columns:
   technology:
     type: string
@@ -25,8 +42,13 @@ columns:
       in this table.
   year:
     type: int
-    required: true
-    description: Year in which the build cost applies.
+    required: false
+    description: >
+      Year for which the build cost applies.
+
+      If absent (or empty):
+      Wildcard — applies to every model year that no more specific row covers (a
+      table-wide default).
   cost:
     type: float
     required: true

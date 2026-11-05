@@ -12,6 +12,7 @@ from ispypsa.templater.helpers import (
     _financial_year_string_to_end_year_int,
     _fuzzy_map_to_allowed_values,
     _looks_like_financial_year,
+    _melt_financial_year_columns,
     _where_any_substring_appears,
 )
 
@@ -23,6 +24,12 @@ _NON_VRE_COLUMN_RENAMES = {
     "Region": "region_id",
     "Generator Type": "technology",
     "Connection capacity (MVA)": "connection_capacity",
+}
+
+_COST_TABLE_COLUMN_RENAMES = {
+    "Region": "region_id",
+    "IASR Scenario": "scenario",
+    "Technology": "technology",
 }
 
 # NOTE: the VRE / non-VRE split below is approximate, not strict. The IASR
@@ -889,3 +896,51 @@ def _warn_nan_connection_costs(
         f"NaN connection cost after per-MW calculation for: {all_nan_costs} "
         "— no additional connection cost will be applied here"
     )
+
+
+# ----------- Build Costs --------------
+
+
+def _template_costs_new_entrant_build(
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
+    generators_new_entrant: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
+) -> pd.DataFrame:
+    build_costs = _filter_table_by_isp_scenario(
+        iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
+        scenario,
+        "scenario",
+        "build_costs",
+    )
+    canonical = _get_canon_technology_and_geo_id_pairs(
+        generators_new_entrant, storage_new_entrant
+    )
+    build_costs = _canonicalise_technologies(
+        build_costs, set(canonical["technology"]), "templating new entrant build costs"
+    )
+    build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
+    build_costs["cost"] *= 1000  # $/kW -> $/MW
+    return build_costs
+
+
+def _canonicalise_technologies(
+    df: pd.DataFrame, canonical: set[str], task_desc: str
+) -> pd.DataFrame:
+    # Note: no more defensive empty canonical set guard. Ongoing assumption: templater
+    # inputs will be IASR tables; translator step is where this can/should differ.
+    excluded = df["technology"].isin(_EXCLUDED_TECHNOLOGIES)
+    df = df[~excluded].copy()
+
+    logging.info(
+        f"KNOWN EXCLUSION: technology(s) {sorted(_EXCLUDED_TECHNOLOGIES)} "
+        f"excluded while {task_desc}."
+    )
+
+    df["technology"] = _fuzzy_map_to_allowed_values(
+        df["technology"],
+        canonical,
+        task_desc,
+        threshold=90,
+    )
+    return df
