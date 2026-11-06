@@ -18,6 +18,7 @@ from ispypsa.templater.helpers import (
     _looks_like_financial_year,
     _manual_remove_footnotes_from_generator_names,
     _map_geo_id_to_granularity,
+    _melt_financial_year_columns,
     _merge_category_keyed_properties,
     _pick_location,
     _required_property_columns,
@@ -982,3 +983,43 @@ def test_filter_table_by_isp_scenario_no_matching_rows(csv_str_to_df, caplog):
         "No rows matched scenario 'Accelerated Transition' in test table "
         "— filtered table will be empty"
     ) in caplog.text
+
+
+# --- _melt_financial_year_columns ---
+
+
+def test_melt_financial_year_columns(csv_str_to_df):
+    # Source isn't an id column and 2026-2027 isn't a 'YYYY-YY' header, so both
+    # are dropped.
+    wide = csv_str_to_df("""
+        technology,  Source,         2024-25,  2025-26,  2026-2027
+        Wind,        CSIRO GenCost,  3412,     3266,     3100
+        CCGT,        CSIRO GenCost,  2499,     ,         2400
+    """)
+
+    result = _melt_financial_year_columns(wide, ["technology"], "cost")
+
+    expected = csv_str_to_df("""
+        technology,  year,  cost
+        Wind,        2025,  3412
+        CCGT,        2025,  2499
+        Wind,        2026,  3266
+        CCGT,        2026,
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_melt_financial_year_columns_without_id_columns(csv_str_to_df):
+    wide = csv_str_to_df("""
+        label,  2024-25,  2025-26
+        IBR,    163.24,   148.88
+    """)
+
+    result = _melt_financial_year_columns(wide, [], "system_strength_cost")
+
+    expected = csv_str_to_df("""
+        year,  system_strength_cost
+        2025,  163.24
+        2026,  148.88
+    """)
+    pd.testing.assert_frame_equal(result, expected)
