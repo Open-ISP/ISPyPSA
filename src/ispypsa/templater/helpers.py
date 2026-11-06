@@ -919,6 +919,33 @@ def _warn_if_no_scenario_rows(
 def _melt_financial_year_columns(
     wide: pd.DataFrame, id_columns: list[str], value_name: str
 ) -> pd.DataFrame:
+    """Melts the financial-year columns of ``wide`` into one row per ``id_columns``
+    row and year, with the yearly values in a column named ``value_name``.
+
+    Many IASR tables lay out a time series as one column per financial year, headed
+    like '2024-25', sometimes with other columns containing descriptive information
+    or key-like mappings. This function melts the columns with financial year headers
+    (see _looks_like_financial_year) to rows, maps those string values to year-end ints,
+    and names the resultant value column.
+
+    Any ``id_columns`` passed in are carried onto every melted row, so the melted
+    dataframe ends up with one row per (*id_columns, year) combination. An empty
+    list just results in a long df with one row per year. Columns that are neither
+    in ``id_columns`` nor a financial year are dropped.
+
+    I/O Example (id_columns=["technology"], value_name="cost"):
+        wide:
+            technology  Source         2024-25  2025-26
+            Wind        CSIRO GenCost  3412     3266
+            CCGT        CSIRO GenCost  2499              # NaN kept
+
+        returns:
+            technology  year  cost
+            Wind        2025  3412
+            CCGT        2025  2499
+            Wind        2026  3266
+            CCGT        2026  NaN
+    """
     year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
     long = wide.melt(
         id_vars=id_columns,

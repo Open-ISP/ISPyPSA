@@ -295,9 +295,9 @@ _EXPECTED_EXPANSION_COST_ROWS_75 = {
 }
 
 _EXPECTED_COSTS_CONNECTION_ROWS_75 = {
-    "sub_regions": 14725,
-    "nem_regions": 10385,
-    "single_region": 8649,
+    "sub_regions": 15190,
+    "nem_regions": 10540,
+    "single_region": 8680,
 }
 
 _EXPECTED_COSTS_FUEL_PRICES_ROWS_75 = {
@@ -325,6 +325,10 @@ _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
 # As above - so far no 'Power Station' level collapse implemented so this count
 # remains the same at every granularity.
 _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
+
+# Build costs are granularity-invariant, always producing one row per new-entrant
+# technology per year.
+_EXPECTED_BUILD_COST_ROWS_75 = 600
 
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
@@ -382,6 +386,7 @@ def test_create_ispypsa_inputs_new_format(
     gens_existing_planned = pd.read_csv(output_dir / "generators_existing_planned.csv")
     storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
     costs_fuel_prices = pd.read_csv(output_dir / "costs_fuel_prices.csv")
+    costs_new_entrant_build = pd.read_csv(output_dir / "costs_new_entrant_build.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert (
@@ -459,6 +464,9 @@ def test_create_ispypsa_inputs_new_format(
     # geo_id's are real network_geography entries.
     assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
     assert set(costs_connection["geo_id"]) <= set(geo["geo_id"])
+
+    # granularity invariant
+    assert len(costs_new_entrant_build) == _EXPECTED_BUILD_COST_ROWS_75
 
     # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
     # should match granularity, but NaNs are allowed (wildcard) so dropped before
