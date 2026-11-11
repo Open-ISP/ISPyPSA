@@ -2,6 +2,31 @@ table: custom_constraints_lhs
 required: false
 unique:
   - [constraint_name, investment_period, variable_name, component, attribute]
+description: >
+  Left-hand-side terms of each custom constraint: one row per (constraint,
+  investment period, model component) coefficient. Consumed by
+  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
+
+  Source tables:
+    - `custom_constraints_lhs`
+    - `network_expansion_options`
+    - `custom_constraints`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.constraints. Each term in the ISPyPSA
+  custom_constraints_lhs table is expanded from its input ID into one term per
+  matching component in the translated links, generators and storage tables
+  (e.g. a path's existing and expansion links), in each investment period the
+  component is in service. Terms are dropped in investment periods where their
+  constraint has no custom_constraints_rhs row. network_expansion_options adds
+  two more kinds of term: p_nom terms for each relaxable constraint's
+  relaxation generators, signed by the constraint's direction in
+  custom_constraints so that building them loosens it, and the p_nom terms of
+  the expansion-limit constraints.
+
+  If absent:
+  No custom constraints are added to the model.
 custom_validation:
   - name: supported_component_attribute_pairs
     description: >
@@ -27,18 +52,6 @@ custom_validation:
       component that isn't extendable has a fixed capacity rather than a
       capacity variable. For example, a p_nom term on an existing generator
       with p_nom_extendable false fails.
-description: >
-  Left-hand-side terms of each custom constraint: one row per (constraint,
-  investment period, model component) coefficient.
-
-  Produced by ispypsa.translator.constraints, which expands each templated
-  term from its input ID into one term per matching PyPSA component (e.g. a
-  path's existing and expansion links) in each investment period the component
-  is in service. Consumed by
-  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
-
-  If absent:
-  No custom constraints are added to the model.
 columns:
   constraint_name:
     type: string

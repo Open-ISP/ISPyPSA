@@ -2,6 +2,29 @@ table: custom_constraints_rhs
 required: false
 unique:
   - [constraint_name, investment_period, timeslice]
+description: >
+  Right-hand side of each custom constraint: one row per linopy constraint
+  pypsa_build adds, scoped in time by its investment_period and timeslice.
+  Consumed by
+  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
+
+  Source tables:
+    - `custom_constraints_rhs`
+    - `custom_constraints`
+    - `network_expansion_options`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.constraints. Each row of the ISPyPSA
+  custom_constraints_rhs table is resolved onto the investment periods, taking
+  its constraint_type from the constraint's direction in custom_constraints.
+  Rows are dropped in investment periods where their constraint has no
+  custom_constraints_lhs term on a model variable. network_expansion_options
+  adds one row per expansion-limit constraint, capping the capacity built for
+  each expandable path and relaxable constraint.
+
+  If absent:
+  No custom constraints are added to the model.
 custom_validation:
   - name: blank_investment_period_rows_have_a_blank_timeslice
     description: >
@@ -39,17 +62,6 @@ custom_validation:
       constraint_name, investment_period and timeslice joined with
       underscores, skipping blanks. For example, (C, 2025, blank) and
       (C_2025, blank, blank) both give C_2025, so together they fail.
-description: >
-  Right-hand side of each custom constraint: one row per linopy constraint
-  pypsa_build adds, scoped in time by its investment_period and timeslice.
-
-  Produced by ispypsa.translator.constraints, which resolves the templated
-  custom-constraint tables onto the investment periods and appends the
-  endogenous expansion-limit constraints. Consumed by
-  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
-
-  If absent:
-  No custom constraints are added to the model.
 columns:
   constraint_name:
     type: string
