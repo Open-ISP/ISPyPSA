@@ -36,7 +36,7 @@ columns:
     required: true
     description: Investment period of the snapshot.
   snapshots:
-    type: date
+    type: datetime
     required: true
     format: "%Y-%m-%d %H:%M:%S"
     description: The snapshot's timestamp.

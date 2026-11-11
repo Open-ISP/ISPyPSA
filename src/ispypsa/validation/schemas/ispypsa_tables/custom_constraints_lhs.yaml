@@ -76,7 +76,7 @@ columns:
     required: true
     description: Coefficient the variable is multiplied by in the constraint.
   date_from:
-    type: date
+    type: datetime
     required: false
     format: "%Y-%m-%dT%H:%M:%S"
     description: >
