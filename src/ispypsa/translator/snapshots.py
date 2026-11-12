@@ -150,7 +150,7 @@ def _add_investment_periods(
     read off the interval's last instant: a stamp of exactly midnight on a year
     boundary belongs to the year just ended (see ispypsa.model_years).
 
-    I/O Example (year_type fy, investment_periods [2026, 2028]):
+    I/O Example (year_type fy, investment_periods [2027, 2028]):
         snapshots:
             snapshots
             2027-06-30 23:30:00
@@ -159,8 +159,8 @@ def _add_investment_periods(
 
         returns:
             investment_periods  snapshots
-            2026                2027-06-30 23:30:00
-            2026                2027-07-01 00:00:00
+            2027                2027-06-30 23:30:00
+            2027                2027-07-01 00:00:00
             2028                2027-07-01 00:30:00
 
     Args:
