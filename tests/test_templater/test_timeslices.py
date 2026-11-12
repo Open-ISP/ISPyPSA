@@ -51,7 +51,7 @@ def test_template_timeslices_decodes_one_pattern_per_reference_year(csv_str_to_d
     # belongs to FY2026's reference year. The typical summer end wraps past
     # the new year.
     expected = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2011,            12-10,            12-12
         nsw_winter_reference,  2011,            12-12,            12-10
         nsw_peak_demand,       2015,            11-18,            11-20
@@ -61,8 +61,8 @@ def test_template_timeslices_decodes_one_pattern_per_reference_year(csv_str_to_d
         qld_winter_reference,  2015,            04-01,            10-01
     """)
     # expected rows are grouped by reference year for readability; the templater
-    # returns them in timeslice_id order, so compare on a shared sort key
-    sort_key = ["reference_year", "timeslice_id", "start_month_day"]
+    # returns them in timeslice order, so compare on a shared sort key
+    sort_key = ["reference_year", "timeslice", "start_month_day"]
     pd.testing.assert_frame_equal(
         result.sort_values(sort_key).reset_index(drop=True),
         expected.sort_values(sort_key).reset_index(drop=True),
@@ -94,7 +94,7 @@ def test_template_timeslices_deduplicates_repeated_reference_year(csv_str_to_df)
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2015,            11-18,            11-20
         nsw_winter_reference,  2015,            11-20,            11-18
     """)
@@ -128,7 +128,7 @@ def test_template_timeslices_extends_sequence_cyclically(csv_str_to_df):
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2011,            12-10,            12-12
         nsw_peak_demand,       2015,            11-18,            11-20
         nsw_winter_reference,  2011,            12-12,            12-10
@@ -206,7 +206,7 @@ def test_template_timeslices_drops_horizon_truncated_planning_year(csv_str_to_df
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2015,            11-18,            11-20
         nsw_summer_typical,    2015,            10-01,            11-18
         nsw_summer_typical,    2015,            11-20,            04-01
@@ -235,7 +235,7 @@ def test_template_timeslices_drops_windows_before_sequence_start(csv_str_to_df):
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2015,            12-10,            12-12
         nsw_winter_reference,  2015,            12-12,            12-10
     """)
@@ -252,7 +252,7 @@ def test_template_timeslices_empty_calendar(csv_str_to_df):
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,  reference_year,  start_month_day,  end_month_day
+        timeslice,  reference_year,  start_month_day,  end_month_day
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
@@ -272,8 +272,8 @@ def test_shipped_calendar_decodes():
     assert sorted(result["reference_year"].unique()) == list(range(2011, 2026))
     # tas_peak_demand never activates in the Draft 2026 ISP calendar; the other
     # 14 region-prefixed timeslices all do.
-    assert "tas_peak_demand" not in set(result["timeslice_id"])
-    assert result["timeslice_id"].nunique() == 14
+    assert "tas_peak_demand" not in set(result["timeslice"])
+    assert result["timeslice"].nunique() == 14
     # Reaching here means the inline partition guard passed: the shipped
     # calendar's windows tile each reference year exactly. The reference-year
     # attribution also relies on only winter crossing 1 July and winter being
@@ -293,7 +293,7 @@ def test_template_timeslices_empty_sequence(csv_str_to_df):
     result = _template_timeslices(timeslice_calendar, reference_year_sequence)
 
     expected = csv_str_to_df("""
-        timeslice_id,  reference_year,  start_month_day,  end_month_day
+        timeslice,  reference_year,  start_month_day,  end_month_day
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
@@ -301,7 +301,7 @@ def test_template_timeslices_empty_sequence(csv_str_to_df):
 def test_coverage_guard_passes_on_full_partition(csv_str_to_df):
     # peak carved out of summer, winter filling the cool half: tiles the year.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_peak_demand,       2015,            01-25,            01-26
         nsw_summer_typical,    2015,            01-26,            04-01
         nsw_winter_reference,  2015,            04-01,            11-01
@@ -314,7 +314,7 @@ def test_coverage_guard_passes_on_full_partition(csv_str_to_df):
 def test_coverage_guard_passes_without_peak_timeslice(csv_str_to_df):
     # tas has no peak_demand; summer + winter alone still tile the year.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         tas_summer_typical,    2015,            01-01,            07-01
         tas_winter_reference,  2015,            07-01,            01-01
     """)
@@ -325,7 +325,7 @@ def test_coverage_guard_passes_without_peak_timeslice(csv_str_to_df):
 def test_coverage_guard_raises_on_gap(csv_str_to_df):
     # June (06-01 to 07-01) is covered by no window.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,    2015,            01-01,            06-01
         nsw_winter_reference,  2015,            07-01,            01-01
     """)
@@ -339,7 +339,7 @@ def test_coverage_guard_raises_on_gap(csv_str_to_df):
 def test_coverage_guard_raises_on_overlap(csv_str_to_df):
     # July (07-01 to 08-01) is covered by both summer and winter.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,    2015,            01-01,            08-01
         nsw_winter_reference,  2015,            07-01,            01-01
     """)
@@ -354,7 +354,7 @@ def test_only_winter_may_cross_financial_year_boundary_raises(csv_str_to_df):
     # A summer window spanning 1 July is weather-varying AND boundary-crossing:
     # exactly the case that could blur reference years.
     timeslices = csv_str_to_df("""
-        timeslice_id,        reference_year,  start_month_day,  end_month_day
+        timeslice,           reference_year,  start_month_day,  end_month_day
         nsw_summer_typical,  2015,            06-01,            08-01
     """)
 
@@ -365,7 +365,7 @@ def test_only_winter_may_cross_financial_year_boundary_raises(csv_str_to_df):
 def test_only_winter_may_cross_financial_year_boundary_passes(csv_str_to_df):
     # Winter spans 1 July (allowed); the wrapping summer covers Nov-Apr, not July.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_winter_reference,  2015,            04-01,            11-01
         nsw_summer_typical,    2015,            11-01,            04-01
     """)
@@ -376,7 +376,7 @@ def test_only_winter_may_cross_financial_year_boundary_passes(csv_str_to_df):
 def test_winter_must_be_constant_per_region_raises(csv_str_to_df):
     # NSW winter differs between its two reference years.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_winter_reference,  2015,            04-01,            11-01
         nsw_winter_reference,  2011,            04-01,            10-15
     """)
@@ -388,7 +388,7 @@ def test_winter_must_be_constant_per_region_raises(csv_str_to_df):
 def test_winter_constant_per_region_passes(csv_str_to_df):
     # NSW winter is identical across reference years; TAS may differ from NSW.
     timeslices = csv_str_to_df("""
-        timeslice_id,          reference_year,  start_month_day,  end_month_day
+        timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_winter_reference,  2015,            04-01,            11-01
         nsw_winter_reference,  2011,            04-01,            11-01
         tas_winter_reference,  2015,            03-01,            12-01
@@ -402,7 +402,7 @@ def test_convert_windows_to_month_days_preserves_leap_day(csv_str_to_df):
     # shipped calendar. The templater must keep "02-29" — clamping it to 02-28
     # in non-leap model years is the translator's job, not the templater's.
     windows = csv_str_to_df("""
-        timeslice_id,     reference_year,  planning_year,  start_date,  end_date
+        timeslice,        reference_year,  planning_year,  start_date,  end_date
         nsw_peak_demand,  2024,            2040,           2040-02-29,  2040-03-01
     """)
     # _convert_windows_to_month_days strftimes these, so they must be datetimes
@@ -412,7 +412,7 @@ def test_convert_windows_to_month_days_preserves_leap_day(csv_str_to_df):
     result = _convert_windows_to_month_days(windows)
 
     expected = csv_str_to_df("""
-        timeslice_id,     reference_year,  planning_year,  start_month_day,  end_month_day
+        timeslice,        reference_year,  planning_year,  start_month_day,  end_month_day
         nsw_peak_demand,  2024,            2040,           02-29,            03-01
     """)
     pd.testing.assert_frame_equal(result, expected)

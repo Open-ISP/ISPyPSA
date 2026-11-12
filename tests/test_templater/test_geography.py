@@ -1,6 +1,10 @@
+import re
+
 import pandas as pd
+import pytest
 
 from ispypsa.templater.geography import (
+    _add_non_rez_geographies_to_rez_table,
     _extract_subregion_id,
     _template_network_geography,
 )
@@ -102,3 +106,65 @@ def test_template_network_geography_single_region(csv_str_to_df):
         result.reset_index(drop=True),
         expected.reset_index(drop=True),
     )
+
+
+# --- _add_non_rez_geographies_to_rez_table ---
+
+
+def test_add_non_rez_geographies_to_rez_table(csv_str_to_df, caplog):
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,                 NEM region,  ISP sub-region
+        Q1,   Far North QLD,        QLD,         NQ
+        N3,   Central-West Orana,   NSW,         CNSW
+    """)
+
+    iasr_tables = {
+        "renewable_energy_zones": renewable_energy_zones,
+        "another_table": csv_str_to_df("""
+            First Column,   Second Column
+            number_one,     number_two
+        """),
+    }
+
+    with caplog.at_level("INFO"):
+        updated_tables = _add_non_rez_geographies_to_rez_table(iasr_tables)
+
+    # check that returned renewable_energy_zones table has extra rows
+    expected_rez = csv_str_to_df("""
+        ID,  Name,                      NEM region,  ISP sub-region
+        Q1,  Far North QLD,             QLD,         NQ
+        N3,  Central-West Orana,        NSW,         CNSW
+        N0,  New South Wales Non-REZ,   NSW,         CNSW
+        V0,  Victoria Non-REZ,          VIC,         SEV
+    """)
+    pd.testing.assert_frame_equal(
+        updated_tables["renewable_energy_zones"], expected_rez
+    )
+
+    # and that the additions were logged:
+    msg = (
+        "IASR TABLE EDIT: Added non-REZ geographies to 'renewable_energy_zones' "
+        "IASR table: ['N0', 'V0']"
+    )
+    assert msg in caplog.text
+
+    # and that the other table passed through untouched
+    assert updated_tables["another_table"] is iasr_tables["another_table"]
+    assert iasr_tables["renewable_energy_zones"] is renewable_energy_zones
+
+
+def test_add_non_rez_geographies_to_rez_table_guard_raises(csv_str_to_df):
+    # check that the guard raises correctly based on ID presence, even if other
+    # column values for that non-REZ row are different.
+    renewable_energy_zones = csv_str_to_df("""
+        ID,   Name,                 NEM region, ISP sub-region
+        N3,   Central-West Orana,   NSW,        CNSW
+        N0,   New Non-REZ Name,     NSW,        SNSW
+    """)
+
+    iasr_tables = {
+        "renewable_energy_zones": renewable_energy_zones,
+    }
+    expected_msg = re.escape("Non-REZ ID(s) ['N0'] are already defined")
+    with pytest.raises(ValueError, match=expected_msg):
+        _add_non_rez_geographies_to_rez_table(iasr_tables)

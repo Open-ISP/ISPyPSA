@@ -1,14 +1,28 @@
+import logging
+import re
+
 import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
+    _apply_iasr_table_replacements,
+    _assert_table_valid,
+    _build_geo_region_lookup,
+    _derive_phes_symmetric_efficiency,
+    _get_property_value_map,
+    _group_properties_by_source,
     _is_battery_row,
     _is_pumped_hydro_row,
     _is_storage_row,
+    _is_subregion_geo_id,
     _looks_like_financial_year,
     _manual_remove_footnotes_from_generator_names,
+    _map_geo_id_to_granularity,
+    _merge_category_keyed_properties,
     _pick_location,
+    _required_property_columns,
     _rez_name_to_id_mapping,
+    _set_geo_id,
     _snakecase_string,
     _standardise_storage_capitalisation,
     _strip_all_text_after_numeric_value,
@@ -452,3 +466,553 @@ def test_is_storage_row(csv_str_to_df):
     # Battery,  Distributed Resources Batteries and Pumped Hydro all match.
     # Solar thermal still does not.
     assert list(result) == [True, True, False, True, False]
+
+
+# --- _derive_phes_symmetric_efficiency ---
+
+
+def test_derive_phes_symmetric_efficiency(csv_str_to_df):
+    # A single round-trip efficiency becomes equal charge and discharge legs, each its
+    # square root: sqrt(0.81) = 0.9 -> 90.0%.
+    phes = csv_str_to_df("""
+        name,                  round_trip_efficiency
+        NQ Pumped Hydro - 24h, 81.0
+    """)
+
+    result = _derive_phes_symmetric_efficiency(phes)
+
+    expected = csv_str_to_df("""
+        name,                  efficiency_charge, efficiency_discharge
+        NQ Pumped Hydro - 24h, 90.0,              90.0
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
+
+
+def test_derive_phes_symmetric_efficiency_empty(csv_str_to_df):
+    phes = csv_str_to_df("""
+        name,                  round_trip_efficiency
+    """)
+
+    result = _derive_phes_symmetric_efficiency(phes)
+
+    expected = csv_str_to_df("""
+        name,                  efficiency_charge, efficiency_discharge
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=False, rtol=1e-6)
+
+
+# --- _set_geo_id ---
+
+
+def test_set_geo_id(csv_str_to_df):
+    new_entrants = csv_str_to_df("""
+        technology,                     REZ ID,         Sub-region
+        Wind,                           N3,             CNSW
+        OCGT (small GT),                Not Applicable, NQ
+    """)
+
+    result = _set_geo_id(new_entrants)
+
+    expected = csv_str_to_df("""
+        technology,                     REZ ID,         Sub-region, geo_id
+        Wind,                           N3,             CNSW,       N3
+        OCGT (small GT),                Not Applicable, NQ,         NQ
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_set_geo_id_empty_input(csv_str_to_df):
+    new_entrants = pd.DataFrame(columns=["technology", "REZ ID", "Sub-region"])
+
+    result = _set_geo_id(new_entrants)
+
+    expected = csv_str_to_df("""
+        technology, REZ ID, Sub-region, geo_id
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+# --- _build_geo_region_lookup ---
+
+
+def test_build_geo_region_lookup(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        NQ,      subregion,  QLD
+        CNSW,    subregion,  NSW
+        Q1,      rez,        QLD
+    """)
+
+    result = _build_geo_region_lookup(sub_regional_geography)
+
+    # sub-regions and REZs map to their region; regions map to themselves.
+    assert result == {
+        "NQ": "QLD",
+        "CNSW": "NSW",
+        "Q1": "QLD",
+        "QLD": "QLD",
+        "NSW": "NSW",
+    }
+
+
+# --- _map_geo_id_to_granularity ---
+
+
+def test_map_geo_id_to_granularity_sub_regions(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        Q1,      rez,        QLD
+    """)
+    geo_id = pd.Series(["CNSW", "SNW", "Q1"])
+
+    result = _map_geo_id_to_granularity(geo_id, "sub_regions", sub_regional_geography)
+
+    expected = pd.Series(["CNSW", "SNW", "Q1"])
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_map_geo_id_to_granularity_nem_regions(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        Q1,      rez,        QLD
+    """)
+    geo_id = pd.Series(["CNSW", "SNW", "Q1"])
+
+    result = _map_geo_id_to_granularity(geo_id, "nem_regions", sub_regional_geography)
+
+    expected = pd.Series(["NSW", "NSW", "Q1"])
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_map_geo_id_to_granularity_single_region(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        Q1,      rez,        QLD
+    """)
+    geo_id = pd.Series(["CNSW", "Q1"])
+
+    result = _map_geo_id_to_granularity(geo_id, "single_region", sub_regional_geography)
+
+    expected = pd.Series(["NEM", "Q1"])
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_map_geo_id_to_granularity_raise_unknown_granularity(csv_str_to_df, caplog):
+    sub_regional_geography = csv_str_to_df("""
+            geo_id,  geo_type,   region_id
+            CNSW,    subregion,  NSW
+            Q1,      rez,        QLD
+        """)
+    geo_id = pd.Series(["CNSW", "Q1"])
+
+    with pytest.raises(
+        ValueError, match=r"Unknown regional_granularity: 'solar_system'"
+    ):
+        _map_geo_id_to_granularity(geo_id, "solar_system", sub_regional_geography)
+
+
+# --- _is_subregion_geo_id ---
+
+
+def test_is_subregion_geo_id(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type
+        CNSW,    subregion
+        Q1,      rez
+    """)
+    geo_id = pd.Series(["CNSW", "Q1"])
+
+    result = _is_subregion_geo_id(geo_id, sub_regional_geography)
+
+    expected = pd.Series([True, False])
+    pd.testing.assert_series_equal(result, expected)
+
+
+# --- _apply_iasr_table_replacements ---
+
+
+def test_apply_iasr_table_replacements(csv_str_to_df):
+    maximum_capacity = csv_str_to_df("""
+        IASR ID,   Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    phes_properties = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        Borumba,        1998,                       24.0,                       76
+    """)
+    iasr_tables = {
+        "maximum_capacity": maximum_capacity,
+        "phes_properties": phes_properties,
+        "some_other_table": pd.DataFrame({"col": [1]}),
+    }
+
+    corrections = [
+        dict(
+            table_name="maximum_capacity",
+            column="IASR ID",
+            replacements={"KiataWF1": "KIATAWF1"},
+        ),
+        dict(
+            table_name="phes_properties",
+            column="Power Station",
+            replacements={"Borumba": "QEJP - Borumba"},
+        ),
+    ]
+    result = _apply_iasr_table_replacements(iasr_tables, corrections)
+
+    expected_capacity = csv_str_to_df("""
+        IASR ID,   Installed capacity (MW)
+        KIATAWF1,  30.0
+        BW01,      660.0
+    """)
+    expected_phes_props = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        QEJP - Borumba, 1998,                       24.0,                       76
+    """)
+    pd.testing.assert_frame_equal(result["maximum_capacity"], expected_capacity)
+    pd.testing.assert_frame_equal(result["phes_properties"], expected_phes_props)
+
+    # Other tables pass through untouched; input dict itself isn't mutated.
+    assert result["some_other_table"] is iasr_tables["some_other_table"]
+
+    unmutated_capacity = csv_str_to_df("""
+        IASR ID,   Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    unmutated_phes_props = csv_str_to_df("""
+        Power Station,  Installed capacity (MW),    Storage capacity (hours),   Pumping efficiency (%)
+        Wivenhoe,       570,                        10.0,                       70
+        Shoalhaven,     240,                        64.0,                       70
+        Borumba,        1998,                       24.0,                       76
+    """)
+    pd.testing.assert_frame_equal(iasr_tables["maximum_capacity"], unmutated_capacity)
+    pd.testing.assert_frame_equal(iasr_tables["phes_properties"], unmutated_phes_props)
+
+
+def test_apply_iasr_table_replacements_missing_expected_col(csv_str_to_df):
+    # Checks that replacement only applies to specified columns, and no error if a
+    # named column is missing. Column presence is asserted later by _assert_table_valid
+    maximum_capacity = csv_str_to_df("""
+        unit_name, Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    iasr_tables = {
+        "maximum_capacity": maximum_capacity,
+    }
+    corrections = [
+        dict(
+            table_name="maximum_capacity",
+            column="IASR ID",
+            replacements={"KiataWF1": "KIATAWF1"},
+        ),
+    ]
+    result = _apply_iasr_table_replacements(iasr_tables, corrections)
+
+    expected_unchanged = csv_str_to_df("""
+        unit_name, Installed capacity (MW)
+        KiataWF1,  30.0
+        BW01,      660.0
+    """)
+    pd.testing.assert_frame_equal(
+        result["maximum_capacity"].sort_values("unit_name").reset_index(drop=True),
+        expected_unchanged.sort_values("unit_name").reset_index(drop=True),
+    )
+
+
+# --- _group_properties_by_source ---
+
+
+def test_group_properties_by_source():
+    # Two properties sharing a (table, key_col) source are grouped together, each
+    # keeping its original attrs dict unchanged; two properties from the same table
+    # but with different key_cols are independent.
+    property_map = {
+        "storage_hours": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Energy capacity_Hours",
+        },
+        "efficiency_charge": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Charge efficiency_%",
+        },
+        "lifetime_technical": {
+            "table": "lead_time_and_project_life",
+            "key_col": "Technology",
+            "value_col": "Technical life (years)",
+        },
+        "different_key_col": {
+            "table": "lead_time_and_project_life",
+            "key_col": "Alternate Technology",
+            "value_col": "Test",
+        },
+    }
+
+    result = _group_properties_by_source(property_map)
+
+    expected = {
+        ("battery_properties", "Technology"): {
+            "storage_hours": property_map["storage_hours"],
+            "efficiency_charge": property_map["efficiency_charge"],
+        },
+        ("lead_time_and_project_life", "Technology"): {
+            "lifetime_technical": property_map["lifetime_technical"],
+        },
+        ("lead_time_and_project_life", "Alternate Technology"): {
+            "different_key_col": property_map["different_key_col"]
+        },
+    }
+    assert result == expected
+
+
+# --- _required_property_columns ---
+
+
+def test_required_property_columns():
+    # Two properties sharing a source - both properties' value_col/key_col are
+    # collected into one set.
+    props = {
+        "storage_hours": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Storage hours",
+        },
+        "degradation_annual": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Variable value",
+        },
+    }
+
+    result = _required_property_columns(props)
+
+    assert result == {"Technology", "Storage hours", "Variable value"}
+
+
+# --- _get_property_value_map ---
+
+
+def test_get_property_value_map_numeric_with_scale(csv_str_to_df):
+    table = csv_str_to_df("""
+        Technology,  Base value
+        Wind,        2.0
+        CCGT,        5.0
+    """)
+    attrs = {"key_col": "Technology", "value_col": "Base value", "scale": 1000.0}
+
+    result = _get_property_value_map(table, attrs)
+
+    expected = pd.Series(
+        [2000.0, 5000.0], index=pd.Index(["Wind", "CCGT"], name="Technology")
+    )
+    pd.testing.assert_series_equal(result, expected, check_names=False)
+
+
+def test_get_property_value_map_numeric_false_skips_coercion_and_scale(csv_str_to_df):
+    # commissioning_date-style column: passed through as-is, no numeric coercion.
+    table = csv_str_to_df("""
+        IASR ID,  Commissioning date
+        BW01,     2028-12-01
+    """)
+    attrs = {"key_col": "IASR ID", "value_col": "Commissioning date", "numeric": False}
+
+    result = _get_property_value_map(table, attrs)
+
+    expected = pd.Series(["2028-12-01"], index=pd.Index(["BW01"], name="IASR ID"))
+    pd.testing.assert_series_equal(result, expected, check_names=False)
+
+
+def test_get_property_value_map_raises_on_typo(csv_str_to_df):
+    table = csv_str_to_df("""
+        IASR ID,  Heat rate (GJ/MWh)
+        BW01,     not_a_number
+    """)
+    attrs = {"key_col": "IASR ID", "value_col": "Heat rate (GJ/MWh)"}
+
+    with pytest.raises(ValueError, match=r'Unable to parse string "not_a_number"'):
+        _get_property_value_map(table, attrs)
+
+
+# --- _merge_category_keyed_properties ---
+
+
+def test_merge_category_keyed_properties(csv_str_to_df):
+    # SUPER GENERIC check that 'df_key_col' input correctly sets the column-to-map
+    # onto the input dataframe.
+    df = csv_str_to_df("""
+        first_col,      second_col,     third_col
+        Big Apples,     Small Oranges,  Pink Bananas
+        Pink Bananas,   Big Apples,     Small Oranges
+        Small Oranges,  Pink Bananas,   Big Apples
+        Big Apples,     Small Oranges,  Pink Bananas
+    """)
+    tables = {
+        "fruit_costs": csv_str_to_df("""
+            Fruits,         Costs
+            Big Apples,     10.0
+            Small 0ranges,  15.0
+            Pink Bananas,   50.0
+        """),  # 'Small 0ranges' <-> 'Small Oranges' via key resolution
+    }
+
+    property_map = {
+        "second_col_costs": dict(
+            table="fruit_costs",
+            key_col="Fruits",
+            value_col="Costs",
+        ),
+    }
+
+    result = _merge_category_keyed_properties(df, tables, property_map, "second_col")
+
+    expected = csv_str_to_df("""
+        first_col,      second_col,     third_col,      second_col_costs
+        Big Apples,     Small Oranges,  Pink Bananas,   15.0
+        Pink Bananas,   Big Apples,     Small Oranges,  10.0
+        Small Oranges,  Pink Bananas,   Big Apples,     50.0
+        Big Apples,     Small Oranges,  Pink Bananas,   15.0
+    """)
+
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_merge_category_keyed_properties_shared_source_merged_once(
+    csv_str_to_df, caplog
+):
+    # storage_hours and efficiency_charge both come from battery_properties/Technology
+    # (as in _STORAGE_BATTERY_PROPERTY_MAP): both are merged correctly in one pass,
+    # NaN property values are retained untouched, and - because they share a source
+    # table - the fuzzy match against it runs once, so a corrected technology name is
+    # logged once, not once per property sourced from that table.
+    new_entrants = csv_str_to_df("""
+        name,             technology
+        NQ Battery - 2h,  battery storage (2hrs storage)
+        NQ CCGT,          CCGT
+    """)
+    property_map = {
+        "storage_hours": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Energy capacity_Hours",
+        },
+        "efficiency_charge": {
+            "table": "battery_properties",
+            "key_col": "Technology",
+            "value_col": "Charge efficiency_%",
+        },
+    }
+    iasr_tables = {
+        "battery_properties": csv_str_to_df("""
+            Technology,                      Energy capacity_Hours, Charge efficiency_%
+            Battery Storage (2hrs storage),  2.0,                   92.0
+            CCGT,                            ,
+        """),
+    }
+
+    with caplog.at_level("INFO"):
+        result = _merge_category_keyed_properties(
+            new_entrants, iasr_tables, property_map, "technology"
+        )
+
+    expected = csv_str_to_df("""
+        name,             technology,                      storage_hours, efficiency_charge
+        NQ Battery - 2h,  battery storage (2hrs storage),  2.0,           92.0
+        NQ CCGT,          CCGT,                            ,
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+    msg = (
+        "'battery storage (2hrs storage)' matched to "
+        "'Battery Storage (2hrs storage)' whilst merging properties "
+        "from 'battery_properties'"
+    )
+    assert caplog.messages.count(msg) == 1
+
+
+def test_merge_category_keyed_properties_raises_on_invalid_source_table(csv_str_to_df):
+    # Regression: confirms the source table is actually validated before merging.
+    # Exact raise behaviour is covered by _assert_table_valid's own tests.
+    new_entrants = csv_str_to_df("""
+        name,     technology
+        SQ CCGT,  CCGT
+    """)
+    property_map = {
+        "fom": {
+            "table": "fixed_opex_new_entrants",
+            "key_col": "Technology",
+            "value_col": "Base value",
+        }
+    }
+    iasr_tables = {
+        "fixed_opex_new_entrants": pd.DataFrame(columns=["Technology", "Base value"]),
+    }
+
+    with pytest.raises(ValueError):
+        _merge_category_keyed_properties(
+            new_entrants, iasr_tables, property_map, "technology"
+        )
+
+
+# --- _assert_table_valid ---
+
+
+def test_assert_table_valid_passes(csv_str_to_df):
+    # Table has both required columns and at least one row - no error raised.
+    table = csv_str_to_df("""
+        Technology,  Base value
+        Wind,        20.0
+    """)
+    # should not raise
+    _assert_table_valid(
+        table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
+    )
+
+
+def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
+    # Table is missing a required column -> raise, naming the table and the column.
+    table = csv_str_to_df("""
+        Technology,  Base value
+        Wind,        20.0
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=r"'fixed_opex_new_entrants' table missing required columns: "
+        r"\['Storage hours'\]",
+    ):
+        _assert_table_valid(
+            table,
+            table_name="fixed_opex_new_entrants",
+            required_cols={"Technology", "Storage hours"},
+            merge_desc="'fom'",
+        )
+
+
+def test_assert_table_valid_raises_empty_table():
+    # Table has both required columns but no rows -> raise, naming what would
+    # have been merged.
+    table = pd.DataFrame(columns=["Technology", "Base value"])
+
+    with pytest.raises(
+        ValueError,
+        match=r"'fixed_opex_new_entrants' table is empty - cannot merge 'fom'",
+    ):
+        _assert_table_valid(
+            table,
+            table_name="fixed_opex_new_entrants",
+            required_cols={"Technology", "Base value"},
+            merge_desc="'fom'",
+        )

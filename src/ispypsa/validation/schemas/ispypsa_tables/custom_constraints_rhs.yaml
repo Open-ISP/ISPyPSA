@@ -11,6 +11,15 @@ description: >
 
   If absent:
   Constraints have no limit values, so no custom constraints bind.
+custom_validation:
+  - name: named_timeslices_of_a_constraint_share_a_region
+    description: >
+      Every named timeslice across a constraint_id's rows must belong to the
+      same region (the timeslice prefix before the first underscore, as in
+      the timeslices table). Each region's timeslices cover the whole year, so
+      timeslices from two regions overlap, and a constraint naming both would
+      have two limits at the snapshots where they do. For example, a
+      constraint with rows for qld_peak_demand and nsw_summer_typical fails.
 columns:
   constraint_id:
     type: string
@@ -22,7 +31,7 @@ columns:
     type: string
     required: false
     allowed_values_from:
-      - timeslices: timeslice_id
+      - timeslices: timeslice
     description: >
       Demand condition the limit applies to: the constraint binds only at
       snapshots inside the timeslice's active windows.
@@ -39,12 +48,20 @@ columns:
     required: true
     description: Limit value the constraint's LHS is compared against.
   date_from:
-    type: date
+    type: datetime
     required: false
     format: "%Y-%m-%dT%H:%M:%S"
     description: >
       Date this row's limit takes effect. For each investment period, the
-      limit active at the period's start applies for the whole period.
+      limit active at the period's start applies for the whole period. A
+      period starts on 1 July of the preceding year when year_type is fy, and
+      on 1 January otherwise.
+
+      Rows supersede each other only within the same constraint_id and
+      timeslice group. A dated limit has no end date: it holds until a later
+      row in its group supersedes it, so reverting to an earlier limit needs
+      its own dated row. A group with no undated row contributes no limit to
+      periods starting before its earliest date_from.
 
       If absent (or empty):
       The limit applies from the start of the model horizon (until another

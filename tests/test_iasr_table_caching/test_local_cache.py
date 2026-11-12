@@ -27,6 +27,21 @@ def test_build_required_tables_new_format():
     assert "connection_costs_for_wind_and_solar" in result
     assert "connection_costs_other" in result
     assert "efficient_level_of_system_strength_cost" in result
+    # ECAA generator summary and its per-property tables feed the
+    # generators_existing_planned / storage_existing_planned templaters
+    assert "existing_committed_anticipated_additional_generator_summary" in result
+    assert (
+        "variable_opex_existing_committed_anticipated_additional_generators" in result
+    )
+    assert "heat_rates_existing_committed_anticipated_additional_generators" in result
+    assert (
+        "maximum_capacity_existing_committed_anticipated_additional_generators"
+        in result
+    )
+    assert "gpg_min_stable_level_existing_generators" in result
+    assert "coal_minimum_stable_level" in result
+    assert "expected_closure_years" in result
+    assert "pumped_hydro_existing_committed_anticipated_additional_properties" in result
     # New entrant generator summary feeds the generators_new_entrant templater
     assert "new_entrants_summary" in result
     # Per-technology property tables merged into the new entrant generators template

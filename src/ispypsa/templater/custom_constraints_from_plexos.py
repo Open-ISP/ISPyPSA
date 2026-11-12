@@ -156,9 +156,15 @@ from the output. The templater raises if a future model starts using it.
 date_from is retained so time-varying coefficients carry through to the
 output.
 
-TODO: switch the IASR ID lookup to a templated generator-summary table once
-one exists -- matching against the raw table currently also matches DER/CER
-rows that ISPyPSA may not template.
+TODO: switch the IASR ID lookup to the templated generator and storage
+tables (generators_existing_planned, generators_new_entrant,
+storage_existing_planned and storage_new_entrant) -- matching against the
+raw summary tables currently also matches DER/CER rows that ISPyPSA may not
+template. The custom_constraints_lhs schema's
+variable_names_resolve_by_term_type rule declares that end state. Custom
+constraints are only templated at sub_regions granularity (see
+create_ispypsa_inputs_template), where the templated unit names are the IASR
+IDs this module emits, so the lookup needs no renaming.
 
 TODO: emitted timeslices are region-prefixed (qld_peak_demand etc.) while
 the rest of the templater still emits the bare canonical names
@@ -234,6 +240,36 @@ assert set(_REGIONAL_SUFFIX_TO_CANONICAL.values()) <= set(_CANONICAL_TIMESLICES)
 _CONSTRAINT_NAME_PREFIX = "ExportGroup_"
 _EXCLUDED_PARENT_CLASSES = ("Purchaser",)
 _AREA_SUFFIX_PATTERN = re.compile(r" Area\d+$")
+
+# Output columns of the three custom-constraint template tables. Shared by the
+# LHS/RHS builders below and empty_custom_constraint_tables() so the header-only
+# and populated tables carry identical columns.
+_CUSTOM_CONSTRAINTS_COLUMNS = ["constraint_id", "direction"]
+_CUSTOM_CONSTRAINTS_LHS_COLUMNS = [
+    "constraint_id",
+    "term_type",
+    "variable_name",
+    "coefficient",
+    "date_from",
+]
+_CUSTOM_CONSTRAINTS_RHS_COLUMNS = ["constraint_id", "timeslice", "rhs", "date_from"]
+
+
+def empty_custom_constraint_tables() -> dict[str, pd.DataFrame]:
+    """Header-only versions of the three custom-constraint template tables.
+
+    Emitted at nem_regions / single_region granularity, where the sub-region
+    nodes, sub-regional flow paths, and REZ-located units the constraints
+    reference are collapsed, leaving nothing to constrain. Emitting "all
+    columns, no rows" tables keeps the templater's output set
+    granularity-invariant, so downstream consumers never need to check for
+    missing tables.
+    """
+    return {
+        "custom_constraints": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_COLUMNS),
+        "custom_constraints_lhs": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_LHS_COLUMNS),
+        "custom_constraints_rhs": pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_RHS_COLUMNS),
+    }
 
 
 def template_custom_constraints_from_plexos(
@@ -428,9 +464,7 @@ def _build_custom_constraints_lhs(
     lhs = _drop_unresolved_terms(lhs)
     lhs = lhs.rename(columns={"value": "coefficient"})
     lhs["constraint_id"] = lhs["constraint_name"].map(_strip_constraint_prefix)
-    lhs = lhs[
-        ["constraint_id", "term_type", "variable_name", "coefficient", "date_from"]
-    ]
+    lhs = lhs[_CUSTOM_CONSTRAINTS_LHS_COLUMNS]
     lhs = _inject_iasr_new_entrant_batteries(lhs, new_entrants)
     lhs = _dedupe_lhs_terms(lhs)
     return lhs.reset_index(drop=True)
@@ -1099,15 +1133,7 @@ def _battery_rows_for_triggers(
     # Short-circuit the empty case: an empty triggered carries a float64
     # location column, which would raise on the object-keyed merge below.
     if triggered.empty:
-        return pd.DataFrame(
-            columns=[
-                "constraint_id",
-                "term_type",
-                "variable_name",
-                "coefficient",
-                "date_from",
-            ]
-        )
+        return pd.DataFrame(columns=_CUSTOM_CONSTRAINTS_LHS_COLUMNS)
     # Inner merge: expand each triggered (constraint_id, location) into one row
     # per new-entrant battery at that location. Triggered locations that hold no
     # batteries (location absent from batteries_by_location) drop out here.
@@ -1122,9 +1148,7 @@ def _battery_rows_for_triggers(
     )
     rows["coefficient"] = rows["coefficient"].fillna(1.0)
     rows["term_type"] = "storage_output"
-    return rows[
-        ["constraint_id", "term_type", "variable_name", "coefficient", "date_from"]
-    ].reset_index(drop=True)
+    return rows[_CUSTOM_CONSTRAINTS_LHS_COLUMNS].reset_index(drop=True)
 
 
 def _log_injected_batteries(injected: pd.DataFrame) -> None:
@@ -1205,9 +1229,7 @@ def _build_custom_constraints_rhs(rhs_values: pd.DataFrame) -> pd.DataFrame:
     rhs["constraint_id"] = rhs["constraint_name"].map(_strip_constraint_prefix)
     rhs["timeslice"] = rhs["tags"].map(_tag_to_timeslice)
     rhs = rhs.rename(columns={"value": "rhs"})
-    return rhs[["constraint_id", "timeslice", "rhs", "date_from"]].reset_index(
-        drop=True
-    )
+    return rhs[_CUSTOM_CONSTRAINTS_RHS_COLUMNS].reset_index(drop=True)
 
 
 def _tag_to_timeslice(tag: str) -> str:

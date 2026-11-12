@@ -6,6 +6,7 @@ import pandas as pd
 from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.templater.connection_and_build_costs import _template_connection_costs
 from ispypsa.templater.custom_constraints_from_plexos import (
+    empty_custom_constraint_tables,
     template_custom_constraints_from_plexos,
 )
 from ispypsa.templater.dynamic_generator_properties import (
@@ -13,6 +14,10 @@ from ispypsa.templater.dynamic_generator_properties import (
 )
 from ispypsa.templater.energy_policy_targets import (
     _template_energy_policy_targets,
+)
+from ispypsa.templater.existing_planned import (
+    _template_generators_existing_planned,
+    _template_storage_existing_planned,
 )
 from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
@@ -22,9 +27,10 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_paths,
 )
 from ispypsa.templater.geography import (
-    _build_geo_region_lookup,
+    _add_non_rez_geographies_to_rez_table,
     _template_network_geography,
 )
+from ispypsa.templater.helpers import _build_geo_region_lookup
 from ispypsa.templater.network_expansion import (
     _extract_flow_path_costs_from_iasr,
     _extract_flow_path_options_from_iasr,
@@ -51,6 +57,10 @@ from ispypsa.templater.static_new_generator_properties import (
     _template_new_generators_static_properties,
 )
 from ispypsa.templater.storage import _template_battery_properties
+from ispypsa.templater.timeslices import (
+    _template_timeslices,
+    load_timeslice_calendar,
+)
 from ispypsa.templater.transmission import _template_network_transmission
 
 _BASE_TEMPLATE_OUTPUTS = [
@@ -82,7 +92,7 @@ _BASE_TEMPLATE_OUTPUTS = [
 
 # Outputs from the new-format templater branch. Granularity-invariant: the
 # same tables are emitted for sub_regions, nem_regions, and single_region
-# (only their contents differ).
+# (only their contents differ — see empty_custom_constraint_tables).
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TEMPLATE_OUTPUTS and
 # delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
@@ -91,18 +101,12 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_transmission_path_limits",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
+    "timeslices",
     "costs_connection",
+    "generators_existing_planned",
     "generators_new_entrant",
+    "storage_existing_planned",
     "storage_new_entrant",
-]
-
-# Custom constraints are templated only at sub_regions granularity (see the gate
-# in create_ispypsa_inputs_template) — coarser granularities collapse the
-# sub-region nodes, sub-regional flow paths and REZ-located units the constraints
-# reference, leaving nothing to constrain. Listed as outputs only at that
-# granularity so the create_ispypsa_inputs task tracks them where they are
-# written and does not expect them where they never are.
-_CUSTOM_CONSTRAINT_OUTPUTS = [
     "custom_constraints",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
@@ -183,6 +187,8 @@ def create_ispypsa_inputs_template(
     # templater path) and inline this branch.
     if FEATURE_FLAGS["use_new_table_format"]:
         template = {}
+        # Explicitly add N0/V0 rows to the 'renewable_energy_zones' IASR table
+        iasr_tables = _add_non_rez_geographies_to_rez_table(iasr_tables)
         sub_regional_geography = _template_network_geography(
             iasr_tables["sub_regional_reference_nodes"],
             iasr_tables["renewable_energy_zones"],
@@ -227,6 +233,10 @@ def create_ispypsa_inputs_template(
         )
         template["network_expansion_options"] = expansion_options
         template["network_transmission_path_expansion_costs"] = expansion_costs
+        template["timeslices"] = _template_timeslices(
+            load_timeslice_calendar(iasr_workbook_version),
+            manually_extracted_tables["reference_year_sequence"],
+        )
 
         # connection_capacity_non_vre is in manually_extracted_template_tables/ (sourced from
         # ENOR tables 16-17 and confirmed with AEMO) but is needed as an iasr_tables input,
@@ -250,18 +260,22 @@ def create_ispypsa_inputs_template(
             template["storage_new_entrant"],
             sub_regional_geography,
         )
-        # Custom constraints from PLEXOS are sub-regional export-group limits:
-        # their LHS references sub-region nodes, sub-regional flow paths, and
-        # REZ-located units that only exist as distinct entities at sub_regions
-        # granularity. Once sub-regions are collapsed (nem_regions /
-        # single_region) they have no meaningful representation, so only emit
-        # them for sub_regions.
+
+        template["generators_existing_planned"] = _template_generators_existing_planned(
+            iasr_tables, regional_granularity, sub_regional_geography
+        )
+        template["storage_existing_planned"] = _template_storage_existing_planned(
+            iasr_tables, regional_granularity, sub_regional_geography
+        )
+
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(
                     iasr_tables, iasr_workbook_version=iasr_workbook_version
                 )
             )
+        else:
+            template.update(empty_custom_constraint_tables())
         return template
 
     template = {}
@@ -355,8 +369,6 @@ def list_templater_output_files(regional_granularity, output_path=None):
     # granularity-specific file removals.
     if FEATURE_FLAGS["use_new_table_format"]:
         files = _NEW_FORMAT_TEMPLATE_OUTPUTS.copy()
-        if regional_granularity == "sub_regions":
-            files += _CUSTOM_CONSTRAINT_OUTPUTS
     else:
         files = _BASE_TEMPLATE_OUTPUTS.copy()
         if regional_granularity in ["sub_regions", "single_region"]:

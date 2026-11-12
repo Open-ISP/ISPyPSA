@@ -1,0 +1,100 @@
+table: custom_constraints_lhs
+required: false
+unique:
+  - [constraint_name, investment_period, variable_name, component, attribute]
+description: >
+  Left-hand-side terms of each custom constraint: one row per (constraint,
+  investment period, model component) coefficient. Consumed by
+  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
+
+  Source tables:
+    - `custom_constraints_lhs`
+    - `network_expansion_options`
+    - `custom_constraints`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.constraints. Each term in the ISPyPSA
+  custom_constraints_lhs table is expanded from its input ID into one term per
+  matching component in the translated links, generators and storage tables
+  (e.g. a path's existing and expansion links), in each investment period the
+  component is in service. Terms are dropped in investment periods where their
+  constraint has no custom_constraints_rhs row. network_expansion_options adds
+  two more kinds of term: p_nom terms for each relaxable constraint's
+  relaxation generators, signed by the constraint's direction in
+  custom_constraints so that building them loosens it, and the p_nom terms of
+  the expansion-limit constraints.
+
+  If absent:
+  No custom constraints are added to the model.
+custom_validation:
+  - name: supported_component_attribute_pairs
+    description: >
+      Each row's (component, attribute) must be one of (Link, p),
+      (Link, p_nom), (Generator, p), (Generator, p_nom), (Storage, p) or
+      (Load, p_set). For example, (Load, p) fails.
+  - name: terms_belong_to_an_rhs_row
+    description: >
+      Every (constraint_name, investment_period) here must match a
+      custom_constraints_rhs row with the same pair, blank matching blank. So a
+      term with a blank investment_period needs its constraint to have an RHS
+      row with a blank investment_period, and a term with an investment_period
+      an RHS row in that investment period. For example, a term in
+      (SWQLD1, 2030) fails if SWQLD1's only RHS rows are in 2025.
+  - name: variables_name_components_in_the_input_tables
+    description: >
+      variable_name must name a component in the pypsa-friendly table for its
+      component type: a Link in links.name; a Generator in generators.name or
+      custom_constraints_generators.name (the relaxation generators); a
+      Storage unit in batteries.name; and a Load as "load_<bus>", where <bus>
+      is in buses.name and has a demand trace (demand_traces/<bus>.parquet).
+      A p_nom term must also name a row with p_nom_extendable true, since a
+      component that isn't extendable has a fixed capacity rather than a
+      capacity variable. For example, a p_nom term on an existing generator
+      with p_nom_extendable false fails.
+columns:
+  constraint_name:
+    type: string
+    required: true
+    allowed_values_from:
+      - custom_constraints_rhs: constraint_name
+    description: Constraint the term belongs to.
+  investment_period:
+    type: int
+    required: false
+    description: >
+      Investment period the term applies in. A term joins the constraints of
+      the custom_constraints_rhs rows with the same constraint_name and
+      investment_period.
+
+      If absent (or empty):
+      The term applies regardless of investment period, joining its
+      constraint's RHS row with a blank investment_period. Only the expansion
+      limits take this form (see terms_belong_to_an_rhs_row).
+  variable_name:
+    type: string
+    required: true
+    description: >
+      Name of the PyPSA component the term's variable belongs to: a link, a
+      generator, a storage unit, or a load ("load_<bus>").
+  component:
+    type: string
+    required: true
+    allowed_values: [Link, Generator, Storage, Load]
+    description: >
+      Type of the component variable_name names. Storage terms apply to
+      StorageUnit components.
+  attribute:
+    type: string
+    required: true
+    allowed_values: [p, p_nom, p_set]
+    description: >
+      The component's variable the term applies to: p is dispatch (a Link's
+      flow, a Generator's output, or a Storage unit's net dispatch, discharging
+      minus charging), p_nom is installed capacity, and p_set (Load only) is
+      demand. p_set is data rather than a variable: coefficient x demand moves
+      to the constraint's right-hand side at each snapshot.
+  coefficient:
+    type: float
+    required: true
+    description: Coefficient the variable is multiplied by in the constraint.

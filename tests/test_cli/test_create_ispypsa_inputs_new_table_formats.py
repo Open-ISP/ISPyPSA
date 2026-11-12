@@ -45,9 +45,17 @@ Handover steps (when 6.0 support is dropped):
 """
 
 import time
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
+from ispypsa.templater import list_templater_output_files
+from ispypsa.templater.custom_constraints_from_plexos import (
+    _CUSTOM_CONSTRAINTS_COLUMNS,
+    _CUSTOM_CONSTRAINTS_LHS_COLUMNS,
+    _CUSTOM_CONSTRAINTS_RHS_COLUMNS,
+)
 
 from .cli_test_helpers import (
     assert_task_ran,
@@ -65,26 +73,19 @@ from .cli_test_helpers_new_table_formats import (
     prepare_test_cache_new_format,
 )
 
-_NEW_FORMAT_OUTPUTS = [
-    "network_geography",
-    "network_transmission_paths",
-    "network_transmission_path_limits",
-    "network_expansion_options",
-    "network_transmission_path_expansion_costs",
-    "costs_connection",
-    "generators_new_entrant",
-    "storage_new_entrant",
-]
 
-# Custom constraints are templated only at sub_regions (coarser granularities
-# collapse the entities they reference). Detailed content lives in
-# test_custom_constraints_from_plexos.py; here we check the CLI writes them at
-# sub_regions and omits them otherwise.
-_CUSTOM_CONSTRAINT_OUTPUTS = [
-    "custom_constraints",
-    "custom_constraints_lhs",
-    "custom_constraints_rhs",
-]
+def _expected_output_files(granularity: str) -> list[str]:
+    """The templater's declared output set under the new-format flag.
+
+    FEATURE_FLAGS is read at import, so the ISPYPSA_USE_NEW_TABLE_FORMAT env var
+    the tests set only reaches the CLI subprocess; the in-process call needs
+    the flag patched.
+    """
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        return list_templater_output_files(granularity)
 
 
 def test_create_ispypsa_inputs_task_new_format(
@@ -125,7 +126,7 @@ def test_create_ispypsa_inputs_task_new_format(
     # Check outputs created
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     assert output_dir.exists()
-    verify_output_files(output_dir, _NEW_FORMAT_OUTPUTS)
+    verify_output_files(output_dir, _expected_output_files("sub_regions"))
 
     # Check log and config files
     log_file = tmp_path / "run_dir" / "test_run" / "ISPyPSA.log"
@@ -232,12 +233,14 @@ def test_create_ispypsa_inputs_task_new_format(
 _NUM_SUBREGIONS_75 = 15
 _NUM_REGIONS_75 = 5
 _NUM_REZS_75 = 47
+_NUM_NON_REZS_75 = 2
 _NUM_FLOW_PATHS_75 = 18
 
 # REZs whose row in `initial_transmission_limits` has all-NaN limit columns.
 # Each collapses to a single placeholder row in network_transmission_path_limits
 # instead of the usual `NUM_TIMESLICES × NUM_DIRECTIONS` rows.
-_NUM_REZS_WITHOUT_LIMITS_75 = 15
+# All non-REZ geographies (N0/V0) have no limits so counts are added here.
+_NUM_REZS_WITHOUT_LIMITS_75 = 15 + _NUM_NON_REZS_75
 
 # Flow paths in the 7.5 input whose augmentation key has no exact match in
 # `flow_path_transfer_capability` and that therefore get a synthetic
@@ -275,10 +278,13 @@ _GEOS_PER_GRANULARITY_75 = {
 
 _PATHS_PER_GRANULARITY_75 = {
     "sub_regions": (
-        _NUM_FLOW_PATHS_75 + _NUM_REZS_75 + _NUM_PARALLEL_PATHS_INJECTED_75_SUB_REGIONS
+        _NUM_FLOW_PATHS_75
+        + _NUM_REZS_75
+        + _NUM_NON_REZS_75
+        + _NUM_PARALLEL_PATHS_INJECTED_75_SUB_REGIONS
     ),
-    "nem_regions": _NUM_INTER_REGIONAL_FLOW_PATHS_75 + _NUM_REZS_75,
-    "single_region": _NUM_REZS_75,
+    "nem_regions": _NUM_INTER_REGIONAL_FLOW_PATHS_75 + _NUM_REZS_75 + _NUM_NON_REZS_75,
+    "single_region": _NUM_REZS_75 + _NUM_NON_REZS_75,
 }
 
 # Drift-detection only — per-option year coverage varies.
@@ -306,9 +312,33 @@ _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75 = {
     "single_region": 135,
 }
 
-# "Non-REZ" placeholder REZ IDs used by generation technologies with no specific
-# REZ location (state-wide VRE/DER). See Open-ISP/ISPyPSA#133
-_NON_REZ_PLACEHOLDER_GEO_IDS = {"N0", "V0"}
+# Drift-detection only — no collapse step for existing/planned generators (unlike
+# new entrant), so this is the same at every granularity.
+_EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75 = 531
+
+# As above - so far no 'Power Station' level collapse implemented so this count
+# remains the same at every granularity.
+_EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
+
+# Per-reference-year window patterns decoded from the shipped RefYear5000
+# calendar and reference_year_sequence (drift-detection;
+# granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
+# activates in the calendar, so tas_peak_demand has no windows. 15 reference
+# years: 2011 to 2025 in year-ending convention.
+_NUM_TIMESLICE_PATTERN_ROWS_75 = 678
+_NUM_TIMESLICE_IDS_75 = 14
+_NUM_REFERENCE_YEARS_75 = 15
+
+# Custom constraints extracted from the PLEXOS model — one ISPyPSA constraint
+# per entry in CONSTRAINT_NAMES in scripts/extract_plexos_constraints.py (the
+# authoritative set: 14 export-group limits + 1 GPG constraint). All survive
+# templating at sub_regions.
+_NUM_CUSTOM_CONSTRAINTS_75 = 15
+
+# Drift-detection: total LHS coefficient rows across all constraints. No clean
+# formula — it is the per-constraint participant count in the PLEXOS model.
+# Refresh by rerunning the test and pasting the failure value here.
+_NUM_CUSTOM_CONSTRAINT_LHS_ROWS_75 = 1023
 
 
 @pytest.mark.parametrize("granularity", ["sub_regions", "nem_regions", "single_region"])
@@ -334,6 +364,7 @@ def test_create_ispypsa_inputs_new_format(
     )
 
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
+    verify_output_files(output_dir, _expected_output_files(granularity))
     geo = pd.read_csv(output_dir / "network_geography.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
@@ -342,9 +373,14 @@ def test_create_ispypsa_inputs_new_format(
     costs_connection = pd.read_csv(output_dir / "costs_connection.csv")
     gens_new_entrant = pd.read_csv(output_dir / "generators_new_entrant.csv")
     storage_new_entrant = pd.read_csv(output_dir / "storage_new_entrant.csv")
+    gens_existing_planned = pd.read_csv(output_dir / "generators_existing_planned.csv")
+    storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
-    assert len(geo) == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75
+    assert (
+        len(geo)
+        == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75 + _NUM_NON_REZS_75
+    )
     assert geo["geo_id"].is_unique
 
     # network_transmission_paths — derived from named structural quantities:
@@ -385,14 +421,12 @@ def test_create_ispypsa_inputs_new_format(
     # generators_new_entrant / storage_new_entrant — row counts drop at coarser
     # granularities as sub-region-located technology options merge into one row
     # per region (REZ-located rows are unaffected). geo_ids are real network_geography
-    # entries, except the pre-existing "Non-REZ" placeholder gap (ISPyPSA#133)
+    # entries.
     assert (
         len(gens_new_entrant) == _EXPECTED_GENERATORS_NEW_ENTRANT_ROWS_75[granularity]
     )
     assert gens_new_entrant["name"].is_unique
-    assert set(gens_new_entrant["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
-    )
+    assert set(gens_new_entrant["geo_id"]) <= (set(geo["geo_id"]))
 
     assert (
         len(storage_new_entrant) == _EXPECTED_STORAGE_NEW_ENTRANT_ROWS_75[granularity]
@@ -400,25 +434,54 @@ def test_create_ispypsa_inputs_new_format(
     assert storage_new_entrant["name"].is_unique
     assert set(storage_new_entrant["geo_id"]) <= set(geo["geo_id"])
 
-    # costs_connection - every new entrant technology + geo_id + year has a row
-    # geo_id's are real network_geography entries + _NON_REZ_PLACEHOLDER_GEO_IDS
-    assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
-    assert set(costs_connection["geo_id"]) <= (
-        set(geo["geo_id"]) | _NON_REZ_PLACEHOLDER_GEO_IDS
-    )
+    # generators_existing_planned — one row per existing/planned generating unit,
+    # no collapse step (unlike new entrant) so the row count doesn't vary by
+    # granularity. geo_ids are real network_geography entries.
+    assert len(gens_existing_planned) == _EXPECTED_GENERATORS_EXISTING_PLANNED_ROWS_75
+    assert gens_existing_planned["name"].is_unique
+    assert set(gens_existing_planned["geo_id"]) <= set(geo["geo_id"])
 
-    # custom_constraints — written only at sub_regions. Detailed content is
-    # covered by test_custom_constraints_from_plexos.py; here we assert the CLI
-    # emits the three tables at sub_regions with no orphan LHS/RHS rows, and
-    # omits them entirely at coarser granularities.
+    # as above - storage_existing_planned — one row per existing/planned storage unit,
+    # no collapse step so the row count doesn't vary. geo_ids are real network_geography
+    # entries.
+    assert len(storage_existing_planned) == _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75
+    assert storage_existing_planned["name"].is_unique
+    assert set(storage_existing_planned["geo_id"]) <= set(geo["geo_id"])
+
+    # costs_connection - every new entrant technology + geo_id + year has a row
+    # geo_id's are real network_geography entries.
+    assert len(costs_connection) == _EXPECTED_COSTS_CONNECTION_ROWS_75[granularity]
+    assert set(costs_connection["geo_id"]) <= set(geo["geo_id"])
+
+    # timeslices — per-reference-year patterns decoded from the shipped
+    # RefYear5000 calendar, identical at every granularity.
+    timeslices = pd.read_csv(output_dir / "timeslices.csv")
+    assert len(timeslices) == _NUM_TIMESLICE_PATTERN_ROWS_75
+    assert timeslices["timeslice"].nunique() == _NUM_TIMESLICE_IDS_75
+    assert timeslices["reference_year"].nunique() == _NUM_REFERENCE_YEARS_75
+
+    # custom_constraints — populated at sub_regions, header-only elsewhere (see
+    # empty_custom_constraint_tables). Detailed content is covered by
+    # test_custom_constraints_from_plexos.py; here we pin the populated output's
+    # size (constraint count + LHS rows) and check no orphan LHS/RHS rows.
+    constraints = pd.read_csv(output_dir / "custom_constraints.csv")
+    lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
+    rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
     if granularity == "sub_regions":
-        verify_output_files(output_dir, _CUSTOM_CONSTRAINT_OUTPUTS)
-        constraints = pd.read_csv(output_dir / "custom_constraints.csv")
-        lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
-        rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
+        # One ISPyPSA constraint per PLEXOS constraint extracted (the
+        # CONSTRAINT_NAMES set in scripts/extract_plexos_constraints.py), plus a
+        # drift-detection count for the LHS coefficient rows.
+        assert constraints["constraint_id"].nunique() == _NUM_CUSTOM_CONSTRAINTS_75
+        assert len(constraints) == _NUM_CUSTOM_CONSTRAINTS_75
+        assert len(lhs) == _NUM_CUSTOM_CONSTRAINT_LHS_ROWS_75
+        # No orphan LHS/RHS rows — every term and limit belongs to a constraint.
         constraint_ids = set(constraints["constraint_id"])
         assert set(lhs["constraint_id"]) <= constraint_ids
         assert set(rhs["constraint_id"]) <= constraint_ids
     else:
-        for name in _CUSTOM_CONSTRAINT_OUTPUTS:
-            assert not (output_dir / f"{name}.csv").exists()
+        assert constraints.empty
+        assert list(constraints.columns) == _CUSTOM_CONSTRAINTS_COLUMNS
+        assert lhs.empty
+        assert list(lhs.columns) == _CUSTOM_CONSTRAINTS_LHS_COLUMNS
+        assert rhs.empty
+        assert list(rhs.columns) == _CUSTOM_CONSTRAINTS_RHS_COLUMNS

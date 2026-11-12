@@ -10,10 +10,14 @@ from ispypsa.templater import (
     list_templater_output_files,
     load_manually_extracted_tables,
 )
+from ispypsa.templater.custom_constraints_from_plexos import (
+    empty_custom_constraint_tables,
+)
 from ispypsa.templater.network_expansion import (
     _FLOW_PATH_FORWARD_MW_COL,
     _FLOW_PATH_REVERSE_MW_COL,
 )
+from ispypsa.templater.timeslices import _TIMESLICE_COLUMNS
 
 _FP_AUG_OPTION_COLS = [
     "Flow path",
@@ -23,7 +27,7 @@ _FP_AUG_OPTION_COLS = [
 ]
 
 
-def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
+def _stub_custom_constraints_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """Identifiable, non-empty stand-in for ``template_custom_constraints_from_plexos``.
 
     Has known row counts (1 constraint, 2 LHS terms, 1 RHS row). The sub_regions
@@ -34,26 +38,19 @@ def _stub_custom_constraints_tables() -> dict[str, pd.DataFrame]:
     per-module tests in ``test_custom_constraints_from_plexos.py``.
     """
     return {
-        "custom_constraints": pd.DataFrame(
-            {"constraint_id": ["SWQLD1"], "direction": ["<="]}
-        ),
-        "custom_constraints_lhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1", "SWQLD1"],
-                "term_type": ["generator_output", "storage_output"],
-                "variable_name": ["BW01", "Q8 Battery - 2h"],
-                "coefficient": [0.5, 1.0],
-                "date_from": [pd.NA, pd.NA],
-            }
-        ),
-        "custom_constraints_rhs": pd.DataFrame(
-            {
-                "constraint_id": ["SWQLD1"],
-                "timeslice": ["qld_winter_reference"],
-                "rhs": [3000.0],
-                "date_from": [pd.NA],
-            }
-        ),
+        "custom_constraints": csv_str_to_df("""
+            constraint_id,  direction
+            SWQLD1,         <=
+        """),
+        "custom_constraints_lhs": csv_str_to_df("""
+            constraint_id,  term_type,         variable_name,    coefficient,  date_from
+            SWQLD1,         generator_output,  BW01,             0.5,
+            SWQLD1,         storage_output,    Q8 Battery - 2h,  1.0,
+        """),
+        "custom_constraints_rhs": csv_str_to_df("""
+            constraint_id,  timeslice,             rhs,     date_from
+            SWQLD1,         qld_winter_reference,  3000.0,
+        """),
     }
 
 
@@ -77,7 +74,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           20.0,                     $
             Large scale Solar PV,           15.0,                     $
             OCGT (small GT),                17.0,                     $
-            Battery Storage (2hrs storage), 13.5,                     $
+            Battery storage (2hrs storage), 13.5,                     $
             Pumped Hydro (24hrs storage),   78.5,                     $
             BOTN - Cethana,                 78.5,                     $
         """),
@@ -92,7 +89,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           5,                      30
             Large scale Solar PV,           25,                     30
             OCGT (small GT),                25,                     40
-            Battery Storage (2hrs storage), 20,                     20
+            Battery storage (2hrs storage), 20,                     20
             Pumped Hydro (24hrs storage),   40,                     90
             BOTN - Cethana,                 40,                     90
         """),
@@ -107,7 +104,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Wind,                           0.0
             Large scale Solar PV,           0.0
             OCGT (small GT),                50.0
-            Battery Storage (2hrs storage), 0.0
+            Battery storage (2hrs storage), 0.0
             Pumped Hydro (24hrs storage),   40.0
             BOTN - Cethana,                 40.0
         """),
@@ -121,7 +118,7 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             BOTN - Cethana - 20h,          20,                       80
         """),
         "technology_specific_lcfs": csv_str_to_df("""
-            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs storage), Pumped Hydro (24hrs storage), BOTN - Cethana
+            Cost zone / REZ ID, REZ name / Description, Wind,           Large scale Solar PV, OCGT (small GT), Battery storage (2hrs storage), Pumped Hydro (24hrs storage), BOTN - Cethana
             Q1,                 Far North QLD,          1.05,           1.08,                 Not Applicable,  Not Applicable,                 Not Applicable,               Not Applicable
             CNSW,               Subregional Ref Node,   Not Applicable, Not Applicable,       1.04,            1.03,                           Not Applicable,               Not Applicable
             SNW,                Subregional Ref Node,   Not Applicable, Not Applicable,       1.00,            1.01,                           Not Applicable,               Not Applicable
@@ -139,21 +136,100 @@ def _new_entrant_property_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
-def test_list_templater_output_files_includes_custom_constraints_only_at_sub_regions():
-    """Custom-constraint tables are declared as task outputs only at sub_regions.
+# NOTE: temporary while existing/planned storage properties not yet wired into
+# templater - input tables defined here for brevity until then.
+def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The ECAA summary plus its per-unit property tables, wiring-only fixture.
 
-    They are templated (and written) only at sub_regions, so they must appear in
-    the output-file list there — otherwise the create_ispypsa_inputs task leaves
-    files it writes untracked — and must be absent at nem_regions /
-    single_region, where declaring them would make the task expect files that are
-    never written.
+    Detailed merge behaviour is covered in test_existing_planned.py; here they
+    just need to be present for wiring to run.
     """
-    custom_constraint_files = {
-        "custom_constraints",
-        "custom_constraints_lhs",
-        "custom_constraints_rhs",
+    summary = csv_str_to_df("""
+        IASR ID / DLT names,  Power Station,  Technology Type,                REZ ID,          Sub-region,  Fuel type,  Fuel cost mapping
+        BW01,                 Bayswater,      Steam Sub Critical,             Not Applicable,  CNSW,        Black Coal, Bayswater
+        Q1G1,                 Solar Farm,     Large scale Solar PV,           Q1,              NQ,          Solar,      Solar Farm
+        W/HOE#1,              Wivenhoe,       Hydro,                          Not Applicable, NQ,           Water,      Hydro
+        ORANA,                Orana BESS,     Battery storage (2hrs storage), N3,             CNSW,         Battery,    Battery
+    """)
+    return {
+        "existing_committed_anticipated_additional_generator_summary": summary,
+        "pumped_hydro_existing_committed_anticipated_additional_properties": csv_str_to_df("""
+            Power Station,  Installed capacity (MW),Storage capacity (hours),   Pumping efficiency (%)
+            Wivenhoe,       570,                    10.0,                       70
+        """),
+        "maximum_capacity_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Installed capacity (MW),  Storage Capacity (MWh), Commissioning date
+            BW01,     660.0,                    ,
+            Q1G1,     100.0,                    ,                       2028-12-01
+            W/HOE#1,  285.0,                    3000.0,
+            ORANA,    415.0,                    1660.0,                 2026-06-01
+        """),
+        "battery_properties": csv_str_to_df("""
+            Technology,                      Energy capacity_Hours, Charge efficiency_%, Discharge efficiency_%, Allowable max state of charge_%, Allowable min state of charge_%, Annual degradation_%
+            Battery storage (2hrs storage),  2.0,                   92.0,                92.0,                   100,                             0,                               1.8
+        """),
+        # Built directly - the real column name's trailing "1," is a literal comma
+        "variable_opex_existing_committed_anticipated_additional_generators": pd.DataFrame(
+            {
+                "IASR ID": ["BW01", "Q1G1"],
+                "Variable OPEX ($/MWh sent out)1,": [8.0, 0.0],
+            }
+        ),
+        "heat_rates_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Heat rate (GJ/MWh)
+            BW01,     10.05
+            Q1G1,     0.0
+        """),
+        "expected_closure_years": csv_str_to_df("""
+            IASR ID,  Expected Closure Year (Calendar year)
+            BW01,     2033
+            Q1G1,     2100
+            W/HOE#1,  2084
+            ORANA,    2066
+        """),
+        "coal_minimum_stable_level": csv_str_to_df("""
+            IASR ID,  Technology Type,      Minimum Stable Level (MW)_Typical Lowest Band
+            BW01,     Steam Sub Critical,   260.0
+        """),
+        "gpg_min_stable_level_existing_generators": csv_str_to_df("""
+            IASR ID,              Technology Type,  Min Stable Level (MW)
+            SOME_OTHER_GAS_UNIT,  CCGT,             5.0
+        """),
     }
 
+
+def _stub_timeslice_calendar(csv_str_to_df) -> pd.DataFrame:
+    """Minimal raw timeslice calendar: two windows that tile planning year
+    FY2026 — a hot-day peak and a winter window that wraps back to it, so the
+    decoded windows leave no day uncovered (the tiling invariant the templater
+    enforces). Patched in place of the packaged PLEXOS calendar; full decode
+    behaviour is covered by the per-module tests in ``test_timeslices.py``.
+    """
+    return csv_str_to_df("""
+        DATETIME,    NAME,         TIMESLICE
+        18/11/2025,  NSW Hot Day,  -1
+        20/11/2025,  NSW Hot Day,  0
+        20/11/2025,  NSW Winter,   -1
+        18/11/2026,  NSW Winter,   0
+    """)
+
+
+def _stub_reference_year_sequence(csv_str_to_df) -> pd.DataFrame:
+    """Assigns the stub calendar's single planning year a reference year."""
+    return csv_str_to_df("""
+        planning_year,  reference_year
+        2026,           2015
+    """)
+
+
+def test_list_templater_output_files_granularity_invariant():
+    """The new-format templater declares the same output set at every granularity.
+
+    The custom-constraint tables are header-only at nem_regions /
+    single_region but still written, so the create_ispypsa_inputs task must
+    track them everywhere — a granularity-dependent list would leave written
+    files untracked or expect files that are never written.
+    """
     with patch(
         "ispypsa.templater.create_template.FEATURE_FLAGS",
         {"use_new_table_format": True},
@@ -162,9 +238,14 @@ def test_list_templater_output_files_includes_custom_constraints_only_at_sub_reg
         nem_regions = set(list_templater_output_files("nem_regions"))
         single_region = set(list_templater_output_files("single_region"))
 
-    assert custom_constraint_files <= sub_regions
-    assert custom_constraint_files.isdisjoint(nem_regions)
-    assert custom_constraint_files.isdisjoint(single_region)
+    assert sub_regions == nem_regions == single_region
+    assert {
+        "custom_constraints",
+        "custom_constraints_lhs",
+        "custom_constraints_rhs",
+        "timeslices",
+        "costs_connection",
+    } <= sub_regions
 
 
 def test_create_ispypsa_inputs_template_sub_regions(
@@ -237,12 +318,14 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # (CNSW-SNW corridor) has valid endpoints in the geography. CQ is included so
     # the CQ-NQ flow path's region prefix resolves (every flow-path endpoint must
     # appear in the geography).
+    # SEV is added to ensure the non-REZ geo V0 has its endpoint present too.
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                        Sub-regional reference node
         Queensland,       Northern Queensland (NQ),              Ross 275 kV
         Queensland,       Central Queensland (CQ),               Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),        Wellington 330 kV
         New South Wales,  Southern New South Wales (SNW),        Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),             Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -327,7 +410,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
+        ),
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
         ),
     ):
         result = create_ispypsa_inputs_template(
@@ -350,26 +437,32 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
             # wiring runs. Output stays empty: generators/storage are placeholder-empty.
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("sub_regions"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
-    # 4 subregions (NQ + CQ + CNSW + SNW) + 2 REZs.
-    assert len(geography) == 6
+    # 5 subregions (NQ + CQ + CNSW + SNW + SEV) + 2 REZs + 2 non-REZs (N0, V0)
+    assert len(geography) == 9
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
     # CQ-NQ + 2 REZ connections (Q1-NQ, N3-CNSW) + CNSW-SNW_NTH + CNSW-SNW_STH
     # + CNSW-SNW (injected by _new_parallel_path_rows).
-    assert len(paths) == 6
+    # + N0-CNSW and V0-SEV (non-REZ geos)
+    assert len(paths) == 8
     # Specifically pin the new parallel-path row — a regression in the
     # _append_new_parallel_paths wiring would fail this assertion.
     assert "CNSW-SNW" in set(paths["path_id"])
@@ -379,7 +472,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # 3 flow paths × 6 (CQ-NQ + 2 CNSW-SNW siblings) + Q1-NQ × 6 (REZ mirrored)
     # + N3-CNSW × 1 (collapsed, absent from initial_transmission_limits)
     # + CNSW-SNW × 6 zero-capacity rows from _new_parallel_path_rows.
-    assert len(limits) == 31
+    # + N0-CNSW × 1 + V0-SEV × 1
+    assert len(limits) == 33
 
     expansion_options = result["network_expansion_options"]
     assert set(expansion_options.columns) == {
@@ -395,6 +489,12 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert set(expansion_costs.columns) == {"expansion_id", "year", "cost"}
     # 3 expansion_ids x 2 years
     assert len(expansion_costs) == 6
+
+    timeslices = result["timeslices"]
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
+    # The stub calendar's two windows decode into two tiling window patterns
+    # (nsw_peak_demand and nsw_winter_reference) for FY2026's reference year.
+    assert len(timeslices) == 2
 
     costs_connection = result["costs_connection"]
     assert set(costs_connection.columns) == {
@@ -452,6 +552,45 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     # BOTN - Cethana (Pumped Hydro), the only storage row in the fixture.
     assert len(storage_new_entrant) == 1
 
+    # generators_existing_planned — BW01 (CNSW) and Q1G1 (Q1 REZ); W/HOE#1 and ORANA
+    # excluded (storage)
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned.columns) == {
+        "name",
+        "power_station",
+        "technology",
+        "geo_id",
+        "fuel_type",
+        "fuel_price_mapping",
+        "capacity",
+        "vom",
+        "heat_rate",
+        "commissioning_date",
+        "closure_year",
+        "minimum_load",
+    }
+    assert set(generators_existing_planned["geo_id"]) == {"CNSW", "Q1"}
+    assert len(generators_existing_planned) == 2
+
+    # storage_existing_planned — W/HOE#1 (NQ) and ORANA (N3); BW01 and Q1G1
+    # excluded (generation)
+    storage_existing_planned = result["storage_existing_planned"]
+    assert set(storage_existing_planned.columns) == {
+        "name",
+        "power_station",
+        "technology",
+        "geo_id",
+        "fuel_type",
+        "capacity",
+        "storage_capacity",
+        "efficiency_charge",
+        "efficiency_discharge",
+        "commissioning_date",
+        "closure_year",
+    }
+    assert set(storage_existing_planned["geo_id"]) == {"NQ", "N3"}
+    assert len(storage_existing_planned) == 2
+
     # Custom-constraints tables are spliced into the output via
     # template.update(template_custom_constraints_from_plexos(...)). The
     # templater is mocked with _stub_custom_constraints_tables (full content is
@@ -490,6 +629,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),       Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -559,10 +699,10 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
         SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
         NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
+        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -572,8 +712,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
+        ),
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -595,27 +739,35 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("nem_regions"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
-    assert len(geography) == 4  # 2 unique NEM regions (QLD, NSW) + 2 REZs
+    # 3 unique NEM regions (QLD, NSW, VIC) + 2 REZs + 2 non-REZs
+    assert len(geography) == 7
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
 
-    # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept; 2 REZ paths kept.
-    assert len(paths) == 3
+    # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept;
+    # 2 REZ and 2 non-REZ paths kept.
+    assert len(paths) == 5
 
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
     # NNSW-SQ -> NSW-QLD: 6 rows. Q1-QLD: 6 rows. N3-NSW: 1 collapsed row.
-    assert len(limits) == 13
+    # N0-NSW: 1 collapsed row. V0-VIC: 1 collapsed row.
+    assert len(limits) == 15
 
     expansion_options = result["network_expansion_options"]
     # CQ-NQ augmentation dropped (intra-QLD); NNSW-SQ re-keyed to NSW-QLD;
@@ -628,6 +780,11 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert set(expansion_costs["expansion_id"]) == {"NSW-QLD", "N3-NSW"}
     # 2 expansion_ids x 2 years
     assert len(expansion_costs) == 4
+
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
+    assert len(timeslices) == 2
 
     costs_connection = result["costs_connection"]
     assert set(costs_connection.columns) == {
@@ -651,14 +808,22 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 3
 
-    # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation once sub-regions are collapsed, so the templater
-    # skips them at nem_regions granularity. The mock turns a regression in that
-    # gate into a clean assertion failure instead of a PLEXOS-extract disk read.
+    # generators_existing_planned — CNSW relabels to NSW; Q1 REZ stays untouched.
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned["geo_id"]) == {"NSW", "Q1"}
+    assert len(generators_existing_planned) == 2
+
+    # storage_existing_planned - NQ relabels to QLD; N3 REZ stays untouched
+    storage_existing_planned = result["storage_existing_planned"]
+    assert set(storage_existing_planned["geo_id"]) == {"QLD", "N3"}
+    assert len(storage_existing_planned) == 2
+
+    # Not templated at this granularity (see empty_custom_constraint_tables);
+    # the mock turns a regression in that gate into a clean assertion failure
+    # rather than a PLEXOS-extract disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert "custom_constraints" not in result
-    assert "custom_constraints_lhs" not in result
-    assert "custom_constraints_rhs" not in result
+    for name, expected in empty_custom_constraint_tables().items():
+        pd.testing.assert_frame_equal(result[name], expected)
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -670,6 +835,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         Queensland,       Central Queensland (CQ),         Stanwell 275 kV
         New South Wales,  Central New South Wales (CNSW),  Wellington 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
+        Victoria,         South East Victoria (SEV),       Hazelwood 500kV
     """)
     renewable_energy_zones = csv_str_to_df("""
         ID,   Name,               NEM region,  ISP sub-region
@@ -730,10 +896,10 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         CNSW OCGT Small,        OCGT (small GT),                Gas,        Not Applicable, CNSW,       CNSW
         SNW OCGT Small,         OCGT (small GT),                Gas,        Not Applicable, SNW,        SNW
         NQ OCGT Small,          OCGT (small GT),                Gas,        Not Applicable, NQ,         NQ
-        CNSW Battery - 2h,      Battery Storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
-        SNW Battery - 2h,       Battery Storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
-        NQ Battery - 2h,        Battery Storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
-        Q1 Battery - 2h,        Battery Storage (2hrs storage), Battery,    Q1,             NQ,         Q1
+        CNSW Battery - 2h,      Battery storage (2hrs storage), Battery,    Not Applicable, CNSW,       CNSW
+        SNW Battery - 2h,       Battery storage (2hrs storage), Battery,    Not Applicable, SNW,        SNW
+        NQ Battery - 2h,        Battery storage (2hrs storage), Battery,    Not Applicable, NQ,         NQ
+        Q1 Battery - 2h,        Battery storage (2hrs storage), Battery,    Q1,             NQ,         Q1
     """)
 
     with (
@@ -743,8 +909,12 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         ),
         patch(
             "ispypsa.templater.create_template.template_custom_constraints_from_plexos",
-            return_value=_stub_custom_constraints_tables(),
+            return_value=_stub_custom_constraints_tables(csv_str_to_df),
         ) as mock_template_custom_constraints,
+        patch(
+            "ispypsa.templater.create_template.load_timeslice_calendar",
+            return_value=_stub_timeslice_calendar(csv_str_to_df),
+        ),
     ):
         result = create_ispypsa_inputs_template(
             scenario="Step Change",
@@ -764,26 +934,32 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "new_entrants_summary": new_entrants_summary,
                 **_new_entrant_property_tables(csv_str_to_df),
+                **_existing_planned_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
+                "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
             iasr_workbook_version="ignored-by-patch",
         )
+        # The templater's output set must match what the create_ispypsa_inputs
+        # task tracks (see test_list_templater_output_files_granularity_invariant).
+        assert set(result) == set(list_templater_output_files("single_region"))
 
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
-    assert len(geography) == 3  # 1 NEM row + 2 REZs
+    assert len(geography) == 5  # 1 NEM row + 2 REZs + 2 non-REZs
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
-    # CQ-NQ flow path dropped; only the two REZ-to-NEM paths remain.
-    assert len(paths) == 2
+    # CQ-NQ flow path dropped; only two REZ-to-NEM and two non-REZ-to-NEM paths remain.
+    assert len(paths) == 4
 
     limits = result["network_transmission_path_limits"]
     assert set(limits.columns) == {"path_id", "direction", "timeslice", "capacity"}
     # Q1-NEM: 6 rows. N3-NEM: 1 collapsed row.
-    assert len(limits) == 7
+    # N0-NEM: 1 collapsed row. V0-NEM: 1 collapsed row.
+    assert len(limits) == 9
 
     expansion_options = result["network_expansion_options"]
     # CQ-NQ augmentation dropped entirely (no flow paths exist at single_region).
@@ -797,8 +973,13 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # 1 expansion_id x 2 years
     assert len(expansion_costs) == 2
 
-    connection_costs = result["costs_connection"]
-    assert set(connection_costs.columns) == {
+    # timeslices is granularity-invariant — same two patterns as at sub_regions.
+    timeslices = result["timeslices"]
+    assert list(timeslices.columns) == _TIMESLICE_COLUMNS
+    assert len(timeslices) == 2
+
+    costs_connection = result["costs_connection"]
+    assert set(costs_connection.columns) == {
         "geo_id",
         "technology",
         "year",
@@ -806,8 +987,8 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         "system_strength_cost",
     }
     # [(2 VRE x 1 REZ) + (1 non-VRE x NEM)] x 2 years
-    assert set(connection_costs["geo_id"]) == {"Q1", "NEM"}
-    assert len(connection_costs) == 6
+    assert set(costs_connection["geo_id"]) == {"Q1", "NEM"}
+    assert len(costs_connection) == 6
 
     # REZ rows untouched, everything else collapses to 'NEM' geo_id
     generators_new_entrant = result["generators_new_entrant"]
@@ -818,11 +999,19 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     storage_new_entrant = result["storage_new_entrant"]
     assert len(storage_new_entrant) == 2
 
-    # Custom constraints from PLEXOS are sub-regional export limits with no
-    # meaningful representation at single_region, so the templater skips them.
-    # The mock turns a regression in that gate into a clean assertion failure
-    # instead of a PLEXOS-extract disk read.
+    # generators_existing_planned — CNSW relabels to NEM; Q1 REZ stays untouched.
+    generators_existing_planned = result["generators_existing_planned"]
+    assert set(generators_existing_planned["geo_id"]) == {"NEM", "Q1"}
+    assert len(generators_existing_planned) == 2
+
+    # storage_existing_planned - NQ relabels to NEM; N3 REZ stays untouched
+    storage_existing_planned = result["storage_existing_planned"]
+    assert set(storage_existing_planned["geo_id"]) == {"NEM", "N3"}
+    assert len(storage_existing_planned) == 2
+
+    # Not templated at this granularity (see empty_custom_constraint_tables);
+    # the mock turns a regression in that gate into a clean assertion failure
+    # rather than a PLEXOS-extract disk read.
     mock_template_custom_constraints.assert_not_called()
-    assert "custom_constraints" not in result
-    assert "custom_constraints_lhs" not in result
-    assert "custom_constraints_rhs" not in result
+    for name, expected in empty_custom_constraint_tables().items():
+        pd.testing.assert_frame_equal(result[name], expected)

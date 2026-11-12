@@ -663,13 +663,36 @@ _SINGLE_REGION_ID = "NEM"
 # lowercased NEM region id.
 _CANONICAL_TIMESLICES = ("peak_demand", "summer_typical", "winter_reference")
 
+# Two non-REZ areas are defined in the ISP to host lower resource quality new
+# entrant VRE (see IASR 2026, p.164 for ISP reasoning). They are not present in the
+# 'renewable_energy_zones' table in the IASR workbook, so they get manually added
+# by `_add_non_rez_geographies_to_rez_table` before templating, to ensure
+# the corresponding geo_ids exist and are mapped to the correct sub/NEM regions.
+# See Open-ISP/ISPyPSA#133.
+_NON_REZ_GEOGRAPHIES = pd.DataFrame(
+    [
+        {
+            "ID": "N0",
+            "Name": "New South Wales Non-REZ",
+            "NEM region": "NSW",
+            "ISP sub-region": "CNSW",
+        },
+        {
+            "ID": "V0",
+            "Name": "Victoria Non-REZ",
+            "NEM region": "VIC",
+            "ISP sub-region": "SEV",
+        },
+    ]
+)
+
 """
 New entrant property columns (keys) mapped to the IASR table and columns that contain
 property values and the technology for which the values apply. Consumed by
-``ispypsa.templater.new_entrants`` via ``_merge_properties``.
+``ispypsa.templater.new_entrants`` via ``_merge_category_keyed_properties``.
 
     `table`: IASR table name holding the named property (key)
-    `technology_col`: column in the IASR table that contains the 'technology' string.
+    `key_col`: column in the IASR table that contains the 'technology' string.
         This is the column used to merge on (after mapping to canonical values).
     `value_col`: column holding the value to merge in
     `scale`: amount by which to multiply the value (default 1.0), used for unit
@@ -683,24 +706,24 @@ the combined battery + PHES rows.
 _COMMON_NEW_ENTRANT_PROPERTY_MAP = {
     "fom": dict(
         table="fixed_opex_new_entrants",
-        technology_col="Technology Type",
+        key_col="Technology Type",
         # NOTE: literal double ")" — parsed directly from the v7.5 IASR workbook
         value_col="Base value ($/kW/year))",
         scale=1000.0,
     ),
     "lifetime_technical": dict(
         table="lead_time_and_project_life",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Technical life (years)",
     ),
     "lifetime_economic": dict(
         table="lead_time_and_project_life",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Economic life (years)",
     ),
     "minimum_stable_level": dict(
         table="gpg_min_stable_level_new_entrants",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Min Stable Level (% of nameplate)",
     ),
 }
@@ -709,12 +732,12 @@ _GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
     **_COMMON_NEW_ENTRANT_PROPERTY_MAP,
     "vom": dict(
         table="variable_opex_new_entrants",
-        technology_col="Generator",
+        key_col="Generator",
         value_col="Base value",
     ),
     "heat_rate": dict(
         table="heat_rates_new_entrants",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Heat rate (GJ/MWh)",
     ),
 }
@@ -722,32 +745,32 @@ _GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
 _STORAGE_BATTERY_PROPERTY_MAP = {
     "storage_hours": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Energy capacity_Hours",
     ),
     "efficiency_charge": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Charge efficiency_%",
     ),
     "efficiency_discharge": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Discharge efficiency_%",
     ),
     "soc_max": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Allowable max state of charge_%",
     ),
     "soc_min": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Allowable min state of charge_%",
     ),
     "degradation_annual": dict(
         table="battery_properties",
-        technology_col="Technology",
+        key_col="Technology",
         value_col="Annual degradation_%",
     ),
 }
@@ -755,12 +778,122 @@ _STORAGE_BATTERY_PROPERTY_MAP = {
 _STORAGE_PHES_PROPERTY_MAP = {
     "storage_hours": dict(
         table="pumped_hydro_new_entrant_properties",
-        technology_col="Power Station / Technology",
+        key_col="Power Station / Technology",
         value_col="Storage capacity (hours)",
     ),
     "round_trip_efficiency": dict(
         table="pumped_hydro_new_entrant_properties",
-        technology_col="Power Station / Technology",
+        key_col="Power Station / Technology",
+        value_col="Pumping efficiency (%)",
+    ),
+}
+
+"""
+Existing/planned (ECAA) generator and storage unit-level property columns (keys) mapped
+to the IASR table and column that contains their values. Consumed by
+``ispypsa.templater.existing_planned`` via ``_merge_unit_keyed_properties``.
+
+Shaped like the new entrant maps above, but every entry here shares the same
+``key_col`` (``IASR ID``) — each unit's ``name`` is resolved against it via
+fuzzy matching (small typos only; see ``existing_planned._resolve_unit_keys``)
+rather than the technology-level fuzzy grouping the new entrant maps need.
+
+    `table`: IASR table name holding the named property (key)
+    `key_col`: column in the IASR table used as the merge key
+    `value_col`: column holding the value to merge in
+    `numeric`: whether the merged value should be coerced with ``pd.to_numeric``
+        (catches a stray non-numeric typo in the source table). Defaults to True;
+        set False for non-numeric columns, e.g. commissioning_date.
+
+See issue: Open-ISP/ISPyPSA#145 for discussion on replacing `dtype` field
+to replace the `numeric` field here.
+"""
+
+_GENERATORS_EXISTING_PLANNED_PROPERTY_MAP = {
+    "capacity": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Installed capacity (MW)",
+    ),
+    "commissioning_date": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Commissioning date",
+        numeric=False,
+    ),
+    "vom": dict(
+        table="variable_opex_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        # trailing "1," is a footnote marker in the v7.5 IASR workbook
+        value_col="Variable OPEX ($/MWh sent out)1,",
+    ),
+    "heat_rate": dict(
+        table="heat_rates_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Heat rate (GJ/MWh)",
+    ),
+    "closure_year": dict(
+        table="expected_closure_years",
+        key_col="IASR ID",
+        value_col="Expected Closure Year (Calendar year)",
+    ),
+}
+
+_STORAGE_EXISTING_PLANNED_UNIT_PROPERTY_MAP = {
+    "capacity": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Installed capacity (MW)",
+    ),
+    "storage_capacity": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Storage Capacity (MWh)",
+    ),
+    "commissioning_date": dict(
+        table="maximum_capacity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Commissioning date",
+        numeric=False,
+    ),
+    "closure_year": dict(
+        table="expected_closure_years",
+        key_col="IASR ID",
+        value_col="Expected Closure Year (Calendar year)",
+    ),
+}
+
+"""
+Existing/planned (ECAA) storage properties that aren't published per unit, mapped to
+the IASR table and column that contains their values. Consumed by
+``ispypsa.templater.existing_planned`` via ``_merge_storage_type_split_properties``,
+which merges each map onto its own subset of storage rows with
+``helpers._merge_category_keyed_properties``.
+
+Each map is keyed on a different category shared by many units:
+    - batteries on ``technology`` (``battery_properties``' ``Technology``)
+    - PHES on ``power_station`` (the PHES properties table's ``Power Station``)
+
+Entries use the same fields as the unit-level maps above.
+"""
+
+_BATTERY_EXISTING_PLANNED_TECH_PROPERTY_MAP = {
+    "efficiency_charge": dict(
+        table="battery_properties",
+        key_col="Technology",
+        value_col="Charge efficiency_%",
+    ),
+    "efficiency_discharge": dict(
+        table="battery_properties",
+        key_col="Technology",
+        value_col="Discharge efficiency_%",
+    ),
+}
+
+_PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP = {
+    "round_trip_efficiency": dict(
+        table="pumped_hydro_existing_committed_anticipated_additional_properties",
+        key_col="Power Station",
         value_col="Pumping efficiency (%)",
     ),
 }

@@ -14,27 +14,42 @@ def _fuzzy_match_names(
     not_match: str = "existing",
     threshold: int = 0,
 ) -> pd.Series:
-    """
-    Fuzzy matches values in `name_series` with values in `choices`.
-    Fuzzy matching is used where typos or minor differences in names in raw data
-    may cause issues with exact mappings (e.g. using a dictionary mapping).
-    This function is only suitable for use where name_series does not have
-    repeated values since matching is done without replacement
+    """Replace each name in ``name_series`` with the ``choices`` entry it best
+    matches, pairing unique names and choices one to one.
 
-    Args:
-        name_series: :class:`pandas.Series` with names to be matched with values in
-            `choices`
-        choices: Iterable of `choices` that are replacement values
-        task_desc: Task description to include in logging information
-        not_match: optional. Defaults to "existing". If "existing", wherever a match
-            that exceeds the threshold does not exist the existing value is retained.
-            If any other string, this will be used to replace the existing value
-            where a match that exceeds the threshold does not exist.
-        threshold: match quality threshold to exceed for replacement. Between 0 and 100
+    The raw IASR workbooks spell the same entity slightly differently from
+    sheet to sheet — typos, stray footnotes, punctuation — so a name column
+    often almost-but-not-exactly matches the canonical names the rest of the
+    pipeline keys on. An exact dictionary mapping would silently miss those
+    rows; fuzzy matching repairs them instead.
 
-    Returns:
-        :class:`pandas.Series` with values from `choices` that correspond to the closest
-            match to the original values in `name_series`
+    ``choices`` holds the canonical spellings (e.g. the NEM sub-region names
+    hardcoded in mappings.py). ``task_desc`` names the operation in the log line each
+    repair emits. ``threshold`` (0-100) is the minimum fuzz.ratio score a
+    pairing must reach; ``not_match`` sets what happens to names left over
+    when no choice scores that high — the sentinel "existing" keeps the
+    original name, and any other string is written in as a literal
+    replacement (e.g. not_match="unknown" stamps unmatched rows "unknown").
+
+    Matching is one to one without replacement over the unique values of both
+    sides: an exact match claims its choice first, then the remaining pairs
+    are matched by repeatedly taking the highest-scoring (name, choice) pair
+    that reaches ``threshold``. Because each choice can be claimed once, a name may
+    not receive its own best match if a stronger pairing takes that choice
+    first — and for the same reason, this function is unsuitable where two
+    different names in the series should map to the same choice. Nothing
+    raises: leftover names take the ``not_match`` fallback, and every changed
+    name is logged at INFO so the repairs can be audited.
+
+    I/O Example:
+        name_series = ["Centarl NSW", "Southern NSW", "Northern NSW"]
+        choices = ["Central NSW", "Southern NSW"]
+        task_desc = "matching sub-region names"
+
+        returns:
+            ["Central NSW",    # typo repaired (logged at INFO)
+             "Southern NSW",   # exact match, claims its choice first
+             "Northern NSW"]   # choices exhausted: "existing" keeps the original
     """
     match_dict = _one_to_one_priority_based_fuzzy_matching(
         set(name_series), set(choices), not_match, threshold
@@ -399,6 +414,330 @@ def _pick_location(row: pd.Series) -> str:
     return row["Sub-region"]
 
 
+def _set_geo_id(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds 'geo_id' column: REZ ID with Sub-region fallback (see ``_pick_location``)."""
+    df = df.copy()
+    df["geo_id"] = df.apply(_pick_location, axis=1)
+    return df
+
+
+def _build_geo_region_lookup(sub_regional_geography: pd.DataFrame) -> dict[str, str]:
+    """Maps every geo (sub-region, REZ, or NEM region) to its NEM region id.
+
+    ``sub_regional_geography`` already lists both sub-regions and REZs against their
+    ``region_id``. NEM regions are added as identities so that geos which are
+    already regions — after granularity aggregation, or on new parallel corridors —
+    resolve to themselves.
+
+    I/O Example:
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            NQ      subregion  QLD
+            CNSW    subregion  NSW
+            Q1      rez        QLD
+
+        returns:
+            {"NQ": "QLD", "CNSW": "NSW", "Q1": "QLD", "QLD": "QLD", "NSW": "NSW"}
+    """
+    lookup = dict(
+        zip(sub_regional_geography["geo_id"], sub_regional_geography["region_id"])
+    )
+    for region in set(sub_regional_geography["region_id"]):
+        lookup[region] = region
+    return lookup
+
+
+def _map_geo_id_to_granularity(
+    geo_id: pd.Series, regional_granularity: str, sub_regional_geography: pd.DataFrame
+) -> pd.Series:
+    """Maps sub-region geo_ids to their region_id ("nem_regions"), "NEM" ("single_region"),
+    or returns untouched; REZ geo_ids always return untouched.
+
+    I/O Example:
+        geo_id: pd.Series(["CNSW", "SNW", "Q1"])
+
+        sub_regional_geography:
+            geo_id  geo_type    region_id
+            CNSW    subregion   NSW
+            SNW     subregion   NSW
+            Q1      rez         QLD
+
+        returns:
+            regional_granularity = "sub_regions":
+                pd.Series(["CNSW", "SNW", "Q1"])
+
+            regional_granularity = "nem_regions":
+                pd.Series(["NSW", "NSW", "Q1"])
+
+            regional_granularity = "single_region":
+                pd.Series(["NEM", "NEM", "Q1"])
+    """
+    # Deferred import to avoid a circular import: mappings.py imports from this
+    # module (_snakecase_string, old-format section) and this function needs
+    # mappings.py's _SINGLE_REGION_ID.
+    # TODO: if/when we move to fully new-format templater - move import
+    from ispypsa.templater.mappings import _SINGLE_REGION_ID
+
+    geo_id = geo_id.copy()
+    is_subregion = _is_subregion_geo_id(geo_id, sub_regional_geography)
+
+    if regional_granularity == "sub_regions":
+        return geo_id
+    if regional_granularity == "single_region":
+        return geo_id.where(~is_subregion, _SINGLE_REGION_ID)
+    if regional_granularity == "nem_regions":
+        # only map subregion geo_ids to their respective regions; REZs untouched
+        geo_id.loc[is_subregion] = geo_id[is_subregion].map(
+            _build_geo_region_lookup(sub_regional_geography)
+        )
+        return geo_id
+    raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
+
+
+def _is_subregion_geo_id(
+    geo_id: pd.Series, sub_regional_geography: pd.DataFrame
+) -> pd.Series:
+    """Boolean mask of ``geo_id`` values that are sub-region-located (not REZ).
+
+    I/O Example:
+        geo_id: pd.Series(["CNSW", "Q1"])
+        sub_regional_geography:
+            geo_id  geo_type
+            CNSW    subregion
+            Q1      rez
+
+        returns: pd.Series([True, False])
+    """
+    geo_type_by_geo_id = sub_regional_geography.set_index("geo_id")["geo_type"]
+    return geo_id.map(geo_type_by_geo_id) == "subregion"
+
+
+def _assert_table_valid(
+    table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
+) -> None:
+    """Asserts a source table has every required column and isn't empty.
+
+    Shared precondition check for tables merged in the new-format templater modules —
+    guards against two silent-failure modes: a missing column producing a KeyError, and
+    an empty table merging to an all-NaN column with no warning.
+
+    Args:
+        table: the source table to validate, e.g. ``iasr_tables["battery_properties"]``.
+        table_name: ``table``'s IASR table name, used to name it in error messages.
+        required_cols: every column the downstream merge reads from ``table``.
+        merge_desc: short description of what would be merged, named in the
+            empty-table error, e.g. ``"properties '['fom']'"`` or ``"'lcf_build'"``.
+
+    Raises:
+        ValueError: if any of ``required_cols`` is missing from ``table``, or if
+            ``table`` has no rows.
+
+    I/O Example:
+        table:
+            Technology  Base value  Extra Column
+            Wind        2.0         unused_info
+
+        table_name: "fixed_opex_new_entrants"
+        required_cols: {"Technology", "Base value"}
+        merge_desc: "properties '['fom']'"
+
+        # No ValueError raised: table has rows, both required columns present.
+    """
+    missing_cols = required_cols - set(table.columns)
+    if missing_cols:
+        raise ValueError(
+            f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
+        )
+    if table.empty:
+        raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
+
+
+def _apply_iasr_table_replacements(
+    iasr_tables: dict[str, pd.DataFrame], corrections: list[dict]
+) -> dict[str, pd.DataFrame]:
+    """Returns ``iasr_tables`` with 'corrections' applied to input IASR tables.
+
+    Shared shape for small, explicitly declared fixes (a documented typo or naming
+    mismatch) to specified locations. ``corrections`` can carry multiple fixes,
+    each with 'fix' specifics (``table_name``, ``column``, ``replacements``) bundled.
+    Returns a shallow copy of ``iasr_tables`` with only listed tables replaced.
+
+    Note: while fuzzy-matching is used to standardise names or other ID strings,
+    some typos/diffs are too 'big' to pass any safe fuzzy-match threshold (see
+    example below - fuzz.ratio("KiataWF1", "KIATAWF1") == 50). This function
+    explicitly handles those known instances where this is the case.
+
+    I/O Example:
+        iasr_tables["maximum_capacity_..."]:
+            IASR ID   Power Station    Installed capacity (MW)
+            KiataWF1  Kiata Wind Farm  31.05
+            BW01      Bayswater        660.0
+
+        corrections (as a single dict element in list):
+            table_name:   "maximum_capacity_..."
+            column:       "IASR ID"
+            replacements: {"KiataWF1": "KIATAWF1"}
+
+        returns copy of iasr_tables with only listed tables edited:
+            iasr_tables["maximum_capacity_..."]:
+                IASR ID   Power Station    Installed capacity (MW)
+                KIATAWF1  Kiata Wind Farm  31.05
+                BW01      Bayswater        660.0
+    """
+    corrected_tables = iasr_tables
+    for correction in corrections:
+        table_name = correction["table_name"]
+        col_to_fix = correction["column"]
+        replacements = correction["replacements"]
+        corrected = iasr_tables[table_name].replace({col_to_fix: replacements})
+        corrected_tables = {**corrected_tables, table_name: corrected}
+    return corrected_tables
+
+
+def _group_properties_by_source(
+    property_map: dict[str, dict],
+) -> dict[tuple[str, str], dict]:
+    """Groups a property map's entries by their source (table, key_col).
+
+    Shared by ``_merge_category_keyed_properties`` and
+    ``existing_planned._merge_unit_keyed_properties`` so a table contributing several
+    properties (e.g. ``battery_properties`` feeds six) is validated and key-resolved
+    once per source, not once per property.
+
+    I/O Example (abbreviated property_map entries):
+        property_map: {
+            "storage_hours":      dict(table="battery_properties",
+                                       key_col="Technology", ...),
+            "efficiency_charge":  dict(table="battery_properties",
+                                       key_col="Technology", ...),
+            "lifetime_technical": dict(table="lead_time_and_project_life",
+                                       key_col="Technology", ...),
+        }
+
+        returns: {
+            ("battery_properties", "Technology"): {
+                "storage_hours":     {...},   # each property's attrs, unchanged
+                "efficiency_charge": {...},
+            },
+            ("lead_time_and_project_life", "Technology"): {
+                "lifetime_technical": {...},
+            },
+        }
+    """
+    groups = {}
+    for property_name, attrs in property_map.items():
+        source_key = (attrs["table"], attrs["key_col"])
+        groups.setdefault(source_key, {})[property_name] = attrs
+    return groups
+
+
+def _required_property_columns(props: dict[str, dict]) -> set[str]:
+    """Returns every ``value_col``/``key_col`` named across a source's properties.
+
+    The returned set of strings is primarily used to pass to ``_assert_table_valid``
+    as the ``required_cols`` argument.
+
+    I/O Example:
+        props:
+            fom: {table: fixed_opex_new_entrants, key_col: Technology, value_col: Base value}
+            vom: {table: variable_opex_new_entrants, key_col: Generator, value_col: Base value}
+
+        returns:
+            {"Technology", "Generator", "Base value"}
+    """
+    return {d[col] for col in ["value_col", "key_col"] for d in props.values()}
+
+
+def _get_property_value_map(
+    table: pd.DataFrame, attrs: dict[str, str | float | bool]
+) -> pd.Series:
+    """Returns one property's value, keyed by ``key_col`` and scaled.
+
+    Numeric columns (the default) are coerced with ``pd.to_numeric`` before ``scale``
+    is applied, raising on anything unparseable — a stray typo in the IASR table. A
+    map entry with ``numeric=False`` (e.g. a date string) skips both the coercion and
+    the scale.
+
+    I/O Example:
+        table:
+            Technology  Base value
+            Wind        2.0
+            CCGT        5.0
+
+        attrs: {key_col: Technology, value_col: Base value, scale: 1000.0}
+
+        returns (indexed by Technology):
+            Wind    2000.0
+            CCGT    5000.0
+    """
+    value_map = table.set_index(attrs["key_col"])[attrs["value_col"]]
+    if attrs.get("numeric", True):
+        value_map = pd.to_numeric(value_map, errors="raise") * float(
+            attrs.get("scale", 1.0)
+        )
+        # TODO: 'year' type cols become floats from this transform - leave for
+        # validator to type-correct or edit handling here? See Open-ISP/ISPyPSA#145
+    return value_map
+
+
+def _merge_category_keyed_properties(
+    df: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
+    property_map: dict[str, dict],
+    df_key_col: str,
+) -> pd.DataFrame:
+    """Merges every non-unit-keyed property in ``property_map`` onto ``df``.
+
+    Groups properties by their source (table, key_col) — see
+    ``_group_properties_by_source`` — so a table that contributes several properties
+    (e.g. ``battery_properties`` feeds six new entrant storage properties) is
+    validated and fuzzy-matched against ``df_key_col`` values once per property map.
+
+    I/O Example:
+        An abbreviated example merging the 'efficiency_charge' property into an
+        'existing_planned_storage' summary table.
+
+        df:
+            name             technology
+            Liddell BESS     Battery storage (4hrs storage)
+
+        df_key_col = "technology"
+
+        property_map:
+            efficiency_charge:  table="battery_properties",
+                                key_col="Technology",
+                                value_col="Charge efficiency_%"
+
+        iasr_tables['battery_properties']:
+            Technology                              Charge efficiency_%
+            Battery storage (4hrs storage)          92.5
+
+        returns (adds one column per map key):
+            name             technology                       efficiency_charge
+            Liddell BESS     Battery storage (4hrs storage)   92.5
+    """
+    df = df.copy()
+    for (table_name, key_col), props in _group_properties_by_source(
+        property_map
+    ).items():
+        table = iasr_tables[table_name]
+        _assert_table_valid(
+            table,
+            table_name,
+            _required_property_columns(props),
+            f"{sorted(props.keys())}",
+        )
+        matched_key_col = _fuzzy_map_to_allowed_values(
+            df[df_key_col],
+            table[key_col],
+            task_desc=f"merging properties from '{table_name}'",
+        )
+        for new_col, attrs in props.items():
+            property_values = _get_property_value_map(table, attrs)
+            df[new_col] = matched_key_col.map(property_values)
+    return df
+
+
 def _is_battery_row(
     df: pd.DataFrame, col_to_check: str = "Technology Type"
 ) -> pd.Series:
@@ -429,6 +768,31 @@ def _is_storage_row(
 ) -> pd.Series:
     """Wrapper that returns union of ``_is_battery_row`` and ``_is_pumped_hydro_row``."""
     return _is_battery_row(df, col_to_check) | _is_pumped_hydro_row(df, col_to_check)
+
+
+def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
+    """Splits the round-trip 'round_trip_efficiency' (%) into charge and discharge legs.
+
+    The IASR PHES tables give only a single round-trip efficiency. Assuming symmetric
+    legs, each one-way efficiency is its square root, so e.g. a 76% round trip becomes
+    ~87.2% charge and ~87.2% discharge (sqrt(0.76) ≈ 0.872). The function returns
+    the input `phes` df with two new columns (efficiency_charge and efficiency_discharge),
+    dropping the intermediate round_trip_efficiency column.
+
+    I/O Example:
+        phes:
+            name                 round_trip_efficiency
+            NQ Pumped Hydro-10h  76.0
+
+        returns (adds the two efficiency columns):
+            name                 efficiency_charge  efficiency_discharge
+            NQ Pumped Hydro-10h  87.18              87.18
+    """
+    phes = phes.copy()
+    one_way_efficiency = (phes["round_trip_efficiency"] / 100) ** 0.5 * 100
+    phes["efficiency_charge"] = one_way_efficiency
+    phes["efficiency_discharge"] = one_way_efficiency
+    return phes.drop(columns=["round_trip_efficiency"])
 
 
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:

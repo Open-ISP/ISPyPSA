@@ -1,0 +1,138 @@
+IASR ID,Power Station,Technology Type,Min Stable Level (MW)
+ANGAS1,Angaston,Reciprocating engine,3.0
+ANGAS2,Angaston,Reciprocating engine,3.0
+BDL01,Bairnsdale,OCGT (small GT),20.0
+BDL02,Bairnsdale,OCGT (small GT),20.0
+BARCALDN,Barcaldine Power Station,OCGT (small GT),20.0
+BIPS1_01,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_02,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_03,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_04,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_05,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_06,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_07,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_08,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_09,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_10,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_11,Barker Inlet Power Station,Reciprocating engine,8.0
+BIPS1_12,Barker Inlet Power Station,Reciprocating engine,8.0
+BBTHREE1,Bell Bay Three,OCGT (large GT),20.0
+BBTHREE2,Bell Bay Three,OCGT (large GT),20.0
+BBTHREE3,Bell Bay Three,OCGT (large GT),20.0
+BOLIVPS1_1,Bolivar Power Station,OCGT (small GT),4.0
+BOLIVPS1_2,Bolivar Power Station,OCGT (small GT),4.0
+BOLIVPS1_3,Bolivar Power Station,OCGT (small GT),4.0
+BOLIVPS1_4,Bolivar Power Station,OCGT (small GT),4.0
+BRAEMAR1,Braemar,OCGT (large GT),110.0
+BRAEMAR2,Braemar,OCGT (large GT),110.0
+BRAEMAR3,Braemar,OCGT (large GT),110.0
+BRAEMAR5,Braemar 2 Power Station,OCGT (large GT),80.0
+BRAEMAR6,Braemar 2 Power Station,OCGT (large GT),80.0
+BRAEMAR7,Braemar 2 Power Station,OCGT (large GT),80.0
+CG1,Colongra,OCGT (small GT),125.0
+CG2,Colongra,OCGT (small GT),125.0
+CG3,Colongra,OCGT (small GT),125.0
+CG4,Colongra,OCGT (small GT),125.0
+CPSA_GT1,Condamine A,CCGT - Gas Turbine,20.0
+CPSA_GT2,Condamine A,CCGT - Gas Turbine,20.0
+CPSA_ST,Condamine A,CCGT - Steam Turbine,13.1
+DDPS1_GT1,Darling Downs,CCGT - Gas Turbine,58.3
+DDPS1_GT2,Darling Downs,CCGT - Gas Turbine,58.3
+DDPS1_GT3,Darling Downs,CCGT - Gas Turbine,58.3
+DDPS1_ST,Darling Downs,CCGT - Steam Turbine,38.9
+DRYCGT1,Dry Creek GT,OCGT (small GT),20.0
+DRYCGT2,Dry Creek GT,OCGT (small GT),20.0
+DRYCGT3,Dry Creek GT,OCGT (small GT),20.0
+AGLHAL01,Hallett GT,OCGT (small GT),9.0
+AGLHAL02,Hallett GT,OCGT (small GT),8.0
+AGLHAL03,Hallett GT,OCGT (small GT),10.0
+AGLHAL04,Hallett GT,OCGT (small GT),10.0
+AGLHAL05,Hallett GT,OCGT (small GT),9.0
+AGLHAL06,Hallett GT,OCGT (small GT),8.5
+AGLHAL07,Hallett GT,OCGT (small GT),10.5
+AGLHAL08,Hallett GT,OCGT (small GT),13.0
+AGLHAL09,Hallett GT,OCGT (small GT),12.0
+AGLHAL10,Hallett GT,OCGT (small GT),8.0
+AGLHAL11,Hallett GT,OCGT (small GT),8.0
+AGLHAL12,Hallett GT,OCGT (small GT),8.0
+AGLHALRE,Hallett GT,OCGT (small GT),18.0
+HEZ1,Hunter Economic Zone,Reciprocating engine,5.2
+JLA01,Jeeralang A,OCGT (small GT),20.0
+JLA02,Jeeralang A,OCGT (small GT),20.0
+JLA03,Jeeralang A,OCGT (small GT),20.0
+JLA04,Jeeralang A,OCGT (small GT),20.0
+JLB01,Jeeralang B,OCGT (small GT),30.0
+JLB02,Jeeralang B,OCGT (small GT),30.0
+JLB03,Jeeralang B,OCGT (small GT),30.0
+LADBROK1,Ladbroke Grove,OCGT (small GT),20.0
+LADBROK2,Ladbroke Grove,OCGT (small GT),20.0
+LNGS1,Laverton North,OCGT (large GT),65.0
+LNGS2,Laverton North,OCGT (large GT),65.0
+LONSDALE,Lonsdale,Reciprocating engine,1.0
+MINTARO,Mintaro GT,OCGT (small GT),30.0
+MORTLK11,Mortlake,OCGT (large GT),125.0
+MORTLK12,Mortlake,OCGT (large GT),125.0
+MSTUART1,Mt Stuart,OCGT (small GT),30.0
+MSTUART2,Mt Stuart,OCGT (small GT),30.0
+MSTUART3,Mt Stuart,OCGT (small GT),30.0
+NPS,Newport,CCGT - Steam Turbine,100.0
+OAKEY1,Oakey Power Station,OCGT (large GT),45.0
+OAKEY2,Oakey Power Station,OCGT (large GT),45.0
+OsborneGT,Osborne,CCGT - Gas Turbine,90.0
+OsborneST,Osborne,CCGT - Steam Turbine,20.0
+PPCCGTGT1,Pelican Point,CCGT - Gas Turbine,60.0
+PPCCGTGT2,Pelican Point,CCGT - Gas Turbine,60.0
+PPCCGTST,Pelican Point,CCGT - Steam Turbine,42.0
+POR01-1,Port Lincoln GT,OCGT (small GT),7.0
+POR01-2,Port Lincoln GT,OCGT (small GT),7.0
+POR01-3,Port Lincoln GT,OCGT (small GT),7.0
+PTSTAN1_1,Port Stanvac 1,Reciprocating engine,0.9
+PTSTAN1_2,Port Stanvac 1,Reciprocating engine,0.9
+QPS1,Quarantine,OCGT (small GT),5.0
+QPS2,Quarantine,OCGT (small GT),3.0
+QPS3,Quarantine,OCGT (small GT),5.0
+QPS4,Quarantine,OCGT (small GT),3.0
+QPS5,Quarantine,OCGT (small GT),74.0
+ROMA_7,Roma,OCGT (small GT),5.0
+ROMA_8,Roma,OCGT (small GT),5.0
+SITHE01,Smithfield Energy Facility,OCGT (small GT),20.0
+SNAPPER1_1,Snapper Point Power Station,OCGT (small GT),5.0
+SNAPPER1_2,Snapper Point Power Station,OCGT (small GT),5.0
+SNAPPER1_3,Snapper Point Power Station,OCGT (small GT),5.0
+SNAPPER1_4,Snapper Point Power Station,OCGT (small GT),5.0
+SNAPPER1_5,Snapper Point Power Station,OCGT (small GT),5.0
+SNUG1,Snuggery,OCGT (small GT),5.0
+SNUG2,Snuggery,OCGT (small GT),5.0
+SNUG3,Snuggery,OCGT (small GT),5.0
+AGLSOM01,Somerton,OCGT (small GT),10.0
+AGLSOM02,Somerton,OCGT (small GT),10.0
+AGLSOM03,Somerton,OCGT (small GT),10.0
+AGLSOM04,Somerton,OCGT (small GT),10.0
+SWAN_E,Swanbank E GT,CCGT,95.0
+TALWA1,Tallawarra,CCGT,190.0
+Tallawarra B,Tallawarra B,OCGT (large GT),160.0
+TVCC201_GT,Tamar Valley Combined Cycle,CCGT - Gas Turbine,70.8
+TVCC201_ST,Tamar Valley Combined Cycle,CCGT - Steam Turbine,41.4
+TVPP104,Tamar Valley Peaking,OCGT (large GT),30.0
+TORRB1,Torrens Island B,CCGT - Steam Turbine,40.0
+TORRB2,Torrens Island B,CCGT - Steam Turbine,40.0
+TORRB3,Torrens Island B,CCGT - Steam Turbine,40.0
+TORRB4,Torrens Island B,CCGT - Steam Turbine,40.0
+YABULU,Townsville Power Station,CCGT - Gas Turbine,75.0
+YABULU2,Townsville Power Station,CCGT - Steam Turbine,55.0
+URANQ11,Uranquinty,OCGT (large GT),80.0
+URANQ12,Uranquinty,OCGT (large GT),80.0
+URANQ13,Uranquinty,OCGT (large GT),80.0
+URANQ14,Uranquinty,OCGT (large GT),80.0
+VPGS1,Valley Power,OCGT (small GT),30.0
+VPGS2,Valley Power,OCGT (small GT),30.0
+VPGS3,Valley Power,OCGT (small GT),30.0
+VPGS4,Valley Power,OCGT (small GT),30.0
+VPGS5,Valley Power,OCGT (small GT),30.0
+VPGS6,Valley Power,OCGT (small GT),30.0
+YARWUN_1,Yarwun Cogen,CCGT,106.0
+Tully Sugar Mill Biomass,Tully Sugar Mill Biomass,Biomass,2.0
+HUNTER1,Hunter Power Station,OCGT (large GT),100.0
+HUNTER2,Hunter Power Station,OCGT (large GT),100.0
+Kogan Gas,Brigalow GT,OCGT (large GT),104.0
+Lockyer Valley GT,Lockyer Valley GT,OCGT (small GT),22.0

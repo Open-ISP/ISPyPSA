@@ -490,17 +490,66 @@ def test_translate_network_to_links_rezs_attached_to_parent_node(
 def test_translate_network_to_links_zero_capacity_parallel_path(
     csv_str_to_df, sample_model_config
 ):
-    """A new parallel corridor has zero existing capacity, given as a
-    timeslice = NaN fallback of 0 in both directions. It becomes an inert
-    existing link at p_nom 0 (its buildable capacity is modelled by expansion
-    links), and the zero-p_nom link is skipped when translating per-timeslice
-    limits, so it yields no link_timeslice_limits rows and no 0/0 division."""
+    """A new parallel corridor has zero existing capacity, which the templater
+    (_new_parallel_path_rows) gives as explicit 0 rows for each direction and
+    each region-prefixed canonical timeslice, with no fallback row. It becomes
+    an inert existing link at p_nom 0 (its buildable capacity is modelled by
+    expansion links) whose per-timeslice limits are per-unit 0 rather than an
+    undefined 0/0, so pypsa_build treats it like any other link."""
     ispypsa_tables = _network_tables(csv_str_to_df)
     ispypsa_tables["network_transmission_paths"] = csv_str_to_df("""
         path_id,   geo_from,  geo_to,  carrier
         CNSW-SNW,  CNSW,      SNW,     AC
     """)
-    # Zero existing capacity as a timeslice = NaN fallback (covers the year).
+    # The templater's shape: 2 directions x 3 named timeslices, all 0, no fallback.
+    ispypsa_tables["network_transmission_path_limits"] = csv_str_to_df("""
+        path_id,   direction,  timeslice,             capacity
+        CNSW-SNW,  forward,    nsw_peak_demand,       0
+        CNSW-SNW,  forward,    nsw_summer_typical,    0
+        CNSW-SNW,  forward,    nsw_winter_reference,  0
+        CNSW-SNW,  reverse,    nsw_peak_demand,       0
+        CNSW-SNW,  reverse,    nsw_summer_typical,    0
+        CNSW-SNW,  reverse,    nsw_winter_reference,  0
+    """)
+    ispypsa_tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+    """)
+
+    links, link_timeslice_limits = _translate_network_to_links(
+        ispypsa_tables, sample_model_config
+    )
+
+    expected_links = csv_str_to_df("""
+        isp_name,  name,                carrier, bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
+        CNSW-SNW,  CNSW-SNW_existing,   AC,      CNSW,  SNW,   0,      0.0,       1.0,       2025,        inf,       ,              False,             flow_path
+    """)
+    pd.testing.assert_frame_equal(links, expected_links, check_dtype=False)
+
+    expected_limits = csv_str_to_df("""
+        name,               attribute,  timeslice,             value
+        CNSW-SNW_existing,  p_max_pu,   nsw_peak_demand,       0.0
+        CNSW-SNW_existing,  p_max_pu,   nsw_summer_typical,    0.0
+        CNSW-SNW_existing,  p_max_pu,   nsw_winter_reference,  0.0
+        CNSW-SNW_existing,  p_min_pu,   nsw_peak_demand,       0.0
+        CNSW-SNW_existing,  p_min_pu,   nsw_summer_typical,    0.0
+        CNSW-SNW_existing,  p_min_pu,   nsw_winter_reference,  0.0
+    """)
+    pd.testing.assert_frame_equal(
+        link_timeslice_limits, expected_limits, check_dtype=False
+    )
+
+
+def test_translate_network_to_links_zero_capacity_fallback_row(
+    csv_str_to_df, sample_model_config
+):
+    """A zero-capacity corridor given as a timeslice = NaN fallback of 0 in
+    both directions (a hand-authored alternative to the templater's named
+    rows) also becomes an inert p_nom 0 link with per-unit 0 fallbacks."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_paths"] = csv_str_to_df("""
+        path_id,   geo_from,  geo_to,  carrier
+        CNSW-SNW,  CNSW,      SNW,     AC
+    """)
     ispypsa_tables["network_transmission_path_limits"] = csv_str_to_df("""
         path_id,   direction,  timeslice,  capacity
         CNSW-SNW,  forward,    ,           0
@@ -521,7 +570,9 @@ def test_translate_network_to_links_zero_capacity_parallel_path(
     pd.testing.assert_frame_equal(links, expected_links, check_dtype=False)
 
     expected_limits = csv_str_to_df("""
-        name,  attribute,  timeslice,  value
+        name,               attribute,  timeslice,  value
+        CNSW-SNW_existing,  p_max_pu,   ,           0.0
+        CNSW-SNW_existing,  p_min_pu,   ,           0.0
     """)
     pd.testing.assert_frame_equal(
         link_timeslice_limits, expected_limits, check_dtype=False
