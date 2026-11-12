@@ -143,8 +143,7 @@ def test_add_non_rez_geographies_to_rez_table(csv_str_to_df, caplog):
 
     # and that the additions were logged:
     msg = (
-        "IASR TABLE EDIT: Added non-REZ geographies to 'renewable_energy_zones' "
-        "IASR table: ['N0', 'V0']"
+        "Added non-REZ geographies to 'renewable_energy_zones' IASR table: ['N0', 'V0']"
     )
     assert msg in caplog.text
 

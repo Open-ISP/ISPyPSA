@@ -417,10 +417,29 @@ def _pick_location(row: pd.Series) -> str:
 
 
 def _set_geo_id(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds 'geo_id' column: REZ ID with Sub-region fallback (see ``_pick_location``)."""
+    """Adds 'geo_id': REZ ID with Sub-region fallback (see ``_pick_location``), with
+    sub-REZ areas mapped to their parent REZ (``_SUB_REZ_AREA_TO_REZ_ID``).
+
+    I/O Example:
+        df:
+            REZ ID          Sub-region
+            N3              CNSW
+            Not Applicable  NQ
+            Q8a             SQ
+
+        returns:
+            REZ ID          Sub-region  geo_id
+            N3              CNSW        N3
+            Not Applicable  NQ          NQ
+            Q8a             SQ          Q8      # sub-area of the Q8 REZ
+    """
+    # Deferred import to avoid a circular import - see _map_geo_id_to_granularity.
+    from ispypsa.templater.mappings import _SUB_REZ_AREA_TO_REZ_ID
+
     df = df.copy()
     # apply() returns float64 on an empty frame; geo_id always holds strings
     df["geo_id"] = df.apply(_pick_location, axis=1).astype("object")
+    df["geo_id"] = df["geo_id"].replace(_SUB_REZ_AREA_TO_REZ_ID)
     return df
 
 
@@ -553,48 +572,6 @@ def _assert_table_valid(
         )
     if table.empty:
         raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
-
-
-def _apply_iasr_table_replacements(
-    iasr_tables: dict[str, pd.DataFrame], corrections: list[dict]
-) -> dict[str, pd.DataFrame]:
-    """Returns ``iasr_tables`` with 'corrections' applied to input IASR tables.
-
-    Shared shape for small, explicitly declared fixes (a documented typo or naming
-    mismatch) to specified locations. ``corrections`` can carry multiple fixes,
-    each with 'fix' specifics (``table_name``, ``column``, ``replacements``) bundled.
-    Returns a shallow copy of ``iasr_tables`` with only listed tables replaced.
-
-    Note: while fuzzy-matching is used to standardise names or other ID strings,
-    some typos/diffs are too 'big' to pass any safe fuzzy-match threshold (see
-    example below - fuzz.ratio("KiataWF1", "KIATAWF1") == 50). This function
-    explicitly handles those known instances where this is the case.
-
-    I/O Example:
-        iasr_tables["maximum_capacity_..."]:
-            IASR ID   Power Station    Installed capacity (MW)
-            KiataWF1  Kiata Wind Farm  31.05
-            BW01      Bayswater        660.0
-
-        corrections (as a single dict element in list):
-            table_name:   "maximum_capacity_..."
-            column:       "IASR ID"
-            replacements: {"KiataWF1": "KIATAWF1"}
-
-        returns copy of iasr_tables with only listed tables edited:
-            iasr_tables["maximum_capacity_..."]:
-                IASR ID   Power Station    Installed capacity (MW)
-                KIATAWF1  Kiata Wind Farm  31.05
-                BW01      Bayswater        660.0
-    """
-    corrected_tables = iasr_tables
-    for correction in corrections:
-        table_name = correction["table_name"]
-        col_to_fix = correction["column"]
-        replacements = correction["replacements"]
-        corrected = iasr_tables[table_name].replace({col_to_fix: replacements})
-        corrected_tables = {**corrected_tables, table_name: corrected}
-    return corrected_tables
 
 
 def _group_properties_by_source(

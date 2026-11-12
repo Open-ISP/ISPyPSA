@@ -59,7 +59,7 @@ def _new_entrant_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     summary table itself.
 
     Covers every generator/storage technology used across the new-format fixtures
-    below (Wind, Large scale Solar PV, OCGT (small GT), Battery Storage (2hrs
+    below (Wind, Large scale Solar PV, OCGT (small GT), Battery storage (2hrs
     storage), Pumped Hydro (24hrs storage)/BOTN - Cethana). technology_specific_lcfs
     and locational_cost_factors additionally cover every geo_id those fixtures use
     (Q1, CNSW, SNW, NQ, TAS), including NQ - used by the nem_regions/single_region
@@ -504,7 +504,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).
@@ -812,7 +812,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).
@@ -1010,7 +1010,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
             },
-            iasr_workbook_version="ignored-by-patch",
+            iasr_workbook_version="7.5",
         )
         # The templater's output set must match what the create_ispypsa_inputs
         # task tracks (see test_list_templater_output_files_granularity_invariant).

@@ -103,7 +103,7 @@ def _storage_property_tables(csv_str_to_df):
         "pumped_hydro_new_entrant_properties": csv_str_to_df("""
             Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
             Pumped Hydro (24hrs storage),  24,                       76
-            BOTN - Cethana - 20h,          20,                       80
+            BOTN - Cethana,                20,                       80
         """),
         "fixed_opex_new_entrants": csv_str_to_df("""
             Technology Type,                 Base value ($/kW/year)),  Unit
@@ -129,7 +129,7 @@ def _storage_property_tables(csv_str_to_df):
         "technology_specific_lcfs": csv_str_to_df("""
             Cost zone / REZ ID, REZ name / Description, Battery storage (2hrs storage), Distributed Resources Batteries, BOTN - Cethana
             N3,                 Central-West Orana,     1.04,                           Not Applicable,                  Not Applicable
-            NQ,                 Subregional Ref Node,   Not Applicable,                 1.06,                            100
+            NQ,                 Subregional Ref Node,   Not Applicable,                 1.06,                            1.0
         """),
         "locational_cost_factors": csv_str_to_df("""
             Cost zone / REZ ID, O&M costs 3
@@ -171,8 +171,8 @@ def test_template_storage_new_entrant(csv_str_to_df):
 
 def test_merge_phes_properties(csv_str_to_df):
     # storage_hours is merged by technology after BOTN's technology is overridden to its own
-    # name and the pumped-hydro table's BOTN key normalised to match; charge/discharge
-    # efficiency are derived from the single round-trip pumping efficiency.
+    # name, which picks up BOTN's own row; charge/discharge efficiency are derived from
+    # the single round-trip pumping efficiency.
     phes = csv_str_to_df("""
         name,                  technology
         NQ Pumped Hydro - 24h, Pumped Hydro (24hrs storage)
@@ -182,7 +182,7 @@ def test_merge_phes_properties(csv_str_to_df):
         "pumped_hydro_new_entrant_properties": csv_str_to_df("""
             Power Station / Technology,    Storage capacity (hours), Pumping efficiency (%)
             Pumped Hydro (24hrs storage),  24,                       64
-            BOTN - Cethana - 20h,          20,                       81
+            BOTN - Cethana,                20,                       81
         """)
     }
 
@@ -259,12 +259,6 @@ def test_merge_phes_properties_empty(csv_str_to_df):
         name, technology, storage_hours, efficiency_charge, efficiency_discharge
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# (BOTN's pumped-hydro key correction is now a plain _apply_iasr_table_replacements
-# call -- see helpers.py / test_helpers.py for that mechanism's own tests. Its wiring
-# here is covered incidentally by test_merge_phes_properties above, which already
-# exercises a full-spelling BOTN row resolving correctly.)
 
 
 # --- _collapse_geo_id_to_granularity ---
@@ -477,21 +471,18 @@ def test_add_resource_type_empty_input():
 
 def test_assert_build_cost_zone_matches_geo_id(csv_str_to_df):
     # geo_id equals 'Regional build cost zone' for every row -> no raise.
-    # Includes existing 'known typo' (NSA -> CSA) which should be explicitly handled.
     new_entrants = csv_str_to_df("""
         geo_id, Regional build cost zone
         Q1,     Q1
         NQ,     NQ
-        NSA,    CSA
     """)
     _assert_build_cost_zone_matches_geo_id(new_entrants)
 
 
 def test_assert_build_cost_zone_matches_geo_id_raises(csv_str_to_df):
-    # An unexpected (geo_id, cost zone) split that isn't the known typo -> raise.
+    # Rows where geo_id and the cost zone differ -> raise, listing each pair.
     new_entrants = csv_str_to_df("""
         geo_id, Regional build cost zone
-        NSA,    CSA
         Q1,     Q2
         Test,
     """)
@@ -499,8 +490,8 @@ def test_assert_build_cost_zone_matches_geo_id_raises(csv_str_to_df):
     with pytest.raises(
         ValueError,
         match=(
-            r"Unexpected divergence between geo_id and 'Regional build cost zone' in "
-            r"new_entrants_summary: \[\('Q1', 'Q2'\), \('Test', nan\)\]"
+            r"geo_id differs from 'Regional build cost zone' in new_entrants_summary: "
+            r"\[\('Q1', 'Q2'\), \('Test', nan\)\]"
         ),
     ):
         _assert_build_cost_zone_matches_geo_id(new_entrants)
@@ -510,12 +501,12 @@ def test_assert_build_cost_zone_matches_geo_id_raises(csv_str_to_df):
 
 
 def test_reshape_technology_specific_lcfs(csv_str_to_df):
-    # Wide -> long: factors become percentages (x100), the bespoke BOTN column (already a
-    # percentage) is left unscaled, and "Not Applicable" cells are dropped.
+    # Wide -> long: factors become percentages (x100), and "Not Applicable" cells are
+    # dropped.
     technology_specific_lcfs = csv_str_to_df("""
         Cost zone / REZ ID, REZ name / Description, Wind,           BOTN - Cethana
         Q1,                 Far North QLD,          1.05,           Not Applicable
-        TAS,                Subregional Ref Node,   Not Applicable, 100
+        TAS,                Subregional Ref Node,   Not Applicable, 1.0
     """)
 
     result = _reshape_technology_specific_lcfs(technology_specific_lcfs)
@@ -559,7 +550,7 @@ def test_merge_lcf_build(csv_str_to_df):
         Cost zone / REZ ID, REZ name / Description, Wind,           OCGT (Small GT), Pumped Hydro (24hrs storage), BOTN - Cethana
         Q1,                 Far North QLD,          1.05,           Not Applicable,  Not Applicable,               Not Applicable
         NQ,                 Subregional Ref Node,   Not Applicable, 1.08,            Not Applicable,               Not Applicable
-        TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,  1.0469,                       100
+        TAS,                Subregional Ref Node,   Not Applicable, Not Applicable,  1.0469,                       1.0
     """)
 
     result = _merge_lcf_build(new_entrants, technology_specific_lcfs)
