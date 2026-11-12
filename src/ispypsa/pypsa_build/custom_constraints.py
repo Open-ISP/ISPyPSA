@@ -302,8 +302,8 @@ def _linopy_constraint_snapshots(
             SWQLD1           2025               qld_peak_demand
 
         returns:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00
+            period  timestep
+            2025    2025-01-01 01:00
 
         rhs_row:
             constraint_name  investment_period  timeslice
@@ -403,8 +403,13 @@ def _timeslice_snapshots_in_period(
     investment_period: float,
 ) -> pd.MultiIndex:
     """The snapshots in one investment_period at which any of the given
-    timeslices is active, as an (investment_periods, snapshots) index. A blank
-    (NaN) investment_period matches no snapshots.
+    timeslices is active, as a (period, timestep) index. A blank (NaN)
+    investment_period matches no snapshots.
+
+    The levels are named after the network's snapshot index rather than
+    timeslice_snapshots' columns, so a linopy constraint's scope looks the
+    same whether it came from here or from slicing network.snapshots (see
+    _linopy_constraint_snapshots).
 
     I/O Example:
         timeslice_snapshots:
@@ -418,16 +423,17 @@ def _timeslice_snapshots_in_period(
         investment_period: 2025
 
         returns:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00
-            2025                2025-01-01 02:00
+            period  timestep
+            2025    2025-01-01 01:00
+            2025    2025-01-01 02:00
     """
     in_scope = timeslice_snapshots["timeslice"].isin(timeslices) & (
         timeslice_snapshots["investment_periods"] == investment_period
     )
     selected = timeslice_snapshots.loc[in_scope]
     return pd.MultiIndex.from_arrays(
-        [selected["investment_periods"], pd.to_datetime(selected["snapshots"])]
+        [selected["investment_periods"], pd.to_datetime(selected["snapshots"])],
+        names=["period", "timestep"],
     )
 
 
@@ -517,9 +523,9 @@ def _build_lhs_expression(
             load_SQ           Load       p_set      -0.33
 
         scope:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00   # t1
-            2025                2025-01-01 02:00   # t2
+            period  timestep
+            2025    2025-01-01 01:00   # t1
+            2025    2025-01-01 02:00   # t2
 
         name: "SWQLD1_2025_qld_peak_demand"   # only used in the error message
 
@@ -597,9 +603,9 @@ def _sum_variable_terms(
             NSW-QLD_exp_2025  Link-p_nom     -1.0
 
         scope:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00   # t1
-            2025                2025-01-01 02:00   # t2
+            period  timestep
+            2025    2025-01-01 01:00   # t1
+            2025    2025-01-01 02:00   # t2
 
         returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.5 Link-p[t, CQ-NQ_existing]
@@ -630,9 +636,9 @@ def _sum_terms_of_variable_type(
             CQ-NQ_existing    -0.75
 
         scope:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00   # t1
-            2025                2025-01-01 02:00   # t2
+            period  timestep
+            2025    2025-01-01 01:00   # t1
+            2025    2025-01-01 02:00   # t2
 
         returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.75 Link-p[t, CQ-NQ_existing]
@@ -658,9 +664,9 @@ def _select_variables_of_type(
 
     I/O Example:
         scope:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00   # t1
-            2025                2025-01-01 02:00   # t2
+            period  timestep
+            2025    2025-01-01 01:00   # t1
+            2025    2025-01-01 02:00   # t2
 
         variable_type: "Link-p"
         component_names: ["NSW-QLD_existing", "CQ-NQ_existing"]
@@ -696,9 +702,9 @@ def _sum_load_terms(
             load_SQ        -0.33
 
         scope:
-            investment_periods  snapshots
-            2025                2025-01-01 01:00
-            2025                2025-01-01 02:00
+            period  timestep
+            2025    2025-01-01 01:00
+            2025    2025-01-01 02:00
 
         network.loads_t.p_set:
             period  timestep          load_SQ
