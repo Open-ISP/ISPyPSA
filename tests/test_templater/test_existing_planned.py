@@ -372,9 +372,9 @@ def test_template_generators_existing_planned(csv_str_to_df):
     # tests above. Columns are compared in order: this is the only test that pins
     # _GENERATOR_COLUMNS' schema ordering (elsewhere it's compared as a set).
     summary = csv_str_to_df("""
-        IASR ID / DLT names,    Power Station,  Technology Type,        REZ ID,         Sub-region, Fuel type,  Fuel cost mapping
-        BW01,                   Bayswater,      Steam Sub Critical,     Not Applicable, CNSW,       Black Coal, Bayswater
-        Q1G1,                   Solar Farm,     Large scale Solar PV,   Q1,             SQ,         Solar,      Solar
+        IASR ID / DLT names,    Power Station,  Technology Type,        REZ ID,         Sub-region, Fuel type
+        BW01,                   Bayswater,      Steam Sub Critical,     Not Applicable, CNSW,       Black Coal
+        Q1G1,                   Solar Farm,     Large scale Solar PV,   Q1,             SQ,         Solar
     """)
     phes_properties = pd.DataFrame(columns=["Power Station"])
     maximum_capacity = csv_str_to_df("""
@@ -428,7 +428,6 @@ def test_template_generators_existing_planned(csv_str_to_df):
         "technology",
         "geo_id",
         "fuel_type",
-        "fuel_price_mapping",
         "capacity",
         "vom",
         "heat_rate",

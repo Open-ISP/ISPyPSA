@@ -686,6 +686,17 @@ _NON_REZ_GEOGRAPHIES = pd.DataFrame(
     ]
 )
 
+# IASR `*_summary` table column names → schema column names.
+# Shared by the existing/planned, new entrant and fuel price templaters, which all read
+# the raw summary tables.
+_SUMMARY_COLUMN_RENAMES = {
+    "IASR ID / DLT names": "name",
+    "Power Station": "power_station",
+    "Technology Type": "technology",
+    "Fuel type": "fuel_type",
+    "Fuel cost mapping": "fuel_cost_mapping",
+}
+
 """
 New entrant property columns (keys) mapped to the IASR table and columns that contain
 property values and the technology for which the values apply. Consumed by

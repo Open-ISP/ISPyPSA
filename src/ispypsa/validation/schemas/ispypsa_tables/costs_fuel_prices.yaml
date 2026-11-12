@@ -8,30 +8,45 @@ table: costs_fuel_prices
 # columns/tables needed to calculate SRMC (dynamic) required.
 required: true
 unique:
-  - [fuel_type, fuel_price_mapping, year]
+  - [fuel_type, power_station, technology, geo_id, year]
 description: >
-  Fuel prices by year for generation and storage units.
+  Fuel prices by year for existing and new entrant generation units.
 
   Contains fuel prices used to calculate dynamic marginal costs for thermal generators.
 
+  The 'key' columns (power_station, technology, geo_id and year) identify the generator
+  and year that a fuel price applies to. Any combination of keys may be left empty to act
+  as a wildcard, matching generators on a 'most-specific wins' basis. The
+  custom_validation rules require the wildcard resolution to be both unambiguous
+  and complete.
+
   Source tables:
+    - `existing_committed_anticipated_additional_generator_summary`
+    - `new_entrants_summary`
     - `coal_fuel_price`
     - `biomass_fuel_price`
-    - `gas_and_liquid_fuel_prices_consultant_scenario_mapping`
     - `gas_prices_existing_generators`
     - `gas_prices_new_entrants`
     - `liquid_fuel_prices`
-    - `gpg_secondary_fuel_prices` # maybe
+    - `gpg_secondary_fuel_prices`
     - `hydrogen_prices`
     - `biomethane_prices`
 
-  Source notes:
-  The consultant scenario mapping table is used to map between specified ISP
-  scenario names and the gas, liquid fuel, hydrogen and biomenthane price scenario
-  names. This is new in the 2026 ISP (IASR v7.5).
-
-  Rows are also added by the `templater` for VRE fuels (Wind, Solar) with a price
-  of $0.0 for all years.
+  Rows are also added by the `templater` for VRE fuels (Wind, Solar) and Water with
+  a price of $0.0 and every key column empty; wildcard resolution applies this to all
+  generators with those fuel types across all years defined in the model.
+custom_validation:
+  - name: costs_resolve_unambiguously
+    description: >
+      No combination may be matched by two rows tied for the fewest wildcards —
+      resolution must have a single most-specific winner. The combination and
+      wildcard model is outlined in the table description.
+  - name: costs_cover_every_generator_and_year
+    description: >
+      Coverage spans every generator (in generators_existing_planned and
+      generators_new_entrant) and every model year: each must resolve to a row for
+      its fuel_type once wildcards resolve. A row with every key column empty
+      covers all generators of that fuel_type in every year.
 columns:
   fuel_type:
     type: string
@@ -42,23 +57,53 @@ columns:
       There are some fuel types (e.g., Biomethane) that are not used directly by any
       generators in the model, but are used to blend with other fuels to calculate
       final fuel costs.
-  fuel_price_mapping:
+  power_station:
     type: string
-    required: true
+    required: false
+    allowed_values_from:
+      - generators_existing_planned: power_station
     description: >
-      Identifier mapping to specific assets or sets of new entrant assets.
+      Identifier mapping to a specific named power station.
 
-      For most existing and planned generation, maps to specific power stations.
-      For new entrants, maps to technology/location groups.
+      Most existing and planned thermal generators have a station-level fuel price
+      given in the IASR workbook. The strings in this column should match those in
+      the 'power_station' column of the 'generators_existing_planned' table.
 
-      Source notes:
-      For purely 'blending' fuels (e.g. Biomethane) and VRE fuel types (Wind, Solar),
-      that don't map to a specific generator, technology, or location this column is
-      filled by the `templater` with the corresponding `fuel_type` value.
+      If absent (or empty):
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
+  technology:
+    type: string
+    required: false
+    allowed_values_from:
+      - generators_existing_planned: technology
+      - generators_new_entrant: technology
+    description: >
+      The full proper name of the technology type to which this fuel price applies.
+
+      If absent (or empty):
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
+  geo_id:
+    type: string
+    required: false
+    allowed_values_from:
+      - network_geography: geo_id
+    description: >
+      The geography identifier at which this row's fuel price applies.
+
+      If absent (or empty):
+      Wildcard — applies to every generator that no more specific row covers (a
+      table-wide default).
   year:
     type: int
-    required: true
-    description: Year for which the price applies.
+    required: false
+    description: >
+      Year for which the price applies.
+
+      If absent (or empty):
+      Wildcard — applies to every model year that no more specific row covers (a
+      table-wide default).
   price:
     type: float
     required: true

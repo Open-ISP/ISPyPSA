@@ -1,7 +1,7 @@
 table: emissions_reduction
 required: false
 unique:
-  - [fuel_type, name, year]
+  - [fuel_type, year]
 description: >
   Emissions intensity factors from fuel blending for gas-fired generators.
 
