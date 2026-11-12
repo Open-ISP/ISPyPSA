@@ -1,0 +1,109 @@
+table: custom_constraints_rhs
+required: false
+unique:
+  - [constraint_name, investment_period, timeslice]
+description: >
+  Right-hand side of each custom constraint: one row per linopy constraint
+  pypsa_build adds, scoped in time by its investment_period and timeslice.
+  Consumed by
+  ispypsa.pypsa_build.custom_constraints._add_custom_constraints_with_temporal_scope.
+
+  Source tables:
+    - `custom_constraints_rhs`
+    - `custom_constraints`
+    - `network_expansion_options`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.constraints. Each row of the ISPyPSA
+  custom_constraints_rhs table is resolved onto the investment periods, taking
+  its constraint_type from the constraint's direction in custom_constraints.
+  Rows are dropped in investment periods where their constraint has no
+  custom_constraints_lhs term on a model variable. network_expansion_options
+  adds one row per expansion-limit constraint, capping the capacity built for
+  each expandable path and relaxable constraint.
+
+  If absent:
+  No custom constraints are added to the model.
+custom_validation:
+  - name: blank_investment_period_rows_have_a_blank_timeslice
+    description: >
+      A row with a blank investment_period must also have a blank timeslice.
+      A blank investment_period is reserved for constraints that hold at every
+      snapshot in every investment period (the expansion limits), so a named
+      timeslice contradicts it. For example, (C, blank, qld_peak_demand)
+      fails.
+  - name: blank_investment_period_constraints_have_no_other_rows
+    description: >
+      If a constraint has a row with a blank investment_period, that must be
+      its only row. A blank investment_period is reserved for the
+      expansion-limit constraints, which don't vary over time, so each has
+      just one row. For example, a constraint with rows (C, blank, blank) and
+      (C, 2025, blank) fails.
+  - name: named_timeslices_of_a_constraint_share_a_region
+    description: >
+      Every named timeslice across a constraint's rows must belong to the
+      same region (the timeslice prefix before the first underscore, as in
+      the timeslices table). Each region's timeslices cover the whole year, so
+      timeslices from two regions overlap, and a constraint naming both would
+      have two limits at the snapshots where they do. For example, a
+      constraint with rows for qld_peak_demand and nsw_summer_typical fails.
+  - name: constraint_investment_periods_have_lhs_terms
+    description: >
+      Every (constraint_name, investment_period) here must have at least one
+      custom_constraints_lhs term on a model variable (anything but a Load
+      p_set term) for the same pair, blank matching blank. Load terms are
+      demand data, so a constraint made only of them has nothing to
+      constrain. For example, (SQ1, 2028) fails if its only term in 2028 is
+      on load_SQ.
+  - name: linopy_constraint_names_are_unique
+    description: >
+      Every row must give a different linopy constraint name: its
+      constraint_name, investment_period and timeslice joined with
+      underscores, skipping blanks. For example, (C, 2025, blank) and
+      (C_2025, blank, blank) both give C_2025, so together they fail.
+columns:
+  constraint_name:
+    type: string
+    required: true
+    description: >
+      Constraint the row belongs to: a templated constraint_id, or
+      "<expansion_id>_expansion_limit" for an expansion-limit constraint.
+  investment_period:
+    type: int
+    required: false
+    description: >
+      Investment period the row applies in. Its LHS terms are the
+      custom_constraints_lhs rows with the same constraint_name and
+      investment_period.
+
+      If absent (or empty):
+      The row applies regardless of investment period, and its LHS terms are
+      the ones with a blank investment_period. Only the expansion-limit
+      constraints take this form.
+  timeslice:
+    type: string
+    required: false
+    description: >
+      Timeslice the row applies in: the constraint holds at that timeslice's
+      snapshots (from timeslice_snapshots) in its investment_period. A
+      timeslice with no snapshots in timeslice_snapshots (e.g. one that never
+      activates, or one missed by snapshot aggregation) is valid; the
+      constraint just doesn't apply.
+
+      If absent (or empty):
+      The row is the constraint's fallback: it applies at the snapshots in its
+      investment_period that none of the same constraint's named timeslices
+      cover. A constraint with only named-timeslice rows doesn't bind outside
+      them.
+  rhs:
+    type: float
+    required: true
+    description: >
+      Limit value the constraint's LHS is compared against, before any load
+      terms' per-snapshot demand is moved across.
+  constraint_type:
+    type: string
+    required: true
+    allowed_values: ["<=", ">=", "=="]
+    description: Comparison between the constraint's LHS and rhs.

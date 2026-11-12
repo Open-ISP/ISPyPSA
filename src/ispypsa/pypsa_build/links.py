@@ -149,6 +149,11 @@ def _expand_limits_to_snapshots(
     """One row per (existing link, attribute, snapshot): the named timeslice's
     value where one is active there, else the fallback, else NaN.
 
+    Named limits are placed onto a grid of the network's snapshots, so a
+    timeslice_snapshots row at a snapshot the network doesn't have is
+    silently dropped. The timeslice_snapshots schema rules this out
+    (snapshots_are_in_the_snapshots_table).
+
     I/O Example:
         links (only name and p_nom_extendable are read):
             name            p_nom_extendable

@@ -2,32 +2,6 @@ table: timeslices
 required: false
 unique:
   - [timeslice, reference_year, start_month_day]
-custom_validation:
-  - name: no_overlapping_windows_per_region_and_reference_year
-    description: >
-      Within a region (the timeslice prefix before the first underscore)
-      and reference_year, no two windows may cover the same day. Windows are
-      compared as [start, end) month-day ranges where an end_month_day at or
-      before its start wraps past New Year (e.g. 11-20 to 03-20).
-  - name: windows_cover_full_year_per_region_and_reference_year
-    description: >
-      Within a region (the timeslice prefix before the first underscore)
-      and reference_year, the windows must cover every day of the year, leaving
-      no day with no active timeslice. Together with
-      no_overlapping_windows_per_region_and_reference_year this makes the
-      windows an exact partition of the year: sorted by start, each window ends
-      where the next begins and the last wraps to the first. A region need not
-      use all three timeslice types (e.g. tas has no peak_demand) as long as the
-      windows it does have tile the year.
-  - name: configured_reference_years_have_patterns
-    description: >
-      Every reference year in the model config's
-      temporal.capacity_expansion.reference_year_cycle must appear in
-      reference_year, so each model year has a pattern to draw its windows
-      from. This is a config-to-table check: the table can be valid on its own
-      and still fail it under a particular cycle. Skipped when the table is
-      absent or empty — no patterns at all is a valid configuration (see "If
-      absent"); the check only applies when some patterns are supplied.
 description: >
   Month-day windows during which each demand-condition timeslice is active,
   one pattern per reference (weather) year.
@@ -61,6 +35,32 @@ description: >
   If absent:
   No timeslice is ever active: timeslice-tagged transmission path limits and
   custom-constraint RHS values never apply to any snapshot.
+custom_validation:
+  - name: no_overlapping_windows_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice prefix before the first underscore)
+      and reference_year, no two windows may cover the same day. Windows are
+      compared as [start, end) month-day ranges where an end_month_day at or
+      before its start wraps past New Year (e.g. 11-20 to 03-20).
+  - name: windows_cover_full_year_per_region_and_reference_year
+    description: >
+      Within a region (the timeslice prefix before the first underscore)
+      and reference_year, the windows must cover every day of the year, leaving
+      no day with no active timeslice. Together with
+      no_overlapping_windows_per_region_and_reference_year this makes the
+      windows an exact partition of the year: sorted by start, each window ends
+      where the next begins and the last wraps to the first. A region need not
+      use all three timeslice types (e.g. tas has no peak_demand) as long as the
+      windows it does have tile the year.
+  - name: configured_reference_years_have_patterns
+    description: >
+      Every reference year in the model config's
+      temporal.capacity_expansion.reference_year_cycle must appear in
+      reference_year, so each model year has a pattern to draw its windows
+      from. This is a config-to-table check: the table can be valid on its own
+      and still fail it under a particular cycle. Skipped when the table is
+      absent or empty — no patterns at all is a valid configuration (see "If
+      absent"); the check only applies when some patterns are supplied.
 columns:
   timeslice:
     type: string
