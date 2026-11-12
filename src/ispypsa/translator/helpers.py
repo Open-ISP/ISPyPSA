@@ -2,20 +2,27 @@ import re
 
 import pandas as pd
 
+from ispypsa.model_years import _model_year_of_dates, _model_year_start
 
-def _get_iteration_start_and_end_time(year_type: str, start_year: int, end_year: int):
-    """Get the model start year, end year, and start/end month for iteration, which depend on
-    financial vs calendar year.
+
+def _get_iteration_start_and_end_time(
+    year_type: str, start_year: int, end_year: int
+) -> tuple[int, int, int]:
+    """The stretch of time covered by the model years start_year to end_year,
+    returned as (start_year, end_year, month).
+
+    The stretch starts on the first day of month in the returned start_year,
+    and stops just before the first day of month in the returned end_year.
+    The snapshot builders and temporal filters build datetimes from the three
+    values to step through the model years one at a time.
+
+    I/O Example:
+        ("fy", 2025, 2030)       -> (2024, 2030, 7)   # 2024-07-01 to just before 2030-07-01
+        ("calendar", 2025, 2030) -> (2025, 2031, 1)   # 2025-01-01 to just before 2031-01-01
     """
-    if year_type == "fy":
-        start_year = start_year - 1
-        end_year = end_year
-        month = 7
-    else:
-        start_year = start_year
-        end_year = end_year + 1
-        month = 1
-    return start_year, end_year, month
+    first = _model_year_start(year_type, start_year)
+    end = _model_year_start(year_type, end_year + 1)
+    return first.year, end.year, first.month
 
 
 def _annuitised_investment_costs(
@@ -61,11 +68,12 @@ def _get_commissioning_or_build_year_as_int(
     if not isinstance(commissioning_date_str, str):
         return default_build_year
     else:
-        commissioning_date = pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")
-        if commissioning_date.month < 7 or year_type == "calendar":
-            commissioning_year = int(commissioning_date.year)
-        else:
-            commissioning_year = int(commissioning_date.year) + 1
+        commissioning_date = pd.Series(
+            [pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")]
+        )
+        commissioning_year = int(
+            _model_year_of_dates(year_type, commissioning_date).item()
+        )
         # Cap at default_build_year to align early generators with model start
         return max(commissioning_year, default_build_year)
 

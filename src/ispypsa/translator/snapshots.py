@@ -7,6 +7,7 @@ import pandas as pd
 
 from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
+from ispypsa.model_years import _model_year_of_interval_ends
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
@@ -145,6 +146,23 @@ def _add_investment_periods(
     """Add a column to the snapshots pd.DataFrame specifying the investment period that
     each model time interval belongs too.
 
+    Snapshots are stamped with their interval's end time, so the model year is
+    read off the interval's last instant: a stamp of exactly midnight on a year
+    boundary belongs to the year just ended (see ispypsa.model_years).
+
+    I/O Example (year_type fy, investment_periods [2027, 2028]):
+        snapshots:
+            snapshots
+            2027-06-30 23:30:00
+            2027-07-01 00:00:00  # last interval of FY2027
+            2027-07-01 00:30:00
+
+        returns:
+            investment_periods  snapshots
+            2027                2027-06-30 23:30:00
+            2027                2027-07-01 00:00:00
+            2028                2027-07-01 00:30:00
+
     Args:
         snapshots: pd.DataFrame with "snapshots" column specifying the time intervals
             of the model as datetime objects.
@@ -159,14 +177,9 @@ def _add_investment_periods(
     Returns: pd.DataFrame with column "investment_periods" and "snapshots".
     """
     snapshots = snapshots.copy()
-    snapshots["calendar_year"] = snapshots["snapshots"].dt.year
-    snapshots["effective_year"] = snapshots["calendar_year"].astype("int64")
-
-    if year_type == "fy":
-        mask = snapshots["snapshots"].dt.month >= 7
-        snapshots.loc[mask, "effective_year"] = (
-            snapshots.loc[mask, "effective_year"] + 1
-        )
+    snapshots["effective_year"] = _model_year_of_interval_ends(
+        year_type, snapshots["snapshots"]
+    )
 
     inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
     inv_periods_df = inv_periods_df.sort_values("investment_periods")
