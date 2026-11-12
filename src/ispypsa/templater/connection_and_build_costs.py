@@ -222,7 +222,6 @@ def _template_vre_connection_costs(
     scenario_cost_forecast = _filter_table_by_isp_scenario(
         connection_cost_forecast_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
-        "scenario",
         "connection_cost_forecast_vre",
     )
     merged_df = scenario_cost_forecast.merge(
@@ -389,7 +388,6 @@ def _template_non_vre_connection_costs(
     scenario_cost_forecast = _filter_table_by_isp_scenario(
         connection_cost_forecast_other.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
-        "scenario",
         "connection_cost_forecast_other",
     )
     merged_df = scenario_cost_forecast.merge(
@@ -765,7 +763,6 @@ def _template_costs_new_entrant_build(
     build_costs = _filter_table_by_isp_scenario(
         iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
-        "scenario",
         "build_costs",
     )
     canonical = _get_canon_technology_and_geo_id_pairs(

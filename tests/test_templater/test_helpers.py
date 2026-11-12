@@ -933,7 +933,7 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
     # NaN values in non-Scenario columns are preserved. Fuzzy matching
     # applied correctly so small typos are fixed before filtering.
     table = csv_str_to_df("""
-        Scenario,       REZ ID,    value
+        scenario,       REZ ID,    value
         Step Change,   N1,         100
         step change,   N2,         150
         Step Change,   N3,
@@ -941,7 +941,7 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
         Slower Growth, N1,         200
     """)
 
-    result = _filter_table_by_isp_scenario(table, "Step Change", "Scenario", "test")
+    result = _filter_table_by_isp_scenario(table, "Step Change", "test")
 
     expected = csv_str_to_df("""
         REZ ID,    value
@@ -956,33 +956,19 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
     )
 
 
-def test_filter_table_by_isp_scenario_no_matching_rows(csv_str_to_df, caplog):
+def test_filter_table_by_isp_scenario_no_matching_rows_raises(csv_str_to_df):
     # No rows have matching "Scenario" values - return empty df with non-'scenario'
     # columns.
     table = csv_str_to_df("""
-        Scenario,       REZ ID,    value
+        scenario,       REZ ID,    value
         Step Change,    N1,         100
         Slower Growth,  N1,         200
     """)
 
-    with caplog.at_level("WARNING"):
-        result = _filter_table_by_isp_scenario(
-            table, "Accelerated Transition", "Scenario", "test"
-        )
-
-    expected = csv_str_to_df("""
-        REZ ID,    value
-    """)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-    assert (
-        "No rows matched scenario 'Accelerated Transition' in test table "
-        "— filtered table will be empty"
-    ) in caplog.text
+    with pytest.raises(
+        ValueError, match=r"No rows matched scenario 'Winter' in test_example table."
+    ):
+        result = _filter_table_by_isp_scenario(table, "Winter", "test_example")
 
 
 # --- _melt_financial_year_columns ---

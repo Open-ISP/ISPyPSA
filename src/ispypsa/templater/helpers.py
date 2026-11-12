@@ -871,48 +871,49 @@ def _rez_name_to_id_mapping(
 
 
 def _filter_table_by_isp_scenario(
-    table: pd.DataFrame, scenario: str, scenario_col_name: str, table_desc: str
+    table: pd.DataFrame, scenario: str, table_desc: str
 ) -> pd.DataFrame:
     """Filters an IASR table to rows matching ``scenario`` and drops the scenario column.
 
     Fuzzy-matches scenario names to handle minor spelling variations in the raw data.
+    Assumes the input ``table`` column containing scenario strings has already been
+    normalised to "scenario" spelling; a KeyError will raise if missing.
 
     I/O Example:
         table:
-            Region      Scenario        2025-26     2026-27
+            Region      scenario        2025-26     2026-27
             NSW         Step Change     100         150
             NSW         Slower Growth   200         300
 
-        scenario = "Step Change", scenario_col_name = "Scenario"
+        scenario = "Step Change"
 
         returns:
             Region      2025-26     2026-27
             NSW         100         150
     """
     table = table.copy()
-    table[scenario_col_name] = _fuzzy_map_to_allowed_values(
-        table[scenario_col_name],
+    table["scenario"] = _fuzzy_map_to_allowed_values(
+        table["scenario"],
         _ISP_SCENARIOS_NEW,
         task_desc=f"filtering {table_desc} table by ISP scenario",
         threshold=80,
     )
     filtered = (
-        table.loc[table[scenario_col_name] == scenario]
-        .drop(columns=[scenario_col_name])
+        table.loc[table["scenario"] == scenario]
+        .drop(columns=["scenario"])
         .reset_index(drop=True)
     )
-    _warn_if_no_scenario_rows(filtered, scenario, table_desc)
+    _raise_if_no_scenario_rows(filtered, scenario, table_desc)
     return filtered
 
 
-def _warn_if_no_scenario_rows(
+def _raise_if_no_scenario_rows(
     filtered_table: pd.DataFrame, scenario: str, table_desc: str
 ) -> None:
-    """Logs a WARNING if filtering a table by scenario produced no matching rows."""
+    """Raises if filtering a table by scenario produced no matching rows."""
     if filtered_table.empty:
-        logging.warning(
-            f"No rows matched scenario '{scenario}' in {table_desc} table "
-            "— filtered table will be empty"
+        raise ValueError(
+            f"No rows matched scenario '{scenario}' in {table_desc} table."
         )
 
 
