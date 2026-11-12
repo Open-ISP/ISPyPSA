@@ -2,6 +2,8 @@ import logging
 
 import pandas as pd
 
+from ispypsa.model_years import _last_instant_of_interval, _model_year_of
+
 logger = logging.getLogger(__name__)
 
 _TIMESLICE_SNAPSHOT_COLUMNS = ["timeslice", "investment_periods", "snapshots"]
@@ -87,11 +89,9 @@ def _add_interval_model_year_and_month_day(
         2026                2025-11-01 00:00:00  2026        10-31
         2026                2025-11-01 00:30:00  2026        11-01
     """
-    last_instant = snapshots["snapshots"] - pd.Timedelta(seconds=1)
+    last_instant = _last_instant_of_interval(snapshots["snapshots"])
     snapshots = snapshots.copy()
-    snapshots["model_year"] = last_instant.dt.year
-    if year_type == "fy":
-        snapshots["model_year"] += (last_instant.dt.month >= 7).astype(int)
+    snapshots["model_year"] = _model_year_of(year_type, last_instant)
     snapshots["month_day"] = last_instant.dt.strftime("%m-%d")
     return snapshots
 

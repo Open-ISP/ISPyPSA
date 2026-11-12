@@ -18,6 +18,7 @@ from importlib.resources import files
 
 import pandas as pd
 
+from ispypsa.model_years import _model_year_of
 from ispypsa.templater.custom_constraints_from_plexos import _tag_to_timeslice
 
 _TIMESLICE_COLUMNS = [
@@ -207,8 +208,7 @@ def _assign_windows_to_planning_years(windows: pd.DataFrame) -> pd.DataFrame:
         start_date 2025-11-16 -> planning_year 2026
         start_date 2026-04-01 -> planning_year 2026
     """
-    starts = windows["start_date"]
-    windows["planning_year"] = starts.dt.year + (starts.dt.month >= 7).astype(int)
+    windows["planning_year"] = _model_year_of("fy", windows["start_date"])
     return windows
 
 

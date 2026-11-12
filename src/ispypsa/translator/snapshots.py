@@ -7,10 +7,8 @@ import pandas as pd
 
 from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
-from ispypsa.translator.helpers import (
-    _get_iteration_start_and_end_time,
-    _period_of,
-)
+from ispypsa.model_years import _last_instant_of_interval, _model_year_of
+from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
 
@@ -148,6 +146,23 @@ def _add_investment_periods(
     """Add a column to the snapshots pd.DataFrame specifying the investment period that
     each model time interval belongs too.
 
+    Snapshots are stamped with their interval's end time, so the model year is
+    read off the interval's last instant: a stamp of exactly midnight on a year
+    boundary belongs to the year just ended (see ispypsa.model_years).
+
+    I/O Example (year_type fy, investment_periods [2026, 2028]):
+        snapshots:
+            snapshots
+            2027-06-30 23:30:00
+            2027-07-01 00:00:00  # last interval of FY2027
+            2027-07-01 00:30:00
+
+        returns:
+            investment_periods  snapshots
+            2026                2027-06-30 23:30:00
+            2026                2027-07-01 00:00:00
+            2028                2027-07-01 00:30:00
+
     Args:
         snapshots: pd.DataFrame with "snapshots" column specifying the time intervals
             of the model as datetime objects.
@@ -162,7 +177,8 @@ def _add_investment_periods(
     Returns: pd.DataFrame with column "investment_periods" and "snapshots".
     """
     snapshots = snapshots.copy()
-    snapshots["effective_year"] = _period_of(year_type, snapshots["snapshots"])
+    last_instants = _last_instant_of_interval(snapshots["snapshots"])
+    snapshots["effective_year"] = _model_year_of(year_type, last_instants)
 
     inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
     inv_periods_df = inv_periods_df.sort_values("investment_periods")

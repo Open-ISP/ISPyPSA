@@ -5,40 +5,33 @@ from pandas.testing import assert_frame_equal
 
 from ispypsa.translator.helpers import (
     _add_investment_periods_as_build_years,
+    _get_commissioning_or_build_year_as_int,
     _get_financial_year_int_from_string,
     _get_iteration_start_and_end_time,
-    _period_of,
-    _period_start,
     _resolve_wildcards,
 )
 
 
-def test_period_start_is_the_financial_or_calendar_year_boundary():
-    assert _period_start("fy", 2030) == pd.Timestamp("2029-07-01")
-    assert _period_start("calendar", 2030) == pd.Timestamp("2030-01-01")
-
-
-def test_period_of_is_the_inverse_of_period_start():
-    timestamps = pd.Series(
-        pd.to_datetime(["2029-06-30 23:00", "2029-07-01 00:00", "2030-06-30 23:00"])
-    )
-
-    financial_years = _period_of("fy", timestamps)
-    calendar_years = _period_of("calendar", timestamps)
-
-    pd.testing.assert_series_equal(
-        financial_years, pd.Series([2029, 2030, 2030], dtype="int64"), check_names=False
-    )
-    pd.testing.assert_series_equal(
-        calendar_years, pd.Series([2029, 2029, 2030], dtype="int64"), check_names=False
-    )
-
-
 def test_get_iteration_start_and_end_time_runs_first_start_to_exclusive_end():
     """Pins the triple's shape so the snapshot builders see no change from it
-    being derived from _period_start."""
+    being derived from _model_year_start."""
     assert _get_iteration_start_and_end_time("fy", 2025, 2030) == (2024, 2030, 7)
     assert _get_iteration_start_and_end_time("calendar", 2025, 2030) == (2025, 2031, 1)
+
+
+def test_commissioning_date_maps_to_the_model_year_it_falls_in():
+    # A commissioning date on 1 July falls in the financial year starting that day.
+    assert _get_commissioning_or_build_year_as_int("2029-06-30", 2025, "fy") == 2029
+    assert _get_commissioning_or_build_year_as_int("2029-07-01", 2025, "fy") == 2030
+    assert (
+        _get_commissioning_or_build_year_as_int("2029-07-01", 2025, "calendar") == 2029
+    )
+
+
+def test_commissioning_year_falls_back_to_the_default_build_year():
+    # No commissioning date given, and a date earlier than the default build year.
+    assert _get_commissioning_or_build_year_as_int(float("nan"), 2025, "fy") == 2025
+    assert _get_commissioning_or_build_year_as_int("2020-03-01", 2025, "fy") == 2025
 
 
 def test_get_financial_year_int_from_string():
