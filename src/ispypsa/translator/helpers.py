@@ -8,14 +8,17 @@ from ispypsa.model_years import _model_year_of_dates, _model_year_start
 def _get_iteration_start_and_end_time(
     year_type: str, start_year: int, end_year: int
 ) -> tuple[int, int, int]:
-    """The (start_year, end_year, month) triple the snapshot builders iterate
-    over: the calendar year and month the first model year starts in, and the
-    calendar year the model year after end_year starts in (an exclusive end).
-    Both boundaries come from _model_year_start.
+    """The stretch of time covered by the model years start_year to end_year,
+    returned as (start_year, end_year, month).
+
+    The stretch starts on the first day of month in the returned start_year,
+    and stops just before the first day of month in the returned end_year.
+    The snapshot builders and temporal filters build datetimes from the three
+    values to step through the model years one at a time.
 
     I/O Example:
-        ("fy", 2025, 2030)       -> (2024, 2030, 7)   # 2024-07-01 up to 2030-07-01
-        ("calendar", 2025, 2030) -> (2025, 2031, 1)   # 2025-01-01 up to 2031-01-01
+        ("fy", 2025, 2030)       -> (2024, 2030, 7)   # 2024-07-01 to just before 2030-07-01
+        ("calendar", 2025, 2030) -> (2025, 2031, 1)   # 2025-01-01 to just before 2031-01-01
     """
     first = _model_year_start(year_type, start_year)
     end = _model_year_start(year_type, end_year + 1)

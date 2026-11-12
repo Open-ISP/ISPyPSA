@@ -13,8 +13,8 @@ from ispypsa.translator.helpers import (
 
 
 def test_get_iteration_start_and_end_time_runs_first_start_to_exclusive_end():
-    """Pins the triple's shape so the snapshot builders see no change from it
-    being derived from _model_year_start."""
+    """Financial years 2025 to 2030 cover 2024-07-01 to just before 2030-07-01,
+    and calendar years 2025 to 2030 cover 2025-01-01 to just before 2031-01-01."""
     assert _get_iteration_start_and_end_time("fy", 2025, 2030) == (2024, 2030, 7)
     assert _get_iteration_start_and_end_time("calendar", 2025, 2030) == (2025, 2031, 1)
 
