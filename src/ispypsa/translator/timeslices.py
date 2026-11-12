@@ -92,11 +92,11 @@ def _add_interval_model_year_and_month_day(
         2026                2025-11-01 00:00:00  2026        10-31
         2026                2025-11-01 00:30:00  2026        11-01
     """
-    last_instant = _last_instant_of_interval(snapshots["snapshots"])
     snapshots = snapshots.copy()
     snapshots["model_year"] = _model_year_of_interval_ends(
         year_type, snapshots["snapshots"]
     )
+    last_instant = _last_instant_of_interval(snapshots["snapshots"])
     snapshots["month_day"] = last_instant.dt.strftime("%m-%d")
     return snapshots
 
