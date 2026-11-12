@@ -565,7 +565,7 @@ def _expand_terms_to_variable_types(terms: pd.DataFrame) -> pd.DataFrame:
 
 def _raise_if_no_variable_terms(variable_terms: pd.DataFrame, name: str) -> None:
     """Raises when a linopy constraint has no LHS terms on model variables, as
-    when no LHS rows match its constraint_name and investment_period. Its LHS
+    when no LHS rows match its constraint_name and investment_period, its LHS
     would be empty.
 
     I/O Example:
