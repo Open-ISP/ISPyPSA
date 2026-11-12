@@ -7,7 +7,7 @@ import pandas as pd
 
 from ispypsa.config import ModelConfig, load_config
 from ispypsa.data_fetch import read_csvs
-from ispypsa.model_years import _last_instant_of_interval, _model_year_of
+from ispypsa.model_years import _model_year_of_interval_ends
 from ispypsa.translator.helpers import _get_iteration_start_and_end_time
 from ispypsa.translator.temporal_filters import _filter_snapshots
 
@@ -177,8 +177,9 @@ def _add_investment_periods(
     Returns: pd.DataFrame with column "investment_periods" and "snapshots".
     """
     snapshots = snapshots.copy()
-    last_instants = _last_instant_of_interval(snapshots["snapshots"])
-    snapshots["effective_year"] = _model_year_of(year_type, last_instants)
+    snapshots["effective_year"] = _model_year_of_interval_ends(
+        year_type, snapshots["snapshots"]
+    )
 
     inv_periods_df = pd.DataFrame({"investment_periods": investment_periods})
     inv_periods_df = inv_periods_df.sort_values("investment_periods")

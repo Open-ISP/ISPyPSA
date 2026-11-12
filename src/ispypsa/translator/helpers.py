@@ -2,7 +2,7 @@ import re
 
 import pandas as pd
 
-from ispypsa.model_years import _model_year_of, _model_year_start
+from ispypsa.model_years import _model_year_of_dates, _model_year_start
 
 
 def _get_iteration_start_and_end_time(
@@ -68,7 +68,9 @@ def _get_commissioning_or_build_year_as_int(
         commissioning_date = pd.Series(
             [pd.to_datetime(commissioning_date_str, format="%Y-%m-%d")]
         )
-        commissioning_year = int(_model_year_of(year_type, commissioning_date).item())
+        commissioning_year = int(
+            _model_year_of_dates(year_type, commissioning_date).item()
+        )
         # Cap at default_build_year to align early generators with model start
         return max(commissioning_year, default_build_year)
 

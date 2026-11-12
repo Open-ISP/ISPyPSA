@@ -2,7 +2,10 @@ import logging
 
 import pandas as pd
 
-from ispypsa.model_years import _last_instant_of_interval, _model_year_of
+from ispypsa.model_years import (
+    _last_instant_of_interval,
+    _model_year_of_interval_ends,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,9 @@ def _add_interval_model_year_and_month_day(
     """
     last_instant = _last_instant_of_interval(snapshots["snapshots"])
     snapshots = snapshots.copy()
-    snapshots["model_year"] = _model_year_of(year_type, last_instant)
+    snapshots["model_year"] = _model_year_of_interval_ends(
+        year_type, snapshots["snapshots"]
+    )
     snapshots["month_day"] = last_instant.dt.strftime("%m-%d")
     return snapshots
 
