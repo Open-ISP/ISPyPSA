@@ -643,7 +643,7 @@ def _sum_terms_of_variable_type(
         returns, at each snapshot t in scope (t1 and t2):
             0.84 Link-p[t, NSW-QLD_existing] - 0.75 Link-p[t, CQ-NQ_existing]
     """
-    coefficients = terms.groupby("variable_name")["coefficient"].sum()
+    coefficients = terms.set_index("variable_name")["coefficient"]
     weights = coefficients.rename_axis("name").to_xarray()
     variable = _select_variables_of_type(
         model, variable_type, list(coefficients.index), scope
@@ -721,7 +721,7 @@ def _sum_load_terms(
     # expression a snapshot dimension.
     if load_terms.empty:
         return 0.0
-    coefficients = load_terms.groupby("variable_name")["coefficient"].sum()
+    coefficients = load_terms.set_index("variable_name")["coefficient"]
     p_set = network.loads_t.p_set.loc[scope, coefficients.index]
     offset = (p_set * coefficients).sum(axis=1)
     # linopy turns the index into a dimension named after it. Unnamed, it
