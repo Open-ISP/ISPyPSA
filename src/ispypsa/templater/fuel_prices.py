@@ -326,7 +326,6 @@ def _prepare_price_tables(
         name: _filter_table_by_isp_scenario(
             iasr_tables[name].rename(columns=_PRICE_TABLE_COLUMN_RENAMES),
             scenario,
-            "scenario",
             name,
         )
         for name in _FUEL_PRICE_TABLES
