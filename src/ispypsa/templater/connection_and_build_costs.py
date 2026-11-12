@@ -720,6 +720,65 @@ def _set_solar_thermal_system_strength_costs_to_zero(
     return connection_costs
 
 
+# ----------- Build Costs --------------
+
+
+def _template_costs_new_entrant_build(
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
+    generators_new_entrant: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
+) -> pd.DataFrame:
+    """Templates new entrant build costs: one cost per technology and year, in $/MW.
+
+    Filters the IASR build_costs table to ``scenario``, then drops the technologies in
+    _EXCLUDED_TECHNOLOGIES and maps the rest to match the technology names in
+    ``generators_new_entrant`` and ``storage_new_entrant`` (see
+    _canonicalise_technologies). Finally, the financial-year columns are melted to one
+    row per year, and costs are converted from $/kW to $/MW.
+
+    I/O Example (scenario="Step Change"):
+        iasr_tables["build_costs"] ($/kW):
+            Technology                      IASR Scenario  2024-25
+            Wind                            Step Change    3412
+            Wind                            Slower Growth  3500    # other scenario
+            Solar Thermal (16hrs Storage)   Step Change    6892    # mapped to canonical
+            Battery storage (2hrs storage)  Step Change    1238
+            Alkaline Electrolyser           Step Change    2755    # excluded
+
+        generators_new_entrant:
+            geo_id  technology
+            N1      Wind
+            Q4      Solar Thermal (16hrs storage)
+
+        storage_new_entrant:
+            geo_id  technology
+            N1      Battery storage (2hrs storage)
+
+        returns ($/MW):
+            technology                      year  cost
+            Wind                            2025  3412000
+            Solar Thermal (16hrs storage)   2025  6892000   # canonical - lower case 'storage'
+            Battery storage (2hrs storage)  2025  1238000
+    """
+    logging.info("Creating a template for new entrant build costs.")
+    build_costs = _filter_table_by_isp_scenario(
+        iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
+        scenario,
+        "scenario",
+        "build_costs",
+    )
+    canonical = _get_canon_technology_and_geo_id_pairs(
+        generators_new_entrant, storage_new_entrant
+    )
+    build_costs = _canonicalise_technologies(
+        build_costs, set(canonical["technology"]), "templating new entrant build costs"
+    )
+    build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
+    build_costs["cost"] *= 1000  # $/kW -> $/MW
+    return build_costs
+
+
 # --- shared helpers ---
 
 
@@ -819,65 +878,6 @@ def _warn_nan_connection_costs(
         f"NaN connection cost after per-MW calculation for: {all_nan_costs} "
         "— no additional connection cost will be applied here"
     )
-
-
-# ----------- Build Costs --------------
-
-
-def _template_costs_new_entrant_build(
-    iasr_tables: dict[str, pd.DataFrame],
-    scenario: str,
-    generators_new_entrant: pd.DataFrame,
-    storage_new_entrant: pd.DataFrame,
-) -> pd.DataFrame:
-    """Templates new entrant build costs: one cost per technology and year, in $/MW.
-
-    Filters the IASR build_costs table to ``scenario``, then drops the technologies in
-    _EXCLUDED_TECHNOLOGIES and maps the rest to match the technology names in
-    ``generators_new_entrant`` and ``storage_new_entrant`` (see
-    _canonicalise_technologies). Finally, the financial-year columns are melted to one
-    row per year, and costs are converted from $/kW to $/MW.
-
-    I/O Example (scenario="Step Change"):
-        iasr_tables["build_costs"] ($/kW):
-            Technology                      IASR Scenario  2024-25
-            Wind                            Step Change    3412
-            Wind                            Slower Growth  3500    # other scenario
-            Solar Thermal (16hrs Storage)   Step Change    6892    # mapped to canonical
-            Battery storage (2hrs storage)  Step Change    1238
-            Alkaline Electrolyser           Step Change    2755    # excluded
-
-        generators_new_entrant:
-            geo_id  technology
-            N1      Wind
-            Q4      Solar Thermal (16hrs storage)
-
-        storage_new_entrant:
-            geo_id  technology
-            N1      Battery storage (2hrs storage)
-
-        returns ($/MW):
-            technology                      year  cost
-            Wind                            2025  3412000
-            Solar Thermal (16hrs storage)   2025  6892000   # canonical - lower case 'storage'
-            Battery storage (2hrs storage)  2025  1238000
-    """
-    logging.info("Creating a template for new entrant build costs.")
-    build_costs = _filter_table_by_isp_scenario(
-        iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        scenario,
-        "scenario",
-        "build_costs",
-    )
-    canonical = _get_canon_technology_and_geo_id_pairs(
-        generators_new_entrant, storage_new_entrant
-    )
-    build_costs = _canonicalise_technologies(
-        build_costs, set(canonical["technology"]), "templating new entrant build costs"
-    )
-    build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
-    build_costs["cost"] *= 1000  # $/kW -> $/MW
-    return build_costs
 
 
 def _canonicalise_technologies(
