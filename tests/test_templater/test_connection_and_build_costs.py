@@ -1,25 +1,27 @@
+import re
+
 import pandas as pd
 import pytest
 
 from ispypsa.templater.connection_and_build_costs import (
-    _NON_VRE_COLUMN_RENAMES,
-    _VRE_COLUMN_RENAMES,
     _average_connection_costs_across_regions,
     _build_vre_cost_rows,
     _calculate_connection_cost_per_mw,
-    _canonicalise_non_vre_technologies,
     _create_non_vre_rez_cost_rows,
+    _drop_excluded_technologies,
     _enforce_numeric_cols,
     _expand_non_vre_connection_costs_to_subregions,
     _filter_connection_costs_by_regional_granularity,
     _get_canon_technology_and_geo_id_pairs,
     _get_unique_vre_geo_id_rows,
+    _map_to_canonical_technologies,
     _merge_and_filter_system_strength_costs,
     _normalise_connection_cost_forecast_frame,
     _normalise_system_strength_cost_frame,
     _set_non_ibr_system_strength_cost_to_zero,
     _set_solar_thermal_system_strength_costs_to_zero,
     _template_connection_costs,
+    _template_costs_new_entrant_build,
     _template_non_vre_connection_costs,
     _template_vre_connection_costs,
     _warn_nan_connection_costs,
@@ -70,13 +72,14 @@ def test_enforce_numeric_cols(csv_str_to_df):
 def test_normalise_connection_cost_forecast_frame(csv_str_to_df):
     # Wide-to-long reshape, FY string -> int year, extra columns dropped (REZ names).
     connection_cost_forecast = csv_str_to_df("""
-        REZ ID, REZ names,        Connection capacity (MVA), 2024-25,     2025-26
+        geo_id,  REZ Names,       connection_capacity, 2024-25,     2025-26
         N1,      North West NSW,  400,                         730000000,   740000000
         Q9,      Banana,          1800,                        8540000000,  8670000000
     """)
 
     result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, id_cols_rename=_VRE_COLUMN_RENAMES
+        connection_cost_forecast,
+        id_cols=["geo_id", "connection_capacity"],
     )
 
     expected = csv_str_to_df("""
@@ -96,16 +99,16 @@ def test_normalise_connection_cost_forecast_frame(csv_str_to_df):
 
 
 def test_normalise_connection_cost_forecast_frame_non_vre_renames(csv_str_to_df):
-    # Non-VRE path melts with a 3-key rename dict (Region, Generator Type,
-    # capacity) — a different, multi-id-column shape from the VRE case above.
+    # Non-VRE path melts with a 3-key id_cols
     connection_cost_forecast = csv_str_to_df("""
-        Region,  Generator Type,  Connection capacity (MVA),  2024-25,   2025-26
-        NSW,     CCGT,            400,                          40000000,  42000000
-        QLD,     CCGT,            300,                          36000000,  37000000
+        region_id,  technology,  connection_capacity,  2024-25,   2025-26
+        NSW,        CCGT,        400,                  40000000,  42000000
+        QLD,        CCGT,        300,                  36000000,  37000000
     """)
 
     result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, id_cols_rename=_NON_VRE_COLUMN_RENAMES
+        connection_cost_forecast,
+        id_cols=["region_id", "technology", "connection_capacity"],
     )
 
     expected = csv_str_to_df("""
@@ -127,13 +130,13 @@ def test_normalise_connection_cost_forecast_frame_non_vre_renames(csv_str_to_df)
 def test_normalise_connection_cost_forecast_frame_preserves_nan_rows(csv_str_to_df):
     # Rows with blank/empty cost values are retained with NaN rather than dropped.
     connection_cost_forecast = csv_str_to_df("""
-        REZ ID,  Connection capacity (MVA),  2024-25
+        geo_id,  connection_capacity,   2024-25
         DN1,     150,
-        Q1,      ,                           160000000.0
+        Q1,      ,                      160000000.0
     """)
 
     result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, id_cols_rename=_VRE_COLUMN_RENAMES
+        connection_cost_forecast, id_cols=["geo_id", "connection_capacity"]
     )
 
     expected = csv_str_to_df("""
@@ -150,11 +153,11 @@ def test_normalise_connection_cost_forecast_frame_preserves_nan_rows(csv_str_to_
 
 def test_normalise_connection_cost_forecast_frame_empty_input(csv_str_to_df):
     connection_cost_forecast = csv_str_to_df("""
-        REZ ID, REZ names,        Connection capacity (MVA), 2024-25,     2025-26
+        geo_id,  REZ Names, connection_capacity, 2024-25,     2025-26
     """)
 
     result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, _VRE_COLUMN_RENAMES
+        connection_cost_forecast, ["geo_id", "connection_capacity"]
     )
 
     expected = csv_str_to_df("""
@@ -267,10 +270,10 @@ def test_warn_nan_connection_costs_no_warning_when_all_costs_valid(
 def test_normalise_system_strength_cost_frame(csv_str_to_df):
     # Wide single-row table -> long (year, system_strength_cost).
     # $/kW * 1000 = $/MW conversion applied.
-    # FY strings converted to year int, long-form year string fix applied correctly.
+    # FY strings converted to year end int.
     # Non-year label column dropped.
     system_strength_cost_table = csv_str_to_df("""
-        label,            2024-25,  2025-26,    2026-2027,      Notes
+        label,            2024-25,  2025-26,    2026-27,        Notes
         IBR remediation,  10,       12,         15,             Some extra note
     """)
 
@@ -788,68 +791,6 @@ def test_get_canon_technology_and_geo_id_pairs(csv_str_to_df):
     )
 
 
-# --- _canonicalise_non_vre_technologies ---
-
-
-def test_canonicalise_non_vre_technologies(csv_str_to_df):
-    # Excluded techs dropped; remaining values fuzzy-mapped to canonical names.
-    df = csv_str_to_df("""
-        region_id,  technology,         year,  connection_capacity,  connection_cost
-        NSW,        CCGT,               2025,  400,                  40000000.0
-        NSW,        OCGT small GT,      2025,  400,                  32000000.0
-        TAS,        BOTN - Cethana,     2025,  250,                  0.0
-    """)
-    canonical_technologies = {"CCGT", "OCGT (small GT)"}
-
-    result = _canonicalise_non_vre_technologies(df, canonical_technologies)
-
-    expected = csv_str_to_df("""
-        region_id,  technology,         year,  connection_capacity,  connection_cost
-        NSW,        CCGT,               2025,  400,                  40000000.0
-        NSW,        OCGT (small GT),    2025,  400,                  32000000.0
-    """)
-    pd.testing.assert_frame_equal(
-        result.sort_values(["region_id", "technology"]).reset_index(drop=True),
-        expected.sort_values(["region_id", "technology"]).reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
-def test_canonicalise_non_vre_technologies_unmatched_raises(csv_str_to_df):
-    # A technology that can't be fuzzy-matched to any canonical name raises.
-    # Pins the (deferred) behaviour for only-VRE / inconsistent inputs — see the
-    # NOTE in _canonicalise_non_vre_technologies.
-    df = csv_str_to_df("""
-        region_id,  technology,  year,  connection_capacity,  connection_cost
-        NSW,        CCGT,        2025,  400,                  40000000.0
-    """)
-    canonical_technologies = {"Wind", "Large scale Solar PV"}
-
-    with pytest.raises(ValueError, match="Could not fuzzy match"):
-        _canonicalise_non_vre_technologies(df, canonical_technologies)
-
-
-def test_canonicalise_non_vre_technologies_empty_canonical_set_returns_empty(
-    csv_str_to_df,
-):
-    # Brownfield: no new-entrant non-VRE technologies -> empty output, no raise.
-    df = csv_str_to_df("""
-        region_id,  technology,  year,  connection_capacity,  connection_cost
-        NSW,        CCGT,        2025,  400,                  40000000.0
-    """)
-
-    result = _canonicalise_non_vre_technologies(df, set())
-
-    expected = csv_str_to_df("""
-        region_id,  technology,  year,  connection_capacity,  connection_cost
-    """)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
 # --- _create_non_vre_rez_cost_rows ---
 
 
@@ -1228,40 +1169,6 @@ def test_template_non_vre_connection_costs(csv_str_to_df):
     assert len(result_single_region) == 6
 
 
-def test_template_non_vre_connection_costs_empty_inputs(csv_str_to_df):
-    # Some checks that should return an empty df with ``_CONNECTION_ONLY_COST_COLS``.
-    forecast = csv_str_to_df("""
-        Generator Type,        Region,     Scenario,       2024-25,    2025-26
-        CCGT,                  NSW,        Step Change,   40000000,   41000000
-    """)
-    capacity = csv_str_to_df("""
-        Region,     Generator Type,        Connection capacity (MVA)
-        NSW,        CCGT,                  400
-    """)
-    # all empty inputs
-    result_all_empty = _template_non_vre_connection_costs(
-        pd.DataFrame(columns=forecast.columns),
-        pd.DataFrame(columns=capacity.columns),
-        "Step Change",
-        pd.DataFrame(columns=_GEO_TECH_COLS),
-        "single_region",
-        pd.DataFrame(columns=["geo_id", "geo_type", "region_id"]),
-    )
-    assert list(result_all_empty.columns) == _CONNECTION_ONLY_COST_COLS
-    assert result_all_empty.empty
-    # empty tech/geography inputs:
-    result_some_empty = _template_non_vre_connection_costs(
-        forecast,
-        capacity,
-        "Step Change",
-        pd.DataFrame(columns=_GEO_TECH_COLS),
-        "single_region",
-        pd.DataFrame(columns=["geo_id", "geo_type", "region_id"]),
-    )
-    assert list(result_some_empty.columns) == _CONNECTION_ONLY_COST_COLS
-    assert result_some_empty.empty
-
-
 def test_template_non_vre_connection_costs_empty_capacity_gives_nan_costs(
     csv_str_to_df,
 ):
@@ -1389,3 +1296,167 @@ def test_template_connection_costs_empty_inputs_give_empty_output(csv_str_to_df)
 
     assert list(result.columns) == _CONNECTION_SYSTEM_STRENGTH_COST_COLS
     assert result.empty
+
+
+# --- _drop_excluded_technologies ---
+
+
+def test_drop_excluded_technologies_logs_dropped_technologies(csv_str_to_df, caplog):
+    # Alkaline Electrolyser repeats (as with one row per region) but is logged once.
+    df = csv_str_to_df("""
+        technology,                 region
+        CCGT,                       NSW
+        Alkaline Electrolyser,      NSW
+        Alkaline Electrolyser,      QLD
+    """)
+
+    with caplog.at_level("INFO"):
+        result = _drop_excluded_technologies(
+            df, {"Alkaline Electrolyser"}, "templating test costs"
+        )
+
+    expected = csv_str_to_df("""
+        technology, region
+        CCGT,       NSW
+    """)
+    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
+    msg = (
+        "KNOWN EXCLUSION: technology(s) ['Alkaline Electrolyser'] excluded while "
+        "templating test costs."
+    )
+    assert caplog.messages.count(msg) == 1
+
+
+def test_drop_excluded_technologies_no_log_when_nothing_excluded(csv_str_to_df, caplog):
+    df = csv_str_to_df("""
+        technology
+        CCGT
+        Wind
+    """)
+
+    with caplog.at_level("INFO"):
+        result = _drop_excluded_technologies(
+            df, {"Alkaline Electrolyser"}, "templating test costs"
+        )
+
+    pd.testing.assert_frame_equal(result, df)
+    assert "KNOWN EXCLUSION" not in caplog.text
+
+
+# --- _map_to_canonical_technologies ---
+
+
+def test_map_to_canonical_technologies(caplog):
+    # Solar Thermal repeats (as with one row per region) but is logged once.
+    technologies = pd.Series(
+        [
+            "Wind",
+            "Solar Thermal (16hrs Storage)",  # upper case 'Storage'
+            "Solar Thermal (16hrs Storage)",  # same
+        ],
+        name="technology",
+    )
+
+    with caplog.at_level("WARNING"):
+        result = _map_to_canonical_technologies(
+            technologies,
+            {"Wind", "Solar Thermal (16hrs storage)"},  # lower case 'storage'
+            "templating test costs",
+        )
+
+    expected = pd.Series(
+        [
+            "Wind",
+            "Solar Thermal (16hrs storage)",  # mapped to lower case
+            "Solar Thermal (16hrs storage)",  # same
+        ],
+        name="technology",
+    )
+    pd.testing.assert_series_equal(result, expected)
+    msg = (
+        "FUZZY MATCH: no exact match for 'Solar Thermal (16hrs Storage)' found whilst "
+        "templating test costs. Replaced by best fuzzy match "
+        "'Solar Thermal (16hrs storage)'."
+    )
+    assert caplog.messages.count(msg) == 1
+
+
+def test_map_to_canonical_technologies_no_warning_when_all_match(caplog):
+    technologies = pd.Series(["Wind", "CCGT"], name="technology")
+
+    with caplog.at_level("WARNING"):
+        result = _map_to_canonical_technologies(
+            technologies, {"Wind", "CCGT"}, "templating test costs"
+        )
+
+    pd.testing.assert_series_equal(result, technologies)
+    assert "FUZZY MATCH" not in caplog.text
+
+
+def test_map_to_canonical_technologies_raises_when_no_fuzzy_match():
+    # Solar Thermal has a fuzzy match, so only Alkaline Electrolyser is listed.
+    # This function only raises in one direction: technologies <= canonical, so
+    # canonical "Wind" having no entry in technologies doesn't register here.
+    technologies = pd.Series(
+        ["Solar Thermal (16hrs Storage)", "Alkaline Electrolyser"],
+        name="technology",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Could not fuzzy match to an allowed value whilst templating test costs: "
+            "['Alkaline Electrolyser']"
+        ),
+    ):
+        _map_to_canonical_technologies(
+            technologies,
+            {"Wind", "Solar Thermal (16hrs storage)"},
+            "templating test costs",
+        )
+
+
+# --- _template_costs_new_entrant_build ---
+
+
+def test_template_costs_new_entrant_build(csv_str_to_df):
+    iasr_tables = {
+        "build_costs": csv_str_to_df("""
+            Technology,                     IASR Scenario,  2024-25,  2025-26
+            Wind,                           Step Change,    3412,     3266
+            Wind,                           Slower Growth,  3500,     3400
+            Solar Thermal (16hrs Storage),  Step Change,    6892,     6769
+            BOTN - Cethana,                 Step Change,    3665,     3595
+            Alkaline Electrolyser,          Step Change,    2755,     2558
+        """),
+    }
+    generators_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        N1,      Wind
+        Q4,      Solar Thermal (16hrs storage)
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        TAS,     BOTN - Cethana
+    """)
+
+    result = _template_costs_new_entrant_build(
+        iasr_tables, "Step Change", generators_new_entrant, storage_new_entrant
+    )
+
+    # The Slower Growth Wind row is filtered out and Alkaline Electrolyser is excluded.
+    # Solar Thermal takes the generators' spelling, BOTN - Cethana matches through
+    # storage_new_entrant, and costs go from $/kW to $/MW (x 1000).
+    expected = csv_str_to_df("""
+        technology,                     year,  cost
+        Wind,                           2025,  3412000
+        Wind,                           2026,  3266000
+        Solar Thermal (16hrs storage),  2025,  6892000
+        Solar Thermal (16hrs storage),  2026,  6769000
+        BOTN - Cethana,                 2025,  3665000
+        BOTN - Cethana,                 2026,  3595000
+    """)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["technology", "year"]).reset_index(drop=True),
+        expected.sort_values(["technology", "year"]).reset_index(drop=True),
+    )

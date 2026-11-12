@@ -77,6 +77,7 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "gpg_secondary_fuel_prices",
             "hydrogen_prices",
             "biomethane_prices",
+            "build_costs",
         ] + augmentation
 
     else:
