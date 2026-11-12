@@ -153,6 +153,7 @@ def _template_fuel_prices(
             CNSW    subregion  NSW
             SNW     subregion  NSW
             NQ      subregion  QLD
+            SQ      subregion  QLD
 
         regional_granularity = "sub_regions" returns:
             fuel_type   power_station  technology          geo_id  year  price
@@ -179,7 +180,7 @@ def _template_fuel_prices(
             fuel_type   power_station  technology          geo_id  year  price
             Black Coal  Bayswater      Steam Sub Critical  NEM     2026  4.12   # existing: no price change
             Gas         Tallawarra     CCGT                NEM     2026  14.50  # geo_id -> NEM
-            Gas                        OCGT (small GT)     NEM     2026  14.75  # mean(14.00, 15.50), geo_id -> NEM
+            Gas                        OCGT (small GT)     NEM     2026  15.00  # mean(15.50, 15.50, 14.00) over NQ, SQ, CNSW; geo_id -> NEM
             ...         ...            ...                 ...     ...   ...
             # fuel-wide and zero-cost rows are the same as sub_regions output
 
@@ -426,15 +427,14 @@ def _template_secondary_liquid_fuel_prices(
 
 def _exclude_gpg_with_no_2nd_fuel_price(generators: pd.DataFrame) -> pd.DataFrame:
     """Drops the stations in _GPG_WITH_NO_2ND_FUEL_PRICE and logs the exclusion."""
-    generators = generators[
-        ~generators["power_station"].isin(_GPG_WITH_NO_2ND_FUEL_PRICE)
-    ]
-    # log for full record - currently only Brigalow GT
-    logging.info(
-        f"KNOWN EXCLUSION: power station(s) {sorted(_GPG_WITH_NO_2ND_FUEL_PRICE)} "
-        "excluded while templating secondary fuel prices for named GPG."
-    )
-    return generators
+    to_exclude = generators["power_station"].isin(_GPG_WITH_NO_2ND_FUEL_PRICE)
+    excluded = set(generators.loc[to_exclude, "power_station"])
+    if excluded:
+        logging.info(
+            f"KNOWN EXCLUSION: power station(s) {sorted(excluded)} "
+            "excluded while templating secondary fuel prices for named GPG."
+        )
+    return generators[~to_exclude].copy()
 
 
 # --- new entrant prices ---
@@ -647,6 +647,9 @@ def _merge_prices_onto_generators(
     dropped without a log, as a price table can cover more keys than the summary
     needs (existing gas is merged against both gas tables combined).
 
+    Duplicate fuel_cost_mapping rows in prices raise a MergeError, even if no generator
+    uses that mapping.
+
     I/O Example:
         generators:
             power_station       fuel_cost_mapping
@@ -669,6 +672,7 @@ def _merge_prices_onto_generators(
         how="left",
         on="fuel_cost_mapping",
         indicator=True,
+        validate="many_to_one",
     )
     # TODO revisit logging unused rows; sticking point is gas w/ combined ecaa/new entrants
     _raise_on_unpriced_generators(

@@ -337,6 +337,23 @@ def test_template_secondary_liquid_fuel_prices(csv_str_to_df, caplog):
     ) in caplog.text
 
 
+def test_template_secondary_liquid_fuel_prices_no_log(csv_str_to_df, caplog):
+    # If nothing is excluded, nothing gets logged.
+    prices = csv_str_to_df("""
+        fuel_cost_mapping,    2025-26
+        Tallawarra_2nd_Fuel,  31.00
+    """)
+    summary_existing = csv_str_to_df("""
+        Power Station,  Technology Type,  geo_id,  Fuel type,  Fuel cost mapping
+        Tallawarra,     CCGT,             SNW,     Gas,        Tallawarra
+    """)
+
+    with caplog.at_level("INFO"):
+        _template_secondary_liquid_fuel_prices(prices, summary_existing)
+
+    assert "KNOWN EXCLUSION" not in caplog.text
+
+
 # --- _template_new_entrant_gas_prices ---
 
 
@@ -543,6 +560,24 @@ def test_merge_prices_onto_generators_raises_on_unpriced_generators(csv_str_to_d
         _merge_prices_onto_generators(
             prices, generators, "gas_prices_existing_generators"
         )
+
+
+def test_merge_prices_onto_generators_raises_on_duplicates(csv_str_to_df):
+    # Multiple price rows sharing fuel_cost_mapping raise via .merge() "many_to_one"
+    # validation
+    generators = csv_str_to_df("""
+        power_station,  fuel_cost_mapping
+        Bayswater,      Bayswater
+    """)
+    prices = csv_str_to_df("""
+        fuel_cost_mapping,  2025-26
+        Bayswater,          4.12
+        Bayswater,          100.0
+        Eraring,            3.80
+    """)
+
+    with pytest.raises(pd.errors.MergeError, match="not a many-to-one merge"):
+        _merge_prices_onto_generators(prices, generators, "test_validation")
 
 
 # --- _melt_fuel_prices_to_long ---
