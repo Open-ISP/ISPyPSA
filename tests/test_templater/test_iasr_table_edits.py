@@ -226,6 +226,171 @@ def test_replace_edit_that_matches_nothing_warns(csv_str_to_df, caplog):
     ) in caplog.text
 
 
+def test_replace_edit_that_matches_nothing_warns_only_once(csv_str_to_df, caplog):
+    iasr_tables = {
+        "new_entrants_summary": csv_str_to_df("""
+            IASR ID / DLT names,     Regional build cost zone
+            NSA Pumped Hydro - 10h,  NSA
+        """)
+    }
+    edits = [
+        {
+            "table": "new_entrants_summary",
+            "column": "Regional build cost zone",
+            "where": {"IASR ID / DLT names": ["NSA Pumped Hydro - 24h"]},
+            "replace": {"CSA": "NSA"},
+            "reason": "Build cost zone typo'd as CSA.",
+        }
+    ]
+
+    with caplog.at_level("WARNING"):
+        _apply_edits(iasr_tables, edits)
+
+    # The where value and the replace key are both unused, but an edit that matches
+    # nothing gets the 'not applied' warning alone, not a 'partly applied' one too.
+    assert caplog.messages == [
+        "IASR TABLE EDIT (not applied): 'new_entrants_summary' column "
+        "'Regional build cost zone': {'CSA': 'NSA'} matched nothing."
+    ]
+
+
+def test_replace_edit_with_where_value_in_no_row_warns(csv_str_to_df, caplog):
+    iasr_tables = {
+        "existing_committed_anticipated_additional_generator_summary": csv_str_to_df("""
+            IASR ID / DLT names,  Sub-region
+            CSPVPS1,              CQ
+            DAYDSF1,              CQ
+        """)
+    }
+    edits = [
+        {
+            "table": "existing_committed_anticipated_additional_generator_summary",
+            "column": "Sub-region",
+            "where": {
+                "IASR ID / DLT names": ["CSPVPS1", "DAYDSF2"]
+            },  # misspelt DAYDSF1
+            "replace": {"CQ": "NQ"},
+            "reason": "Mis-labelled sub-region.",
+        }
+    ]
+
+    with caplog.at_level("WARNING"):
+        result = _apply_edits(iasr_tables, edits)
+
+    # CSPVPS1 is still edited. DAYDSF1 isn't, as the where names DAYDSF2 instead.
+    expected = csv_str_to_df("""
+        IASR ID / DLT names,  Sub-region
+        CSPVPS1,              NQ
+        DAYDSF1,              CQ
+    """)
+    pd.testing.assert_frame_equal(
+        result["existing_committed_anticipated_additional_generator_summary"], expected
+    )
+
+    assert caplog.messages == [
+        "IASR TABLE EDIT (partly applied): "
+        "'existing_committed_anticipated_additional_generator_summary' column "
+        "'Sub-region': 'where' values not found: {'IASR ID / DLT names': ['DAYDSF2']}."
+    ]
+
+
+def test_replace_edit_with_where_value_in_no_selected_row_warns(csv_str_to_df, caplog):
+    iasr_tables = {
+        "new_entrants_summary": csv_str_to_df("""
+            IASR ID / DLT names,  Technology Type,  REZ ID,  Sub-region
+            N13 Wind,             Wind,             N13,     CNSW
+            N3 Solar,             Solar,            N3,      CNSW
+        """)
+    }
+    edits = [
+        {
+            "table": "new_entrants_summary",
+            "column": "Sub-region",
+            "where": {
+                "REZ ID": ["N13"],
+                "Technology Type": ["Wind", "Solar"],
+            },
+            "replace": {"CNSW": "SNSW"},
+            "reason": "Mis-labelled sub-region.",
+        }
+    ]
+
+    with caplog.at_level("WARNING"):
+        _apply_edits(iasr_tables, edits)
+
+    # Solar is in the table, but only on the N3 row, which the REZ ID where column
+    # rules out. So no selected row is Solar, and it counts as unused.
+    assert caplog.messages == [
+        "IASR TABLE EDIT (partly applied): 'new_entrants_summary' column "
+        "'Sub-region': 'where' values not found: {'Technology Type': ['Solar']}."
+    ]
+
+
+def test_replace_edit_with_replace_key_in_no_cell_warns(csv_str_to_df, caplog):
+    iasr_tables = {
+        "new_entrants_summary": csv_str_to_df("""
+            IASR ID / DLT names,  Technology Type
+            NQ Battery - 2h,      Battery Storage (2hrs storage)
+            NQ Wind,              Wind
+        """)
+    }
+    edits = [
+        {
+            "table": "new_entrants_summary",
+            "column": "Technology Type",
+            "replace": {
+                "Battery Storage (2hrs storage)": "Battery storage (2hrs storage)",
+                "Battery Storage (8hrs storage)": "Battery storage (8hrs storage)",
+            },
+            "reason": "Capitalised 'Battery Storage'.",
+        }
+    ]
+
+    with caplog.at_level("WARNING"):
+        result = _apply_edits(iasr_tables, edits)
+
+    # The 2hrs battery is still edited; no row holds the 8hrs spelling.
+    expected = csv_str_to_df("""
+        IASR ID / DLT names,  Technology Type
+        NQ Battery - 2h,      Battery storage (2hrs storage)
+        NQ Wind,              Wind
+    """)
+    pd.testing.assert_frame_equal(result["new_entrants_summary"], expected)
+
+    assert caplog.messages == [
+        "IASR TABLE EDIT (partly applied): 'new_entrants_summary' column "
+        "'Technology Type': 'replace' keys not found: "
+        "['Battery Storage (8hrs storage)']."
+    ]
+
+
+def test_replace_edit_that_uses_every_where_value_and_replace_key_does_not_warn(
+    csv_str_to_df, caplog
+):
+    iasr_tables = {
+        "existing_committed_anticipated_additional_generator_summary": csv_str_to_df("""
+            IASR ID / DLT names,  Sub-region
+            CSPVPS1,              CQ
+            DAYDSF1,              CQ
+            HAMISF1,              NQ
+        """)
+    }
+    edits = [
+        {
+            "table": "existing_committed_anticipated_additional_generator_summary",
+            "column": "Sub-region",
+            "where": {"IASR ID / DLT names": ["CSPVPS1", "DAYDSF1"]},
+            "replace": {"CQ": "NQ"},
+            "reason": "Mis-labelled sub-region.",
+        }
+    ]
+
+    with caplog.at_level("WARNING"):
+        _apply_edits(iasr_tables, edits)
+
+    assert caplog.messages == []
+
+
 def test_rename_columns_edit_that_matches_nothing_warns(csv_str_to_df, caplog):
     iasr_tables = {
         "flow_path_transfer_capability": csv_str_to_df("""
