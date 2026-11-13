@@ -119,7 +119,7 @@ def _template_connection_costs(
     logging.info("Creating a template for new entrant connection costs.")
     new_entrant_pairs = _extract_new_entrant_pairs(iasr_tables["new_entrants_summary"])
     system_strength_costs = _normalise_system_strength_cost_frame(
-        iasr_tables["efficient_level_of_system_strength_cost"]
+        _read_cost_table(iasr_tables, "efficient_level_of_system_strength_cost")
     )
     vre_connection_costs = _template_vre_connection_costs(
         iasr_tables, scenario, new_entrant_pairs
@@ -230,10 +230,10 @@ def _template_vre_connection_costs(
     forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
     capacity = _read_cost_table(iasr_tables, "connection_costs_for_wind_and_solar")
     costs = forecast.merge(capacity, how="left", on=["geo_id"])
-    normalised_df = _normalise_connection_cost_forecast_frame(
-        costs, id_cols=["geo_id", "connection_capacity"]
+    costs = _melt_financial_year_columns(
+        costs, ["geo_id", "connection_capacity"], "connection_cost"
     )
-    costs_per_mw = _calculate_connection_cost_per_mw(normalised_df)
+    costs_per_mw = _calculate_connection_cost_per_mw(costs)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["geo_id"])
     return _build_vre_cost_rows(costs_per_mw, vre_technologies_by_geo_id)
 
@@ -387,8 +387,8 @@ def _template_non_vre_connection_costs(
     forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
     capacity = _read_cost_table(iasr_tables, "connection_capacity_non_vre")
     costs = forecast.merge(capacity, how="left", on=["region_id", "technology"])
-    costs = _normalise_connection_cost_forecast_frame(
-        costs, id_cols=["region_id", "technology", "connection_capacity"]
+    costs = _melt_financial_year_columns(
+        costs, ["region_id", "technology", "connection_capacity"], "connection_cost"
     )
     costs = _canonicalise_technologies(
         costs,
@@ -517,9 +517,6 @@ def _normalise_system_strength_cost_frame(
     long = _melt_financial_year_columns(
         system_strength_cost_table, [], "system_strength_cost"
     )
-    long["system_strength_cost"] = pd.to_numeric(
-        long["system_strength_cost"], errors="coerce"
-    )
     long["system_strength_cost"] *= 1000  # convert to $/MW
     return long
 
@@ -628,43 +625,6 @@ def _read_cost_table(
     renames = _COST_TABLE_COLUMN_RENAMES[table_name]
     _assert_table_valid(table, table_name, set(renames), "new entrant cost data")
     return table.rename(columns=renames)
-
-
-def _normalise_connection_cost_forecast_frame(
-    connection_cost_forecast: pd.DataFrame, id_cols: list[str]
-) -> pd.DataFrame:
-    """Melts the financial-year columns of a connection cost forecast to one row per
-    ``id_cols`` row and year (see _melt_financial_year_columns), then coerces
-    connection_cost and connection_capacity to numeric.
-
-    ``id_cols`` must include connection_capacity. NaN costs are kept.
-
-    I/O Example:
-        connection_cost_forecast (VRE, headers already renamed):
-            geo_id  connection_capacity  2024-25
-            N1      400                  73000000
-            Q9      1800                 854000000
-            R99     150                  NaN         # R99: fictional REZ, no cost data
-
-        id_cols: ["geo_id", "connection_capacity"]
-
-        returns:
-            geo_id  connection_capacity  year  connection_cost
-            N1      400                  2025  73000000
-            Q9      1800                 2025  854000000
-            R99     150                  2025  NaN          # NaN preserved
-    """
-    melted = _melt_financial_year_columns(
-        connection_cost_forecast, id_cols, "connection_cost"
-    )
-    return _enforce_numeric_cols(melted, ["connection_cost", "connection_capacity"])
-
-
-def _enforce_numeric_cols(df: pd.DataFrame, numeric_cols: list[str]) -> pd.DataFrame:
-    """Applies pd.to_numeric() with arg ``errors='coerce'`` to each ``df`` column in ``numeric_cols``."""
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    return df
 
 
 def _calculate_connection_cost_per_mw(

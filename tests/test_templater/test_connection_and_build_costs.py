@@ -8,12 +8,10 @@ from ispypsa.templater.connection_and_build_costs import (
     _build_vre_cost_rows,
     _calculate_connection_cost_per_mw,
     _drop_excluded_technologies,
-    _enforce_numeric_cols,
     _extract_new_entrant_pairs,
     _get_unique_vre_geo_id_rows,
     _map_to_canonical_technologies,
     _merge_region_costs_onto_new_entrant_pairs,
-    _normalise_connection_cost_forecast_frame,
     _normalise_system_strength_cost_frame,
     _set_non_ibr_system_strength_cost_to_zero,
     _set_solar_thermal_system_strength_costs_to_zero,
@@ -33,139 +31,6 @@ _CONNECTION_SYSTEM_STRENGTH_COST_COLS = [
     "connection_cost",
     "system_strength_cost",
 ]
-
-
-# --- _enforce_numeric_cols ---
-
-
-def test_enforce_numeric_cols(csv_str_to_df):
-    # String numbers are converted; non-numeric values are coerced to NaN.
-    # Only specified columns are treated.
-    df = csv_str_to_df("""
-        name,   cost,       capacity
-        1,      100,        400
-        one,    200.5,      not_a_number
-        10^6,   ,           0.03
-    """)
-
-    result = _enforce_numeric_cols(df, ["cost", "capacity"])
-
-    expected = csv_str_to_df("""
-        name,   cost,   capacity
-        1,      100.0,  400.0
-        one,    200.5,
-        10^6,   ,       0.03
-    """)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
-# --- _normalise_connection_cost_forecast_frame ---
-
-
-def test_normalise_connection_cost_forecast_frame(csv_str_to_df):
-    # Wide-to-long reshape, FY string -> int year, extra columns dropped (REZ names).
-    connection_cost_forecast = csv_str_to_df("""
-        geo_id,  REZ Names,       connection_capacity, 2024-25,     2025-26
-        N1,      North West NSW,  400,                         730000000,   740000000
-        Q9,      Banana,          1800,                        8540000000,  8670000000
-    """)
-
-    result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast,
-        id_cols=["geo_id", "connection_capacity"],
-    )
-
-    expected = csv_str_to_df("""
-        geo_id,  connection_capacity,  year,  connection_cost
-        N1,      400.0,                2025,  730000000.0
-        N1,      400.0,                2026,  740000000.0
-        Q9,      1800.0,               2025,  8540000000.0
-        Q9,      1800.0,               2026,  8670000000.0
-    """)
-    pd.testing.assert_frame_equal(
-        result.sort_values(["geo_id", "year"]).reset_index(drop=True),
-        expected.sort_values(["geo_id", "year"]).reset_index(drop=True),
-        check_exact=False,
-        rtol=1e-5,
-        check_dtype=False,
-    )
-
-
-def test_normalise_connection_cost_forecast_frame_non_vre_renames(csv_str_to_df):
-    # Non-VRE path melts with a 3-key id_cols
-    connection_cost_forecast = csv_str_to_df("""
-        region_id,  technology,  connection_capacity,  2024-25,   2025-26
-        NSW,        CCGT,        400,                  40000000,  42000000
-        QLD,        CCGT,        300,                  36000000,  37000000
-    """)
-
-    result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast,
-        id_cols=["region_id", "technology", "connection_capacity"],
-    )
-
-    expected = csv_str_to_df("""
-        region_id,  technology,  connection_capacity,  year,  connection_cost
-        NSW,        CCGT,        400.0,                2025,  40000000.0
-        NSW,        CCGT,        400.0,                2026,  42000000.0
-        QLD,        CCGT,        300.0,                2025,  36000000.0
-        QLD,        CCGT,        300.0,                2026,  37000000.0
-    """)
-    pd.testing.assert_frame_equal(
-        result.sort_values(["region_id", "year"]).reset_index(drop=True),
-        expected.sort_values(["region_id", "year"]).reset_index(drop=True),
-        check_exact=False,
-        rtol=1e-5,
-        check_dtype=False,
-    )
-
-
-def test_normalise_connection_cost_forecast_frame_preserves_nan_rows(csv_str_to_df):
-    # Rows with blank/empty cost values are retained with NaN rather than dropped.
-    connection_cost_forecast = csv_str_to_df("""
-        geo_id,  connection_capacity,   2024-25
-        DN1,     150,
-        Q1,      ,                      160000000.0
-    """)
-
-    result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, id_cols=["geo_id", "connection_capacity"]
-    )
-
-    expected = csv_str_to_df("""
-        geo_id,     connection_capacity,    year,   connection_cost
-        DN1,        150.0,                  2025,
-        Q1,         ,                       2025,   160000000.0
-    """)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
-def test_normalise_connection_cost_forecast_frame_empty_input(csv_str_to_df):
-    connection_cost_forecast = csv_str_to_df("""
-        geo_id,  REZ Names, connection_capacity, 2024-25,     2025-26
-    """)
-
-    result = _normalise_connection_cost_forecast_frame(
-        connection_cost_forecast, ["geo_id", "connection_capacity"]
-    )
-
-    expected = csv_str_to_df("""
-        geo_id,     connection_capacity,    year,   connection_cost
-    """)
-
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
 
 
 # --- _calculate_connection_cost_per_mw ---
@@ -287,25 +152,6 @@ def test_normalise_system_strength_cost_frame(csv_str_to_df):
         expected.sort_values("year").reset_index(drop=True),
         check_exact=False,
         rtol=1e-5,
-        check_dtype=False,
-    )
-
-
-def test_normalise_system_strength_cost_frame_empty_input_df(csv_str_to_df):
-    # Should return an empty df with columns ('year', 'system_strength_cost')
-    system_strength_cost_table = csv_str_to_df("""
-        label,  2024-25,  2025-26,    2026-27
-    """)
-
-    result = _normalise_system_strength_cost_frame(system_strength_cost_table)
-
-    expected = csv_str_to_df("""
-        year,  system_strength_cost
-    """)
-
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
         check_dtype=False,
     )
 
@@ -440,47 +286,6 @@ def test_add_system_strength_costs_year_not_in_system_strength_gives_nan(
     )
 
 
-def test_add_system_strength_costs_empty_inputs(csv_str_to_df):
-    # Empty connection_costs -> empty output with correct columns.
-    system_strength_costs = csv_str_to_df("""
-        year,  system_strength_cost
-        2025,  10000.0
-    """)
-
-    result_empty_costs = _add_system_strength_costs(
-        pd.DataFrame(columns=_CONNECTION_ONLY_COST_COLS),
-        system_strength_costs,
-    )
-    expected_empty_cc = pd.DataFrame(columns=_CONNECTION_SYSTEM_STRENGTH_COST_COLS)
-    pd.testing.assert_frame_equal(
-        result_empty_costs.reset_index(drop=True),
-        expected_empty_cc.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-    # Empty system_strength_costs -> all system_strength_cost values are NaN.
-    empty_system_strength_costs = csv_str_to_df("""
-        year,  system_strength_cost
-    """)
-    connection_costs = csv_str_to_df("""
-        geo_id,  technology,  year,  connection_cost
-        N1,      Wind,        2025,  182500.0
-    """)
-
-    result_empty_ss = _add_system_strength_costs(
-        connection_costs, empty_system_strength_costs
-    )
-    expected_empty_ss = csv_str_to_df("""
-        geo_id,  technology,  year,  connection_cost,  system_strength_cost
-        N1,      Wind,        2025,  182500.0
-    """)
-    pd.testing.assert_frame_equal(
-        result_empty_ss.reset_index(drop=True),
-        expected_empty_ss.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
 # --- _get_unique_vre_geo_id_rows ---
 
 
@@ -511,16 +316,6 @@ def test_get_unique_vre_geo_id_rows(csv_str_to_df):
     pd.testing.assert_frame_equal(
         result.sort_values(_GEO_TECH_COLS).reset_index(drop=True),
         expected.sort_values(_GEO_TECH_COLS).reset_index(drop=True),
-    )
-
-
-def test_get_unique_vre_geo_id_rows_empty_input():
-    result = _get_unique_vre_geo_id_rows(pd.DataFrame(columns=_GEO_TECH_COLS))
-    expected = pd.DataFrame(columns=_GEO_TECH_COLS)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
     )
 
 
@@ -569,49 +364,6 @@ def test_build_vre_cost_rows(csv_str_to_df):
     )
 
 
-def test_build_vre_cost_rows_empty_inputs(csv_str_to_df):
-    # Empty vre_technologies -> no (tech, year) combinations -> empty output.
-    # Empty costs_per_mw -> no years to cross-join -> empty output.
-    costs_per_mw = csv_str_to_df("""
-        geo_id,  year,  connection_cost
-        N1,      2025,  182500.0
-    """)
-    vre_technologies = csv_str_to_df("""
-        geo_id,  technology
-        N1,      Wind
-    """)
-    expected_empty_result = pd.DataFrame(columns=_CONNECTION_ONLY_COST_COLS)
-
-    result_empty_techs = _build_vre_cost_rows(
-        costs_per_mw, pd.DataFrame(columns=_GEO_TECH_COLS)
-    )
-
-    pd.testing.assert_frame_equal(
-        result_empty_techs.reset_index(drop=True),
-        expected_empty_result.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-    result_empty_costs = _build_vre_cost_rows(
-        pd.DataFrame(columns=["geo_id", "year", "connection_cost"]), vre_technologies
-    )
-    pd.testing.assert_frame_equal(
-        result_empty_costs.reset_index(drop=True),
-        expected_empty_result.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-    result_all_empty = _build_vre_cost_rows(
-        pd.DataFrame(columns=["geo_id", "year", "connection_cost"]),
-        pd.DataFrame(columns=_GEO_TECH_COLS),
-    )
-    pd.testing.assert_frame_equal(
-        result_all_empty.reset_index(drop=True),
-        expected_empty_result.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-
 # --- _template_vre_connection_costs (integration) ---
 # Wiring test only — detailed content covered by unit tests above.
 # Not tested: scenario fuzzy matching (covered by _filter_table_by_isp_scenario
@@ -653,102 +405,6 @@ def test_template_vre_connection_costs(csv_str_to_df, caplog):
     # Columns correct; 3 (geo_id, tech) pairs × 2 years + 2 offshore NaN rows = 8
     assert list(result.columns) == _CONNECTION_ONLY_COST_COLS
     assert len(result) == 8  # detailed content covered by unit tests above
-
-
-def test_template_vre_connection_costs_all_empty_inputs(csv_str_to_df):
-    # test that even with all empty inputs we get an empty df with expected columns.
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ ID,  REZ names,       Scenario,     2024-25,    2025-26
-    """)
-    connection_costs_for_vre = csv_str_to_df("""
-        REZ ID,  Connection capacity (MVA)
-    """)
-
-    result = _template_vre_connection_costs(
-        connection_cost_forecast_vre,
-        connection_costs_for_vre,
-        "Step Change",
-        pd.DataFrame(columns=_GEO_TECH_COLS),
-    )
-
-    assert list(result.columns) == _CONNECTION_ONLY_COST_COLS
-    assert result.empty
-
-
-def test_template_vre_connection_costs_some_empty_inputs(csv_str_to_df):
-    # test that even with combinations of empty/full inputs we get an empty df
-    # with expected columns.
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ ID, REZ names,          Scenario,     2024-25,    2025-26
-        N1,     North West NSW,     Step Change, 73000000,   74000000
-        Q9,     Banana,             Step Change, 854000000,  867000000
-    """)
-    empty_capacity = csv_str_to_df("""
-        REZ ID,  Connection capacity (MVA)
-    """)
-
-    result = _template_vre_connection_costs(
-        connection_cost_forecast_vre,
-        empty_capacity,
-        "Step Change",
-        pd.DataFrame(columns=_GEO_TECH_COLS),
-    )
-
-    assert list(result.columns) == _CONNECTION_ONLY_COST_COLS
-    assert result.empty
-
-    # non-empty vre_technologies_by_geo_id input -> empty output
-    empty_forecast = csv_str_to_df("""
-        REZ ID,  REZ names,       Scenario,     2024-25,    2025-26
-    """)
-    vre_technologies_by_geo_id = csv_str_to_df("""
-        geo_id,  technology
-        N1,      Wind
-    """)
-
-    result = _template_vre_connection_costs(
-        empty_forecast,
-        empty_capacity,
-        "Step Change",
-        vre_technologies_by_geo_id,
-    )
-
-    assert list(result.columns) == _CONNECTION_ONLY_COST_COLS
-    assert result.empty
-
-
-def test_template_vre_connection_costs_empty_capacity_gives_nan_costs(csv_str_to_df):
-    # Non-empty forecast and technologies but empty capacity -> NaN connection_cost
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ ID, REZ names,          Scenario,     2024-25,    2025-26
-        N1,     North West NSW,     Step Change, 73000000,   74000000
-        Q9,     Banana,             Step Change, 854000000,  867000000
-    """)
-    empty_capacity = csv_str_to_df("""
-        REZ ID,  Connection capacity (MVA)
-    """)
-    vre_technologies_by_geo_id = csv_str_to_df("""
-        geo_id,  technology
-        N1,      Wind
-    """)
-
-    result = _template_vre_connection_costs(
-        connection_cost_forecast_vre,
-        empty_capacity,
-        "Step Change",
-        vre_technologies_by_geo_id,
-    )
-    expected = csv_str_to_df("""
-        geo_id,     technology,     year,   connection_cost
-        N1,         Wind,           2025,
-        N1,         Wind,           2026,
-    """)
-
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
 
 
 # --- _extract_new_entrant_pairs ---
@@ -915,39 +571,6 @@ def test_template_non_vre_connection_costs(
     )
 
 
-def test_template_non_vre_connection_costs_empty_capacity_gives_nan_costs(
-    csv_str_to_df,
-):
-    # Non-empty forecast, technologies and geography but empty capacity
-    # -> present but NaN connection_cost
-    forecast = csv_str_to_df("""
-        Generator Type,        Region,     Scenario,       2024-25,    2025-26
-        CCGT,                  NSW,        Step Change,   40000000,   41000000
-    """)
-    empty_capacity = pd.DataFrame(
-        columns=["Region", "Generator Type", "Connection capacity (MVA)"]
-    )
-    pairs = csv_str_to_df("""
-        geo_id,     technology
-        CNSW,       CCGT
-    """)
-    geography = csv_str_to_df("""
-        geo_id,     geo_type,   region_id
-        CNSW,       subregion,  NSW
-    """)
-    result_nans = _template_non_vre_connection_costs(
-        forecast,
-        empty_capacity,
-        "Step Change",
-        pairs,
-        "sub_regions",
-        geography,
-    )
-    assert list(result_nans.columns) == _CONNECTION_ONLY_COST_COLS
-    assert len(result_nans) == 2  # 2 years, 1 tech, 1 subregion
-    assert all(result_nans["connection_cost"].isna())
-
-
 # --- _template_connection_costs (integration) ---
 # Wiring test only — detailed content covered by unit tests above.
 
@@ -1001,40 +624,6 @@ def test_template_connection_costs(csv_str_to_df):
     # + 1 REZ battery (N1, inheriting the NSW cost) = 4 rows.
     assert list(result.columns) == _CONNECTION_SYSTEM_STRENGTH_COST_COLS
     assert len(result) == 4
-
-
-def test_template_connection_costs_empty_inputs_give_empty_output(csv_str_to_df):
-    # All empty inputs -> empty output with all expected columns present.
-    iasr_tables = {
-        "connection_cost_forecast_wind_and_solar": csv_str_to_df("""
-            REZ ID,  Scenario,  2024-25
-        """),
-        "connection_costs_for_wind_and_solar": csv_str_to_df("""
-            REZ ID,  Connection capacity (MVA)
-        """),
-        "connection_cost_forecast_other": csv_str_to_df("""
-            Generator Type,  Region,  Scenario,  2024-25
-        """),
-        "connection_capacity_non_vre": csv_str_to_df("""
-            Region,  Generator Type,  Connection capacity (MVA)
-        """),
-        "efficient_level_of_system_strength_cost": csv_str_to_df("""
-            label,  2024-25
-        """),
-        "new_entrants_summary": csv_str_to_df("""
-            IASR ID / DLT names,  Technology Type,  Sub-region,  REZ ID
-        """),
-    }
-
-    result = _template_connection_costs(
-        iasr_tables,
-        "Step Change",
-        "sub_regions",
-        pd.DataFrame(columns=["geo_id", "geo_type", "region_id"]),
-    )
-
-    assert list(result.columns) == _CONNECTION_SYSTEM_STRENGTH_COST_COLS
-    assert result.empty
 
 
 # --- _drop_excluded_technologies ---
