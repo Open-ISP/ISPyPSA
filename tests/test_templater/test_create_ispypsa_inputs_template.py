@@ -583,10 +583,10 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "connection_cost",
         "system_strength_cost",
     }
-    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (4 subregions: CNSW, SNW, NQ, CQ)] x 2 years,
-    # since region costs expand to every sub-region
-    assert set(costs_connection["geo_id"]) == {"CQ", "NQ", "Q1", "CNSW", "SNW"}
-    assert len(costs_connection) == 12
+    # [(2 VRE) x (1 REZ) + (1 non-VRE) x (3 subregions: CNSW, SNW, NQ)] x 2 years.
+    # Region costs only go to sub-regions with a new entrant, so CQ gets no row.
+    assert set(costs_connection["geo_id"]) == {"NQ", "Q1", "CNSW", "SNW"}
+    assert len(costs_connection) == 10
 
     # At sub_regions, geo_id collapse is a no-op: one row per new-entrant summary
     # row. Detailed collapse behaviour is covered by test_new_entrants.py.
