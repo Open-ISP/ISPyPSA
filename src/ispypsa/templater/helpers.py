@@ -534,6 +534,70 @@ def _is_subregion_geo_id(
     return geo_id.map(geo_type_by_geo_id) == "subregion"
 
 
+def _collapse_geo_id_and_average(
+    table: pd.DataFrame,
+    group_cols: list[str],
+    value_col: str,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+) -> pd.DataFrame:
+    """Collapses ``table``'s geo_id to ``regional_granularity``, then averages
+    ``value_col`` over the rows that now share every column in ``group_cols``.
+
+    ``table`` holds one value per new entrant option at sub-region or REZ level, e.g.
+    a CCGT connection cost in each of CNSW and SNW. At a coarser granularity those
+    options become one: CNSW and SNW both become NSW (at "nem_regions") or "NEM" (at
+    "single_region"), and the model needs a single value for the merged option.
+
+    ``group_cols`` names the key-columns that are used to group rows by, and must
+    include geo_id. Any column in ``table`` not in ``group_cols`` or ``value_col``
+    is dropped.
+
+    Each geo_id is mapped with _map_geo_id_to_granularity: sub-regions move to their
+    region or to "NEM", and REZs are left as they are. The table then gets grouped
+    by ``group_cols``, and the values in ``value_col`` are averaged across all rows
+    in each group.
+
+    I/O Example:
+        table:
+            technology  geo_id  year  cost
+            CCGT        CNSW    2025  100.0
+            CCGT        SNW     2025  100.0
+            CCGT        NQ      2025  130.0
+            Battery     N1      2025  50.0     # unique row: stays untouched
+
+        group_cols: ["technology", "geo_id", "year"]
+        value_col: "cost"
+
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+            NQ      subregion  QLD
+            N1      rez        NSW
+
+        returns:
+            regional_granularity = "nem_regions":
+                technology  geo_id  year  cost
+                Battery     N1      2025  50.0
+                CCGT        NSW     2025  100.0    # mean(100, 100)
+                CCGT        QLD     2025  130.0
+
+            regional_granularity = "single_region":
+                technology  geo_id  year  cost
+                Battery     N1      2025  50.0
+                CCGT        NEM     2025  110.0    # mean(100, 100, 130)
+
+    An unknown ``regional_granularity`` raises, via _map_geo_id_to_granularity.
+    """
+    table = table.assign(
+        geo_id=_map_geo_id_to_granularity(
+            table["geo_id"], regional_granularity, sub_regional_geography
+        )
+    )
+    return table.groupby(group_cols)[value_col].mean().reset_index()
+
+
 def _assert_table_valid(
     table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
 ) -> None:
