@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _assert_table_valid,
     _best_fuzzy_match,
     _build_geo_region_lookup,
     _collapse_geo_id_and_average,
@@ -15,18 +16,11 @@ from ispypsa.templater.helpers import (
     _set_geo_id,
     _where_any_substring_appears,
 )
-from ispypsa.templater.mappings import _SUMMARY_COLUMN_RENAMES
+from ispypsa.templater.mappings import (
+    _COST_TABLE_COLUMN_RENAMES,
+    _SUMMARY_COLUMN_RENAMES,
+)
 from ispypsa.templater.new_entrants import _override_botn_technology
-
-_COST_TABLE_COLUMN_RENAMES = {
-    "Region": "region_id",
-    "REZ ID": "geo_id",
-    "Connection capacity (MVA)": "connection_capacity",
-    "Scenario": "scenario",
-    "IASR Scenario": "scenario",
-    "Generator Type": "technology",
-    "Technology": "technology",
-}
 
 # NOTE: the VRE / non-VRE split below is approximate, not strict. The IASR
 # "connection_cost_forecast_other" (non-VRE) table actually includes "distributed
@@ -128,14 +122,10 @@ def _template_connection_costs(
         iasr_tables["efficient_level_of_system_strength_cost"]
     )
     vre_connection_costs = _template_vre_connection_costs(
-        iasr_tables["connection_cost_forecast_wind_and_solar"],
-        iasr_tables["connection_costs_for_wind_and_solar"],
-        scenario,
-        new_entrant_pairs,
+        iasr_tables, scenario, new_entrant_pairs
     )
     non_vre_connection_costs = _template_non_vre_connection_costs(
-        iasr_tables["connection_cost_forecast_other"],
-        iasr_tables["connection_capacity_non_vre"],
+        iasr_tables,
         scenario,
         new_entrant_pairs,
         regional_granularity,
@@ -183,30 +173,31 @@ def _extract_new_entrant_pairs(new_entrants_summary: pd.DataFrame) -> pd.DataFra
 
 
 def _template_vre_connection_costs(
-    connection_cost_forecast_vre: pd.DataFrame,
-    connection_costs_for_vre: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
     new_entrant_pairs: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates connection costs for VRE (wind and solar) new entrant technologies.
 
-    Filters the cost forecast to the given scenario, merges in connection capacity,
-    normalises to long format and $/MW units, then expands to all VRE
-    (geo_id, technology) pairs in ``new_entrant_pairs``. REZs absent
-    from the cost forecast (e.g. offshore wind) are included with NaN
-    connection_cost — system strength costs are still applied to them downstream.
-    NaN connection costs for REZs that ARE in the forecast are logged as a WARNING.
+    Reads the cost forecast (``connection_cost_forecast_wind_and_solar``) and filters it
+    to the given scenario, merges in connection capacity
+    (``connection_costs_for_wind_and_solar``), normalises to long format and $/MW
+    units, then expands to all VRE (geo_id, technology) pairs in
+    ``new_entrant_pairs``. REZs absent from the cost forecast (e.g. offshore wind) are
+    included with NaN connection_cost — system strength costs are still applied to them
+    downstream. NaN connection costs for REZs that ARE in the forecast are logged as a
+    WARNING.
 
     I/O Example:
         Inputs:
 
-            connection_cost_forecast_vre:
+            iasr_tables["connection_cost_forecast_wind_and_solar"]:
                 REZ ID  REZ names       Scenario        2024-25     2025-26
                 N1      North West NSW  Step Change     73000000    74000000
                 Q9      Banana          Step Change     854000000   867000000
                 # V8 absent: offshore REZs have no connection cost forecast
 
-            connection_costs_for_vre:
+            iasr_tables["connection_costs_for_wind_and_solar"]:
                 REZ ID  REZ names       Connection capacity (MVA)
                 N1      North West NSW  400
                 Q9      Banana          1800
@@ -234,18 +225,13 @@ def _template_vre_connection_costs(
             V8      Wind - offshore (fixed) 2026  NaN          # system strength applied downstream
     """
     vre_technologies_by_geo_id = _get_unique_vre_geo_id_rows(new_entrant_pairs)
-    scenario_cost_forecast = _filter_table_by_isp_scenario(
-        connection_cost_forecast_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        scenario,
-        "connection_cost_forecast_vre",
-    )
-    merged_df = scenario_cost_forecast.merge(
-        connection_costs_for_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        how="left",
-        on=["geo_id"],
-    )
+    forecast_name = "connection_cost_forecast_wind_and_solar"
+    forecast = _read_cost_table(iasr_tables, forecast_name)
+    forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
+    capacity = _read_cost_table(iasr_tables, "connection_costs_for_wind_and_solar")
+    costs = forecast.merge(capacity, how="left", on=["geo_id"])
     normalised_df = _normalise_connection_cost_forecast_frame(
-        merged_df, id_cols=["geo_id", "connection_capacity"]
+        costs, id_cols=["geo_id", "connection_capacity"]
     )
     costs_per_mw = _calculate_connection_cost_per_mw(normalised_df)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["geo_id"])
@@ -337,8 +323,7 @@ def _build_vre_cost_rows(
 
 
 def _template_non_vre_connection_costs(
-    cost_forecast: pd.DataFrame,
-    connection_capacity: pd.DataFrame,
+    iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
     new_entrant_pairs: pd.DataFrame,
     regional_granularity: str,
@@ -348,7 +333,8 @@ def _template_non_vre_connection_costs(
     ``regional_granularity``.
 
     IASR publishes non-VRE connection costs per NEM region and technology. The cost
-    forecast is filtered to ``scenario``, connection capacity is merged in, and the
+    forecast (``connection_cost_forecast_other``) is filtered to ``scenario``,
+    connection capacity (``connection_capacity_non_vre``) is merged in, and the
     table is melted to long format and converted to $/MW. Technologies in
     _EXCLUDED_TECHNOLOGIES are dropped, and the rest are respelt to match
     ``new_entrant_pairs`` (see _canonicalise_technologies).
@@ -361,13 +347,13 @@ def _template_non_vre_connection_costs(
     same way the other new entrant properties and fuel prices are averaged.
 
     I/O Example (regional_granularity="single_region"):
-        cost_forecast:
+        iasr_tables["connection_cost_forecast_other"]:
             Generator Type        Region  Scenario     2024-25
             CCGT                  NSW     Step Change  40000000
             CCGT                  QLD     Step Change  39000000
             Battery Storage (4h)  SA      Step Change  27000000
 
-        connection_capacity:
+        iasr_tables["connection_capacity_non_vre"]:
             Region  Generator Type        Connection capacity (MVA)
             NSW     CCGT                  400
             QLD     CCGT                  300
@@ -396,16 +382,11 @@ def _template_non_vre_connection_costs(
             NEM     CCGT                  2025  110000.0    # mean(100000, 100000, 130000)
             S1      Battery Storage (4h)  2025  90000.0     # REZ: SA cost, geo_id not remapped
     """
-    cost_forecast = _filter_table_by_isp_scenario(
-        cost_forecast.rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        scenario,
-        "connection_cost_forecast_other",
-    )
-    costs = cost_forecast.merge(
-        connection_capacity.rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        how="left",
-        on=["region_id", "technology"],
-    )
+    forecast_name = "connection_cost_forecast_other"
+    forecast = _read_cost_table(iasr_tables, forecast_name)
+    forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
+    capacity = _read_cost_table(iasr_tables, "connection_capacity_non_vre")
+    costs = forecast.merge(capacity, how="left", on=["region_id", "technology"])
     costs = _normalise_connection_cost_forecast_frame(
         costs, id_cols=["region_id", "technology", "connection_capacity"]
     )
@@ -606,11 +587,8 @@ def _template_costs_new_entrant_build(
             Battery storage (2hrs storage)  2025  1238000
     """
     logging.info("Creating a template for new entrant build costs.")
-    build_costs = _filter_table_by_isp_scenario(
-        iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
-        scenario,
-        "build_costs",
-    )
+    build_costs = _read_cost_table(iasr_tables, "build_costs")
+    build_costs = _filter_table_by_isp_scenario(build_costs, scenario, "build_costs")
     new_entrant_pairs = _extract_new_entrant_pairs(iasr_tables["new_entrants_summary"])
     build_costs = _canonicalise_technologies(
         build_costs,
@@ -623,6 +601,33 @@ def _template_costs_new_entrant_build(
 
 
 # --- shared helpers ---
+
+
+def _read_cost_table(
+    iasr_tables: dict[str, pd.DataFrame], table_name: str
+) -> pd.DataFrame:
+    """Returns ``iasr_tables[table_name]`` with its headers renamed to schema names,
+    after checking it has every header the renames need and isn't empty.
+
+    The headers and their new names come from _COST_TABLE_COLUMN_RENAMES. Raises a
+    ValueError naming the table if a header is missing or the table is empty (see
+    _assert_table_valid).
+
+    I/O Example:
+        iasr_tables["build_costs"]:
+            Technology  IASR Scenario  2024-25
+            Wind        Step Change    3412
+
+        table_name: "build_costs"
+
+        returns:
+            technology  scenario     2024-25
+            Wind        Step Change  3412
+    """
+    table = iasr_tables[table_name]
+    renames = _COST_TABLE_COLUMN_RENAMES[table_name]
+    _assert_table_valid(table, table_name, set(renames), "new entrant cost data")
+    return table.rename(columns=renames)
 
 
 def _normalise_connection_cost_forecast_frame(
