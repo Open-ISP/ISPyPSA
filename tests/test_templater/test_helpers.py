@@ -7,6 +7,7 @@ import pytest
 from ispypsa.templater.helpers import (
     _assert_table_valid,
     _build_geo_region_lookup,
+    _collapse_geo_id_and_average,
     _derive_phes_symmetric_efficiency,
     _filter_table_by_isp_scenario,
     _get_property_value_map,
@@ -636,6 +637,65 @@ def test_is_subregion_geo_id(csv_str_to_df):
 
     expected = pd.Series([True, False])
     pd.testing.assert_series_equal(result, expected)
+
+
+# --- _collapse_geo_id_and_average ---
+
+
+@pytest.mark.parametrize(
+    "regional_granularity, expected_csv",
+    [
+        (
+            "nem_regions",
+            # CNSW and SNW share NSW's row; NQ becomes QLD on its own
+            """
+            technology,  geo_id,  year,  cost
+            Battery,     N1,      2025,  50.0
+            CCGT,        NSW,     2025,  100.0
+            CCGT,        QLD,     2025,  130.0
+            """,
+        ),
+        (
+            "single_region",
+            # Each sub-region counts once: mean(100, 100, 130) = 110
+            """
+            technology,  geo_id,  year,  cost
+            Battery,     N1,      2025,  50.0
+            CCGT,        NEM,     2025,  110.0
+            """,
+        ),
+    ],
+)
+def test_collapse_geo_id_and_average(csv_str_to_df, regional_granularity, expected_csv):
+    # N1 is a REZ, so it keeps its own row at every granularity
+    table = csv_str_to_df("""
+        technology,  geo_id,  year,  cost
+        CCGT,        CNSW,    2025,  100.0
+        CCGT,        SNW,     2025,  100.0
+        CCGT,        NQ,      2025,  130.0
+        Battery,     N1,      2025,  50.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        NQ,      subregion,  QLD
+        N1,      rez,        NSW
+    """)
+
+    result = _collapse_geo_id_and_average(
+        table,
+        ["technology", "geo_id", "year"],
+        "cost",
+        regional_granularity,
+        sub_regional_geography,
+    )
+
+    expected = csv_str_to_df(expected_csv)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+        expected.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+    )
 
 
 # --- _group_properties_by_source ---
