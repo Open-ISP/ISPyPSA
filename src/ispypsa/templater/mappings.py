@@ -919,7 +919,9 @@ New entrant cost tables mapped to the raw IASR headers they need and the schema
 column names those headers become. Consumed by
 ``ispypsa.templater.connection_and_build_costs`` via ``_read_cost_table``, which raises
 if a listed header is missing before renaming. The financial-year columns aren't listed
-here; they're melted to a ``year`` column later.
+here; they're melted to a ``year`` column later. A table with no headers to rename maps
+to ``{}``, so it is only checked for being empty; kept in this format for consistency
+with other new entrant cost table handling.
 """
 
 _COST_TABLE_COLUMN_RENAMES = {
@@ -942,4 +944,5 @@ _COST_TABLE_COLUMN_RENAMES = {
         "Connection capacity (MVA)": "connection_capacity",
     },
     "build_costs": {"Technology": "technology", "IASR Scenario": "scenario"},
+    "efficient_level_of_system_strength_cost": {},
 }
