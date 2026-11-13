@@ -619,17 +619,19 @@ def test_build_vre_cost_rows_empty_inputs(csv_str_to_df):
 
 
 def test_template_vre_connection_costs(csv_str_to_df, caplog):
-    connection_cost_forecast_vre = csv_str_to_df("""
-        REZ ID,  REZ names,         Scenario,     2024-25,    2025-26
-        N1,      North West NSW,    Step Change, 73000000,   74000000
-        Q9,      Banana,            Step Change, 854000000,  867000000
-    """)
-    connection_costs_for_vre = csv_str_to_df("""
-        REZ ID,     Connection capacity (MVA)
-        N1,         400
-        Q9,         1800
-        V8,
-    """)
+    iasr_tables = {
+        "connection_cost_forecast_wind_and_solar": csv_str_to_df("""
+            REZ ID,  REZ names,         Scenario,     2024-25,    2025-26
+            N1,      North West NSW,    Step Change, 73000000,   74000000
+            Q9,      Banana,            Step Change, 854000000,  867000000
+        """),
+        "connection_costs_for_wind_and_solar": csv_str_to_df("""
+            REZ ID,     Connection capacity (MVA)
+            N1,         400
+            Q9,         1800
+            V8,
+        """),
+    }
     new_entrant_pairs = csv_str_to_df("""
         geo_id,     technology
         N1,         Wind
@@ -642,10 +644,7 @@ def test_template_vre_connection_costs(csv_str_to_df, caplog):
 
     with caplog.at_level("WARNING"):
         result = _template_vre_connection_costs(
-            connection_cost_forecast_vre,
-            connection_costs_for_vre,
-            "Step Change",
-            new_entrant_pairs,
+            iasr_tables, "Step Change", new_entrant_pairs
         )
 
     # No warning raised for offshore REZ NaN cost (row added after NaNs checked)
@@ -868,20 +867,22 @@ def test_template_non_vre_connection_costs(
     # SA battery = 27000000 / 300 = 90000. VIC CCGT has no new entrant and N1 Wind
     # is VRE, so neither appears at any granularity. S1 is a REZ, so its geo_id isn't
     # remapped at any granularity.
-    cost_forecast = csv_str_to_df("""
-        Generator Type,        Region,  Scenario,     2024-25
-        CCGT,                  NSW,     Step Change,  40000000
-        CCGT,                  QLD,     Step Change,  39000000
-        CCGT,                  VIC,     Step Change,  20000000
-        Battery Storage (4h),  SA,      Step Change,  27000000
-    """)
-    connection_capacity = csv_str_to_df("""
-        Region,  Generator Type,        Connection capacity (MVA)
-        NSW,     CCGT,                  400
-        QLD,     CCGT,                  300
-        VIC,     CCGT,                  250
-        SA,      Battery Storage (4h),  300
-    """)
+    iasr_tables = {
+        "connection_cost_forecast_other": csv_str_to_df("""
+            Generator Type,        Region,  Scenario,     2024-25
+            CCGT,                  NSW,     Step Change,  40000000
+            CCGT,                  QLD,     Step Change,  39000000
+            CCGT,                  VIC,     Step Change,  20000000
+            Battery Storage (4h),  SA,      Step Change,  27000000
+        """),
+        "connection_capacity_non_vre": csv_str_to_df("""
+            Region,  Generator Type,        Connection capacity (MVA)
+            NSW,     CCGT,                  400
+            QLD,     CCGT,                  300
+            VIC,     CCGT,                  250
+            SA,      Battery Storage (4h),  300
+        """),
+    }
     new_entrant_pairs = csv_str_to_df("""
         geo_id,  technology
         CNSW,    CCGT
@@ -900,8 +901,7 @@ def test_template_non_vre_connection_costs(
     """)
 
     result = _template_non_vre_connection_costs(
-        cost_forecast,
-        connection_capacity,
+        iasr_tables,
         "Step Change",
         new_entrant_pairs,
         regional_granularity,
