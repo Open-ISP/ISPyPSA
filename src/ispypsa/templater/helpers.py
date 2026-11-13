@@ -998,10 +998,12 @@ def _melt_financial_year_columns(
     list just results in a long df with one row per year. Columns that are neither
     in ``id_columns`` nor a financial year are dropped.
 
-    ``table_name`` names the IASR table the year columns come from, for the error
-    raised if ``wide`` has none (see _find_financial_year_columns). A header in another
-    format, say '2024-2025', is dropped like any other non-year column, so a table
-    where only some headers changed format still melts, without those years.
+    ``table_name`` names the IASR table the year columns come from, for the errors
+    raised if ``wide`` has none (see _find_financial_year_columns) or if a yearly value
+    isn't numeric (see _convert_values_to_numeric). A header in another format, say
+    '2024-2025', is dropped like any other non-year column, so a table where only some
+    headers changed format still melts, without those years. Schema validation or
+    other context-specific checks are expected to catch such cases.
 
     I/O Example (id_columns=["technology"], value_name="cost"):
         wide:
@@ -1024,6 +1026,7 @@ def _melt_financial_year_columns(
         value_name=value_name,
     )
     long["year"] = long["year"].apply(_financial_year_string_to_end_year_int)
+    long[value_name] = _convert_values_to_numeric(long[value_name], table_name)
     return long
 
 
@@ -1044,3 +1047,24 @@ def _find_financial_year_columns(wide: pd.DataFrame, table_name: str) -> list[st
             f"Columns found: {list(wide.columns)}"
         )
     return year_columns
+
+
+def _convert_values_to_numeric(values: pd.Series, table_name: str) -> pd.Series:
+    """Returns ``values`` as numbers, raising if any non-blank value isn't numeric.
+
+    Blank cells stay NaN. A value pd.to_numeric can't parse, e.g. 'TBC', raises a
+    ValueError naming ``table_name`` and listing the values, rather than being carried
+    on as text (where e.g. multiplication would quietly repeat the string).
+
+    I/O Example:
+        [4.12, NaN, "3.95"] -> [4.12, NaN, 3.95]
+        [4.12, "TBC"]       -> raises ValueError
+    """
+    numeric = pd.to_numeric(values, errors="coerce")
+    not_numeric = values[numeric.isna() & values.notna()]
+    if not not_numeric.empty:
+        raise ValueError(
+            f"Non-numeric values in '{table_name}' table: "
+            f"{sorted(not_numeric.astype(str).unique())}"
+        )
+    return numeric

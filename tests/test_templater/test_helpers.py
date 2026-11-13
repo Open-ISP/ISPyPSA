@@ -1088,3 +1088,18 @@ def test_melt_financial_year_columns_raises_when_no_year_columns(csv_str_to_df):
         ),
     ):
         _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")
+
+
+def test_melt_financial_year_columns_raises_on_non_numeric_values(csv_str_to_df):
+    # The blank CCGT 2025-26 cell is a real gap and stays NaN; only 'TBC' is reported.
+    wide = csv_str_to_df("""
+        technology,  2024-25,  2025-26
+        Wind,        3412,     TBC
+        CCGT,        2499,
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Non-numeric values in 'build_costs' table: ['TBC']"),
+    ):
+        _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")
