@@ -231,7 +231,7 @@ def _template_vre_connection_costs(
     capacity = _read_cost_table(iasr_tables, "connection_costs_for_wind_and_solar")
     costs = forecast.merge(capacity, how="left", on=["geo_id"])
     costs = _melt_financial_year_columns(
-        costs, ["geo_id", "connection_capacity"], "connection_cost"
+        costs, ["geo_id", "connection_capacity"], "connection_cost", forecast_name
     )
     costs_per_mw = _calculate_connection_cost_per_mw(costs)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["geo_id"])
@@ -388,7 +388,10 @@ def _template_non_vre_connection_costs(
     capacity = _read_cost_table(iasr_tables, "connection_capacity_non_vre")
     costs = forecast.merge(capacity, how="left", on=["region_id", "technology"])
     costs = _melt_financial_year_columns(
-        costs, ["region_id", "technology", "connection_capacity"], "connection_cost"
+        costs,
+        ["region_id", "technology", "connection_capacity"],
+        "connection_cost",
+        forecast_name,
     )
     costs = _canonicalise_technologies(
         costs,
@@ -470,8 +473,9 @@ def _add_system_strength_costs(
     Solar thermal contains "solar" so matches ``_IBR_TECHNOLOGY_STRINGS`` but does
     not incur a system strength cost, so it is zeroed separately.
 
-    Years missing from ``system_strength_costs`` get NaN for IBR technologies. At
-    v7.5 that's 2025 and 2055, since the system strength table covers 2026-2054.
+    Years missing from ``system_strength_costs`` get NaN for IBR technologies, and
+    are logged (see _warn_years_without_system_strength_cost). At v7.5 that's 2025
+    and 2055, since the system strength table covers 2026-2054.
 
     I/O Example:
         connection_costs:
@@ -492,7 +496,9 @@ def _add_system_strength_costs(
     """
     costs = connection_costs.merge(system_strength_costs, how="left", on=["year"])
     costs = _set_non_ibr_system_strength_cost_to_zero(costs)
-    return _set_solar_thermal_system_strength_costs_to_zero(costs)
+    costs = _set_solar_thermal_system_strength_costs_to_zero(costs)
+    _warn_years_without_system_strength_cost(costs)
+    return costs
 
 
 def _normalise_system_strength_cost_frame(
@@ -515,7 +521,10 @@ def _normalise_system_strength_cost_frame(
             2027  148880.0
     """
     long = _melt_financial_year_columns(
-        system_strength_cost_table, [], "system_strength_cost"
+        system_strength_cost_table,
+        [],
+        "system_strength_cost",
+        "efficient_level_of_system_strength_cost",
     )
     long["system_strength_cost"] *= 1000  # convert to $/MW
     return long
@@ -545,6 +554,23 @@ def _set_solar_thermal_system_strength_costs_to_zero(
     )
     connection_costs.loc[solar_thermal_rows, "system_strength_cost"] = 0.0
     return connection_costs
+
+
+def _warn_years_without_system_strength_cost(connection_costs: pd.DataFrame) -> None:
+    """Logs one WARNING listing the years where system_strength_cost is NaN.
+
+    Runs after non-IBR and solar thermal rows are zeroed, so any NaN left is an IBR
+    technology in a year the system strength table doesn't cover. Listing the years
+    also shows up a year header the melt skipped, e.g. a '2032-2033' header.
+    """
+    nan_rows = connection_costs["system_strength_cost"].isna()
+    missing_years = sorted(connection_costs.loc[nan_rows, "year"].unique().tolist())
+    if missing_years:
+        logging.warning(
+            f"No system strength cost for years {missing_years} in "
+            "'efficient_level_of_system_strength_cost' table; IBR technologies will "
+            "default to $0 in those years."
+        )
 
 
 # ----------- Build Costs --------------
@@ -592,7 +618,9 @@ def _template_costs_new_entrant_build(
         set(new_entrant_pairs["technology"]),
         "templating new entrant build costs",
     )
-    build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
+    build_costs = _melt_financial_year_columns(
+        build_costs, ["technology"], "cost", "build_costs"
+    )
     build_costs["cost"] *= 1000  # $/kW -> $/MW
     return build_costs
 

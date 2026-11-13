@@ -982,7 +982,7 @@ def _raise_if_no_scenario_rows(
 
 
 def _melt_financial_year_columns(
-    wide: pd.DataFrame, id_columns: list[str], value_name: str
+    wide: pd.DataFrame, id_columns: list[str], value_name: str, table_name: str
 ) -> pd.DataFrame:
     """Melts the financial-year columns of ``wide`` into one row per ``id_columns``
     row and year, with the yearly values in a column named ``value_name``.
@@ -998,6 +998,11 @@ def _melt_financial_year_columns(
     list just results in a long df with one row per year. Columns that are neither
     in ``id_columns`` nor a financial year are dropped.
 
+    ``table_name`` names the IASR table the year columns come from, for the error
+    raised if ``wide`` has none (see _find_financial_year_columns). A header in another
+    format, say '2024-2025', is dropped like any other non-year column, so a table
+    where only some headers changed format still melts, without those years.
+
     I/O Example (id_columns=["technology"], value_name="cost"):
         wide:
             technology  Source         2024-25  2025-26
@@ -1011,7 +1016,7 @@ def _melt_financial_year_columns(
             Wind        2026  3266
             CCGT        2026  NaN
     """
-    year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
+    year_columns = _find_financial_year_columns(wide, table_name)
     long = wide.melt(
         id_vars=id_columns,
         value_vars=year_columns,
@@ -1020,3 +1025,22 @@ def _melt_financial_year_columns(
     )
     long["year"] = long["year"].apply(_financial_year_string_to_end_year_int)
     return long
+
+
+def _find_financial_year_columns(wide: pd.DataFrame, table_name: str) -> list[str]:
+    """Returns the headers of ``wide`` that look like a financial year ('2024-25').
+
+    Raises a ValueError naming ``table_name`` and listing its headers if there are
+    none, since melting would otherwise return an empty table without any error.
+
+    I/O Example:
+        columns ["technology", "2024-25", "2025-26"] -> ["2024-25", "2025-26"]
+        columns ["technology", "2024-2025"]          -> raises ValueError
+    """
+    year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
+    if not year_columns:
+        raise ValueError(
+            f"No financial-year columns (like '2024-25') in '{table_name}' table. "
+            f"Columns found: {list(wide.columns)}"
+        )
+    return year_columns
