@@ -295,8 +295,8 @@ _EXPECTED_EXPANSION_COST_ROWS_75 = {
 }
 
 _EXPECTED_COSTS_CONNECTION_ROWS_75 = {
-    "sub_regions": 15190,
-    "nem_regions": 10540,
+    "sub_regions": 14384,
+    "nem_regions": 10416,
     "single_region": 8680,
 }
 

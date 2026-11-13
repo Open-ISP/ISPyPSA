@@ -8,10 +8,15 @@ import pandas as pd
 
 from ispypsa.templater.helpers import (
     _best_fuzzy_match,
+    _build_geo_region_lookup,
+    _collapse_geo_id_and_average,
     _filter_table_by_isp_scenario,
     _melt_financial_year_columns,
+    _set_geo_id,
     _where_any_substring_appears,
 )
+from ispypsa.templater.mappings import _SUMMARY_COLUMN_RENAMES
+from ispypsa.templater.new_entrants import _override_botn_technology
 
 _COST_TABLE_COLUMN_RENAMES = {
     "Region": "region_id",
@@ -37,22 +42,25 @@ def _template_connection_costs(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
     regional_granularity: str,
-    generators_new_entrant: pd.DataFrame,
-    storage_new_entrant: pd.DataFrame,
     sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
     """Combines VRE and non-VRE connection costs with system strength costs.
 
     Produces a long-format table with columns (geo_id, technology, year,
-    connection_cost, system_strength_cost). VRE (wind/solar) costs are templated
-    per-REZ; non-VRE costs are templated per-region and expanded to geo_id level
-    based on ``regional_granularity``. Non-VRE technologies in _EXCLUDED_TECHNOLOGIES
-    are dropped, and the rest are respelt to match the new entrant tables (see
-    _canonicalise_technologies). System strength costs ($/MW) are merged in for all
-    IBR technologies (wind, solar, battery).
+    connection_cost, system_strength_cost), with a row for each new entrant option in
+    ``new_entrants_summary`` (see _extract_new_entrant_pairs). VRE (wind/solar) costs
+    are templated per REZ. Non-VRE costs are published per region: each new entrant
+    option takes its region's cost, and geo_id is then collapsed to
+    ``regional_granularity`` (see _template_non_vre_connection_costs). Non-VRE
+    technologies in _EXCLUDED_TECHNOLOGIES are dropped, and the rest are respelt to
+    match the new entrant technologies (see _canonicalise_technologies). System
+    strength costs ($/MW) are merged in for all IBR technologies (wind, solar,
+    battery).
 
     Args:
         iasr_tables: dict containing the following keys:
+            ``new_entrants_summary``: columns IASR ID / DLT names, Technology Type,
+                REZ ID, Sub-region.
             ``connection_cost_forecast_wind_and_solar``: columns REZ ID, Scenario,
                 one column per financial year (total connection cost in $).
             ``connection_costs_for_wind_and_solar``: columns REZ ID, Connection
@@ -66,12 +74,8 @@ def _template_connection_costs(
                 per financial year (IBR remediation cost in $/kW).
         scenario: ISP scenario name, e.g. "Step Change".
         regional_granularity: "sub_regions", "nem_regions", or "single_region".
-        generators_new_entrant: templated new entrant generators table;
-            columns used: 'geo_id' and 'technology'.
-        storage_new_entrant: templated new entrant storage table;
-            columns used: 'geo_id' and 'technology'.
-        sub_regional_geography: templated network geography table;
-            columns used: 'geo_id', 'geo_type', 'region_id'.
+        sub_regional_geography: network_geography templated at "sub_regions"
+            granularity; columns used: 'geo_id', 'geo_type', 'region_id'.
 
     Returns:
         One row per (geo_id, technology, year). connection_cost and
@@ -81,6 +85,13 @@ def _template_connection_costs(
 
     I/O Example:
         Inputs (abbreviated; regional_granularity="nem_regions"):
+
+            new_entrants_summary:
+                IASR ID / DLT names  Technology Type       Sub-region  REZ ID
+                N1 Wind              Wind                  NNSW        N1
+                N1 Solar             Large scale Solar PV  NNSW        N1
+                CNSW CCGT            CCGT                  CNSW        Not Applicable
+                SNW CCGT             CCGT                  SNW         Not Applicable
 
             connection_cost_forecast_wind_and_solar:
                 REZ ID  Scenario      2024-25   2025-26
@@ -102,64 +113,70 @@ def _template_connection_costs(
                 Unnamed: 1                  2025-26   2026-27
                 IBR remediation cost $/kW   163.24    148.88
 
-            generators_new_entrant:
-                geo_id  technology
-                N1      Wind
-                N1      Large scale Solar PV
-                NSW     CCGT
-
-            storage_new_entrant: (empty)
-
         Returns:
             geo_id  technology              year  connection_cost  system_strength_cost
             N1      Wind                    2025  182500.0         NaN       # no 2024-25 value
             N1      Wind                    2026  185000.0         163240.0  # VRE IBR
             N1      Large scale Solar PV    2025  182500.0         NaN
             N1      Large scale Solar PV    2026  185000.0         163240.0
-            NSW     CCGT                    2025  100000.0         0.0       # non-VRE, non-IBR
-            NSW     CCGT                    2026  105000.0         0.0
+            NSW     CCGT                    2025  100000.0         0.0       # CNSW, SNW -> NSW
+            NSW     CCGT                    2026  105000.0         0.0       # non-VRE, non-IBR
     """
     logging.info("Creating a template for new entrant connection costs.")
+    new_entrant_pairs = _extract_new_entrant_pairs(iasr_tables["new_entrants_summary"])
     system_strength_costs = _normalise_system_strength_cost_frame(
         iasr_tables["efficient_level_of_system_strength_cost"]
     )
-
-    canonical_technology_geo_id_pairs = _get_canon_technology_and_geo_id_pairs(
-        generators_new_entrant, storage_new_entrant
-    )
-
     vre_connection_costs = _template_vre_connection_costs(
         iasr_tables["connection_cost_forecast_wind_and_solar"],
         iasr_tables["connection_costs_for_wind_and_solar"],
         scenario,
-        canonical_technology_geo_id_pairs,
+        new_entrant_pairs,
     )
     non_vre_connection_costs = _template_non_vre_connection_costs(
         iasr_tables["connection_cost_forecast_other"],
         iasr_tables["connection_capacity_non_vre"],
         scenario,
-        canonical_technology_geo_id_pairs,
+        new_entrant_pairs,
         regional_granularity,
         sub_regional_geography,
     )
-
     combined_connection_costs = pd.concat(
         [vre_connection_costs, non_vre_connection_costs], axis=0, ignore_index=True
     )
-    return _merge_and_filter_system_strength_costs(
-        combined_connection_costs, system_strength_costs
-    )
+    return _add_system_strength_costs(combined_connection_costs, system_strength_costs)
 
 
-def _get_canon_technology_and_geo_id_pairs(
-    generators_new_entrant: pd.DataFrame, storage_new_entrant: pd.DataFrame
-) -> pd.DataFrame:
-    """Combines and deduplicates (geo_id, technology) pairs from new entrant generators
-    and storage tables."""
-    generators = generators_new_entrant[["geo_id", "technology"]].copy()
-    storage = storage_new_entrant[["geo_id", "technology"]].copy()
-    combined = pd.concat([generators, storage], axis=0, ignore_index=True)
-    return combined.drop_duplicates().reset_index(drop=True)
+def _extract_new_entrant_pairs(new_entrants_summary: pd.DataFrame) -> pd.DataFrame:
+    """Returns the deduplicated (geo_id, technology) pair of every new entrant option
+    in ``new_entrants_summary``, at sub-region/REZ level.
+
+    The pairs decide which cost rows the connection costs keep, and their technologies
+    are the spellings both cost tables are matched to. Connection costs need the
+    sub-region detail so that they can be aggregated the same way as the other
+    new entrant properties (see _template_non_vre_connection_costs).
+
+    geo_id comes from _set_geo_id. BOTN - Cethana takes its own technology, as it does
+    in storage_new_entrant (see _override_botn_technology). Otherwise it would be listed
+    as the generic PHES 24h option in TAS.
+
+    I/O Example:
+        new_entrants_summary (abbreviated):
+            IASR ID / DLT names   Technology Type               Sub-region  REZ ID
+            N1 Wind               Wind                          NNSW        N1
+            CNSW OCGT Small       OCGT (small GT)               CNSW        Not Applicable
+            WOO OCGT Small        OCGT (small GT)               CNSW        Not Applicable  # same pair
+            BOTN - Cethana - 20h  Pumped Hydro (24hrs storage)  TAS         Not Applicable
+
+        returns:
+            geo_id  technology
+            N1      Wind
+            CNSW    OCGT (small GT)
+            TAS     BOTN - Cethana
+    """
+    summary = _set_geo_id(new_entrants_summary.rename(columns=_SUMMARY_COLUMN_RENAMES))
+    summary["technology"] = _override_botn_technology(summary)
+    return summary[["geo_id", "technology"]].drop_duplicates().reset_index(drop=True)
 
 
 # --- VRE connection costs ---
@@ -169,13 +186,13 @@ def _template_vre_connection_costs(
     connection_cost_forecast_vre: pd.DataFrame,
     connection_costs_for_vre: pd.DataFrame,
     scenario: str,
-    canonical_technology_geo_id_pairs: pd.DataFrame,
+    new_entrant_pairs: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates connection costs for VRE (wind and solar) new entrant technologies.
 
     Filters the cost forecast to the given scenario, merges in connection capacity,
     normalises to long format and $/MW units, then expands to all VRE
-    technology/geo_id pairs from the new entrant generators table. REZs absent
+    (geo_id, technology) pairs in ``new_entrant_pairs``. REZs absent
     from the cost forecast (e.g. offshore wind) are included with NaN
     connection_cost — system strength costs are still applied to them downstream.
     NaN connection costs for REZs that ARE in the forecast are logged as a WARNING.
@@ -196,7 +213,7 @@ def _template_vre_connection_costs(
 
             scenario: "Step Change"
 
-            canonical_technology_geo_id_pairs:
+            new_entrant_pairs:
                 geo_id  technology
                 NNSW    CCGT
                 NNSW    Battery Storage (4h)
@@ -216,9 +233,7 @@ def _template_vre_connection_costs(
             V8      Wind - offshore (fixed) 2025  NaN          # no forecast: expected
             V8      Wind - offshore (fixed) 2026  NaN          # system strength applied downstream
     """
-    vre_technologies_by_geo_id = _get_unique_vre_geo_id_rows(
-        canonical_technology_geo_id_pairs
-    )
+    vre_technologies_by_geo_id = _get_unique_vre_geo_id_rows(new_entrant_pairs)
     scenario_cost_forecast = _filter_table_by_isp_scenario(
         connection_cost_forecast_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
@@ -237,17 +252,17 @@ def _template_vre_connection_costs(
     return _build_vre_cost_rows(costs_per_mw, vre_technologies_by_geo_id)
 
 
-def _get_unique_vre_geo_id_rows(canonical_tech_geo_ids: pd.DataFrame) -> pd.DataFrame:
+def _get_unique_vre_geo_id_rows(new_entrant_pairs: pd.DataFrame) -> pd.DataFrame:
     """Extracts (geo_id, technology) rows for non-distributed VRE technologies
-    from the canonical technology/geo_id pairs.
+    from the new entrant pairs.
 
     Returns only rows where technology contains 'solar' or 'wind' (see
     ``_VRE_TECHNOLOGY_STRINGS``), but not 'distributed'. Deduplication is the
-    caller's responsibility — the canonical pairs are already deduplicated upstream
-    by ``_get_canon_technology_and_geo_id_pairs``.
+    caller's responsibility — the pairs are already deduplicated upstream by
+    ``_extract_new_entrant_pairs``.
 
     I/O Example:
-        canonical_tech_geo_ids:
+        new_entrant_pairs:
             geo_id  technology
             N1      Large scale Solar PV
             N1      Wind
@@ -260,15 +275,15 @@ def _get_unique_vre_geo_id_rows(canonical_tech_geo_ids: pd.DataFrame) -> pd.Data
             N1      Wind
     """
     vre_technologies = _where_any_substring_appears(
-        canonical_tech_geo_ids["technology"], _VRE_TECHNOLOGY_STRINGS
+        new_entrant_pairs["technology"], _VRE_TECHNOLOGY_STRINGS
     )
     distributed_resources = _where_any_substring_appears(
-        canonical_tech_geo_ids["technology"], ["distributed"]
+        new_entrant_pairs["technology"], ["distributed"]
     )
     rows_to_keep = vre_technologies & ~distributed_resources
-    return canonical_tech_geo_ids.loc[
-        rows_to_keep, ["geo_id", "technology"]
-    ].reset_index(drop=True)
+    return new_entrant_pairs.loc[rows_to_keep, ["geo_id", "technology"]].reset_index(
+        drop=True
+    )
 
 
 def _build_vre_cost_rows(
@@ -290,7 +305,7 @@ def _build_vre_cost_rows(
             geo_id  year  connection_cost
             N1      2025  182500.0
             N1      2026  185000.0
-            R99     2025  474444.4  # R99 dropped - no VRE technology in canonical pairs
+            R99     2025  474444.4  # R99 dropped - no VRE technology in the pairs
             R99     2026  481666.7  # R99 dropped
             # V8 absent: no cost forecast defined for offshore REZs
 
@@ -322,312 +337,148 @@ def _build_vre_cost_rows(
 
 
 def _template_non_vre_connection_costs(
-    connection_cost_forecast_other: pd.DataFrame,
-    connection_capacity_df: pd.DataFrame,
+    cost_forecast: pd.DataFrame,
+    connection_capacity: pd.DataFrame,
     scenario: str,
-    canon_tech_geo_id_pairs: pd.DataFrame,
+    new_entrant_pairs: pd.DataFrame,
     regional_granularity: str,
     sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Templates connection costs for non-VRE new entrant technologies.
+    """Templates connection costs for non-VRE new entrant options, at
+    ``regional_granularity``.
 
-    Filters the cost forecast to the given scenario, merges in connection capacity
-    and melts to long format. It then drops _EXCLUDED_TECHNOLOGIES and maps the
-    remaining technologies to match ``canon_tech_geo_id_pairs`` (see
-    _canonicalise_technologies), converts costs to $/MW, and expands them to geo_id
-    level based on ``regional_granularity``. Batteries located in REZs receive
-    additional rows keyed to their REZ geo_id using costs from their parent NEM
-    region — see _create_non_vre_rez_cost_rows.
+    IASR publishes non-VRE connection costs per NEM region and technology. The cost
+    forecast is filtered to ``scenario``, connection capacity is merged in, and the
+    table is melted to long format and converted to $/MW. Technologies in
+    _EXCLUDED_TECHNOLOGIES are dropped, and the rest are respelt to match
+    ``new_entrant_pairs`` (see _canonicalise_technologies).
 
-    ``canon_tech_geo_id_pairs`` holds the deduplicated (geo_id, technology) pairs from
-    the new entrant generators and storage tables (see
-    _get_canon_technology_and_geo_id_pairs).
+    Each new entrant option then takes its region's cost (see
+    _merge_region_costs_onto_new_entrant_pairs), so only options that exist get a row,
+    and REZ batteries take their parent region's cost. Finally, geo_id is collapsed to
+    ``regional_granularity`` and costs are averaged over the options that now share a
+    geo_id (see _collapse_geo_id_and_average). Each sub-region option counts once, the
+    same way the other new entrant properties and fuel prices are averaged.
 
-    I/O Example:
-        connection_cost_forecast_other:
-            Generator Type          Region  Scenario        2024-25
-            CCGT                    NSW     Step Change     40000000
-            CCGT                    QLD     Step Change     36000000
-            Battery Storage (4h)    SA      Step Change     27000000
+    I/O Example (regional_granularity="single_region"):
+        cost_forecast:
+            Generator Type        Region  Scenario     2024-25
+            CCGT                  NSW     Step Change  40000000
+            CCGT                  QLD     Step Change  39000000
+            Battery Storage (4h)  SA      Step Change  27000000
 
-        connection_capacity_df:
-            Region  Generator Type          Connection capacity (MVA)
-            NSW     CCGT                    400
-            QLD     CCGT                    300
-            SA      Battery Storage (4h)    300
+        connection_capacity:
+            Region  Generator Type        Connection capacity (MVA)
+            NSW     CCGT                  400
+            QLD     CCGT                  300
+            SA      Battery Storage (4h)  300
 
         scenario: "Step Change"
 
-        canon_tech_geo_id_pairs:
+        new_entrant_pairs:
             geo_id  technology
             CNSW    CCGT
             SNW     CCGT
             NQ      CCGT
-            CSA     Battery Storage (4h)
-            S1      Battery Storage (4h)
-
-        regional_granularity: "sub_regions"
+            S1      Battery Storage (4h)    # REZ battery
+            N1      Wind                    # VRE: templated separately, dropped here
 
         sub_regional_geography:
             geo_id  geo_type    region_id
             CNSW    subregion   NSW
             SNW     subregion   NSW
             NQ      subregion   QLD
-            CSA     subregion   SA
             S1      rez         SA
+            N1      rez         NSW
 
         returns:
-            geo_id  technology              year    connection_cost
-            CNSW    CCGT                    2025    100000.0
-            SNW     CCGT                    2025    100000.0
-            NQ      CCGT                    2025    120000.0
-            CSA     Battery Storage (4h)    2025    90000.0
-            S1      Battery Storage (4h)    2025    90000.0
+            geo_id  technology            year  connection_cost
+            NEM     CCGT                  2025  110000.0    # mean(100000, 100000, 130000)
+            S1      Battery Storage (4h)  2025  90000.0     # REZ: SA cost, geo_id not remapped
     """
-
-    scenario_cost_forecast = _filter_table_by_isp_scenario(
-        connection_cost_forecast_other.rename(columns=_COST_TABLE_COLUMN_RENAMES),
+    cost_forecast = _filter_table_by_isp_scenario(
+        cost_forecast.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
         "connection_cost_forecast_other",
     )
-    merged_df = scenario_cost_forecast.merge(
-        connection_capacity_df.rename(columns=_COST_TABLE_COLUMN_RENAMES),
+    costs = cost_forecast.merge(
+        connection_capacity.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         how="left",
         on=["region_id", "technology"],
     )
-    normalised_df = _normalise_connection_cost_forecast_frame(
-        merged_df, id_cols=["region_id", "technology", "connection_capacity"]
+    costs = _normalise_connection_cost_forecast_frame(
+        costs, id_cols=["region_id", "technology", "connection_capacity"]
     )
-    canonical_technologies = set(canon_tech_geo_id_pairs["technology"])
-    canonicalised_df = _canonicalise_technologies(
-        normalised_df, canonical_technologies, "templating non-VRE connection costs"
+    costs = _canonicalise_technologies(
+        costs,
+        set(new_entrant_pairs["technology"]),
+        "templating non-VRE connection costs",
     )
-    costs_per_mw = _calculate_connection_cost_per_mw(canonicalised_df)
-    _warn_nan_connection_costs(costs_per_mw, id_cols=["region_id", "technology"])
-    return _filter_connection_costs_by_regional_granularity(
-        costs_per_mw,
+    costs = _calculate_connection_cost_per_mw(costs)
+    _warn_nan_connection_costs(costs, id_cols=["region_id", "technology"])
+    costs = _merge_region_costs_onto_new_entrant_pairs(
+        costs, new_entrant_pairs, sub_regional_geography
+    )
+    return _collapse_geo_id_and_average(
+        costs,
+        ["geo_id", "technology", "year"],
+        "connection_cost",
         regional_granularity,
-        canon_tech_geo_id_pairs,
         sub_regional_geography,
     )
 
 
-def _create_non_vre_rez_cost_rows(
-    canon_tech_geo_id_pairs: pd.DataFrame,
+def _merge_region_costs_onto_new_entrant_pairs(
+    region_costs: pd.DataFrame,
+    new_entrant_pairs: pd.DataFrame,
     sub_regional_geography: pd.DataFrame,
-    connection_costs: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Creates connection cost rows for non-VRE technology located in REZs, keyed by
-    the REZ geo_id.
+    """Gives each new entrant (geo_id, technology) pair the cost rows of its region.
 
-    At IASR workbook v7.5 this only includes 2h, 4h and 8h battery storage
-    technologies. Any non-VRE technologies defined in REZs that are not also
-    represented in the ``connection_costs`` dataframe will not have rows created.
+    Each geo_id, whether a sub-region or a REZ, is looked up to its region with
+    _build_geo_region_lookup and then inner-merged on (region_id, technology). Pairs with
+    no regional cost (e.g. VRE, which is costed per REZ) and regional costs with no new
+    entrant are both dropped.
 
     I/O Example:
-        canon_tech_geo_id_pairs:
+        region_costs:
+            region_id  technology  year  connection_cost
+            NSW        CCGT        2025  100000.0
+            QLD        CCGT        2025  130000.0    # no QLD CCGT new entrant: dropped
+            SA         Battery     2025  90000.0
+
+        new_entrant_pairs:
             geo_id  technology
-            S1      Battery Storage (4h)    # REZ, non-VRE: included
-            S1      Wind                    # REZ, but VRE: excluded
-            NQ      CCGT                    # subregion, non-VRE: excluded
+            CNSW    CCGT
+            SNW     CCGT
+            S1      Battery     # REZ: takes SA's cost
+            N1      Wind        # no regional cost for Wind: dropped
 
         sub_regional_geography:
-            geo_id  geo_type  region_id
-            S1      rez       SA
-            NQ      subregion QLD
-
-        connection_costs:
-            region_id   technology              year    connection_cost
-            SA          Battery Storage (4h)    2025    90000.0
-            SA          Battery Storage (4h)    2026    94500.0
-            QLD         CCGT                    2025    100000.0
-            QLD         CCGT                    2026    120000.0
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+            S1      rez        SA
+            N1      rez        NSW
 
         returns:
-            geo_id  technology              year  connection_cost
-            S1      Battery Storage (4h)    2025  90000.0   # SA cost applied to REZ S1
-            S1      Battery Storage (4h)    2026  94500.0
+            geo_id  technology  year  connection_cost
+            CNSW    CCGT        2025  100000.0
+            SNW     CCGT        2025  100000.0
+            S1      Battery     2025  90000.0
     """
-    rezs_by_region = sub_regional_geography.loc[
-        sub_regional_geography["geo_type"] == "rez", ["geo_id", "region_id"]
-    ]
-    in_rez = canon_tech_geo_id_pairs["geo_id"].isin(set(rezs_by_region["geo_id"]))
-    non_vre = ~_where_any_substring_appears(
-        canon_tech_geo_id_pairs["technology"], _VRE_TECHNOLOGY_STRINGS
+    region_by_geo_id = _build_geo_region_lookup(sub_regional_geography)
+    pairs = new_entrant_pairs.assign(
+        region_id=new_entrant_pairs["geo_id"].map(region_by_geo_id)
     )
-    rez_technologies = canon_tech_geo_id_pairs[in_rez & non_vre].merge(
-        rezs_by_region, how="left", on="geo_id"
-    )
-    additional_rows = rez_technologies.merge(
-        connection_costs, how="inner", on=["region_id", "technology"]
-    )
-    return additional_rows.drop(columns=["region_id"])
-
-
-def _filter_connection_costs_by_regional_granularity(
-    non_vre_connection_costs: pd.DataFrame,
-    regional_granularity: str,
-    canon_tech_geo_id_pairs: pd.DataFrame,
-    sub_regional_geography: pd.DataFrame,
-) -> pd.DataFrame:
-    """Converts region-level non-VRE costs to geo_id-level based on granularity, and
-    appends additional rows for batteries located in REZs.
-
-    Three granularity branches are supported:
-    - ``"nem_regions"``:   one row per NEM region (region_id renamed to geo_id)
-    - ``"sub_regions"``:   one row per sub-region — see
-      :func:`_expand_non_vre_connection_costs_to_subregions`
-    - ``"single_region"``: all regions averaged to a single "NEM" geo_id — see
-      :func:`_average_connection_costs_across_regions`
-
-    Non-VRE technologies defined in REZs (from ``canon_tech_geo_id_pairs``) are
-    appended in all branches with their REZ geo_id and costs inherited from the
-    parent NEM region — see :func:`_create_non_vre_rez_cost_rows`.
-
-    I/O Example:
-
-        Inputs:
-            non_vre_connection_costs:
-                region_id  technology              year  connection_cost
-                NSW        CCGT                    2025  100000.0    # 40000000 / 400
-                NSW        Battery Storage (4h)    2025  50000.0     # 20000000 / 400
-                QLD        CCGT                    2025  120000.0    # 36000000 / 300
-                QLD        Battery Storage (4h)    2025  60000.0     # 18000000 / 300
-
-            canon_tech_geo_id_pairs:
-                geo_id  technology
-                N1      Battery Storage (4h)    # REZ: extra row created for N1
-                SNW     Battery Storage (4h)
-                SNW     CCGT
-                CQ      Battery Storage (4h)
-                CQ      CCGT
-                NQ      Battery Storage (4h)
-                NQ      CCGT
-
-            sub_regional_geography:
-                geo_id  geo_type    region_id
-                N1      rez         NSW
-                SNW     subregion   NSW
-                CQ      subregion   QLD
-                NQ      subregion   QLD
-
-        Returns:
-            regional_granularity = "nem_regions":
-                geo_id  technology              year  connection_cost
-                NSW     CCGT                    2025  100000.0    # region_id -> geo_id
-                NSW     Battery Storage (4h)    2025  50000.0
-                QLD     CCGT                    2025  120000.0
-                QLD     Battery Storage (4h)    2025  60000.0
-                N1      Battery Storage (4h)    2025  50000.0     # REZ row appended (NSW cost)
-
-            regional_granularity = "sub_regions":
-                geo_id  technology              year  connection_cost
-                SNW     CCGT                    2025  100000.0
-                SNW     Battery Storage (4h)    2025  50000.0
-                CQ      CCGT                    2025  120000.0    # QLD costs applied
-                CQ      Battery Storage (4h)    2025  60000.0
-                NQ      CCGT                    2025  120000.0
-                NQ      Battery Storage (4h)    2025  60000.0
-                N1      Battery Storage (4h)    2025  50000.0     # REZ row appended (NSW cost)
-
-            regional_granularity = "single_region":
-                geo_id  technology              year  connection_cost
-                NEM     CCGT                    2025  110000.0    # mean(100000, 120000)
-                NEM     Battery Storage (4h)    2025  55000.0     # mean(50000, 60000)
-                N1      Battery Storage (4h)    2025  50000.0     # REZ row: NSW cost, not averaged
-    """
-    rez_non_vre_rows = _create_non_vre_rez_cost_rows(
-        canon_tech_geo_id_pairs, sub_regional_geography, non_vre_connection_costs
-    )
-
-    if regional_granularity == "nem_regions":
-        connection_costs = non_vre_connection_costs.rename(
-            columns={"region_id": "geo_id"}
-        )
-    elif regional_granularity == "sub_regions":
-        connection_costs = _expand_non_vre_connection_costs_to_subregions(
-            non_vre_connection_costs, sub_regional_geography
-        )
-    elif regional_granularity == "single_region":
-        connection_costs = _average_connection_costs_across_regions(
-            non_vre_connection_costs
-        )
-    else:
-        raise ValueError(f"Unknown regional_granularity: {regional_granularity!r}")
-
-    combined = pd.concat(
-        [connection_costs, rez_non_vre_rows], axis=0, ignore_index=True
-    )
-    return combined[["geo_id", "technology", "year", "connection_cost"]]
-
-
-def _expand_non_vre_connection_costs_to_subregions(
-    non_vre_connection_costs: pd.DataFrame, sub_regional_geography: pd.DataFrame
-) -> pd.DataFrame:
-    """Expands region-level connection costs to one row per subregion by merging
-    with the subregion rows from the network geography table.
-
-    I/O Example:
-        non_vre_connection_costs:
-            region_id  technology       year  connection_cost
-            QLD        OCGT (small GT)  2025  120000.0    # 36000000 / 300
-            NSW        OCGT (small GT)  2025  100000.0    # 40000000 / 400
-
-        sub_regional_geography:
-            geo_id  geo_type    region_id
-            Q9      rez         QLD          # REZ rows ignored (inner merge on subregion only)
-            NQ      subregion   QLD
-            CQ      subregion   QLD
-            NNSW    subregion   NSW
-            SNW     subregion   NSW
-
-        returns:
-            geo_id  technology       year  connection_cost
-            NQ      OCGT (small GT)  2025  120000.0
-            CQ      OCGT (small GT)  2025  120000.0
-            NNSW    OCGT (small GT)  2025  100000.0
-            SNW     OCGT (small GT)  2025  100000.0
-    """
-    subregion_geo_type = sub_regional_geography.loc[
-        sub_regional_geography["geo_type"] == "subregion", ["geo_id", "region_id"]
-    ]
-    connection_costs_by_subregion = subregion_geo_type.merge(
-        non_vre_connection_costs, how="inner", on=["region_id"]
-    )
-    return connection_costs_by_subregion.drop(columns=["region_id"])
-
-
-def _average_connection_costs_across_regions(
-    non_vre_connection_costs: pd.DataFrame,
-) -> pd.DataFrame:
-    """Averages connection costs across NEM regions and assigns geo_id="NEM".
-
-    Used for the single_region granularity where all regions and subregions are
-    collapsed to one aggregate "NEM".
-
-    I/O Example:
-        non_vre_connection_costs:
-            region_id  technology       year  connection_cost
-            NSW        OCGT (small GT)  2025  100000.0
-            QLD        OCGT (small GT)  2025  120000.0
-            VIC        OCGT (small GT)  2025  80000.0
-
-        returns:
-            geo_id  technology       year  connection_cost
-            NEM     OCGT (small GT)  2025  100000.0    # mean(100000, 120000, 80000)
-    """
-    return (
-        non_vre_connection_costs.assign(geo_id="NEM")
-        .groupby(["geo_id", "technology", "year"])["connection_cost"]
-        .mean()
-        .reset_index()
-    )
+    costs = pairs.merge(region_costs, how="inner", on=["region_id", "technology"])
+    return costs.drop(columns="region_id")
 
 
 # --- system strength costs ---
 
 
-def _merge_and_filter_system_strength_costs(
+def _add_system_strength_costs(
     connection_costs: pd.DataFrame,
     system_strength_costs: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -724,14 +575,12 @@ def _set_solar_thermal_system_strength_costs_to_zero(
 def _template_costs_new_entrant_build(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
-    generators_new_entrant: pd.DataFrame,
-    storage_new_entrant: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates new entrant build costs: one cost per technology and year, in $/MW.
 
     Filters the IASR build_costs table to ``scenario``, then drops the technologies in
-    _EXCLUDED_TECHNOLOGIES and maps the rest to match the technology names in
-    ``generators_new_entrant`` and ``storage_new_entrant`` (see
+    _EXCLUDED_TECHNOLOGIES and maps the rest to match the new entrant technologies in
+    ``new_entrants_summary`` (see _extract_new_entrant_pairs and
     _canonicalise_technologies). Finally, the financial-year columns are melted to one
     row per year, and costs are converted from $/kW to $/MW.
 
@@ -744,14 +593,11 @@ def _template_costs_new_entrant_build(
             Battery storage (2hrs storage)  Step Change    1238
             Alkaline Electrolyser           Step Change    2755    # excluded
 
-        generators_new_entrant:
-            geo_id  technology
-            N1      Wind
-            Q4      Solar Thermal (16hrs storage)
-
-        storage_new_entrant:
-            geo_id  technology
-            N1      Battery storage (2hrs storage)
+        iasr_tables["new_entrants_summary"] (abbreviated):
+            IASR ID / DLT names  Technology Type                 Sub-region  REZ ID
+            N1 Wind              Wind                            NNSW        N1
+            Q4 Solar Thermal     Solar Thermal (16hrs storage)   CQ          Q4
+            N1 Battery - 2h      Battery storage (2hrs storage)  NNSW        N1
 
         returns ($/MW):
             technology                      year  cost
@@ -765,11 +611,11 @@ def _template_costs_new_entrant_build(
         scenario,
         "build_costs",
     )
-    canonical = _get_canon_technology_and_geo_id_pairs(
-        generators_new_entrant, storage_new_entrant
-    )
+    new_entrant_pairs = _extract_new_entrant_pairs(iasr_tables["new_entrants_summary"])
     build_costs = _canonicalise_technologies(
-        build_costs, set(canonical["technology"]), "templating new entrant build costs"
+        build_costs,
+        set(new_entrant_pairs["technology"]),
+        "templating new entrant build costs",
     )
     build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
     build_costs["cost"] *= 1000  # $/kW -> $/MW

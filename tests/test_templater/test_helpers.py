@@ -667,7 +667,7 @@ def test_is_subregion_geo_id(csv_str_to_df):
     ],
 )
 def test_collapse_geo_id_and_average(csv_str_to_df, regional_granularity, expected_csv):
-    # N1 is a REZ, so it keeps its own row at every granularity
+    # N1 is a REZ, so its geo_id isn't remapped at any granularity
     table = csv_str_to_df("""
         technology,  geo_id,  year,  cost
         CCGT,        CNSW,    2025,  100.0
