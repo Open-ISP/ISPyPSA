@@ -1043,7 +1043,7 @@ def test_melt_financial_year_columns(csv_str_to_df):
         CCGT,        CSIRO GenCost,  2499,     ,         2400
     """)
 
-    result = _melt_financial_year_columns(wide, ["technology"], "cost")
+    result = _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")
 
     expected = csv_str_to_df("""
         technology,  year,  cost
@@ -1061,7 +1061,9 @@ def test_melt_financial_year_columns_without_id_columns(csv_str_to_df):
         IBR,    163.24,   148.88
     """)
 
-    result = _melt_financial_year_columns(wide, [], "system_strength_cost")
+    result = _melt_financial_year_columns(
+        wide, [], "system_strength_cost", "efficient_level_of_system_strength_cost"
+    )
 
     expected = csv_str_to_df("""
         year,  system_strength_cost
@@ -1069,3 +1071,20 @@ def test_melt_financial_year_columns_without_id_columns(csv_str_to_df):
         2026,  148.88
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_melt_financial_year_columns_raises_when_no_year_columns(csv_str_to_df):
+    # '2024-2025' isn't a 'YYYY-YY' header, so the table has no year columns.
+    wide = csv_str_to_df("""
+        technology,  2024-2025
+        Wind,        3412
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No financial-year columns (like '2024-25') in 'build_costs' table. "
+            "Columns found: ['technology', '2024-2025']"
+        ),
+    ):
+        _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")

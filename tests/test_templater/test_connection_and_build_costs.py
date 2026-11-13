@@ -223,7 +223,7 @@ def test_set_solar_thermal_system_strength_costs_to_zero(csv_str_to_df):
 # pass through with their system_strength_cost value unchanged.
 
 
-def test_add_system_strength_costs(csv_str_to_df):
+def test_add_system_strength_costs(csv_str_to_df, caplog):
     # IBR gets system strength cost, non-IBR gets 0.0, solar thermal gets 0.0.
     # Extra years present in system_strength_costs dropped in the merge.
     connection_costs = csv_str_to_df("""
@@ -239,7 +239,8 @@ def test_add_system_strength_costs(csv_str_to_df):
         2026,   10000.0
     """)
 
-    result = _add_system_strength_costs(connection_costs, system_strength_costs)
+    with caplog.at_level("WARNING"):
+        result = _add_system_strength_costs(connection_costs, system_strength_costs)
 
     expected = csv_str_to_df("""
         geo_id,  technology,            year,  connection_cost,  system_strength_cost
@@ -254,16 +255,19 @@ def test_add_system_strength_costs(csv_str_to_df):
         check_exact=False,
         rtol=1e-5,
     )
+    assert "No system strength cost" not in caplog.text
 
 
 def test_add_system_strength_costs_year_not_in_system_strength_gives_nan(
-    csv_str_to_df,
+    csv_str_to_df, caplog
 ):
-    # Year in connection_costs but absent from system_strength_costs -> NaN
+    # 2025 and 2028 are absent from system_strength_costs. Wind 2025 is left NaN and
+    # logged; OCGT 2028 is zeroed as non-IBR, so 2028 isn't logged.
     connection_costs = csv_str_to_df("""
         geo_id,  technology,  year,  connection_cost
         N1,      Wind,        2025,  182500.0
         N1,      Wind,        2027,  200000.0
+        QLD,     OCGT,        2028,  500000.0
     """)
     system_strength_costs = csv_str_to_df("""
         year,  system_strength_cost
@@ -271,19 +275,25 @@ def test_add_system_strength_costs_year_not_in_system_strength_gives_nan(
         2027,  10000.0
     """)
 
-    result = _add_system_strength_costs(connection_costs, system_strength_costs)
+    with caplog.at_level("WARNING"):
+        result = _add_system_strength_costs(connection_costs, system_strength_costs)
 
     expected = csv_str_to_df("""
         geo_id,  technology,  year,  connection_cost,   system_strength_cost
         N1,      Wind,        2025,  182500.0,
         N1,      Wind,        2027,  200000.0,          10000.0
+        QLD,     OCGT,        2028,  500000.0,          0.0
     """)
-
     pd.testing.assert_frame_equal(
         result.reset_index(drop=True),
         expected.reset_index(drop=True),
         check_dtype=False,
     )
+    assert (
+        "No system strength cost for years [2025] in "
+        "'efficient_level_of_system_strength_cost' table; IBR technologies will "
+        "default to $0 in those years."
+    ) in caplog.text
 
 
 # --- _get_unique_vre_geo_id_rows ---
