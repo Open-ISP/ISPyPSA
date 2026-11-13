@@ -47,6 +47,10 @@ The steps are:
        edit that matches nothing logs a warning tagged 'IASR TABLE EDIT (not applied)'
        instead. The run is still correct in that case, but the entry may no longer be
        needed, e.g. because AEMO has fixed the typo in a later workbook.
+    5. Warn about a replace edit that was applied to some cells but not everywhere it
+       says, tagged 'IASR TABLE EDIT (partly applied)'. Every 'where' value and every
+       'replace' key an entry lists is expected to be used at least once, so one that
+       isn't (say, a misspelt IASR ID in a 'where' list) is named in the warning.
 
 What counts as an edit: a mistake or inconsistency we would report to AEMO. Modelling
 choices stay in the templater, even when they change table values. For example, the
@@ -259,7 +263,9 @@ def _apply_edit_replace(table: pd.DataFrame, details: dict) -> pd.DataFrame:
     """Replaces values in one column of ``table``, only on the rows picked by
     ``where`` (every row if there's no ``where``).
 
-    Raises if ``column`` or a ``where`` column isn't in ``table``.
+    Raises if ``column`` or a ``where`` column isn't in ``table``. Warns if the edit
+    matches nothing, or if it leaves a listed ``where`` value or ``replace`` key
+    unused (see ``_log_edit_replacement_partly_applied``).
 
     I/O Example:
         table:
@@ -285,6 +291,7 @@ def _apply_edit_replace(table: pd.DataFrame, details: dict) -> pd.DataFrame:
     edited = table.copy()
     edited.loc[rows, column] = edited.loc[rows, column].replace(replacements)
     _log_edit_replacement(details, num_replacements)
+    _log_edit_replacement_partly_applied(table[rows], details)
     return edited
 
 
@@ -319,6 +326,45 @@ def _select_rows_to_edit(table: pd.DataFrame, where: dict[str, list]) -> pd.Seri
     for column, values in where.items():
         rows &= table[column].isin(values)
     return rows
+
+
+def _find_unused_where_values(
+    selected_rows: pd.DataFrame, where: dict[str, list]
+) -> dict[str, list]:
+    """Finds the ``where`` values that none of ``selected_rows`` holds, by column.
+
+    ``selected_rows`` are the rows the whole ``where`` picked, so with several
+    ``where`` columns a value counts as unused when no row holds it alongside a
+    listed value in every other column. Columns whose values are all used are left
+    out.
+
+    I/O Example:
+        selected_rows:
+            IASR ID / DLT names  Sub-region
+            CSPVPS1              CQ
+
+        where: {IASR ID / DLT names: [CSPVPS1, DAYDSF2]}
+
+        returns: {IASR ID / DLT names: [DAYDSF2]}
+    """
+    unused_values = {
+        column: sorted(set(values) - set(selected_rows[column]))
+        for column, values in where.items()
+    }
+    return {column: values for column, values in unused_values.items() if values}
+
+
+def _find_unused_replace_keys(selected_cells: pd.Series, replacements: dict) -> list:
+    """Finds the ``replacements`` keys (current values) that no cell in
+    ``selected_cells`` holds.
+
+    I/O Example:
+        selected_cells:  CQ, CQ, NQ
+        replacements:    {CQ: NQ, SQ: NQ}
+
+        returns: [SQ]
+    """
+    return sorted(set(replacements) - set(selected_cells))
 
 
 def _apply_edit_rename_columns(table: pd.DataFrame, details: dict) -> pd.DataFrame:
@@ -376,6 +422,99 @@ def _log_edit_replacement(details: dict, num_replacements: int) -> None:
             f"{_LOG_TAG}: {edit} (cells changed: {num_replacements}). "
             f"{details['reason']}"
         )
+
+
+def _log_edit_replacement_partly_applied(
+    selected_rows: pd.DataFrame, details: dict
+) -> None:
+    """Warns if a replace edit changed some cells but left a listed ``where`` value
+    or ``replace`` key unused.
+
+    ``selected_rows`` are the rows of the unedited table that the edit's ``where``
+    picked (every row if there's no ``where``). An edit that matched nothing at all
+    is skipped, since ``_log_edit_replacement`` has already warned about it.
+
+    I/O Example (every case has table: existing_..._summary, column: Sub-region):
+        Case 1 - a 'where' value and a 'replace' key both unused, reported in one
+        warning.
+
+        selected_rows:      # DAYDSF2 is a misspelt DAYDSF1, so its row isn't picked
+            IASR ID / DLT names  Sub-region
+            CSPVPS1              CQ
+
+        details:
+            where: {IASR ID / DLT names: [CSPVPS1, DAYDSF2]}
+            replace: {CQ: NQ, SQ: NQ}      # no selected row is SQ
+
+        logs (WARNING):
+            IASR TABLE EDIT (partly applied): 'existing_..._summary' column
+            'Sub-region': 'where' values not found:
+            {'IASR ID / DLT names': ['DAYDSF2']}; 'replace' keys not found:
+            ['SQ'].
+
+        Case 2 - nothing matched, so no warning here.
+
+        selected_rows:      # e.g. a later workbook already says NQ
+            IASR ID / DLT names  Sub-region
+            CSPVPS1              NQ
+
+        details:
+            where: {IASR ID / DLT names: [CSPVPS1, DAYDSF2]}
+            replace: {CQ: NQ}
+
+        logs nothing: no 'replace' key was used at all, which
+        ``_log_edit_replacement`` has already reported as 'not applied'.
+
+        Case 3 - every 'where' value and 'replace' key used.
+
+        selected_rows:
+            IASR ID / DLT names  Sub-region
+            CSPVPS1              CQ
+            DAYDSF1              CQ
+
+        details:
+            where: {IASR ID / DLT names: [CSPVPS1, DAYDSF1]}
+            replace: {CQ: NQ}
+
+        logs nothing.
+    """
+    replacements = details["replace"]
+    unused_values = _find_unused_where_values(selected_rows, details.get("where", {}))
+    unused_keys = _find_unused_replace_keys(
+        selected_rows[details["column"]], replacements
+    )
+    nothing_matched = len(unused_keys) == len(replacements)
+    problems = _describe_unused_edit_details(unused_values, unused_keys)
+    if problems and not nothing_matched:
+        logging.warning(
+            f"{_LOG_TAG} (partly applied): '{details['table']}' column "
+            f"'{details['column']}': {'; '.join(problems)}."
+        )
+
+
+def _describe_unused_edit_details(
+    unused_values: dict[str, list], unused_keys: list
+) -> list[str]:
+    """Describes the ``where`` values and ``replace`` keys a replace edit didn't use,
+    leaving out whichever of the two is empty.
+
+    I/O Example:
+        unused_values:      # DAYDSF2 is a misspelt DAYDSF1, so it's in no row
+            {IASR ID / DLT names: [DAYDSF2]}
+
+        unused_keys:        # no selected row's Sub-region is SQ
+            [SQ]
+
+        returns:
+            ["'where' values not found: {'IASR ID / DLT names': ['DAYDSF2']}",
+             "'replace' keys not found: ['SQ']"]
+    """
+    problems = []
+    if unused_values:
+        problems.append(f"'where' values not found: {unused_values}")
+    if unused_keys:
+        problems.append(f"'replace' keys not found: {unused_keys}")
+    return problems
 
 
 def _log_edit_rename_columns(details: dict, found_renames: dict[str, str]) -> None:

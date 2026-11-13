@@ -13,6 +13,10 @@
 #   So if a replace uses a column header that a rename fixes, the rename goes first.
 # - An entry that matches nothing logs an 'IASR TABLE EDIT (not applied)' warning.
 #   It may no longer be needed, or the table may have changed.
+# - A replace entry that matches some cells, but lists a 'where' value found in no
+#   row or a 'replace' key found in no cell, logs an 'IASR TABLE EDIT (partly
+#   applied)' warning naming what wasn't used. So list only values that are in the
+#   table.
 #
 # Edit types: each entry has exactly one of the 'replace' or 'rename_columns' keys,
 # which sets its type. Every key listed for a type is required unless marked
