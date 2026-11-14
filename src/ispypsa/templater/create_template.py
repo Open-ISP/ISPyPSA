@@ -280,7 +280,11 @@ def create_ispypsa_inputs_template(
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(
-                    iasr_tables, iasr_workbook_version=iasr_workbook_version
+                    template["generators_existing_planned"],
+                    template["generators_new_entrant"],
+                    template["storage_existing_planned"],
+                    template["storage_new_entrant"],
+                    iasr_workbook_version=iasr_workbook_version,
                 )
             )
         else:
