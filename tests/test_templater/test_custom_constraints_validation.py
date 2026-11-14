@@ -5,7 +5,10 @@ ways and asserts that the two agree, modulo a small explicit set of known
 differences:
 
 1. **PLEXOS route** -- the production templater
-   ``template_custom_constraints_from_plexos`` reads the PLEXOS extract.
+   ``template_custom_constraints_from_plexos`` reads the PLEXOS extract and
+   matches its units against the templated generator and storage tables. The
+   fixture holds the IASR unit summary tables, not templated ones, so
+   ``_templated_unit_tables`` builds minimal stand-ins from them.
 2. **Workbook route** -- ``workbook_extract_constraint_lhs`` (in
    ``scripts/workbook_extract_constraint.py``) independently expands each
    constraint's REZ Terms straight from ``rez_group_constraint_summary``
@@ -88,6 +91,7 @@ from ispypsa.data_fetch.csv_read_write import read_csvs  # noqa: E402
 from ispypsa.templater.custom_constraints_from_plexos import (  # noqa: E402
     template_custom_constraints_from_plexos,
 )
+from ispypsa.templater.helpers import _is_battery_row, _set_geo_id  # noqa: E402
 
 _FIXTURE_DIR = Path(__file__).parent / "data" / "custom_constraints_validation"
 
@@ -174,12 +178,48 @@ def iasr_tables():
 
 @pytest.fixture(scope="module")
 def plexos_lhs(iasr_tables):
+    unit_tables = _templated_unit_tables(iasr_tables)
     out = template_custom_constraints_from_plexos(
-        iasr_tables,
+        unit_tables["generators_existing_planned"],
+        unit_tables["generators_new_entrant"],
+        unit_tables["storage_existing_planned"],
+        unit_tables["storage_new_entrant"],
         iasr_workbook_version="7.5",
         plexos_extract_dir=_FIXTURE_DIR / "plexos",
     )
     return out["custom_constraints_lhs"]
+
+
+def _templated_unit_tables(
+    iasr_tables: dict[str, pd.DataFrame],
+) -> dict[str, pd.DataFrame]:
+    """Minimal stand-ins for the four templated generator and storage tables.
+
+    Built straight from the fixture's two IASR unit summary tables, with only
+    the columns the custom-constraints templater reads. Batteries go to the
+    storage tables and everything else to the generator tables, which is the
+    same split the workbook route makes; the fixture holds no pumped hydro.
+    """
+    existing = _unit_columns(
+        iasr_tables["existing_committed_anticipated_additional_generator_summary"]
+    )
+    new_entrants = _unit_columns(iasr_tables["new_entrants_summary"])
+    existing_is_battery = _is_battery_row(existing, "technology")
+    new_entrant_is_battery = _is_battery_row(new_entrants, "technology")
+    return {
+        "generators_existing_planned": existing[~existing_is_battery],
+        "generators_new_entrant": new_entrants[~new_entrant_is_battery],
+        "storage_existing_planned": existing[existing_is_battery],
+        "storage_new_entrant": new_entrants[new_entrant_is_battery],
+    }
+
+
+def _unit_columns(summary: pd.DataFrame) -> pd.DataFrame:
+    """Reduce an IASR unit summary table to templated-style name, technology and geo_id."""
+    units = _set_geo_id(summary).rename(
+        columns={"IASR ID / DLT names": "name", "Technology Type": "technology"}
+    )
+    return units[["name", "technology", "geo_id"]]
 
 
 @pytest.mark.parametrize("constraint_id", list(EXPECTED_DELTAS))

@@ -24,6 +24,21 @@ Inputs (CSVs in the PLEXOS extract dir):
       constraint_name     value   date_from  tags
       ExportGroup_SWQLD1  3000.0             QLD Hot Day
 
+Inputs (templated tables): the four generator and storage tables, one row per
+unit. They say which units ISPyPSA models, whether each is a generator or
+storage, and where the new entrants are.
+
+* generators_existing_planned and storage_existing_planned:
+
+      name
+      KINGASF1
+
+* generators_new_entrant and storage_new_entrant (technology is only read
+  from the storage table):
+
+      name             technology                      geo_id
+      Q8 Battery - 2h  Battery Storage (2hrs storage)  Q8
+
 Outputs (keys of the returned dict): each constraint is a linear inequality,
 sum(coefficient * variable) <relation> rhs, and the three tables hold its
 three parts.
@@ -60,18 +75,50 @@ passes:
   nodes) into the ISPyPSA term schema. It maps each row's
   (parent_class, property) to a term_type, resolves each parent_name
   to an ISPyPSA variable_name, and drops any row whose unit has no ISPyPSA
-  counterpart. A term that keeps a match *survives* pass 1.
+  counterpart. A term that keeps a match *survives* pass 1. Units are matched
+  against the templated generator and storage tables (generators_existing_planned,
+  generators_new_entrant, storage_existing_planned, storage_new_entrant), so a
+  surviving term always names a unit the template contains. Where PLEXOS and
+  ISPyPSA disagree about whether a unit is a generator or storage, the term
+  takes the type of the table the unit is templated in: Shoalhaven's pumped
+  hydro units are PLEXOS generators but ISPyPSA storage, so their terms become
+  storage_output.
 
-* Pass 2 reconstructs the IASR new-entrant batteries that pass 1 could not
-  keep. PLEXOS scopes its new-entrant batteries into per-constraint variants in
-  a layout ISPyPSA does not mirror (Open-ISP/ISPyPSA#110), so those PLEXOS
-  batteries match no ISPyPSA unit and are dropped in pass 1. Pass 2 puts them
-  back: wherever a new-entrant generator or battery survives pass 1, it injects
-  the IASR new-entrant batteries at that unit's location, copying the
-  coefficients the surviving batteries there carry over time. When a surviving
-  unit brings its location's batteries back like this we say it *triggers* that
-  location, and a battery's coefficients over time are its *profile*.
+* Pass 2 gives each constraint a consistent set of new-entrant battery terms,
+  in place of a PLEXOS battery formulation that can't be carried across.
+
+  The PLEXOS file describes new-entrant battery participation in a more
+  nuanced way than the other units. Some batteries are named for a location,
+  as in ISPyPSA (Q8 Battery - 2h). Others are named for the constraint itself
+  (SWQLD1 Battery - 2h and SWQLD1 Battery - 8h, and likewise for SQ1, MN1,
+  NSA1, NET1, SEVIC1 and SWV1), which we call *constraint-scoped*. In most
+  constraints the 4h batteries are left out, with only the 2h and 8h listed.
+  A constraint-scoped battery has no counterpart among the ISPyPSA units, and
+  the name doesn't say which location's batteries it stands for, so the PLEXOS
+  formulation can't be reconstructed in ISPyPSA terms (Open-ISP/ISPyPSA#110).
+
+  So the constraint-scoped batteries are dropped in pass 1, along with every
+  other unit that matches no ISPyPSA name, and battery participation is
+  rebuilt from the rest of the constraint. Wherever a new-entrant generator or
+  storage unit survives pass 1, pass 2 adds every new-entrant battery at that
+  unit's location, at the coefficients the batteries that survived there carry
+  over time, or at 1.0 where none survived. When a surviving unit brings its
+  location's batteries in like this we say it *triggers* that location, and a
+  battery's coefficients over time are its *profile*.
   _inject_iasr_new_entrant_batteries carries the detail.
+
+  The result is a set of constraints that treats batteries the same way
+  everywhere, but that is known to differ from the PLEXOS implementation:
+
+    - The constraint-scoped batteries are not carried across, and nothing
+      replaces them in a constraint where no new-entrant unit survives pass 1.
+    - The batteries added are chosen by where the constraint's other
+      new-entrant units are, not by anything PLEXOS says about batteries.
+    - They take a coefficient from the batteries that survived at their
+      location, or 1.0, not the coefficient of a constraint-scoped battery
+      (SWQLD1 Battery - 2h is 1.0 in PLEXOS; the batteries added at Q8 are
+      0.43).
+    - The 4h batteries are included wherever PLEXOS leaves them out.
 
 Vocabulary (terms reused throughout the helpers below):
 
@@ -83,14 +130,15 @@ Vocabulary (terms reused throughout the helpers below):
   applies from the start. A term with two date_from rows is therefore a
   single value that steps over time -- e.g. 0.78 until 2031-11-30 and then
   0.00 from 2031-11-30 -- not two competing values.
-* *location*: a unit's REZ ID, or its sub-region when it has no REZ.
-* *survive*: a pass-1 term survives when its PLEXOS unit matched an IASR unit,
-  so it was not dropped and carries through to the LHS output with its PLEXOS
-  coefficient.
-* *trigger*: a surviving new-entrant generator or battery triggers its location.
-  For each triggered location, pass 2 injects a storage_output row for every
-  IASR new-entrant battery there, so battery durations PLEXOS omitted (e.g. the
-  4h battery) are re-added.
+* *location*: a new-entrant unit's geo_id in the templated tables -- its REZ
+  ID, or its sub-region when it has no REZ.
+* *survive*: a pass-1 term survives when its PLEXOS unit matched a templated
+  unit, so it was not dropped and carries through to the LHS output with its
+  PLEXOS coefficient.
+* *trigger*: a surviving new-entrant generator or storage unit triggers its
+  location. For each triggered location, pass 2 injects a storage_output row
+  for every new-entrant battery there, so battery durations PLEXOS omitted
+  (e.g. the 4h battery) are re-added.
 * *profile*: the set of (date_from, coefficient) rows a single battery
   carries -- its coefficient over time. Pass 2 copies a location's profile from
   the batteries that survived there onto the durations it re-adds, which is
@@ -105,12 +153,16 @@ PLEXOS -> ISPyPSA translations applied here:
     - Battery + Generation Coefficient => storage_output
     - Line + Flow Coefficient => link_flow
     - Node + Load Coefficient => load
+  A generator or battery term is then given the term_type of the table its
+  unit is templated in (generators_* => generator_output, storage_* =>
+  storage_output), which overrides the PLEXOS class where the two differ.
 * parent_name -> variable_name: PLEXOS units pass through as-is; only
   their names are translated to the ISPyPSA unit names. The name differences
   are all systematic, so matching is deterministic -- no fuzzy matching:
     - Generator / Battery: apply the systematic renames below, then
-      match (case-insensitively) against IASR ID / DLT names in the
-      generator summary tables. Terms that still don't match are dropped.
+      match (case-insensitively) against the name column of the four
+      templated generator and storage tables. Terms that still don't match
+      are dropped.
     - Line: hardcoded line -> path_id table.
     - Node: PLEXOS node names are already ISPyPSA sub-region codes.
 * RHS tags -> timeslice: the regional suffix is mapped to the
@@ -122,17 +174,21 @@ PLEXOS -> ISPyPSA translations applied here:
   data/timeslice_RefYear4006.csv), so the prefix is preserved; the
   suffix uses the codebase-wide _CANONICAL_TIMESLICES vocabulary.
 
-Systematic name renames (PLEXOS -> IASR):
+Systematic name renames (PLEXOS -> ISPyPSA). Custom constraints are only
+templated at sub_regions granularity (see create_ispypsa_inputs_template),
+where a templated unit's name is its IASR ID, so the renames below are stated
+in terms of the IASR names:
 
 * Case only (e.g. "North QLD" -> "North Qld") -- handled by the
   case-insensitive match, no rename rule needed.
 * Prefix rename: DN1/DN3 (PLEXOS REZ ids) -> DREZ (IASR) for
   both generator and battery names -- a one-to-one naming-style mapping
   where DN1/DN3 are IASR REZ IDs and DREZ is just IASR's naming prefix
-  for batteries inside them. The constraint-scoped battery prefixes
-  (SWQLD1, SQ1, MN1, NSA1, NET1, SEVIC1, SWV1)
-  get no rename -- they're many-to-one mappings onto sub-region batteries
-  with unclear semantics, handled by pass 2 instead.
+  for batteries inside them. The constraint-scoped batteries (prefixes
+  SWQLD1, SQ1, MN1, NSA1, NET1, SEVIC1, SWV1) get no rename -- the name
+  doesn't say which location's batteries they stand for, so they match no
+  ISPyPSA unit and are dropped. Pass 2 does not restore them; it rebuilds
+  battery participation from the constraint's other units (see Pipeline).
 * Suffix strip: " Area<n>" -- a small set of PLEXOS unit names carry
   this suffix (only Area1 appears in the current PLEXOS extract); IASR
   doesn't carry it. The regex tolerates any \\d+ in case future extracts
@@ -147,30 +203,15 @@ Dropped rows:
 * Battery Load Coefficient rows -- the negative pair of the
   Generation Coefficient row kept as the single storage_output. [INFO]
 * Terms whose unit has no ISPyPSA counterpart -- e.g. CER units not yet
-  modelled (Open-ISP/ISPyPSA#104), PLEXOS constraint-scoped batteries
-  replaced by the pass-2 injection, or plant absent from the IASR tables.
-  Dropping loosens the constraint, so this is logged as a WARNING.
+  modelled (Open-ISP/ISPyPSA#104), the PLEXOS constraint-scoped batteries
+  (see Pipeline, pass 2), or plant absent from the templated generator and
+  storage tables. Dropping loosens the constraint, so this is
+  logged as a WARNING.
 
 date_to is currently always empty in AEMO's PLEXOS files and is dropped
 from the output. The templater raises if a future model starts using it.
 date_from is retained so time-varying coefficients carry through to the
 output.
-
-TODO: switch the IASR ID lookup to the templated generator and storage
-tables (generators_existing_planned, generators_new_entrant,
-storage_existing_planned and storage_new_entrant) -- matching against the
-raw summary tables currently also matches DER/CER rows that ISPyPSA may not
-template. The custom_constraints_lhs schema's
-variable_names_resolve_by_term_type rule declares that end state. Custom
-constraints are only templated at sub_regions granularity (see
-create_ispypsa_inputs_template), where the templated unit names are the IASR
-IDs this module emits, so the lookup needs no renaming.
-
-TODO: emitted timeslices are region-prefixed (qld_peak_demand etc.) while
-the rest of the templater still emits the bare canonical names
-(peak_demand etc.). Downstream consumers (filter_template,
-translator, pypsa_build) need extending to handle the region-prefixed
-timeslice space before custom constraints flow through end-to-end.
 """
 
 from __future__ import annotations
@@ -182,22 +223,24 @@ from pathlib import Path
 
 import pandas as pd
 
-from .helpers import _is_battery_row, _pick_location
+from .helpers import _is_battery_row
 from .mappings import _CANONICAL_TIMESLICES
 
-# PLEXOS REZ-id prefixes that IASR renamed to DREZ. Applied to the first
-# token of generator names (DN1_SAT_Dubbo -> DREZ_SAT_Dubbo) and to
-# battery names of the form "DN1 <location> Battery - <duration>"# (DN1 Dubbo Battery - 2h -> DREZ Dubbo Battery - 2h).
-_GENERATOR_PREFIX_RENAME = {"DN1": "DREZ", "DN3": "DREZ"}
-
-# Battery-name rename. Unlike the (deliberately removed) constraint-scoped
-# battery variants (SWQLD1 Battery - 2h etc., which were many-to-one
-# mappings onto sub-region batteries and are now handled by the pass-2
-# injection), the DN1/DN3 -> DREZ rename is one-to-one: it's a naming-style
-# difference for the same physical battery, since DN1/DN3 are the literal
-# IASR REZ IDs and DREZ is just IASR's naming prefix for batteries inside
-# them. Keeping it lets pass-1 preserve PLEXOS' time-varying coefficients.
-_BATTERY_PREFIX_RENAME = {"DN1": "DREZ", "DN3": "DREZ"}
+# The PLEXOS unit-name prefixes DN1 and DN3, which IASR (and so ISPyPSA) spells
+# DREZ. DN1 and DN3 are the IASR REZ IDs and DREZ is IASR's naming prefix for
+# the units inside those REZs, so this is a one-to-one difference in naming
+# style for the same unit, and the renamed unit keeps its PLEXOS coefficients.
+# The constraint-scoped batteries (SWQLD1 Battery - 2h etc.) have no such
+# rename: their names don't say which location's batteries they stand for, so
+# they are dropped (see pass 2 in the module docstring).
+#
+# Example names matched:
+#     "DN1_SAT_Dubbo"             a generator: the prefix, then "_"
+#     "DN3 Marulan Battery - 2h"  a battery: the prefix, then " "
+# ^(DN1|DN3)  the prefix at the start of the name, replaced by "DREZ"
+# (?=[_ ])    the "_" or " " that must follow it; it is left in place, and it
+#             stops a longer first token such as "DN10" from matching
+_DREZ_PREFIX_PATTERN = re.compile(r"^(DN1|DN3)(?=[_ ])")
 
 # PLEXOS line names -> ISPyPSA path_ids. Lines are network elements that
 # don't appear in Summary Mapping, so this table is the source of truth.
@@ -239,6 +282,14 @@ assert set(_REGIONAL_SUFFIX_TO_CANONICAL.values()) <= set(_CANONICAL_TIMESLICES)
 
 _CONSTRAINT_NAME_PREFIX = "ExportGroup_"
 _EXCLUDED_PARENT_CLASSES = ("Purchaser",)
+# The " Area<n>" suffix a few PLEXOS unit names carry and IASR doesn't.
+#
+# Example names matched:
+#     "PV CNSW Area1"
+#     "CNSW SAT - Distributed Resources Area1"
+# " Area"  the literal suffix, including its leading space
+# \d+$     the area number, at the end of the name. Only Area1 appears in the
+#          7.5 extract; any number is accepted so a later Area2 is stripped too
 _AREA_SUFFIX_PATTERN = re.compile(r" Area\d+$")
 
 # Output columns of the three custom-constraint template tables. Shared by the
@@ -273,16 +324,25 @@ def empty_custom_constraint_tables() -> dict[str, pd.DataFrame]:
 
 
 def template_custom_constraints_from_plexos(
-    iasr_tables: dict[str, pd.DataFrame],
+    generators_existing_planned: pd.DataFrame,
+    generators_new_entrant: pd.DataFrame,
+    storage_existing_planned: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
     iasr_workbook_version: str,
     plexos_extract_dir: Path | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Build the three custom-constraint template tables from the PLEXOS extract.
 
     Args:
-        iasr_tables: parsed IASR tables -- must contain
-            existing_committed_anticipated_additional_generator_summary
-            and new_entrants_summary.
+        generators_existing_planned: templated table; its name column lists the
+            existing and planned generators a constraint term can refer to.
+        generators_new_entrant: templated table; name as above, and geo_id
+            gives each new-entrant generator's location for pass 2.
+        storage_existing_planned: templated table; its name column lists the
+            existing and planned storage units a constraint term can refer to.
+        storage_new_entrant: templated table; name as above, with technology
+            and geo_id identifying the new-entrant batteries and their
+            locations for pass 2.
         iasr_workbook_version: selects the plexos extract subdirectory under
             src/ispypsa/templater/plexos/ (e.g. "7.5"). Ignored when
             plexos_extract_dir is given.
@@ -304,12 +364,16 @@ def template_custom_constraints_from_plexos(
     _assert_no_date_to(constraints, "constraints")
     _assert_no_date_to(lhs_terms, "lhs_terms")
     _assert_no_date_to(rhs_values, "rhs_values")
-    iasr_ids = _iasr_id_choices(iasr_tables)
-    new_entrants = iasr_tables["new_entrants_summary"]
+    unit_term_types = _unit_term_types(
+        generators_existing_planned,
+        generators_new_entrant,
+        storage_existing_planned,
+        storage_new_entrant,
+    )
     tables = {
         "custom_constraints": _build_custom_constraints(constraints),
         "custom_constraints_lhs": _build_custom_constraints_lhs(
-            lhs_terms, iasr_ids, new_entrants
+            lhs_terms, unit_term_types, generators_new_entrant, storage_new_entrant
         ),
         "custom_constraints_rhs": _build_custom_constraints_rhs(rhs_values),
     }
@@ -340,25 +404,47 @@ def _assert_no_date_to(df: pd.DataFrame, label: str) -> None:
         )
 
 
-def _iasr_id_choices(iasr_tables: dict[str, pd.DataFrame]) -> set[str]:
-    """Collect the set of valid IASR IDs from the generator summary tables.
+def _unit_term_types(
+    generators_existing_planned: pd.DataFrame,
+    generators_new_entrant: pd.DataFrame,
+    storage_existing_planned: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
+) -> dict[str, str]:
+    """Map every templated unit name to the term_type a constraint term on it
+    takes: generator_output for a generator, storage_output for a storage unit.
+
+    The keys are the unit names a PLEXOS term can resolve to; the values say
+    which of the two kinds of unit table each one is templated in.
 
     I/O Example:
-        iasr_tables: {
-            "existing_committed_anticipated_additional_generator_summary":
-                df with "IASR ID / DLT names" column = ["BW01", "BW02", ...],
-            "new_entrants_summary":
-                df with column = ["NQ SAT - Distributed Resources", ...],
-        }
+        generators_existing_planned:
+            name
+            BW01
 
-        returns: {"BW01", "BW02", "NQ SAT - Distributed Resources", ...}
+        generators_new_entrant:
+            name
+            Q8_SAT_Brisbane
+
+        storage_existing_planned:
+            name
+            SHGEN01             # pumped hydro, templated as storage
+
+        storage_new_entrant:
+            name
+            Q8 Battery - 2h
+
+        returns:
+            {"BW01": "generator_output", "Q8_SAT_Brisbane": "generator_output",
+             "SHGEN01": "storage_output", "Q8 Battery - 2h": "storage_output"}
     """
-    column = "IASR ID / DLT names"
-    existing = iasr_tables[
-        "existing_committed_anticipated_additional_generator_summary"
-    ][column]
-    new_entrants = iasr_tables["new_entrants_summary"][column]
-    return set(existing.dropna()) | set(new_entrants.dropna())
+    generators = pd.concat(
+        [generators_existing_planned["name"], generators_new_entrant["name"]]
+    )
+    storage = pd.concat([storage_existing_planned["name"], storage_new_entrant["name"]])
+    return {
+        **dict.fromkeys(generators, "generator_output"),
+        **dict.fromkeys(storage, "storage_output"),
+    }
 
 
 # --- constraints table ---
@@ -427,31 +513,41 @@ def _strip_constraint_prefix(name: str) -> str:
 
 def _build_custom_constraints_lhs(
     lhs_terms: pd.DataFrame,
-    iasr_ids: set[str],
-    new_entrants: pd.DataFrame,
+    unit_term_types: dict[str, str],
+    generators_new_entrant: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
 ) -> pd.DataFrame:
     """Filter, collapse the battery Load/Generation pairs, and translate the
-    raw LHS rows into ISPyPSA's term schema, then inject IASR new-entrant
+    raw LHS rows into ISPyPSA's term schema, then inject new-entrant
     batteries for triggered REZ/sub-regions.
 
     I/O Example:
         lhs_terms (abbreviated):
             constraint_name      parent_class  parent_name           property               value
-            ExportGroup_SWQLD1   Generator     KINGASF1              Generation Sent Out C   0.14   # new entrant in REZ Q8 -> triggers Q8
+            ExportGroup_SWQLD1   Generator     Q8_SAT_Brisbane       Generation Sent Out C   0.14   # new entrant in REZ Q8 -> triggers Q8
+            ExportGroup_SWQLD1   Generator     SHGEN01               Generation Sent Out C   0.33   # templated as storage -> storage_output
             ExportGroup_SWQLD1   Line          NSW1-QLD1             Flow Coefficient        0.84
-            ExportGroup_SWQLD1   Battery       Q8 Battery - 2h       Generation Coefficient  0.43   # matches IASR -> survives pass 1
-            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Generation Coefficient  1.0    # dropped (constraint-scoped, no IASR match)
+            ExportGroup_SWQLD1   Battery       Q8 Battery - 2h       Generation Coefficient  0.43   # matches a templated unit -> survives pass 1
+            ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Generation Coefficient  1.0    # dropped (constraint-scoped, no templated unit)
             ExportGroup_SWQLD1   Battery       SWQLD1 Battery - 2h   Load Coefficient       -1.0    # dropped (Load pair)
 
-        new_entrants (abbreviated):
-            IASR ID / DLT names  Sub-region  REZ ID           Technology Type
-            KINGASF1             SQ          Q8               Pumped Hydro ...
-            Q8 Battery - 2h      SQ          Q8               Battery Storage (2hrs storage)
-            Q8 Battery - 4h      SQ          Q8               Battery Storage (4hrs storage)
+        unit_term_types:
+            {"Q8_SAT_Brisbane": "generator_output", "SHGEN01": "storage_output",
+             "Q8 Battery - 2h": "storage_output", "Q8 Battery - 4h": "storage_output"}
+
+        generators_new_entrant (abbreviated):
+            name             geo_id
+            Q8_SAT_Brisbane  Q8
+
+        storage_new_entrant (abbreviated):
+            name             technology                      geo_id
+            Q8 Battery - 2h  Battery Storage (2hrs storage)  Q8
+            Q8 Battery - 4h  Battery Storage (4hrs storage)  Q8
 
         returns:
             constraint_id  term_type        variable_name    coefficient  date_from
-            SWQLD1         generator_output KINGASF1          0.14
+            SWQLD1         generator_output Q8_SAT_Brisbane   0.14
+            SWQLD1         storage_output   SHGEN01           0.33
             SWQLD1         link_flow        NSW-QLD           0.84
             SWQLD1         storage_output   Q8 Battery - 2h   0.43          # survived pass 1 (pass-2 re-injection deduped)
             SWQLD1         storage_output   Q8 Battery - 4h   0.43          # injected; copies the 2h sibling's coefficient
@@ -460,12 +556,15 @@ def _build_custom_constraints_lhs(
     lhs = _drop_constraint_relaxation_terms(lhs)
     lhs = _drop_battery_load_coefficient_rows(lhs)
     lhs = _add_term_type_column(lhs)
-    lhs = _add_variable_name_column(lhs, iasr_ids)
+    lhs = _add_variable_name_column(lhs, set(unit_term_types))
     lhs = _drop_unresolved_terms(lhs)
+    lhs = _set_unit_term_types_from_templated_tables(lhs, unit_term_types)
     lhs = lhs.rename(columns={"value": "coefficient"})
     lhs["constraint_id"] = lhs["constraint_name"].map(_strip_constraint_prefix)
     lhs = lhs[_CUSTOM_CONSTRAINTS_LHS_COLUMNS]
-    lhs = _inject_iasr_new_entrant_batteries(lhs, new_entrants)
+    lhs = _inject_iasr_new_entrant_batteries(
+        lhs, generators_new_entrant, storage_new_entrant
+    )
     lhs = _dedupe_lhs_terms(lhs)
     return lhs.reset_index(drop=True)
 
@@ -615,138 +714,123 @@ def _raise_on_unmapped_term_type(lhs: pd.DataFrame) -> None:
         )
 
 
-def _add_variable_name_column(lhs: pd.DataFrame, iasr_ids: set[str]) -> pd.DataFrame:
-    """Resolve each LHS term's parent_name to an ISPyPSA variable_name.
+def _add_variable_name_column(lhs: pd.DataFrame, unit_names: set[str]) -> pd.DataFrame:
+    """Add variable_name: the ISPyPSA name of the component each LHS term is on.
 
-    Generators and batteries are matched against IASR unit names (left as NaN
-    when unmatched, then dropped downstream); lines use a fixed path_id table;
-    node names are already ISPyPSA sub-region codes and pass through.
+    How a PLEXOS parent_name becomes a variable_name depends on its
+    parent_class:
+
+    - Generator and Battery: renamed to the ISPyPSA naming style, then matched
+      to unit_names, the names of the templated generators and storage units.
+      A unit with no match is left as NaN, and dropped downstream.
+    - Line: looked up in the fixed line -> path_id table.
+    - Node: kept as is; PLEXOS node names are already ISPyPSA sub-region codes.
+
+    I/O Example:
+        lhs (abbreviated):
+            parent_class  parent_name
+            Generator     DN1_SAT_Dubbo
+            Generator     SA Hydrogen Turbine
+            Battery       SWQLD1 Battery - 2h
+            Line          NSW1-QLD1
+            Node          CNSW
+
+        unit_names: {"DREZ_SAT_Dubbo"}
+
+        returns:
+            parent_class  parent_name          variable_name
+            Generator     DN1_SAT_Dubbo        DREZ_SAT_Dubbo
+            Generator     SA Hydrogen Turbine  NaN             # no templated unit
+            Battery       SWQLD1 Battery - 2h  NaN             # constraint-scoped
+            Line          NSW1-QLD1            NSW-QLD
+            Node          CNSW                 CNSW
     """
+    _raise_on_unexpected_parent_class(lhs)
+    is_unit = lhs["parent_class"].isin(["Generator", "Battery"])
+    is_line = lhs["parent_class"] == "Line"
+    is_node = lhs["parent_class"] == "Node"
+    plexos_names = lhs["parent_name"]
     lhs = lhs.copy()
-    lower_index = {name.lower(): name for name in iasr_ids}
-    lhs["variable_name"] = [
-        _resolve_variable_name(parent_class, parent_name, iasr_ids, lower_index)
-        for parent_class, parent_name in zip(lhs["parent_class"], lhs["parent_name"])
-    ]
+    lhs["variable_name"] = None
+    lhs.loc[is_unit, "variable_name"] = _match_to_templated_unit_names(
+        plexos_names[is_unit], unit_names
+    )
+    lhs.loc[is_line, "variable_name"] = _line_names_to_path_ids(plexos_names[is_line])
+    lhs.loc[is_node, "variable_name"] = plexos_names[is_node]
     _log_name_renames(lhs)
     return lhs
 
 
-def _resolve_variable_name(
-    parent_class: str, parent_name: str, iasr_ids: set[str], lower_index: dict[str, str]
-) -> str | None:
-    """Dispatch one LHS term to its per-class name-resolution strategy.
+def _raise_on_unexpected_parent_class(lhs: pd.DataFrame) -> None:
+    """Raise if a term's parent_class is one this module has no naming rule for."""
+    expected = {"Generator", "Battery", "Line", "Node"}
+    unexpected = sorted(set(lhs["parent_class"]) - expected)
+    if unexpected:
+        raise ValueError(f"Unexpected LHS parent_class values: {unexpected}")
+
+
+def _match_to_templated_unit_names(
+    plexos_names: pd.Series, unit_names: set[str]
+) -> pd.Series:
+    """Translate PLEXOS generator and battery names to templated unit names,
+    giving NaN where there is no such unit.
+
+    The names are first rewritten in the ISPyPSA naming style: the DN1/DN3
+    prefix becomes DREZ and the " Area<n>" suffix is removed. A rewritten name
+    that is itself a templated unit is kept as it is. Otherwise it is matched
+    ignoring case, because PLEXOS and IASR capitalise some names differently,
+    and takes the templated spelling.
 
     I/O Example:
-        ("Generator", "DN1_SAT_Dubbo", ...)        -> "DREZ_SAT_Dubbo"
-        ("Battery",   "SWQLD1 Battery - 2h", ...)   -> "SQ Battery - 2h"
-        ("Line",      "NSW1-QLD1", ...)             -> "NSW-QLD"
-        ("Node",      "CNSW", ...)                  -> "CNSW"
-        ("Generator", "SA Hydrogen Turbine", ...)   -> None   # no IASR match
+        plexos_names:
+            parent_name
+            DN1_SAT_Dubbo
+            DN3 Marulan Battery - 8h
+            CNSW SAT - Distributed Resources Area1
+            Q2_CST_North QLD Clean Energy Hub
+            BW01
+            SWQLD1 Battery - 2h
+            Cultana Solar Farm
+
+        unit_names:
+            {"DREZ_SAT_Dubbo", "DREZ Marulan Battery - 8h",
+             "CNSW SAT - Distributed Resources",
+             "Q2_CST_North Qld Clean Energy Hub", "BW01"}
+
+        returns:
+            parent_name
+            DREZ_SAT_Dubbo                      # prefix renamed
+            DREZ Marulan Battery - 8h           # prefix renamed
+            CNSW SAT - Distributed Resources    # Area suffix removed
+            Q2_CST_North Qld Clean Energy Hub   # matched ignoring case
+            BW01                                # already a templated unit
+            NaN                                 # constraint-scoped: no rename, no unit
+            NaN                                 # no templated unit
     """
-    if parent_class == "Generator":
-        return _match_unit_name(
-            _rename_generator_name(parent_name), iasr_ids, lower_index
-        )
-    if parent_class == "Battery":
-        return _match_unit_name(
-            _rename_battery_name(parent_name), iasr_ids, lower_index
-        )
-    if parent_class == "Line":
-        return _line_variable_name(parent_name)
-    if parent_class == "Node":
-        return parent_name  # PLEXOS node names are already ISPyPSA sub-region codes
-    raise ValueError(f"Unexpected LHS parent_class: {parent_class!r}")
+    names = plexos_names.str.replace(_DREZ_PREFIX_PATTERN, "DREZ", regex=True)
+    names = names.str.replace(_AREA_SUFFIX_PATTERN, "", regex=True)
+    templated_name_by_lowercase = {name.lower(): name for name in unit_names}
+    case_insensitive_matches = names.str.lower().map(templated_name_by_lowercase)
+    return names.where(names.isin(unit_names), case_insensitive_matches)
 
 
-def _match_unit_name(
-    name: str, iasr_ids: set[str], lower_index: dict[str, str]
-) -> str | None:
-    """Match a renamed unit name to an IASR unit name, case-insensitively.
+def _line_names_to_path_ids(line_names: pd.Series) -> pd.Series:
+    """Look up the ISPyPSA path_id for each PLEXOS line name.
 
-    I/O Example:
-        "BW01"                              -> "BW01"        # exact
-        "Q2_CST_North QLD Clean Energy Hub" -> "Q2_CST_North Qld Clean Energy Hub"
-        "Cultana Solar Farm"                -> None          # no IASR unit
-    """
-    if name in iasr_ids:
-        return name
-    return lower_index.get(name.lower())
-
-
-def _rename_generator_name(name: str) -> str:
-    """Apply the systematic PLEXOS -> IASR renames to a generator name.
-
-    I/O Example:
-        "DN1_SAT_Dubbo"                          -> "DREZ_SAT_Dubbo"
-        "CNSW SAT - Distributed Resources Area1" -> "CNSW SAT - Distributed Resources"
-        "BW01"                                   -> "BW01"
-    """
-    name = _rename_first_token(name, "_", _GENERATOR_PREFIX_RENAME)
-    return _strip_area_suffix(name)
-
-
-def _rename_battery_name(name: str) -> str:
-    """Apply the DN1/DN3 -> DREZ prefix rename and strip the " Area<n>"
-    distributed-resource subdivision suffix.
-
-    Constraint-scoped batteries (SWQLD1 Battery - 2h etc.) intentionally
-    have NO rename rule -- they are designed not to match any IASR battery,
-    fall through _drop_unresolved_terms, and are re-supplied by
-    _inject_iasr_new_entrant_batteries.
-
-    I/O Example:
-        "DN1 Dubbo Battery - 2h"               -> "DREZ Dubbo Battery - 2h"
-        "DN3 Marulan Battery - 8h"             -> "DREZ Marulan Battery - 8h"
-        "CNSW Battery - Distributed Res. Area1"-> "CNSW Battery - Distributed Res."
-        "Tarong BESS"                          -> "Tarong BESS"
-        "SWQLD1 Battery - 2h"                  -> "SWQLD1 Battery - 2h"  # no IASR match
-    """
-    name = _rename_first_token(name, " ", _BATTERY_PREFIX_RENAME)
-    return _strip_area_suffix(name)
-
-
-def _rename_first_token(name: str, delimiter: str, rename_map: dict[str, str]) -> str:
-    """Replace the first delimiter-delimited token of name via rename_map.
-
-    I/O Example (delimiter="_", rename_map={"DN1": "DREZ"}):
-        "DN1_SAT_Dubbo"  -> "DREZ_SAT_Dubbo"
-        "BW01"           -> "BW01"   # no delimiter, or token not in map
-    """
-    head, sep, tail = name.partition(delimiter)
-    if sep and head in rename_map:
-        return rename_map[head] + sep + tail
-    return name
-
-
-def _strip_area_suffix(name: str) -> str:
-    """Strip the " Area<n>" suffix from a PLEXOS unit name.
-
-    A small set of PLEXOS unit names (e.g. "PV CNSW Area1") carry an
-    " Area<n>" suffix that IASR doesn't carry; only Area1 is seen in
-    the current PLEXOS extract. The regex tolerates any digit suffix so
-    future Area2/3/... values won't silently slip through unstripped.
-
-    I/O Example:
-        "PV CNSW Area1"  -> "PV CNSW"
-        "BW01"           -> "BW01"
-    """
-    return _AREA_SUFFIX_PATTERN.sub("", name)
-
-
-def _line_variable_name(parent_name: str) -> str:
-    """Look up the ISPyPSA path_id for a PLEXOS line name.
+    Raises for a line with no entry in _LINE_TO_PATH_ID, which means the
+    PLEXOS extract has a line this module hasn't been told about.
 
     I/O Example:
         "NSW1-QLD1"  -> "NSW-QLD"
         "V-SA"       -> "WNV-SESA"
         "SQ-CQ"      -> "SQ-CQ"
     """
-    if parent_name not in _LINE_TO_PATH_ID:
+    unmapped = sorted(set(line_names) - set(_LINE_TO_PATH_ID))
+    if unmapped:
         raise ValueError(
-            f"PLEXOS line name {parent_name!r} not in _LINE_TO_PATH_ID -- add a mapping."
+            f"PLEXOS line names not in _LINE_TO_PATH_ID -- add a mapping: {unmapped}"
         )
-    return _LINE_TO_PATH_ID[parent_name]
+    return line_names.map(_LINE_TO_PATH_ID)
 
 
 def _log_name_renames(lhs: pd.DataFrame) -> None:
@@ -766,7 +850,8 @@ def _drop_unresolved_terms(lhs: pd.DataFrame) -> pd.DataFrame:
     """Drop LHS terms whose parent_name resolved to no ISPyPSA unit.
 
     These are PLEXOS units with no ISPyPSA counterpart -- e.g. CER units not
-    yet modelled (Open-ISP/ISPyPSA#104) or plant absent from the IASR tables.
+    yet modelled (Open-ISP/ISPyPSA#104) or plant absent from the templated
+    generator and storage tables.
     Dropping loosens the constraint, so it is logged as a WARNING.
 
     I/O Example:
@@ -797,18 +882,76 @@ def _drop_unresolved_terms(lhs: pd.DataFrame) -> pd.DataFrame:
     return lhs[~unresolved].copy()
 
 
-# --- pass 2: inject IASR new-entrant batteries by triggered REZ/sub-region ---
+def _set_unit_term_types_from_templated_tables(
+    lhs: pd.DataFrame, unit_term_types: dict[str, str]
+) -> pd.DataFrame:
+    """Give each generator or battery term the term_type of the table its unit
+    is templated in, overriding the one implied by its PLEXOS class.
+
+    PLEXOS and ISPyPSA mostly agree on which units are generators and which are
+    storage. Where they differ, the term has to follow ISPyPSA: a
+    generator_output term on a unit the model builds as storage would name a
+    generator that doesn't exist. Shoalhaven's pumped hydro units are the case
+    in the 7.5 extract -- PLEXOS generators, templated as storage. A
+    storage_output term is the unit's net dispatch (discharging minus
+    charging), which is how PLEXOS's own battery-class terms are read here.
+    Line and node terms are left as they are.
+
+    I/O Example:
+        lhs (abbreviated):
+            constraint_name  term_type         variable_name
+            X                generator_output  BW01
+            X                generator_output  SHGEN01          # templated as storage
+            X                storage_output    Q8 Battery - 2h
+            X                load              CNSW             # not a unit term
+
+        unit_term_types:
+            {"BW01": "generator_output", "SHGEN01": "storage_output",
+             "Q8 Battery - 2h": "storage_output"}
+
+        returns:
+            constraint_name  term_type         variable_name
+            X                generator_output  BW01
+            X                storage_output    SHGEN01
+            X                storage_output    Q8 Battery - 2h
+            X                load              CNSW
+    """
+    is_unit_term = lhs["term_type"].isin(["generator_output", "storage_output"])
+    templated_types = lhs["variable_name"].map(unit_term_types).where(is_unit_term)
+    _log_changed_unit_term_types(lhs, templated_types)
+    lhs = lhs.copy()
+    lhs["term_type"] = templated_types.fillna(lhs["term_type"])
+    return lhs
+
+
+def _log_changed_unit_term_types(lhs: pd.DataFrame, templated_types: pd.Series) -> None:
+    """Log the units whose term_type was changed to match the templated tables."""
+    changed = templated_types.notna() & (templated_types != lhs["term_type"])
+    unit = lhs.loc[changed, "variable_name"]
+    old_type = lhs.loc[changed, "term_type"]
+    new_type = templated_types[changed]
+    changes = sorted(set(unit + ": " + old_type + " -> " + new_type))
+    if changes:
+        logging.info(
+            f"Changed the term_type of {changed.sum()} LHS term rows to match the "
+            f"table their unit is templated in: {changes}"
+        )
+
+
+# --- pass 2: inject new-entrant batteries by triggered REZ/sub-region ---
 
 
 def _inject_iasr_new_entrant_batteries(
-    lhs: pd.DataFrame, new_entrants: pd.DataFrame
+    lhs: pd.DataFrame,
+    generators_new_entrant: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Append a storage_output row for every IASR new-entrant battery in
+    """Append a storage_output row for every new-entrant battery in
     each REZ/sub-region whose new-entrant units participate in the constraint.
 
     For each generator_output or storage_output term whose
-    variable_name is a new-entrant IASR ID, look up that unit's location --
-    REZ ID if populated, else Sub-region -- and add storage_output rows
+    variable_name is a new-entrant unit, look up that unit's location -- its
+    geo_id -- and add storage_output rows
     for every new-entrant battery at that same location. A surviving battery
     triggers its location just as a surviving generator does, so a location
     that PLEXOS represents through batteries alone still has its omitted
@@ -822,6 +965,9 @@ def _inject_iasr_new_entrant_batteries(
     coefficient keeps the whole location consistent. Where no new-entrant
     battery survived pass 1 at the location, the coefficient defaults to 1.0
     with empty date_from.
+
+    Only batteries are injected. The other new-entrant storage technologies
+    (pumped hydro) can trigger a location but are not added to it.
 
     Every battery at a triggered location is appended, including any that
     already survived pass 1, so the result can contain a duplicate that
@@ -837,13 +983,17 @@ def _inject_iasr_new_entrant_batteries(
             SWQLD1         storage_output   Q8 Battery - 2h  0.43   # survived pass 1
             NQ1            generator_output Q1_WH_Cairns     1.0
 
-        new_entrants (abbreviated):
-            IASR ID / DLT names  Sub-region  REZ ID  Technology Type
-            Q8_SAT_Brisbane      SQ          Q8      Solar
-            Q1_WH_Cairns         NQ          Q1      Wind
-            Q8 Battery - 2h      SQ          Q8      Battery Storage ...
-            Q8 Battery - 4h      SQ          Q8      Battery Storage ...
-            Q1 Battery - 2h      NQ          Q1      Battery Storage ...
+        generators_new_entrant (abbreviated):
+            name             geo_id
+            Q8_SAT_Brisbane  Q8
+            Q1_WH_Cairns     Q1
+
+        storage_new_entrant (abbreviated):
+            name                   technology                      geo_id
+            Q8 Battery - 2h        Battery Storage (2hrs storage)  Q8
+            Q8 Battery - 4h        Battery Storage (4hrs storage)  Q8
+            Q1 Battery - 2h        Battery Storage (2hrs storage)  Q1
+            Q1 Pumped Hydro - 10h  Pumped Hydro (10hrs storage)    Q1    # not a battery, never injected
 
         returns (these rows appended after the unchanged pass-1 lhs rows):
             constraint_id  term_type        variable_name    coefficient  date_from
@@ -851,15 +1001,12 @@ def _inject_iasr_new_entrant_batteries(
             SWQLD1         storage_output   Q8 Battery - 4h  0.43          # PLEXOS-omitted duration, copies the 2h sibling's coefficient
             NQ1            storage_output   Q1 Battery - 2h  1.0           # no surviving sibling -> default
     """
-    # A trigger can be a generator or a battery; their IASR IDs never collide,
-    # so one combined unit -> location lookup serves both.
-    unit_to_location = {
-        **_generator_to_location(new_entrants),
-        **_battery_to_location(new_entrants),
-    }
-    batteries_by_location = _batteries_by_location(new_entrants)
+    unit_to_location = _new_entrant_to_location(
+        generators_new_entrant, storage_new_entrant
+    )
+    batteries_by_location = _batteries_by_location(storage_new_entrant)
     triggered = _triggered_locations_per_constraint(lhs, unit_to_location)
-    coefficients = _surviving_battery_coefficients(lhs, new_entrants)
+    coefficients = _surviving_battery_coefficients(lhs, storage_new_entrant)
     injected = _battery_rows_for_triggers(
         triggered, batteries_by_location, coefficients
     )
@@ -897,77 +1044,85 @@ def _warn_on_default_battery_coefficients(
         )
 
 
-def _generator_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
-    """Build a {generator IASR ID: REZ ID or Sub-region} lookup for non-battery
-    new entrants.
-
-    The location is the REZ ID when populated, otherwise the Sub-region.
+def _new_entrant_to_location(
+    generators_new_entrant: pd.DataFrame, storage_new_entrant: pd.DataFrame
+) -> dict[str, str]:
+    """Build a {unit name: geo_id} lookup covering every new-entrant generator
+    and storage unit.
 
     I/O Example:
-        new_entrants (abbreviated):
-            IASR ID / DLT names  Sub-region  REZ ID           Technology Type
-            Q8_SAT_Brisbane      SQ          Q8               Solar Photovoltaic
-            CSA Coal             CSA         Not Applicable   Black Coal
-            CSA Battery - 2h     CSA         Not Applicable   Battery Storage (2hrs storage)
+        generators_new_entrant (abbreviated):
+            name             geo_id
+            Q8_SAT_Brisbane  Q8
+            CSA CCGT         CSA       # no REZ, so its geo_id is the sub-region
+
+        storage_new_entrant (abbreviated):
+            name                   geo_id
+            Q8 Battery - 2h        Q8
+            Q8 Pumped Hydro - 10h  Q8
 
         returns:
-            {"Q8_SAT_Brisbane": "Q8", "CSA Coal": "CSA"}   # battery excluded
+            {"Q8_SAT_Brisbane": "Q8", "CSA CCGT": "CSA",
+             "Q8 Battery - 2h": "Q8", "Q8 Pumped Hydro - 10h": "Q8"}
     """
-    non_battery = new_entrants[~_is_battery_row(new_entrants)]
-    locations = non_battery.apply(_pick_location, axis=1)
-    return dict(zip(non_battery["IASR ID / DLT names"], locations))
+    new_entrants = pd.concat(
+        [
+            generators_new_entrant[["name", "geo_id"]],
+            storage_new_entrant[["name", "geo_id"]],
+        ]
+    )
+    return dict(zip(new_entrants["name"], new_entrants["geo_id"]))
 
 
-def _batteries_by_location(new_entrants: pd.DataFrame) -> dict[str, list[str]]:
-    """Build a {location: [battery IASR IDs]} lookup for new-entrant batteries.
+def _batteries_by_location(storage_new_entrant: pd.DataFrame) -> dict[str, list[str]]:
+    """Build a {geo_id: [battery names]} lookup for new-entrant batteries.
 
     I/O Example:
-        new_entrants (abbreviated):
-            IASR ID / DLT names  Sub-region  REZ ID  Technology Type
-            Q8 Battery - 2h      SQ          Q8      Battery Storage (2hrs storage)
-            Q8 Battery - 4h      SQ          Q8      Battery Storage (4hrs storage)
-            CSA Battery - 2h     CSA         Not Applicable  Battery Storage (2hrs storage)
+        storage_new_entrant (abbreviated):
+            name                   technology                      geo_id
+            Q8 Battery - 2h        Battery Storage (2hrs storage)  Q8
+            Q8 Battery - 4h        Battery Storage (4hrs storage)  Q8
+            CSA Battery - 2h       Battery Storage (2hrs storage)  CSA
+            Q8 Pumped Hydro - 10h  Pumped Hydro (10hrs storage)    Q8     # not a battery
 
         returns:
             {"Q8":  ["Q8 Battery - 2h", "Q8 Battery - 4h"],
              "CSA": ["CSA Battery - 2h"]}
     """
-    batteries = new_entrants[_is_battery_row(new_entrants)].copy()
-    batteries["location"] = batteries.apply(_pick_location, axis=1)
+    batteries = storage_new_entrant[_is_battery_row(storage_new_entrant, "technology")]
     return (
-        batteries.groupby("location")["IASR ID / DLT names"]
+        batteries.groupby("geo_id")["name"]
         .apply(lambda s: sorted(s.unique()))
         .to_dict()
     )
 
 
-def _battery_to_location(new_entrants: pd.DataFrame) -> dict[str, str]:
-    """Build a {battery IASR ID: REZ ID or Sub-region} lookup for new-entrant
-    batteries -- the inverse of _batteries_by_location.
+def _battery_to_location(storage_new_entrant: pd.DataFrame) -> dict[str, str]:
+    """Build a {battery name: geo_id} lookup for new-entrant batteries -- the
+    inverse of _batteries_by_location.
 
     I/O Example:
-        new_entrants (abbreviated):
-            IASR ID / DLT names  Sub-region  REZ ID          Technology Type
-            Q8 Battery - 2h      SQ          Q8              Battery Storage (2hrs storage)
-            CSA Battery - 2h     CSA         Not Applicable  Battery Storage (2hrs storage)
+        storage_new_entrant (abbreviated):
+            name                   technology                      geo_id
+            Q8 Battery - 2h        Battery Storage (2hrs storage)  Q8
+            CSA Battery - 2h       Battery Storage (2hrs storage)  CSA
+            Q8 Pumped Hydro - 10h  Pumped Hydro (10hrs storage)    Q8     # not a battery
 
         returns:
             {"Q8 Battery - 2h": "Q8", "CSA Battery - 2h": "CSA"}
     """
-    batteries = new_entrants[_is_battery_row(new_entrants)].copy()
-    locations = batteries.apply(_pick_location, axis=1)
-    return dict(zip(batteries["IASR ID / DLT names"], locations))
+    batteries = storage_new_entrant[_is_battery_row(storage_new_entrant, "technology")]
+    return dict(zip(batteries["name"], batteries["geo_id"]))
 
 
 def _triggered_locations_per_constraint(
     lhs: pd.DataFrame, unit_to_location: dict[str, str]
 ) -> pd.DataFrame:
     """Find the distinct {constraint_id, location} pairs implied by the
-    surviving new-entrant generator and battery terms.
+    surviving new-entrant generator and storage terms.
 
-    Units whose IASR ID isn't in unit_to_location (existing / committed /
-    anticipated plant) don't trigger; only new-entrant units drive the
-    injection. A surviving battery triggers its location just as a surviving
+    Units whose name isn't in unit_to_location (existing and planned plant)
+    don't trigger; only new-entrant units drive the injection. A surviving battery triggers its location just as a surviving
     generator does, so a location whose generators were all dropped (or that
     PLEXOS represents through batteries alone) still has its omitted battery
     durations re-added.
@@ -997,7 +1152,7 @@ def _triggered_locations_per_constraint(
 
 
 def _surviving_battery_coefficients(
-    lhs: pd.DataFrame, new_entrants: pd.DataFrame
+    lhs: pd.DataFrame, storage_new_entrant: pd.DataFrame
 ) -> pd.DataFrame:
     """The coefficient *profile* -- the (date_from, coefficient) rows -- that
     the pass-1 new-entrant batteries surviving in each (constraint_id, location)
@@ -1014,7 +1169,8 @@ def _surviving_battery_coefficients(
     profile as each other, which _raise_on_inconsistent_battery_profiles
     enforces (generators are deliberately not checked: they keep their own
     per-unit coefficients). Existing-plant batteries carry no new-entrant
-    location and are ignored.
+    location and are ignored, as are storage_output terms on new-entrant
+    storage that isn't a battery (pumped hydro).
 
     I/O Example:
         lhs (storage_output rows, abbreviated):
@@ -1025,13 +1181,19 @@ def _surviving_battery_coefficients(
             WNV1           storage_output  V7 Battery - 2h  0.00         2031-11-30  # ... then 0.00 -- one battery's stepped profile, not a conflict
             SWQLD1         storage_output  Tarong BESS      0.14         # existing -> no location, ignored
 
+        storage_new_entrant (abbreviated):
+            name             technology                      geo_id
+            Q8 Battery - 2h  Battery Storage (2hrs storage)  Q8
+            Q8 Battery - 8h  Battery Storage (8hrs storage)  Q8
+            V7 Battery - 2h  Battery Storage (2hrs storage)  V7
+
         returns:
             constraint_id  location  coefficient  date_from
             SWQLD1         Q8        0.43
             WNV1           V7        0.78
             WNV1           V7        0.00         2031-11-30              # V7's two-date profile passes through intact
     """
-    battery_location = _battery_to_location(new_entrants)
+    battery_location = _battery_to_location(storage_new_entrant)
     surviving = lhs[lhs["term_type"] == "storage_output"].copy()
     surviving["location"] = surviving["variable_name"].map(battery_location)
     surviving = surviving.dropna(subset=["location"])
@@ -1170,7 +1332,7 @@ def _dedupe_lhs_terms(lhs: pd.DataFrame) -> pd.DataFrame:
     date_from).
 
     Safety net for the pass-1/pass-2 overlap: a battery that survives pass 1
-    (exact IASR name match) and is also injected by pass 2 would otherwise
+    (it matched a templated unit) and is also injected by pass 2 would otherwise
     appear twice at the same date_from. The first occurrence is kept --
     pass-1 rows come first and carry the coefficient from PLEXOS.
 

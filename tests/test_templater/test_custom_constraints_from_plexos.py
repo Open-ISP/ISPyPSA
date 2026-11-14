@@ -10,6 +10,7 @@ real production logic against a workbook-derived fixture -- lives in
 ``test_custom_constraints_validation.py``.
 """
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -28,22 +29,18 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _drop_constraint_relaxation_terms,
     _drop_excluded_classes,
     _drop_unresolved_terms,
-    _generator_to_location,
-    _iasr_id_choices,
     _inject_iasr_new_entrant_batteries,
-    _line_variable_name,
+    _line_names_to_path_ids,
     _location_battery_pairs,
     _log_injected_batteries,
-    _match_unit_name,
+    _match_to_templated_unit_names,
+    _new_entrant_to_location,
     _plexos_extract_dir,
-    _rename_battery_name,
-    _rename_first_token,
-    _rename_generator_name,
-    _resolve_variable_name,
-    _strip_area_suffix,
+    _set_unit_term_types_from_templated_tables,
     _surviving_battery_coefficients,
     _tag_to_timeslice,
     _triggered_locations_per_constraint,
+    _unit_term_types,
     _warn_on_constraints_missing_lhs,
     _warn_on_default_battery_coefficients,
     template_custom_constraints_from_plexos,
@@ -58,8 +55,9 @@ def _write_plexos_extract(plexos_dir):
     Exercises every translation path: all three senses, each
     (parent_class, property) -> term_type pair, the DN1 -> DREZ battery
     rename, the three dropped-row categories (Purchaser, Installed Capacity
-    Coefficient, battery Load Coefficient), and an unmatched generator that
-    gets dropped.
+    Coefficient, battery Load Coefficient), an unmatched generator that
+    gets dropped, and a PLEXOS generator (SHGEN01) that ISPyPSA templates as
+    storage.
     """
     plexos_dir.mkdir()
     (plexos_dir / "constraints.csv").write_text(
@@ -82,6 +80,7 @@ def _write_plexos_extract(plexos_dir):
         "ExportGroup_SWQLD1,Node,CNSW,Load Coefficient,1.0,,,\n"
         "ExportGroup_SWQLD1,Purchaser,Q1 to NQ Flexible Electrolyser,Load Coefficient,-1.0,,,\n"
         "ExportGroup_NET1,Generator,T1_Wind,Generation Sent Out Coefficient,0.6,,,\n"
+        "ExportGroup_NET1,Generator,SHGEN01,Generation Sent Out Coefficient,0.3,,,\n"
         "ExportGroup_EQ,Node,NQ,Load Coefficient,1.0,,,\n"
     )
     (plexos_dir / "rhs_values.csv").write_text(
@@ -98,25 +97,36 @@ def test_template_custom_constraints_from_plexos_end_to_end(
 ):
     plexos_dir = tmp_path / "plexos"
     _write_plexos_extract(plexos_dir)
-    iasr_tables = {
-        "existing_committed_anticipated_additional_generator_summary": csv_str_to_df("""
-            IASR ID / DLT names
-            BW01
-        """),
-        "new_entrants_summary": csv_str_to_df("""
-            IASR ID / DLT names,      Sub-region,  REZ ID,  Technology Type
-            Q8_SAT_Brisbane,          SQ,          Q8,      Solar
-            Q8 Battery - 2h,          SQ,          Q8,      Battery Storage (2hrs storage)
-            Q8 Battery - 4h,          SQ,          Q8,      Battery Storage (4hrs storage)
-            DREZ Dubbo Battery - 2h,  CNSW,        DN1,     Battery Storage (2hrs storage)
-            T1_Wind,                  TAS,         T1,      Wind
-            T1 Battery - 2h,          TAS,         T1,      Battery Storage (2hrs storage)
-        """),
-    }
+    generators_existing_planned = csv_str_to_df("""
+        name
+        BW01
+    """)
+    generators_new_entrant = csv_str_to_df("""
+        name,             geo_id
+        Q8_SAT_Brisbane,  Q8
+        T1_Wind,          T1
+    """)
+    storage_existing_planned = csv_str_to_df("""
+        name
+        SHGEN01
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,                     technology,                      geo_id
+        Q8 Battery - 2h,          Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,          Battery Storage (4hrs storage),  Q8
+        DREZ Dubbo Battery - 2h,  Battery Storage (2hrs storage),  DN1
+        T1 Battery - 2h,          Battery Storage (2hrs storage),  T1
+        T1 Pumped Hydro - 10h,    Pumped Hydro (10hrs storage),    T1
+    """)
 
     with caplog.at_level("INFO"):
         out = template_custom_constraints_from_plexos(
-            iasr_tables, iasr_workbook_version="ignored", plexos_extract_dir=plexos_dir
+            generators_existing_planned,
+            generators_new_entrant,
+            storage_existing_planned,
+            storage_new_entrant,
+            iasr_workbook_version="ignored",
+            plexos_extract_dir=plexos_dir,
         )
 
     assert set(out) == {
@@ -143,13 +153,16 @@ def test_template_custom_constraints_from_plexos_end_to_end(
     # drops the Purchaser, Installed Capacity Coefficient and battery Load
     # Coefficient rows, plus the unmatched SA Hydrogen Turbine. Pass 2 injects
     # the Q8 batteries (triggered by Q8_SAT_Brisbane in SWQLD1), the T1
-    # battery (triggered by T1_Wind in NET1), and re-injects the surviving
-    # DREZ Dubbo battery (its own DN1 trigger; deduped against pass 1).
-    # EQ carries only its NQ load term.
+    # battery (triggered by T1_Wind in NET1) but not T1 Pumped Hydro - 10h,
+    # which is new-entrant storage but not a battery, and re-injects the
+    # surviving DREZ Dubbo battery (its own DN1 trigger; deduped against
+    # pass 1). SHGEN01 is a PLEXOS generator listed in storage_existing_planned,
+    # so its term is storage_output. EQ carries only its NQ load term.
     expected_lhs = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,            coefficient,  date_from
         EQ,             load,              NQ,                       1.0,
         NET1,           generator_output,  T1_Wind,                  0.6,
+        NET1,           storage_output,    SHGEN01,                  0.3,
         NET1,           storage_output,    T1 Battery - 2h,          1.0,
         SWQLD1,         generator_output,  BW01,                     0.5,
         SWQLD1,         generator_output,  Q8_SAT_Brisbane,          0.4,
@@ -182,8 +195,10 @@ def test_template_custom_constraints_from_plexos_end_to_end(
     )
 
     # End-to-end side effects: dropping the unmatched generator loosens the
-    # constraint (WARNING); the pass-2 injection is summarised (INFO).
+    # constraint (WARNING); the term_type change and the pass-2 injection are
+    # summarised (INFO).
     assert "SWQLD1: SA Hydrogen Turbine" in caplog.text
+    assert "['SHGEN01: generator_output -> storage_output']" in caplog.text
     assert "Injected 4 new-entrant battery storage_output rows" in caplog.text
 
 
@@ -210,64 +225,85 @@ def test_assert_no_date_to_raises_when_any_populated(csv_str_to_df):
         _assert_no_date_to(df, "test")
 
 
-# --- _iasr_id_choices ---
+# --- _unit_term_types ---
 
 
-def test_iasr_id_choices_unions_and_dedupes(csv_str_to_df):
-    iasr = {
-        "existing_committed_anticipated_additional_generator_summary": csv_str_to_df("""
-            IASR ID / DLT names
-            BW01
-            BW02
-            SHARED
-        """),
-        "new_entrants_summary": csv_str_to_df("""
-            IASR ID / DLT names
-            Q1 Battery - 2h
-            SHARED
-        """),
+_EMPTY_NAMES = pd.DataFrame(columns=["name"])
+
+
+def test_unit_term_types_maps_each_table_to_its_term_type(csv_str_to_df):
+    generators_existing_planned = csv_str_to_df("""
+        name
+        BW01
+        BW02
+    """)
+    generators_new_entrant = csv_str_to_df("""
+        name
+        Q8_SAT_Brisbane
+    """)
+    storage_existing_planned = csv_str_to_df("""
+        name
+        SHGEN01
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name
+        Q8 Battery - 2h
+    """)
+
+    result = _unit_term_types(
+        generators_existing_planned,
+        generators_new_entrant,
+        storage_existing_planned,
+        storage_new_entrant,
+    )
+
+    assert result == {
+        "BW01": "generator_output",
+        "BW02": "generator_output",
+        "Q8_SAT_Brisbane": "generator_output",
+        "SHGEN01": "storage_output",
+        "Q8 Battery - 2h": "storage_output",
     }
 
-    result = _iasr_id_choices(iasr)
 
-    assert result == {"BW01", "BW02", "SHARED", "Q1 Battery - 2h"}
+def test_unit_term_types_handles_empty_generator_tables(csv_str_to_df):
+    storage_existing_planned = csv_str_to_df("""
+        name
+        SHGEN01
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name
+        Q8 Battery - 2h
+    """)
 
+    result = _unit_term_types(
+        _EMPTY_NAMES, _EMPTY_NAMES, storage_existing_planned, storage_new_entrant
+    )
 
-def test_iasr_id_choices_handles_empty_existing(csv_str_to_df):
-    iasr = {
-        "existing_committed_anticipated_additional_generator_summary": pd.DataFrame(
-            columns=["IASR ID / DLT names"]
-        ),
-        "new_entrants_summary": csv_str_to_df("""
-            IASR ID / DLT names
-            ONLY_NEW
-        """),
-    }
-
-    assert _iasr_id_choices(iasr) == {"ONLY_NEW"}
-
-
-def test_iasr_id_choices_handles_empty_new_entrants(csv_str_to_df):
-    iasr = {
-        "existing_committed_anticipated_additional_generator_summary": csv_str_to_df("""
-            IASR ID / DLT names
-            ONLY_EXISTING
-        """),
-        "new_entrants_summary": pd.DataFrame(columns=["IASR ID / DLT names"]),
-    }
-
-    assert _iasr_id_choices(iasr) == {"ONLY_EXISTING"}
+    assert result == {"SHGEN01": "storage_output", "Q8 Battery - 2h": "storage_output"}
 
 
-def test_iasr_id_choices_handles_both_empty():
-    iasr = {
-        "existing_committed_anticipated_additional_generator_summary": pd.DataFrame(
-            columns=["IASR ID / DLT names"]
-        ),
-        "new_entrants_summary": pd.DataFrame(columns=["IASR ID / DLT names"]),
-    }
+def test_unit_term_types_handles_empty_storage_tables(csv_str_to_df):
+    generators_existing_planned = csv_str_to_df("""
+        name
+        BW01
+    """)
+    generators_new_entrant = csv_str_to_df("""
+        name
+        Q8_SAT_Brisbane
+    """)
 
-    assert _iasr_id_choices(iasr) == set()
+    result = _unit_term_types(
+        generators_existing_planned, generators_new_entrant, _EMPTY_NAMES, _EMPTY_NAMES
+    )
+
+    assert result == {"BW01": "generator_output", "Q8_SAT_Brisbane": "generator_output"}
+
+
+def test_unit_term_types_handles_all_empty():
+    result = _unit_term_types(_EMPTY_NAMES, _EMPTY_NAMES, _EMPTY_NAMES, _EMPTY_NAMES)
+
+    assert result == {}
 
 
 # --- _build_custom_constraints ---
@@ -469,166 +505,164 @@ def test_add_term_type_column_raises_on_unknown_pair(csv_str_to_df):
         _add_term_type_column(lhs)
 
 
-# --- _rename_first_token ---
+# --- _match_to_templated_unit_names ---
 
 
-@pytest.mark.parametrize(
-    "name, delimiter, mapping, expected",
-    [
-        ("DN1_SAT_Dubbo", "_", {"DN1": "DREZ"}, "DREZ_SAT_Dubbo"),
-        ("DN3 Marulan Battery - 2h", " ", {"DN3": "DREZ"}, "DREZ Marulan Battery - 2h"),
-        ("BW01", "_", {"DN1": "DREZ"}, "BW01"),  # no delimiter -> unchanged
-        ("KSP1", "_", {}, "KSP1"),  # empty map
-        ("OTHER_SAT_X", "_", {"DN1": "DREZ"}, "OTHER_SAT_X"),  # token not in map
-    ],
-)
-def test_rename_first_token(name, delimiter, mapping, expected):
-    assert _rename_first_token(name, delimiter, mapping) == expected
-
-
-# --- _strip_area_suffix ---
-
-
-@pytest.mark.parametrize(
-    "name, expected",
-    [
-        ("PV CNSW Area1", "PV CNSW"),
-        ("CNSW SAT - Distributed Resources Area1", "CNSW SAT - Distributed Resources"),
-        ("CNSW V2G Area12", "CNSW V2G"),  # multi-digit Area
-        ("BW01", "BW01"),  # no Area suffix
-        ("Areaway", "Areaway"),  # 'Area' inside other word -> untouched
-    ],
-)
-def test_strip_area_suffix(name, expected):
-    assert _strip_area_suffix(name) == expected
-
-
-# --- _rename_generator_name / _rename_battery_name ---
-
-
-@pytest.mark.parametrize(
-    "name, expected",
-    [
-        ("DN1_SAT_Dubbo", "DREZ_SAT_Dubbo"),  # prefix rename
-        ("DN3_WH_Marulan", "DREZ_WH_Marulan"),
-        (
+def test_match_to_templated_unit_names_renames_then_matches():
+    plexos_names = pd.Series(
+        [
+            "DN1_SAT_Dubbo",
+            "DN3 Marulan Battery - 2h",
+            "DN10_SAT_Elsewhere",
+            "OTHER_SAT_X",
             "CNSW SAT - Distributed Resources Area1",
-            "CNSW SAT - Distributed Resources",
-        ),  # Area strip
-        ("BW01", "BW01"),  # neither rule applies
-    ],
-)
-def test_rename_generator_name(name, expected):
-    assert _rename_generator_name(name) == expected
-
-
-@pytest.mark.parametrize(
-    "name, expected",
-    [
-        # DN1/DN3 -> DREZ: one-to-one naming rename retained
-        ("DN1 Dubbo Battery - 4h", "DREZ Dubbo Battery - 4h"),
-        ("DN3 Marulan Battery - 2h", "DREZ Marulan Battery - 2h"),
-        # Constraint-scoped prefixes: no rename (drop through, re-injected by pass 2)
-        ("SWQLD1 Battery - 2h", "SWQLD1 Battery - 2h"),
-        ("MN1 Battery - 8h", "MN1 Battery - 8h"),
-        # Area suffix is always stripped
-        (
-            "CNSW Battery - Distributed Resources Area1",
-            "CNSW Battery - Distributed Resources",
-        ),
-        # Plant name passes through unchanged
-        ("Tarong BESS", "Tarong BESS"),
-    ],
-)
-def test_rename_battery_name(name, expected):
-    assert _rename_battery_name(name) == expected
-
-
-# --- _match_unit_name ---
-
-
-def test_match_unit_name_exact():
-    iasr_ids = {"BW01", "BW02"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert _match_unit_name("BW01", iasr_ids, lower) == "BW01"
-
-
-def test_match_unit_name_case_insensitive():
-    iasr_ids = {"Q2_SAT_North Qld Clean Energy Hub"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert (
-        _match_unit_name("Q2_SAT_North QLD Clean Energy Hub", iasr_ids, lower)
-        == "Q2_SAT_North Qld Clean Energy Hub"
+            "CNSW V2G Area12",
+            "Areaway",
+            "BW01",
+            "Q2_SAT_North QLD Clean Energy Hub",
+            "SWQLD1 Battery - 2h",
+            "UNKNOWN",
+        ]
     )
+    unit_names = {
+        "DREZ_SAT_Dubbo",
+        "DREZ Marulan Battery - 2h",
+        "DN10_SAT_Elsewhere",
+        "OTHER_SAT_X",
+        "CNSW SAT - Distributed Resources",
+        "CNSW V2G",
+        "Areaway",
+        "BW01",
+        "Q2_SAT_North Qld Clean Energy Hub",
+        "SQ Battery - 2h",
+    }
 
+    result = _match_to_templated_unit_names(plexos_names, unit_names)
 
-def test_match_unit_name_returns_none_on_miss():
-    iasr_ids = {"BW01"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert _match_unit_name("UNKNOWN", iasr_ids, lower) is None
-
-
-# --- _line_variable_name ---
-
-
-def test_line_variable_name_known():
-    assert _line_variable_name("NSW1-QLD1") == "NSW-QLD"
-    assert _line_variable_name("SQ-CQ") == "SQ-CQ"
-
-
-def test_line_variable_name_raises_for_unknown():
-    with pytest.raises(ValueError, match="_LINE_TO_PATH_ID"):
-        _line_variable_name("MADE-UP-LINE")
-
-
-# --- _resolve_variable_name (per-class dispatch) ---
-
-
-def test_resolve_variable_name_generator_matches():
-    iasr_ids = {"BW01"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert _resolve_variable_name("Generator", "BW01", iasr_ids, lower) == "BW01"
-
-
-def test_resolve_variable_name_generator_no_match_returns_none():
-    iasr_ids = {"BW01"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert _resolve_variable_name("Generator", "UNKNOWN", iasr_ids, lower) is None
-
-
-def test_resolve_variable_name_battery_applies_rename():
-    iasr_ids = {"DREZ Dubbo Battery - 4h"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert (
-        _resolve_variable_name("Battery", "DN1 Dubbo Battery - 4h", iasr_ids, lower)
-        == "DREZ Dubbo Battery - 4h"
+    expected = pd.Series(
+        [
+            "DREZ_SAT_Dubbo",  # DN1 prefix, then "_"
+            "DREZ Marulan Battery - 2h",  # DN3 prefix, then " "
+            "DN10_SAT_Elsewhere",  # DN10 is a different first token: not renamed
+            "OTHER_SAT_X",  # prefix not one of DN1/DN3
+            "CNSW SAT - Distributed Resources",  # Area suffix stripped
+            "CNSW V2G",  # multi-digit Area number
+            "Areaway",  # "Area" inside another word
+            "BW01",  # neither rule applies
+            "Q2_SAT_North Qld Clean Energy Hub",  # matched ignoring case
+            np.nan,  # constraint-scoped: no rename, so no templated unit
+            np.nan,  # no templated unit
+        ]
     )
+    pd.testing.assert_series_equal(result, expected)
 
 
-def test_resolve_variable_name_battery_constraint_scoped_returns_none():
-    """Constraint-scoped battery names (no rename rule) don't match IASR."""
-    iasr_ids = {"SQ Battery - 2h"}
-    lower = {n.lower(): n for n in iasr_ids}
-    assert (
-        _resolve_variable_name("Battery", "SWQLD1 Battery - 2h", iasr_ids, lower)
-        is None
-    )
+def test_match_to_templated_unit_names_prefers_the_exact_spelling():
+    # Two templated units differ only by capitalisation. A PLEXOS name that is
+    # exactly one of them keeps that spelling, whichever the lower-cased
+    # lookup would have picked.
+    plexos_names = pd.Series(["North QLD Hub", "North Qld Hub"])
+    unit_names = {"North QLD Hub", "North Qld Hub"}
+
+    result = _match_to_templated_unit_names(plexos_names, unit_names)
+
+    expected = pd.Series(["North QLD Hub", "North Qld Hub"])
+    pd.testing.assert_series_equal(result, expected)
 
 
-def test_resolve_variable_name_line_uses_path_table():
-    assert _resolve_variable_name("Line", "NSW1-QLD1", set(), {}) == "NSW-QLD"
+def test_match_to_templated_unit_names_no_templated_units():
+    plexos_names = pd.Series(["BW01", "UNKNOWN"])
+
+    result = _match_to_templated_unit_names(plexos_names, set())
+
+    expected = pd.Series([np.nan, np.nan], dtype=object)
+    pd.testing.assert_series_equal(result, expected)
 
 
-def test_resolve_variable_name_node_passes_through():
-    assert _resolve_variable_name("Node", "CNSW", set(), {}) == "CNSW"
+def test_match_to_templated_unit_names_no_names():
+    plexos_names = pd.Series([], dtype=object)
+
+    result = _match_to_templated_unit_names(plexos_names, {"BW01"})
+
+    expected = pd.Series([], dtype=object)
+    pd.testing.assert_series_equal(result, expected)
 
 
-def test_resolve_variable_name_unknown_class_raises():
-    with pytest.raises(ValueError, match="Unexpected LHS parent_class"):
-        _resolve_variable_name("Storage", "X", set(), {})
+# --- _line_names_to_path_ids ---
+
+
+def test_line_names_to_path_ids_known():
+    result = _line_names_to_path_ids(pd.Series(["NSW1-QLD1", "SQ-CQ"]))
+
+    expected = pd.Series(["NSW-QLD", "SQ-CQ"])
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_line_names_to_path_ids_raises_for_unknown():
+    line_names = pd.Series(["NSW1-QLD1", "MADE-UP-LINE"])
+
+    with pytest.raises(
+        ValueError,
+        match=r"not in _LINE_TO_PATH_ID -- add a mapping: \['MADE-UP-LINE'\]",
+    ):
+        _line_names_to_path_ids(line_names)
 
 
 # --- _add_variable_name_column (orchestration) + rename logging ---
+
+
+def test_add_variable_name_column_names_each_parent_class(csv_str_to_df):
+    lhs = csv_str_to_df("""
+        parent_class,  parent_name
+        Generator,     DN1_SAT_Dubbo
+        Generator,     SA Hydrogen Turbine
+        Battery,       DN1 Dubbo Battery - 4h
+        Battery,       SWQLD1 Battery - 2h
+        Line,          NSW1-QLD1
+        Node,          CNSW
+    """)
+    unit_names = {"DREZ_SAT_Dubbo", "DREZ Dubbo Battery - 4h"}
+
+    result = _add_variable_name_column(lhs, unit_names)
+
+    # Generators and batteries are renamed and matched to unit_names; SA
+    # Hydrogen Turbine and the constraint-scoped SWQLD1 battery match nothing,
+    # so their variable_name is blank. The line goes through the path_id table
+    # and the node keeps its name.
+    expected = csv_str_to_df("""
+        parent_class,  parent_name,             variable_name
+        Generator,     DN1_SAT_Dubbo,           DREZ_SAT_Dubbo
+        Generator,     SA Hydrogen Turbine,
+        Battery,       DN1 Dubbo Battery - 4h,  DREZ Dubbo Battery - 4h
+        Battery,       SWQLD1 Battery - 2h,
+        Line,          NSW1-QLD1,               NSW-QLD
+        Node,          CNSW,                    CNSW
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+def test_add_variable_name_column_raises_on_unexpected_parent_class(csv_str_to_df):
+    lhs = csv_str_to_df("""
+        parent_class,  parent_name
+        Generator,     BW01
+        Storage,       X
+    """)
+
+    with pytest.raises(
+        ValueError, match=r"Unexpected LHS parent_class values: \['Storage'\]"
+    ):
+        _add_variable_name_column(lhs, {"BW01"})
+
+
+def test_add_variable_name_column_empty_lhs(csv_str_to_df):
+    lhs = pd.DataFrame(columns=["parent_class", "parent_name"], dtype=object)
+
+    result = _add_variable_name_column(lhs, {"BW01"})
+
+    expected = csv_str_to_df("""
+        parent_class,  parent_name,  variable_name
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 def test_add_variable_name_column_logs_renames(csv_str_to_df, caplog):
@@ -637,10 +671,10 @@ def test_add_variable_name_column_logs_renames(csv_str_to_df, caplog):
         Generator,     DN1_SAT_Dubbo
         Generator,     BW01
     """)
-    iasr_ids = {"DREZ_SAT_Dubbo", "BW01"}
+    unit_names = {"DREZ_SAT_Dubbo", "BW01"}
 
     with caplog.at_level("INFO"):
-        result = _add_variable_name_column(lhs, iasr_ids)
+        result = _add_variable_name_column(lhs, unit_names)
 
     expected = csv_str_to_df("""
         parent_class,  parent_name,    variable_name
@@ -648,8 +682,10 @@ def test_add_variable_name_column_logs_renames(csv_str_to_df, caplog):
         Generator,     BW01,           BW01
     """)
     pd.testing.assert_frame_equal(result, expected)
-    assert "Applied 1 PLEXOS->ISPyPSA LHS name renames" in caplog.text
-    assert "DN1_SAT_Dubbo -> DREZ_SAT_Dubbo" in caplog.text
+    assert (
+        "Applied 1 PLEXOS->ISPyPSA LHS name renames: "
+        "['DN1_SAT_Dubbo -> DREZ_SAT_Dubbo']"
+    ) in caplog.text
 
 
 def test_add_variable_name_column_no_log_when_no_renames(csv_str_to_df, caplog):
@@ -754,18 +790,27 @@ def test_build_custom_constraints_lhs_wires_filters_renames_and_drops(csv_str_to
         ExportGroup_SWQLD1,  Purchaser,     Some Electrolyser,    Load Coefficient,                   -1.0,
         ExportGroup_SWQLD1,  Generator,     SWQLD1_Linear Augmentation, Installed Capacity Coefficient, -1.0,
     """)
-    iasr_ids = {"BW01", "Q8_SAT_Brisbane", "Q8 Battery - 2h"}
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,         Technology Type
-        Q8_SAT_Brisbane,          SQ,          Q8,              Solar
-        Q8 Battery - 2h,       SQ,          Q8,              Battery Storage (2hrs storage)
+    unit_term_types = {
+        "BW01": "generator_output",
+        "Q8_SAT_Brisbane": "generator_output",
+        "Q8 Battery - 2h": "storage_output",
+    }
+    generators_new_entrant = csv_str_to_df("""
+        name,             geo_id
+        Q8_SAT_Brisbane,  Q8
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
     """)
 
-    result = _build_custom_constraints_lhs(lhs_terms, iasr_ids, new_entrants)
+    result = _build_custom_constraints_lhs(
+        lhs_terms, unit_term_types, generators_new_entrant, storage_new_entrant
+    )
 
     # Purchaser dropped, Installed Capacity dropped, Battery Load Coefficient
-    # dropped, SWQLD1 constraint-scoped Battery dropped (no IASR match),
-    # UNKNOWN dropped (no IASR match). BW01 + Q8_SAT_Brisbane survive pass 1;
+    # dropped, SWQLD1 constraint-scoped Battery dropped (no templated unit),
+    # UNKNOWN dropped (no templated unit). BW01 + Q8_SAT_Brisbane survive pass 1;
     # pass 2 injects Q8 Battery - 2h because Q8_SAT_Brisbane triggers REZ Q8.
     expected = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,      coefficient,  date_from
@@ -778,6 +823,84 @@ def test_build_custom_constraints_lhs_wires_filters_renames_and_drops(csv_str_to
         expected.sort_values(["term_type", "variable_name"]).reset_index(drop=True),
         check_dtype=False,
     )
+
+
+# --- _set_unit_term_types_from_templated_tables ---
+
+
+def test_set_unit_term_types_from_templated_tables_follows_templated_table(
+    csv_str_to_df, caplog
+):
+    lhs = csv_str_to_df("""
+        constraint_name,  term_type,         variable_name
+        X,                generator_output,  BW01
+        X,                generator_output,  SHGEN01
+        X,                generator_output,  SHGEN02
+        Y,                generator_output,  SHGEN01
+        X,                storage_output,    Q8 Battery - 2h
+        X,                link_flow,         NSW-QLD
+        X,                load,              CNSW
+    """)
+    unit_term_types = {
+        "BW01": "generator_output",
+        "SHGEN01": "storage_output",
+        "SHGEN02": "storage_output",
+        "Q8 Battery - 2h": "storage_output",
+    }
+
+    with caplog.at_level("INFO"):
+        result = _set_unit_term_types_from_templated_tables(lhs, unit_term_types)
+
+    # SHGEN01 and SHGEN02 are generator terms on units templated as storage, so
+    # all three of their rows become storage_output. The link and load terms
+    # aren't unit terms and keep their types.
+    expected = csv_str_to_df("""
+        constraint_name,  term_type,         variable_name
+        X,                generator_output,  BW01
+        X,                storage_output,    SHGEN01
+        X,                storage_output,    SHGEN02
+        Y,                storage_output,    SHGEN01
+        X,                storage_output,    Q8 Battery - 2h
+        X,                link_flow,         NSW-QLD
+        X,                load,              CNSW
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+    assert (
+        "Changed the term_type of 3 LHS term rows to match the table their unit "
+        "is templated in: ['SHGEN01: generator_output -> storage_output', "
+        "'SHGEN02: generator_output -> storage_output']"
+    ) in caplog.text
+
+
+def test_set_unit_term_types_from_templated_tables_no_log_when_types_agree(
+    csv_str_to_df, caplog
+):
+    lhs = csv_str_to_df("""
+        constraint_name,  term_type,         variable_name
+        X,                generator_output,  BW01
+        X,                storage_output,    Q8 Battery - 2h
+        X,                load,              CNSW
+    """)
+    unit_term_types = {"BW01": "generator_output", "Q8 Battery - 2h": "storage_output"}
+
+    with caplog.at_level("INFO"):
+        result = _set_unit_term_types_from_templated_tables(lhs, unit_term_types)
+
+    pd.testing.assert_frame_equal(result, lhs)
+    assert "Changed the term_type" not in caplog.text
+
+
+def test_set_unit_term_types_from_templated_tables_empty_lhs(csv_str_to_df):
+    lhs = pd.DataFrame(columns=["constraint_name", "term_type", "variable_name"])
+
+    result = _set_unit_term_types_from_templated_tables(
+        lhs, {"BW01": "generator_output"}
+    )
+
+    expected = csv_str_to_df("""
+        constraint_name,  term_type,  variable_name
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 # --- _tag_to_timeslice ---
@@ -828,29 +951,65 @@ def test_build_custom_constraints_rhs_maps_to_region_prefixed_canonical_timeslic
     pd.testing.assert_frame_equal(result, expected)
 
 
-# --- _generator_to_location ---
+# --- _new_entrant_to_location ---
 
 
-def test_generator_to_location_uses_rez_id_when_populated(csv_str_to_df):
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,         Technology Type
-        Q8 Solar,                SQ,          Q8,              Solar
-        CSA Coal,                CSA,         Not Applicable, Black Coal
-        Q1 Battery - 2h,       NQ,          Q1,              Battery Storage (2hrs storage)
+_EMPTY_GENERATORS_NEW_ENTRANT = pd.DataFrame(columns=["name", "geo_id"])
+_EMPTY_STORAGE_NEW_ENTRANT = pd.DataFrame(columns=["name", "technology", "geo_id"])
+
+
+def test_new_entrant_to_location_covers_generators_and_storage(csv_str_to_df):
+    generators_new_entrant = csv_str_to_df("""
+        name,      geo_id
+        Q8 Solar,  Q8
+        CSA Coal,  CSA
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,                   technology,                      geo_id
+        Q1 Battery - 2h,        Battery Storage (2hrs storage),  Q1
+        Q1 Pumped Hydro - 10h,  Pumped Hydro (10hrs storage),    Q1
     """)
 
-    result = _generator_to_location(new_entrants)
+    result = _new_entrant_to_location(generators_new_entrant, storage_new_entrant)
 
-    # Battery row excluded; REZ ID used when populated, Sub-region as fallback.
-    assert result == {"Q8 Solar": "Q8", "CSA Coal": "CSA"}
+    assert result == {
+        "Q8 Solar": "Q8",
+        "CSA Coal": "CSA",
+        "Q1 Battery - 2h": "Q1",
+        "Q1 Pumped Hydro - 10h": "Q1",
+    }
 
 
-def test_generator_to_location_empty_input(csv_str_to_df):
-    new_entrants = pd.DataFrame(
-        columns=["IASR ID / DLT names", "Sub-region", "REZ ID", "Technology Type"]
+def test_new_entrant_to_location_empty_generators(csv_str_to_df):
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q1 Battery - 2h,  Battery Storage (2hrs storage),  Q1
+    """)
+
+    result = _new_entrant_to_location(
+        _EMPTY_GENERATORS_NEW_ENTRANT, storage_new_entrant
     )
 
-    result = _generator_to_location(new_entrants)
+    assert result == {"Q1 Battery - 2h": "Q1"}
+
+
+def test_new_entrant_to_location_empty_storage(csv_str_to_df):
+    generators_new_entrant = csv_str_to_df("""
+        name,      geo_id
+        Q8 Solar,  Q8
+    """)
+
+    result = _new_entrant_to_location(
+        generators_new_entrant, _EMPTY_STORAGE_NEW_ENTRANT
+    )
+
+    assert result == {"Q8 Solar": "Q8"}
+
+
+def test_new_entrant_to_location_both_empty():
+    result = _new_entrant_to_location(
+        _EMPTY_GENERATORS_NEW_ENTRANT, _EMPTY_STORAGE_NEW_ENTRANT
+    )
 
     assert result == {}
 
@@ -858,19 +1017,19 @@ def test_generator_to_location_empty_input(csv_str_to_df):
 # --- _batteries_by_location ---
 
 
-def test_batteries_by_location_groups_by_rez_or_sub_region(csv_str_to_df):
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,    Sub-region,  REZ ID,         Technology Type
-        Q8 Battery - 2h,         SQ,          Q8,              Battery Storage (2hrs storage)
-        Q8 Battery - 4h,         SQ,          Q8,              Battery Storage (4hrs storage)
-        CSA Battery - 2h,        CSA,         Not Applicable, Battery Storage (2hrs storage)
-        Q8 Solar,                  SQ,          Q8,              Solar
+def test_batteries_by_location_groups_batteries_by_geo_id(csv_str_to_df):
+    storage_new_entrant = csv_str_to_df("""
+        name,                   technology,                      geo_id
+        Q8 Battery - 2h,        Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,        Battery Storage (4hrs storage),  Q8
+        CSA Battery - 2h,       Battery Storage (2hrs storage),  CSA
+        Q8 Pumped Hydro - 10h,  Pumped Hydro (10hrs storage),    Q8
     """)
 
-    result = _batteries_by_location(new_entrants)
+    result = _batteries_by_location(storage_new_entrant)
 
-    # Battery rows grouped by REZ ID (when populated) / Sub-region (when not);
-    # non-battery rows excluded; per-key list is sorted.
+    # Battery rows grouped by geo_id; the pumped hydro row is excluded; each
+    # location's list is sorted.
     assert result == {
         "Q8": ["Q8 Battery - 2h", "Q8 Battery - 4h"],
         "CSA": ["CSA Battery - 2h"],
@@ -878,11 +1037,7 @@ def test_batteries_by_location_groups_by_rez_or_sub_region(csv_str_to_df):
 
 
 def test_batteries_by_location_empty_input():
-    new_entrants = pd.DataFrame(
-        columns=["IASR ID / DLT names", "Sub-region", "REZ ID", "Technology Type"]
-    )
-
-    result = _batteries_by_location(new_entrants)
+    result = _batteries_by_location(_EMPTY_STORAGE_NEW_ENTRANT)
 
     assert result == {}
 
@@ -1050,16 +1205,24 @@ def test_inject_iasr_new_entrant_batteries_appends_for_triggered_locations(
         SWQLD1,         generator_output,  Q8 Solar,       0.4,
         SWQLD1,         link_flow,         NSW-QLD,        0.8,
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Solar,             SQ,          Q8,      Solar
-        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
-        Q8 Battery - 4h,      SQ,          Q8,      Battery Storage (4hrs storage)
+    generators_new_entrant = csv_str_to_df("""
+        name,      geo_id
+        Q8 Solar,  Q8
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,                   technology,                      geo_id
+        Q8 Battery - 2h,        Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,        Battery Storage (4hrs storage),  Q8
+        Q8 Pumped Hydro - 10h,  Pumped Hydro (10hrs storage),    Q8
     """)
 
-    result = _inject_iasr_new_entrant_batteries(lhs, new_entrants)
+    result = _inject_iasr_new_entrant_batteries(
+        lhs, generators_new_entrant, storage_new_entrant
+    )
 
     # Pass-1 rows preserved; pass-2 appends Q8 Battery - 2h and 4h for SWQLD1.
+    # Q8 Pumped Hydro - 10h is new-entrant storage at Q8 but not a battery, so
+    # it isn't injected.
     expected = csv_str_to_df("""
         constraint_id,  term_type,         variable_name,    coefficient,  date_from
         SWQLD1,         generator_output,  Q8 Solar,         0.4,
@@ -1080,12 +1243,14 @@ def test_inject_iasr_new_entrant_batteries_no_trigger_no_injection(csv_str_to_df
         constraint_id,  term_type,         variable_name,  coefficient,  date_from
         SWQLD1,         link_flow,         NSW-QLD,        0.8,
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Battery - 2h,       SQ,          Q8,       Battery Storage (2hrs storage)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
     """)
 
-    result = _inject_iasr_new_entrant_batteries(lhs, new_entrants)
+    result = _inject_iasr_new_entrant_batteries(
+        lhs, _EMPTY_GENERATORS_NEW_ENTRANT, storage_new_entrant
+    )
 
     # No surviving generator term -> no triggers -> no injection.
     pd.testing.assert_frame_equal(result, lhs)
@@ -1096,14 +1261,19 @@ def test_inject_iasr_new_entrant_batteries_logs_summary(csv_str_to_df, caplog):
         constraint_id,  term_type,         variable_name,  coefficient,  date_from
         SWQLD1,         generator_output,  Q8 Solar,      0.4,
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Solar,                SQ,          Q8,       Solar
-        Q8 Battery - 2h,       SQ,          Q8,       Battery Storage (2hrs storage)
+    generators_new_entrant = csv_str_to_df("""
+        name,      geo_id
+        Q8 Solar,  Q8
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
     """)
 
     with caplog.at_level("INFO"):
-        _inject_iasr_new_entrant_batteries(lhs, new_entrants)
+        _inject_iasr_new_entrant_batteries(
+            lhs, generators_new_entrant, storage_new_entrant
+        )
 
     assert "Injected 1 new-entrant battery storage_output rows" in caplog.text
 
@@ -1209,16 +1379,16 @@ def test_plexos_extract_dir_resolves_to_shipped_extract():
 
 
 def test_battery_to_location_maps_batteries_only(csv_str_to_df):
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,          Technology Type
-        Q8 Battery - 2h,      SQ,          Q8,              Battery Storage (2hrs storage)
-        CSA Battery - 2h,     CSA,         Not Applicable,  Battery Storage (2hrs storage)
-        Q8 Solar,             SQ,          Q8,              Solar
+    storage_new_entrant = csv_str_to_df("""
+        name,                   technology,                      geo_id
+        Q8 Battery - 2h,        Battery Storage (2hrs storage),  Q8
+        CSA Battery - 2h,       Battery Storage (2hrs storage),  CSA
+        Q8 Pumped Hydro - 10h,  Pumped Hydro (10hrs storage),    Q8
     """)
 
-    result = _battery_to_location(new_entrants)
+    result = _battery_to_location(storage_new_entrant)
 
-    # Non-battery rows excluded; REZ ID used when populated, Sub-region as fallback.
+    # The pumped hydro row is excluded.
     assert result == {"Q8 Battery - 2h": "Q8", "CSA Battery - 2h": "CSA"}
 
 
@@ -1253,21 +1423,25 @@ def test_surviving_battery_coefficients_profiles_per_location(csv_str_to_df):
         SWQLD1,         storage_output,    Q8 Battery - 2h,  0.43,
         SWQLD1,         storage_output,    Q8 Battery - 8h,  0.43,
         SWQLD1,         storage_output,    Tarong BESS,      0.14,
+        SWQLD1,         storage_output,    Q8 Pumped Hydro - 10h,  0.9,
         WNV1,           storage_output,    V7 Battery - 2h,  0.78,
         WNV1,           storage_output,    V7 Battery - 2h,  0.0,          2031-11-30T00:00:00
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
-        Q8 Battery - 8h,      SQ,          Q8,      Battery Storage (8hrs storage)
-        V7 Battery - 2h,      SEV,         V7,      Battery Storage (2hrs storage)
+    storage_new_entrant = csv_str_to_df("""
+        name,                   technology,                      geo_id
+        Q8 Battery - 2h,        Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 8h,        Battery Storage (8hrs storage),  Q8
+        Q8 Pumped Hydro - 10h,  Pumped Hydro (10hrs storage),    Q8
+        V7 Battery - 2h,        Battery Storage (2hrs storage),  V7
     """)
 
-    result = _surviving_battery_coefficients(lhs, new_entrants)
+    result = _surviving_battery_coefficients(lhs, storage_new_entrant)
 
     # Q8's two surviving siblings collapse to one 0.43 profile row; the
-    # generator term and the existing Tarong BESS (not a new-entrant battery)
-    # are ignored; V7 keeps both time-varying rows.
+    # generator term, the existing Tarong BESS (not a new-entrant battery) and
+    # Q8 Pumped Hydro - 10h (new-entrant storage, but not a battery, so its 0.9
+    # is not part of Q8's battery profile) are ignored; V7 keeps both
+    # time-varying rows.
     expected = csv_str_to_df("""
         constraint_id,  location,  coefficient,  date_from
         SWQLD1,         Q8,        0.43,
@@ -1291,14 +1465,14 @@ def test_surviving_battery_coefficients_raises_on_inconsistent_siblings(csv_str_
         SWQLD1,         storage_output,  Q8 Battery - 2h,  0.43,
         SWQLD1,         storage_output,  Q8 Battery - 8h,  0.50,
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
-        Q8 Battery - 8h,      SQ,          Q8,      Battery Storage (8hrs storage)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 8h,  Battery Storage (8hrs storage),  Q8
     """)
 
     with pytest.raises(ValueError, match="share one"):
-        _surviving_battery_coefficients(lhs, new_entrants)
+        _surviving_battery_coefficients(lhs, storage_new_entrant)
 
 
 def test_surviving_battery_coefficients_raises_on_divergent_date_sets(csv_str_to_df):
@@ -1313,14 +1487,14 @@ def test_surviving_battery_coefficients_raises_on_divergent_date_sets(csv_str_to
         WNV1,           storage_output,  V7 Battery - 2h,  0.0,          2031-11-30T00:00:00
         WNV1,           storage_output,  V7 Battery - 8h,  0.78,
     """)
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        V7 Battery - 2h,      SEV,         V7,      Battery Storage (2hrs storage)
-        V7 Battery - 8h,      SEV,         V7,      Battery Storage (8hrs storage)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        V7 Battery - 2h,  Battery Storage (2hrs storage),  V7
+        V7 Battery - 8h,  Battery Storage (8hrs storage),  V7
     """)
 
     with pytest.raises(ValueError, match="share one"):
-        _surviving_battery_coefficients(lhs, new_entrants)
+        _surviving_battery_coefficients(lhs, storage_new_entrant)
 
 
 # --- _build_custom_constraints_lhs: injected battery inherits sibling coeff ---
@@ -1338,15 +1512,24 @@ def test_build_custom_constraints_lhs_injected_battery_inherits_sibling_coeffici
         ExportGroup_SWQLD1,  Generator,     Q8_SAT_Brisbane,  Generation Sent Out Coefficient,  0.43,
         ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Generation Coefficient,           0.43,
     """)
-    iasr_ids = {"Q8_SAT_Brisbane", "Q8 Battery - 2h"}
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8_SAT_Brisbane,      SQ,          Q8,      Solar
-        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
-        Q8 Battery - 4h,      SQ,          Q8,      Battery Storage (4hrs storage)
+    unit_term_types = {
+        "Q8_SAT_Brisbane": "generator_output",
+        "Q8 Battery - 2h": "storage_output",
+        "Q8 Battery - 4h": "storage_output",
+    }
+    generators_new_entrant = csv_str_to_df("""
+        name,             geo_id
+        Q8_SAT_Brisbane,  Q8
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,  Battery Storage (4hrs storage),  Q8
     """)
 
-    result = _build_custom_constraints_lhs(lhs_terms, iasr_ids, new_entrants)
+    result = _build_custom_constraints_lhs(
+        lhs_terms, unit_term_types, generators_new_entrant, storage_new_entrant
+    )
 
     # Surviving 2h (0.43) is deduped against its pass-2 re-injection; the
     # omitted 4h is injected at the inherited 0.43, not 1.0.
@@ -1375,14 +1558,19 @@ def test_build_custom_constraints_lhs_battery_only_survivor_triggers_injection(
         ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Generation Coefficient,  0.43,
         ExportGroup_SWQLD1,  Battery,       Q8 Battery - 2h,  Load Coefficient,        -0.43,
     """)
-    iasr_ids = {"Q8 Battery - 2h"}
-    new_entrants = csv_str_to_df("""
-        IASR ID / DLT names,  Sub-region,  REZ ID,  Technology Type
-        Q8 Battery - 2h,      SQ,          Q8,      Battery Storage (2hrs storage)
-        Q8 Battery - 4h,      SQ,          Q8,      Battery Storage (4hrs storage)
+    unit_term_types = {
+        "Q8 Battery - 2h": "storage_output",
+        "Q8 Battery - 4h": "storage_output",
+    }
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,  Battery Storage (4hrs storage),  Q8
     """)
 
-    result = _build_custom_constraints_lhs(lhs_terms, iasr_ids, new_entrants)
+    result = _build_custom_constraints_lhs(
+        lhs_terms, unit_term_types, _EMPTY_GENERATORS_NEW_ENTRANT, storage_new_entrant
+    )
 
     expected = csv_str_to_df("""
         constraint_id,  term_type,       variable_name,    coefficient,  date_from
