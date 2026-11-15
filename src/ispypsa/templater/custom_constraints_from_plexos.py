@@ -1010,7 +1010,7 @@ def _inject_iasr_new_entrant_batteries(
     injected = _battery_rows_for_triggers(
         triggered, batteries_by_location, coefficients
     )
-    _log_injected_batteries(injected)
+    _log_injected_batteries(injected, lhs)
     _warn_on_default_battery_coefficients(
         triggered, coefficients, batteries_by_location
     )
@@ -1313,15 +1313,40 @@ def _battery_rows_for_triggers(
     return rows[_CUSTOM_CONSTRAINTS_LHS_COLUMNS].reset_index(drop=True)
 
 
-def _log_injected_batteries(injected: pd.DataFrame) -> None:
-    """Summarise the pass-2 injection at INFO."""
+def _log_injected_batteries(injected: pd.DataFrame, lhs: pd.DataFrame) -> None:
+    """Summarise the pass-2 injection at INFO, counting only the injected rows
+    that are new to the pass-1 lhs.
+
+    Pass 2 re-injects batteries that already survived pass 1, and
+    _dedupe_lhs_terms drops those copies downstream, so they are left out of
+    the counts: the summary matches the rows the injection adds to the output.
+
+    I/O Example:
+        injected:
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43          # already in lhs, not counted
+            SWQLD1         storage_output  Q8 Battery - 4h  0.43
+
+        lhs (after pass 1):
+            constraint_id  term_type         variable_name    coefficient  date_from
+            SWQLD1         generator_output  Q8_SAT_Brisbane  0.43
+            SWQLD1         storage_output    Q8 Battery - 2h  0.43
+
+        logs:
+            Injected 1 new-entrant battery storage_output rows across 1
+            constraints (1 distinct batteries)
+    """
     if injected.empty:
         logging.info("Injected no new-entrant batteries (no triggers fired)")
         return
-    n_constraints = injected["constraint_id"].nunique()
-    n_batteries = injected["variable_name"].nunique()
+    term_key = ["constraint_id", "term_type", "variable_name", "date_from"]
+    pass_1_terms = lhs[term_key].drop_duplicates()
+    injected = injected.merge(pass_1_terms, on=term_key, how="left", indicator=True)
+    net_new = injected[injected["_merge"] == "left_only"]
+    n_constraints = net_new["constraint_id"].nunique()
+    n_batteries = net_new["variable_name"].nunique()
     logging.info(
-        f"Injected {len(injected)} new-entrant battery storage_output rows "
+        f"Injected {len(net_new)} new-entrant battery storage_output rows "
         f"across {n_constraints} constraints "
         f"({n_batteries} distinct batteries)"
     )

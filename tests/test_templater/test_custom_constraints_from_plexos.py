@@ -196,10 +196,14 @@ def test_template_custom_constraints_from_plexos_end_to_end(
 
     # End-to-end side effects: dropping the unmatched generator loosens the
     # constraint (WARNING); the term_type change and the pass-2 injection are
-    # summarised (INFO).
+    # summarised (INFO). The injection count leaves out the re-injected DREZ
+    # Dubbo battery, which was already in the pass-1 LHS.
     assert "SWQLD1: SA Hydrogen Turbine" in caplog.text
     assert "['SHGEN01: generator_output -> storage_output']" in caplog.text
-    assert "Injected 4 new-entrant battery storage_output rows" in caplog.text
+    assert (
+        "Injected 3 new-entrant battery storage_output rows "
+        "across 2 constraints (3 distinct batteries)"
+    ) in caplog.text
 
 
 # --- _assert_no_date_to ---
@@ -1275,7 +1279,41 @@ def test_inject_iasr_new_entrant_batteries_logs_summary(csv_str_to_df, caplog):
             lhs, generators_new_entrant, storage_new_entrant
         )
 
-    assert "Injected 1 new-entrant battery storage_output rows" in caplog.text
+    assert (
+        "Injected 1 new-entrant battery storage_output rows "
+        "across 1 constraints (1 distinct batteries)"
+    ) in caplog.text
+
+
+def test_inject_iasr_new_entrant_batteries_log_counts_only_net_new_rows(
+    csv_str_to_df, caplog
+):
+    lhs = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,    coefficient,  date_from
+        SWQLD1,         generator_output,  Q8 Solar,         0.4,
+        SWQLD1,         storage_output,    Q8 Battery - 2h,  0.43,
+    """)
+    generators_new_entrant = csv_str_to_df("""
+        name,      geo_id
+        Q8 Solar,  Q8
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        name,             technology,                      geo_id
+        Q8 Battery - 2h,  Battery Storage (2hrs storage),  Q8
+        Q8 Battery - 4h,  Battery Storage (4hrs storage),  Q8
+    """)
+
+    with caplog.at_level("INFO"):
+        _inject_iasr_new_entrant_batteries(
+            lhs, generators_new_entrant, storage_new_entrant
+        )
+
+    # Both Q8 batteries are injected, but the 2h battery is already in lhs, so
+    # only the 4h battery is counted.
+    assert (
+        "Injected 1 new-entrant battery storage_output rows "
+        "across 1 constraints (1 distinct batteries)"
+    ) in caplog.text
 
 
 # --- _log_injected_batteries (empty input) ---
@@ -1293,9 +1331,9 @@ def test_log_injected_batteries_empty_input_logs_zero_message(caplog):
     )
 
     with caplog.at_level("INFO"):
-        _log_injected_batteries(empty)
+        _log_injected_batteries(empty, empty)
 
-    assert "Injected no new-entrant batteries" in caplog.text
+    assert ("Injected no new-entrant batteries (no triggers fired)") in caplog.text
 
 
 # --- _dedupe_lhs_terms ---
