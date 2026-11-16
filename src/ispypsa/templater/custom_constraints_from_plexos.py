@@ -549,7 +549,7 @@ def _build_custom_constraints_lhs(
             SWQLD1         generator_output Q8_SAT_Brisbane   0.14
             SWQLD1         storage_output   SHGEN01           0.33
             SWQLD1         link_flow        NSW-QLD           0.84
-            SWQLD1         storage_output   Q8 Battery - 2h   0.43          # survived pass 1 (pass-2 re-injection deduped)
+            SWQLD1         storage_output   Q8 Battery - 2h   0.43          # survived pass 1, so pass 2 leaves it alone
             SWQLD1         storage_output   Q8 Battery - 4h   0.43          # injected; copies the 2h sibling's coefficient
     """
     lhs = _drop_excluded_classes(lhs_terms)
@@ -745,7 +745,6 @@ def _add_variable_name_column(lhs: pd.DataFrame, unit_names: set[str]) -> pd.Dat
             Line          NSW1-QLD1            NSW-QLD
             Node          CNSW                 CNSW
     """
-    _raise_on_unexpected_parent_class(lhs)
     is_unit = lhs["parent_class"].isin(["Generator", "Battery"])
     is_line = lhs["parent_class"] == "Line"
     is_node = lhs["parent_class"] == "Node"
@@ -759,14 +758,6 @@ def _add_variable_name_column(lhs: pd.DataFrame, unit_names: set[str]) -> pd.Dat
     lhs.loc[is_node, "variable_name"] = plexos_names[is_node]
     _log_name_renames(lhs)
     return lhs
-
-
-def _raise_on_unexpected_parent_class(lhs: pd.DataFrame) -> None:
-    """Raise if a term's parent_class is one this module has no naming rule for."""
-    expected = {"Generator", "Battery", "Line", "Node"}
-    unexpected = sorted(set(lhs["parent_class"]) - expected)
-    if unexpected:
-        raise ValueError(f"Unexpected LHS parent_class values: {unexpected}")
 
 
 def _match_to_templated_unit_names(
@@ -969,9 +960,8 @@ def _inject_iasr_new_entrant_batteries(
     Only batteries are injected. The other new-entrant storage technologies
     (pumped hydro) can trigger a location but are not added to it.
 
-    Every battery at a triggered location is appended, including any that
-    already survived pass 1, so the result can contain a duplicate that
-    _dedupe_lhs_terms removes downstream.
+    A battery that already survived pass 1 in the constraint is not added
+    again: it keeps its pass-1 rows.
 
     See Open-ISP/ISPyPSA#110 for the PLEXOS battery layout that motivated
     dropping the pass-1 constraint-scoped variants.
@@ -997,7 +987,6 @@ def _inject_iasr_new_entrant_batteries(
 
         returns (these rows appended after the unchanged pass-1 lhs rows):
             constraint_id  term_type        variable_name    coefficient  date_from
-            SWQLD1         storage_output   Q8 Battery - 2h  0.43          # re-injected duplicate of the survivor; _dedupe_lhs_terms drops it downstream
             SWQLD1         storage_output   Q8 Battery - 4h  0.43          # PLEXOS-omitted duration, copies the 2h sibling's coefficient
             NQ1            storage_output   Q1 Battery - 2h  1.0           # no surviving sibling -> default
     """
@@ -1010,7 +999,8 @@ def _inject_iasr_new_entrant_batteries(
     injected = _battery_rows_for_triggers(
         triggered, batteries_by_location, coefficients
     )
-    _log_injected_batteries(injected, lhs)
+    injected = _drop_batteries_already_in_constraint(injected, lhs)
+    _log_injected_batteries(injected)
     _warn_on_default_battery_coefficients(
         triggered, coefficients, batteries_by_location
     )
@@ -1215,9 +1205,9 @@ def _raise_on_inconsistent_battery_profiles(surviving: pd.DataFrame) -> None:
     they must all agree for the copied profile to be unambiguous. Comparing
     whole profiles catches both ways they could disagree: a coefficient that
     differs at a shared date, and one battery carrying an extra date the others
-    lack (its extra-date rows would otherwise be grafted onto the others
-    silently, since _dedupe_lhs_terms keeps them -- nothing matches their
-    date_from). The batteries do agree across the current 7.5 extract; this
+    lack (its extra-date rows would otherwise be copied onto the batteries
+    pass 2 adds, though the other surviving batteries don't carry them). The
+    batteries do agree across the current 7.5 extract; this
     guards future extracts.
     """
     if surviving.empty:
@@ -1313,40 +1303,63 @@ def _battery_rows_for_triggers(
     return rows[_CUSTOM_CONSTRAINTS_LHS_COLUMNS].reset_index(drop=True)
 
 
-def _log_injected_batteries(injected: pd.DataFrame, lhs: pd.DataFrame) -> None:
-    """Summarise the pass-2 injection at INFO, counting only the injected rows
-    that are new to the pass-1 lhs.
+def _drop_batteries_already_in_constraint(
+    injected: pd.DataFrame, lhs: pd.DataFrame
+) -> pd.DataFrame:
+    """Drop the rows of injected whose battery is already a term of the same
+    constraint in the pass-1 lhs.
 
-    Pass 2 re-injects batteries that already survived pass 1, and
-    _dedupe_lhs_terms drops those copies downstream, so they are left out of
-    the counts: the summary matches the rows the injection adds to the output.
+    Such a battery survived pass 1 and keeps its pass-1 rows. The rows built
+    for it here would only repeat them, because the coefficients pass 2 uses
+    at a location are copied from the batteries that survived there.
 
     I/O Example:
         injected:
             constraint_id  term_type       variable_name    coefficient  date_from
-            SWQLD1         storage_output  Q8 Battery - 2h  0.43          # already in lhs, not counted
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43          # already in SWQLD1: dropped
             SWQLD1         storage_output  Q8 Battery - 4h  0.43
+            NQ1            storage_output  Q8 Battery - 2h  1.0           # in SWQLD1 but not in NQ1: kept
 
-        lhs (after pass 1):
-            constraint_id  term_type         variable_name    coefficient  date_from
+        lhs (after pass 1, abbreviated):
+            constraint_id  term_type         variable_name    coefficient
             SWQLD1         generator_output  Q8_SAT_Brisbane  0.43
             SWQLD1         storage_output    Q8 Battery - 2h  0.43
+            NQ1            generator_output  Q8_SAT_Brisbane  1.0
+
+        returns:
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 4h  0.43
+            NQ1            storage_output  Q8 Battery - 2h  1.0
+    """
+    constraint_and_name = ["constraint_id", "variable_name"]
+    already_in_constraint = lhs[constraint_and_name].drop_duplicates()
+    injected = injected.merge(
+        already_in_constraint, on=constraint_and_name, how="left", indicator=True
+    )
+    injected = injected[injected["_merge"] == "left_only"]
+    return injected[_CUSTOM_CONSTRAINTS_LHS_COLUMNS].reset_index(drop=True)
+
+
+def _log_injected_batteries(injected: pd.DataFrame) -> None:
+    """Summarise the rows pass 2 adds to the LHS at INFO.
+
+    I/O Example:
+        injected:
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 4h  0.43
+            NQ1            storage_output  Q8 Battery - 4h  1.0
 
         logs:
-            Injected 1 new-entrant battery storage_output rows across 1
+            Injected 2 new-entrant battery storage_output rows across 2
             constraints (1 distinct batteries)
     """
     if injected.empty:
-        logging.info("Injected no new-entrant batteries (no triggers fired)")
+        logging.info("Injected no new-entrant batteries")
         return
-    term_key = ["constraint_id", "term_type", "variable_name", "date_from"]
-    pass_1_terms = lhs[term_key].drop_duplicates()
-    injected = injected.merge(pass_1_terms, on=term_key, how="left", indicator=True)
-    net_new = injected[injected["_merge"] == "left_only"]
-    n_constraints = net_new["constraint_id"].nunique()
-    n_batteries = net_new["variable_name"].nunique()
+    n_constraints = injected["constraint_id"].nunique()
+    n_batteries = injected["variable_name"].nunique()
     logging.info(
-        f"Injected {len(net_new)} new-entrant battery storage_output rows "
+        f"Injected {len(injected)} new-entrant battery storage_output rows "
         f"across {n_constraints} constraints "
         f"({n_batteries} distinct batteries)"
     )
@@ -1354,29 +1367,48 @@ def _log_injected_batteries(injected: pd.DataFrame, lhs: pd.DataFrame) -> None:
 
 def _dedupe_lhs_terms(lhs: pd.DataFrame) -> pd.DataFrame:
     """Drop duplicate LHS rows on (constraint_id, term_type, variable_name,
-    date_from).
+    date_from), keeping the first, and log the terms that had a duplicate.
 
-    Safety net for the pass-1/pass-2 overlap: a battery that survives pass 1
-    (it matched a templated unit) and is also injected by pass 2 would otherwise
-    appear twice at the same date_from. The first occurrence is kept --
-    pass-1 rows come first and carry the coefficient from PLEXOS.
+    Duplicates arise where two PLEXOS lines map to the same ISPyPSA path
+    (Marinus and T-V-MNSP1 are both TAS-SEV): a constraint that lists both gets
+    two rows for the one path. Only the first row's coefficient is kept, which
+    is right while the two lines carry the same coefficient, as they do in the
+    7.5 extract. Pass 2 adds no duplicates, since it skips batteries that are
+    already in the constraint.
 
     date_from is part of the key because PLEXOS carries time-varying
     coefficients as multiple rows for the same (constraint, term, unit) with
     different date_from -- those legitimately co-exist and must not be
     collapsed.
+
+    I/O Example:
+        lhs:
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43
+            SWQLD1         storage_output  Q8 Battery - 2h  0.25         2029-11-30   # later date_from: kept
+            NET1           link_flow       TAS-SEV          1.0                       # from Marinus
+            NET1           link_flow       TAS-SEV          1.0                       # from T-V-MNSP1: dropped
+
+        returns:
+            constraint_id  term_type       variable_name    coefficient  date_from
+            SWQLD1         storage_output  Q8 Battery - 2h  0.43
+            SWQLD1         storage_output  Q8 Battery - 2h  0.25         2029-11-30
+            NET1           link_flow       TAS-SEV          1.0
+
+        logs:
+            Dropped 1 duplicate LHS term rows, keeping the first of each:
+            ['NET1: TAS-SEV']
     """
-    before = len(lhs)
-    deduped = lhs.drop_duplicates(
-        subset=["constraint_id", "term_type", "variable_name", "date_from"],
-        keep="first",
-    )
-    dropped = before - len(deduped)
-    if dropped:
+    term_key = ["constraint_id", "term_type", "variable_name", "date_from"]
+    is_duplicate = lhs.duplicated(subset=term_key, keep="first")
+    if is_duplicate.any():
+        duplicates = lhs[is_duplicate]
+        terms = duplicates["constraint_id"] + ": " + duplicates["variable_name"]
         logging.info(
-            f"Deduped {dropped} overlapping LHS rows (pass-1/pass-2 collisions)"
+            f"Dropped {is_duplicate.sum()} duplicate LHS term rows, keeping the "
+            f"first of each: {sorted(set(terms))}"
         )
-    return deduped
+    return lhs[~is_duplicate]
 
 
 def _warn_on_constraints_missing_lhs(
