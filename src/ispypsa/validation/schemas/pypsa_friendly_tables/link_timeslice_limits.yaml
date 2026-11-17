@@ -1,0 +1,65 @@
+table: link_timeslice_limits
+required: false
+unique:
+  - [name, attribute, timeslice]
+description: >
+  Flow limits of each existing link, per unit of its p_nom: one row per (link,
+  attribute, timeslice). Consumed by
+  ispypsa.pypsa_build.links._add_links_to_network, which expands the rows
+  into a p_max_pu and a p_min_pu value for every existing link at every
+  snapshot, using timeslice_snapshots to find the snapshots each named
+  timeslice covers. Expansion links have no rows: their limits don't vary
+  over time.
+
+  Source tables:
+    - `network_transmission_path_limits`
+    - `network_transmission_paths`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.network. Each path limit is divided by its link's p_nom
+  (the largest limit of the path across both directions and all timeslices).
+  Forward limits become p_max_pu rows and reverse limits p_min_pu rows, with
+  the reverse values negated.
+
+  If absent (or empty):
+  Valid only when the links table has no existing links, e.g. a single-region
+  model. Otherwise existing_links_are_limited_at_every_snapshot fails.
+custom_validation:
+  - name: existing_links_are_limited_at_every_snapshot
+    description: >
+      Every existing (non-extendable) link in the links table must have a
+      p_max_pu and a p_min_pu value at every snapshot of the model, from a
+      named timeslice active at the snapshot (see timeslice_snapshots) or
+      from a fallback row. For example, a link whose only p_max_pu row is for
+      qld_peak_demand fails if any snapshot is outside that timeslice.
+columns:
+  name:
+    type: string
+    required: true
+    description: Name of the existing link the limit applies to, as in the links table.
+  attribute:
+    type: string
+    required: true
+    allowed_values: [p_max_pu, p_min_pu]
+    description: >
+      The link attribute the row sets: p_max_pu is the forward flow limit and
+      p_min_pu the reverse flow limit (zero or negative).
+  timeslice:
+    type: string
+    required: false
+    description: >
+      Timeslice the limit applies in: the value is used at that timeslice's
+      snapshots (from timeslice_snapshots). A timeslice with no snapshots in
+      timeslice_snapshots is valid; the limit just never applies.
+
+      If absent (or empty):
+      The row is the fallback for its link and attribute: it applies at every
+      snapshot that none of the same link and attribute's named timeslices
+      cover.
+  value:
+    type: float
+    required: true
+    description: >
+      The limit as a fraction of the link's p_nom, between -1 and 1. A link
+      with a p_nom of zero has a value of zero.

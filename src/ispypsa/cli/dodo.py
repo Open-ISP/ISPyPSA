@@ -520,7 +520,9 @@ def create_and_run_capacity_expansion_model() -> None:
 
     ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
 
-    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
+    pypsa_friendly_input_tables = read_csvs(
+        pypsa_friendly_dir, schemas="pypsa_friendly_tables"
+    )
 
     network = build_pypsa_network(
         pypsa_friendly_input_tables,
@@ -573,7 +575,9 @@ def create_operational_timeseries() -> None:
 
     # Load tables
     ispypsa_tables = read_csvs(input_tables_dir)
-    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
+    pypsa_friendly_input_tables = read_csvs(
+        pypsa_friendly_dir, schemas="pypsa_friendly_tables"
+    )
 
     # Create operational timeseries
     operational_snapshots = create_pypsa_friendly_timeseries_inputs(
@@ -605,7 +609,9 @@ def create_and_run_operational_model() -> None:
     run_optimisation = get_var("run_optimisation", "True") == "True"
 
     # Load tables
-    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
+    pypsa_friendly_input_tables = read_csvs(
+        pypsa_friendly_dir, schemas="pypsa_friendly_tables"
+    )
 
     # Load the capacity expansion network
     network = pypsa.Network(capacity_expansion_pypsa_file)

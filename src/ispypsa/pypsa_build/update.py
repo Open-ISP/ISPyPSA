@@ -30,7 +30,10 @@ def update_network_timeseries(
         Get PyPSA friendly inputs (inparticular these need to contain the generators and
         buses tables).
 
-        >>> pypsa_friendly_input_tables = read_csvs("path/to/pypsa/friendly/inputs")
+        >>> pypsa_friendly_input_tables = read_csvs(
+        ...     "path/to/pypsa/friendly/inputs",
+        ...     schemas="pypsa_friendly_tables",
+        ... )
 
         Get the snapshots for the updated time series data.
 
