@@ -52,6 +52,30 @@ What counts as an edit: a mistake or inconsistency we would report to AEMO. Mode
 choices stay in the templater, even when they change table values. For example, the
 Q8a/b/c sub-areas are mapped to Q8 in helpers._set_geo_id, and the N0/V0 non-REZ rows
 are added in geography.py.
+
+The keys each type of edit takes are listed below. Every key is required unless marked
+optional, and any other key raises.
+
+    replace - changes values in one column.
+        table:    the IASR table's snake_case name, e.g. new_entrants_summary.
+        column:   the full column name, as left by any earlier renames.
+        replace:  {current value: new value}. Only cells that match a value exactly
+                  are changed.
+        where:    optional. {column name: [value, ...]}, which limits the edit to rows
+                  whose value in each listed column is one of those given. With
+                  several columns, a row must match all of them (AND, not OR). Use a
+                  list even for a single value, e.g. [EMERASF1].
+        reason:   what the edit fixes and why. It appears in the log line when the
+                  edit is applied.
+
+    rename_columns - renames column headers.
+        table:           as for replace.
+        rename_columns:  {old header: new header}. Headers not in the table are
+                         skipped.
+        reason:          as for replace.
+
+A workbook version with no edits still needs its own file, but the file can be empty
+or hold only comments. The run then logs that no edits are listed for that version.
 """
 
 import logging
@@ -107,14 +131,21 @@ def _load_edit_details(iasr_workbook_version: str) -> list[dict]:
     """Loads the IASR table edits listed for ``iasr_workbook_version``.
 
     Each workbook version has its own file in iasr_table_edits_detail/, named by
-    version (e.g. 7.5.yaml). A version with no file raises FileNotFoundError.
+    version (e.g. 7.5.yaml). A version with no file raises FileNotFoundError. An
+    empty or comment-only file means the version has no edits, which is logged.
     """
     edits_file = (
         files("ispypsa.templater")
         / "iasr_table_edits_detail"
         / f"{iasr_workbook_version}.yaml"
     )
-    return yaml.safe_load(edits_file.read_text())
+    # An empty or comment-only YAML file loads as None rather than an empty list.
+    edits = yaml.safe_load(edits_file.read_text()) or []
+    if not edits:
+        logging.info(
+            f"No IASR table edits listed for workbook version {iasr_workbook_version}."
+        )
+    return edits
 
 
 def _apply_edits(

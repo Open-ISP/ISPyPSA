@@ -5,9 +5,11 @@ import pandas as pd
 import pytest
 
 from ispypsa.data_fetch import read_csvs
+from ispypsa.templater import iasr_table_edits
 from ispypsa.templater.iasr_table_edits import (
     _apply_edits,
     _apply_edits_to_iasr_tables,
+    _load_edit_details,
 )
 
 # --- _apply_edits_to_iasr_tables ---
@@ -22,6 +24,41 @@ def test_every_7_5_edit_matches_the_frozen_7_5_cache(caplog):
     # An edit that matches nothing logs a warning - signalling a table or an edit
     # detail has changed unexpectedly
     assert caplog.messages == []
+
+
+# --- _load_edit_details ---
+
+
+@pytest.mark.parametrize(
+    "file_contents",
+    [
+        pytest.param("", id="empty file"),
+        pytest.param("# Header comment only\n", id="comment-only file"),
+        pytest.param("[]\n", id="empty list"),
+    ],
+)
+def test_version_with_no_edits_loads_empty_list_and_logs(
+    tmp_path, monkeypatch, caplog, file_contents
+):
+    edits_dir = tmp_path / "iasr_table_edits_detail"
+    edits_dir.mkdir()
+    (edits_dir / "9.9.yaml").write_text(file_contents)
+    # Point the package-resource lookup at tmp_path, so the test reads its own
+    # 9.9.yaml instead of the files shipped in the package.
+    monkeypatch.setattr(iasr_table_edits, "files", lambda package: tmp_path)
+
+    with caplog.at_level("INFO"):
+        edits = _load_edit_details("9.9")
+
+    assert edits == []
+    assert "No IASR table edits listed for workbook version 9.9." in caplog.text
+
+
+def test_version_with_edits_does_not_log_no_edits(caplog):
+    with caplog.at_level("INFO"):
+        _load_edit_details("7.5")
+
+    assert "No IASR table edits listed" not in caplog.text
 
 
 # --- _apply_edits ---
