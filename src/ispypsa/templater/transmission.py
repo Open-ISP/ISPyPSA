@@ -306,7 +306,6 @@ def _extract_flow_path_limits(
             CQ-NQ    reverse    winter_reference  1910
     """
     df = flow_path_transfer_capability.copy()
-    df.columns = _fix_column_typos(df.columns)
     df["path_id"] = path_ids.values
     melted = _melt_flow_path_capacity(df, _FLOW_PATH_COLUMN_RENAMES)
     _log_flow_paths_with_no_capacity_data(melted)
@@ -449,16 +448,6 @@ def _extract_rez_limits(
 
 
 # --- Shared helpers ---
-
-
-def _fix_column_typos(columns: pd.Index) -> pd.Index:
-    """Patches known IASR workbook v7.5 column-name typos.
-
-    I/O Example:
-        Index(['...Winter refernce', 'Flow Paths'])
-            -> Index(['...Winter reference', 'Flow Paths'])
-    """
-    return columns.str.replace("refernce", "reference", regex=False)
 
 
 def _melt_flow_path_capacity(

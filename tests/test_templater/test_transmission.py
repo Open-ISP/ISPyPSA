@@ -174,47 +174,6 @@ def test_template_network_transmission(csv_str_to_df):
     )
 
 
-def test_typo_in_column_names(csv_str_to_df):
-    """Handles the 'refernce' typo in IASR workbook v7.5 flow path columns."""
-    flow_paths = csv_str_to_df("""
-        Flow Paths,  Forward direction capability approximation (MW)_Peak demand,  Forward direction capability approximation (MW)_Summer typical,  Forward direction capability approximation (MW)_Winter refernce,  Reverse direction capability approximation (MW)_Peak demand,  Reverse direction capability approximation (MW)_Summer typical,  Reverse direction capability approximation (MW)_Winter refernce
-        CQ-NQ,       100,  200,  300,  400,  500,  600
-    """)
-
-    initial_limits = pd.DataFrame(columns=_REZ_LIMIT_COLUMNS)
-    renewable_energy_zones = csv_str_to_df("""
-        ID,  Name,  NEM region,  ISP sub-region
-    """)
-
-    _, limits = _template_network_transmission(
-        flow_paths,
-        initial_limits,
-        renewable_energy_zones,
-        _sub_regional_geography(),
-        "sub_regions",
-    )
-
-    expected_limits = csv_str_to_df("""
-        path_id,  direction,  timeslice,             capacity
-        CQ-NQ,    forward,    qld_peak_demand,       100
-        CQ-NQ,    forward,    qld_summer_typical,    200
-        CQ-NQ,    forward,    qld_winter_reference,  300
-        CQ-NQ,    reverse,    qld_peak_demand,       400
-        CQ-NQ,    reverse,    qld_summer_typical,    500
-        CQ-NQ,    reverse,    qld_winter_reference,  600
-    """)
-    pd.testing.assert_frame_equal(
-        limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
-            drop=True
-        ),
-        expected_limits.sort_values(["path_id", "direction", "timeslice"]).reset_index(
-            drop=True
-        ),
-        check_exact=False,
-        check_dtype=False,
-    )
-
-
 def test_empty_flow_paths(csv_str_to_df):
     flow_paths = pd.DataFrame(columns=_FLOW_PATH_COLUMNS)
 

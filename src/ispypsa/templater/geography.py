@@ -342,7 +342,7 @@ def _assert_non_rezs_dont_exist(table: pd.DataFrame) -> None:
 def _log_non_rezs_added_to_rez_table() -> None:
     """Logs non-REZs added to the renewable_energy_zones table."""
     msg = (
-        "IASR TABLE EDIT: Added non-REZ geographies to 'renewable_energy_zones' "
+        "Added non-REZ geographies to 'renewable_energy_zones' "
         f"IASR table: {sorted(_NON_REZ_GEOGRAPHIES['ID'])}"
     )
     logging.info(msg)
