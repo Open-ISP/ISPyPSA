@@ -1,43 +1,7 @@
-# Known mistakes in the parsed IASR tables for workbook version 7.5, corrected in
-# memory before the rest of the templater runs. How the edits are checked, applied
-# and logged is described in the module docstring of
+# Known mistakes in the parsed IASR tables for workbook version 7.5. What counts as
+# an edit, the keys each entry takes, and how entries are checked, applied and
+# logged are described in the module docstring of
 # src/ispypsa/templater/iasr_table_edits.py.
-#
-# What counts as an edit: a mistake or inconsistency we would (in theory) report to
-# AEMO, such as a typo or a name that differs between tables. A change that reflects
-# a modelling decision, such as adding rows to a table, belongs in the templater.
-#
-# Layout:
-# - Each entry is one edit to one table, with its own reason.
-# - Entries are applied top to bottom, each to the table as earlier entries left it.
-#   So if a replace uses a column header that a rename fixes, the rename goes first.
-# - An entry that matches nothing logs an 'IASR TABLE EDIT (not applied)' warning.
-#   It may no longer be needed, or the table may have changed.
-# - A replace entry that matches some cells, but lists a 'where' value found in no
-#   row or a 'replace' key found in no cell, logs an 'IASR TABLE EDIT (partly
-#   applied)' warning naming what wasn't used. So list only values that are in the
-#   table.
-#
-# Edit types: each entry has exactly one of the 'replace' or 'rename_columns' keys,
-# which sets its type. Every key listed for a type is required unless marked
-# optional, and any other key raises an error.
-#
-# replace - changes values in one column.
-#   table:    the IASR table's snake_case name, e.g. new_entrants_summary.
-#   column:   the full column name, as left by any earlier renames.
-#   replace:  {current value: new value}. Only cells that match a value exactly are
-#             changed.
-#   where:    optional. {column name: [value, ...]}, which limits the edit to rows
-#             whose value in each listed column is one of those given. With several
-#             columns, a row must match all of them (AND, not OR). Use a list even
-#             for a single value, e.g. [EMERASF1].
-#   reason:   what the edit fixes and why. It appears in the log line when the edit
-#             is applied.
-#
-# rename_columns - renames column headers.
-#   table:           as for replace.
-#   rename_columns:  {old header: new header}. Headers not in the table are skipped.
-#   reason:          as for replace.
 
 - table: maximum_capacity_existing_committed_anticipated_additional_generators
   column: IASR ID
