@@ -303,6 +303,7 @@ def test_list_templater_output_files_granularity_invariant():
 
     assert sub_regions == nem_regions == single_region
     assert {
+        "demand_subregions",
         "custom_constraints",
         "custom_constraints_lhs",
         "custom_constraints_rhs",
@@ -514,6 +515,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
     # 6 subregions (NQ + CQ + CNSW + SNW + SEV + TAS) + 2 REZs + 2 non-REZs (N0, V0)
     assert len(geography) == 10
+
+    demand_subregions = result["demand_subregions"]
+    assert set(demand_subregions.columns) == {"subregion_id", "geo_id"}
+    # One row per subregion (NQ, CQ, CNSW, SNW, SEV, TAS)
+    assert len(demand_subregions) == 6
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -823,6 +829,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # 4 unique NEM regions (QLD, NSW, VIC, TAS) + 2 REZs + 2 non-REZs
     assert len(geography) == 8
 
+    demand_subregions = result["demand_subregions"]
+    assert set(demand_subregions.columns) == {"subregion_id", "geo_id"}
+    # Still one row per subregion: the 8 subregions (NQ, CQ, SQ, CNSW, NNSW,
+    # SNW, SEV, TAS) are placed at the 4 NEM regions
+    assert len(demand_subregions) == 8
+
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
 
@@ -1019,6 +1031,11 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
     assert len(geography) == 5  # 1 NEM row + 2 REZs + 2 non-REZs
+
+    demand_subregions = result["demand_subregions"]
+    assert set(demand_subregions.columns) == {"subregion_id", "geo_id"}
+    # Still one row per subregion: all 6 placed at the NEM geography
+    assert len(demand_subregions) == 6
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
