@@ -11,6 +11,7 @@ from ispypsa.plotting import (
 )
 from ispypsa.pypsa_build import (
     build_pypsa_network,
+    optimize_with_rolling_horizon,
     save_pypsa_network,
     update_network_timeseries,
 )
@@ -171,8 +172,11 @@ update_network_timeseries(
 
 network.optimize.fix_optimal_capacities()
 
-# Never use network.optimize() as this will remove custom constraints.
-network.optimize.optimize_with_rolling_horizon(
+# Never use network.optimize.optimize_with_rolling_horizon() directly, as PyPSA
+# rebuilds the model for each window without the custom constraints.
+optimize_with_rolling_horizon(
+    network,
+    pypsa_friendly_input_tables,
     horizon=config.temporal.operational.horizon,
     overlap=config.temporal.operational.overlap,
 )

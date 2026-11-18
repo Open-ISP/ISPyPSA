@@ -117,6 +117,156 @@ def _add_custom_constraints(
             )
 
 
+def _move_fixed_capacity_terms_to_rhs(
+    network: pypsa.Network,
+    custom_constraints_rhs: pd.DataFrame,
+    custom_constraints_lhs: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Rewrites the custom constraints so they only reference capacities that
+    are still decision variables in the network's model.
+
+    PyPSA only creates a p_nom variable for an extendable component. Once
+    capacities are fixed for the operational model
+    (network.optimize.fix_optimal_capacities), no component is extendable, so
+    a p_nom term has no variable to refer to and adding its constraint would
+    raise. The capacity is a known number by then, so each p_nom term on a
+    non-extendable generator or link is taken off the LHS and
+    coefficient x p_nom is subtracted from its constraint's RHS, which leaves
+    the constraint's meaning unchanged.
+
+    A constraint left with no LHS terms (an expansion limit, whose terms are
+    all capacities) is dropped: it would compare two constants, and the
+    capacity expansion model that chose the capacities already enforced it.
+
+    p_nom terms on extendable components are left alone, so on a network
+    whose capacities haven't been fixed the tables come back unchanged.
+
+    I/O Example:
+        network.generators:
+            name        p_nom  p_nom_extendable
+            NQ_relax    20     False
+            wind_new    150    True
+
+        network.links:
+            name        p_nom  p_nom_extendable
+            CQ-NQ       1400   False
+            CQ-NQ_exp   300    False
+
+        custom_constraints_rhs:
+            constraint_name  rhs   constraint_type
+            NQ_flow          40    <=
+            CQ-NQ_limit      500   <=
+            wind_limit       200   <=
+
+        custom_constraints_lhs:
+            constraint_name  variable_name  component  attribute  coefficient
+            NQ_flow          CQ-NQ          Link       p          1.0
+            NQ_flow          NQ_relax       Generator  p_nom      -1.0   # fixed: moved to the RHS
+            CQ-NQ_limit      CQ-NQ_exp      Link       p_nom      1.0    # fixed: moved to the RHS
+            wind_limit       wind_new       Generator  p_nom      1.0    # extendable: kept
+
+        returns (rhs, lhs):
+            constraint_name  rhs   constraint_type
+            NQ_flow          60    <=                # 40 - (-1.0 x 20)
+            wind_limit       200   <=
+                                                     # CQ-NQ_limit has no LHS terms left: dropped
+
+            constraint_name  variable_name  component  attribute  coefficient
+            NQ_flow          CQ-NQ          Link       p          1.0
+            wind_limit       wind_new       Generator  p_nom      1.0
+    """
+    # The old-format translator returns tables with no columns when there are
+    # no custom constraints, so there is nothing to look up or move.
+    if custom_constraints_rhs.empty:
+        return custom_constraints_rhs, custom_constraints_lhs
+    lhs = _add_fixed_capacity_column(custom_constraints_lhs, network)
+    is_fixed = lhs["fixed_capacity"].notna()
+    rhs = _subtract_fixed_capacity_terms(custom_constraints_rhs, lhs[is_fixed])
+    lhs = lhs.loc[~is_fixed, custom_constraints_lhs.columns]
+    rhs = rhs[rhs["constraint_name"].isin(lhs["constraint_name"])]
+    return rhs, lhs
+
+
+def _add_fixed_capacity_column(
+    custom_constraints_lhs: pd.DataFrame, network: pypsa.Network
+) -> pd.DataFrame:
+    """Adds the capacity of the component each p_nom term refers to, where
+    that component is a non-extendable generator or link. Every other term
+    gets NaN.
+
+    I/O Example:
+        network.generators:
+            name        p_nom  p_nom_extendable
+            NQ_relax    20     False
+            wind_new    150    True
+
+        network.links:
+            name        p_nom  p_nom_extendable
+            CQ-NQ       1400   False
+
+        custom_constraints_lhs:
+            variable_name  component  attribute
+            CQ-NQ          Link       p
+            CQ-NQ          Link       p_nom
+            NQ_relax       Generator  p_nom
+            wind_new       Generator  p_nom
+
+        returns:
+            variable_name  component  attribute  fixed_capacity
+            CQ-NQ          Link       p          ,               # not a capacity term
+            CQ-NQ          Link       p_nom      1400
+            NQ_relax       Generator  p_nom      20
+            wind_new       Generator  p_nom      ,               # extendable
+    """
+    generators = network.generators
+    links = network.links
+    fixed_capacities = pd.concat(
+        [
+            generators.loc[~generators["p_nom_extendable"], "p_nom"],
+            links.loc[~links["p_nom_extendable"], "p_nom"],
+        ],
+        keys=["Generator", "Link"],
+        names=["component", "variable_name"],
+    )
+    fixed_capacities = fixed_capacities.rename("fixed_capacity").reset_index()
+    fixed_capacities["attribute"] = "p_nom"
+    return custom_constraints_lhs.merge(
+        fixed_capacities, how="left", on=["component", "variable_name", "attribute"]
+    )
+
+
+def _subtract_fixed_capacity_terms(
+    custom_constraints_rhs: pd.DataFrame, fixed_capacity_terms: pd.DataFrame
+) -> pd.DataFrame:
+    """Subtracts each constraint's fixed capacity terms, summed as
+    coefficient x fixed_capacity, from its RHS.
+
+    I/O Example:
+        custom_constraints_rhs:
+            constraint_name  rhs
+            NQ_flow          40
+            SQ_flow          70
+
+        fixed_capacity_terms:
+            constraint_name  coefficient  fixed_capacity
+            NQ_flow          -1.0         20
+            NQ_flow          -0.5         10
+
+        returns:
+            constraint_name  rhs
+            NQ_flow          65     # 40 - (-1.0 x 20) - (-0.5 x 10)
+            SQ_flow          70     # no fixed capacity terms
+    """
+    terms = fixed_capacity_terms
+    constants = terms["coefficient"] * terms["fixed_capacity"]
+    constant_per_constraint = constants.groupby(terms["constraint_name"]).sum()
+    rhs = custom_constraints_rhs.copy()
+    rhs["rhs"] = rhs["rhs"] - rhs["constraint_name"].map(
+        constant_per_constraint
+    ).fillna(0.0)
+    return rhs
+
+
 # The variable types each supported (component, attribute) LHS term sums,
 # with the sign each enters at. A Storage "p" term is net dispatch:
 # discharging counts positive and charging negative, matching PLEXOS's paired
