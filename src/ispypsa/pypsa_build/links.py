@@ -85,6 +85,61 @@ def _add_links_to_network(
         network.add(**(row.to_dict() | pu_overrides.get(row["name"], {})))
 
 
+def _update_link_limit_timeseries(
+    network: pypsa.Network,
+    links: pd.DataFrame,
+    link_timeslice_limits: pd.DataFrame,
+    timeslice_snapshots: pd.DataFrame,
+) -> None:
+    """Rebuilds every existing link's per-snapshot p_max_pu / p_min_pu for the
+    network's current snapshots.
+
+    Used after the network's snapshots are replaced (e.g. when a capacity
+    expansion network is turned into an operational one): the series
+    _add_links_to_network set were built for the old snapshots, so they are
+    expanded again from the same link_timeslice_limits, with a
+    timeslice_snapshots table that maps the new snapshots. As when the links
+    are first added, a link or snapshot left without a limit raises (see
+    _build_link_pu_overrides).
+
+    I/O Example:
+        links (only name and p_nom_extendable are read):
+            name            p_nom_extendable
+            CQ-NQ_existing  False
+
+        link_timeslice_limits:
+            name            attribute  timeslice        value
+            CQ-NQ_existing  p_max_pu   qld_peak_demand  0.857
+            CQ-NQ_existing  p_max_pu   ,                1.0     # fallback
+            CQ-NQ_existing  p_min_pu   ,                -0.714  # fallback only
+
+        timeslice_snapshots (for the network's new snapshots):
+            timeslice        investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-13 13:00
+
+        network.snapshots (already replaced):
+            investment_periods  snapshots
+            2025                2025-01-13 12:30
+            2025                2025-01-13 13:00
+
+        returns None; network is modified in place:
+            network.links_t.p_max_pu:
+                investment_periods  snapshots         CQ-NQ_existing
+                2025                2025-01-13 12:30  1.0
+                2025                2025-01-13 13:00  0.857
+            network.links_t.p_min_pu:
+                investment_periods  snapshots         CQ-NQ_existing
+                2025                2025-01-13 12:30  -0.714
+                2025                2025-01-13 13:00  -0.714
+    """
+    pu_overrides = _build_link_pu_overrides(
+        links, link_timeslice_limits, timeslice_snapshots, network.snapshots
+    )
+    for name, limits in pu_overrides.items():
+        network.links_t.p_max_pu[name] = limits["p_max_pu"]
+        network.links_t.p_min_pu[name] = limits["p_min_pu"]
+
+
 def _build_link_pu_overrides(
     links: pd.DataFrame,
     link_timeslice_limits: pd.DataFrame | None,

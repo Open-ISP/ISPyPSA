@@ -3,9 +3,14 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.pypsa_build.buses import _update_buses_demand_timeseries
-from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build.custom_constraints import (
+    _add_custom_constraints,
+    _add_custom_constraints_with_temporal_scope,
+)
 from ispypsa.pypsa_build.generators import _update_generators_availability_timeseries
+from ispypsa.pypsa_build.links import _update_link_limit_timeseries
 
 
 def update_network_timeseries(
@@ -13,6 +18,9 @@ def update_network_timeseries(
     pypsa_friendly_input_tables: dict[str, pd.DataFrame],
     snapshots: pd.DataFrame,
     pypsa_friendly_timeseries_location: Path,
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: make timeslice_snapshots a
+    # required argument. A model with no timeslices passes an empty table.
+    timeslice_snapshots: pd.DataFrame | None = None,
 ) -> None:
     """
     Update the time series data in a pypsa.Network instance.
@@ -62,6 +70,14 @@ def update_network_timeseries(
             begin.
         pypsa_friendly_timeseries_location: `Path` to `PyPSA` friendly time series
             data (add link to timeseries data docs).
+        timeslice_snapshots: a pd.DataFrame with the columns 'timeslice',
+            'investment_periods' and 'snapshots', listing the timeslice active at
+            each of the new `snapshots`. Required under the new table format,
+            where transmission limits and custom constraints are scoped by
+            timeslice: the mapping built for the network's previous snapshots
+            doesn't cover the new ones, so both are rebuilt from this table.
+            Not used under the old table format.
+            FEATURE_FLAG_CLEANUP[use_new_table_format]: make this required.
 
     Returns: None
     """
@@ -89,13 +105,31 @@ def update_network_timeseries(
         pypsa_friendly_timeseries_location,
     )
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the condition.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        _update_link_limit_timeseries(
+            network,
+            pypsa_friendly_input_tables["links"],
+            pypsa_friendly_input_tables["link_timeslice_limits"],
+            timeslice_snapshots,
+        )
+
     # The underlying linopy model needs to get built again here so that the new time
     # series data is used in the linopy model rather than the old data.
     network.optimize.create_model(multi_investment_periods=True)
 
     # As we rebuilt the linopy model now we need to re add custom constrains.
-    _add_custom_constraints(
-        network,
-        pypsa_friendly_input_tables["custom_constraints_rhs"],
-        pypsa_friendly_input_tables["custom_constraints_lhs"],
-    )
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch only.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        _add_custom_constraints_with_temporal_scope(
+            network,
+            pypsa_friendly_input_tables["custom_constraints_rhs"],
+            pypsa_friendly_input_tables["custom_constraints_lhs"],
+            timeslice_snapshots,
+        )
+    else:
+        _add_custom_constraints(
+            network,
+            pypsa_friendly_input_tables["custom_constraints_rhs"],
+            pypsa_friendly_input_tables["custom_constraints_lhs"],
+        )

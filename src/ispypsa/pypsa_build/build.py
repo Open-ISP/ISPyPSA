@@ -2,12 +2,16 @@ from pathlib import Path
 
 import pandas as pd
 
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.pypsa_build.buses import (
     _add_bus_for_custom_constraints,
     _add_buses_to_network,
 )
 from ispypsa.pypsa_build.carriers import _add_carriers_to_network
-from ispypsa.pypsa_build.custom_constraints import _add_custom_constraints
+from ispypsa.pypsa_build.custom_constraints import (
+    _add_custom_constraints,
+    _add_custom_constraints_with_temporal_scope,
+)
 from ispypsa.pypsa_build.generators import (
     _add_custom_constraint_generators_to_network,
     _add_generators_to_network,
@@ -69,7 +73,15 @@ def build_pypsa_network(
         network, pypsa_friendly_tables["buses"], path_to_pypsa_friendly_timeseries_data
     )
 
-    if "links" in pypsa_friendly_tables.keys():
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch only.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        _add_links_to_network(
+            network,
+            pypsa_friendly_tables["links"],
+            pypsa_friendly_tables["link_timeslice_limits"],
+            pypsa_friendly_tables["timeslice_snapshots"],
+        )
+    elif "links" in pypsa_friendly_tables.keys():
         _add_links_to_network(network, pypsa_friendly_tables["links"])
 
     _add_generators_to_network(
@@ -91,7 +103,15 @@ def build_pypsa_network(
     # The underlying linopy model needs to get built so we can add custom constraints.
     network.optimize.create_model(multi_investment_periods=True)
 
-    if "custom_constraints_rhs" in pypsa_friendly_tables:
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch only.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        _add_custom_constraints_with_temporal_scope(
+            network,
+            pypsa_friendly_tables["custom_constraints_rhs"],
+            pypsa_friendly_tables["custom_constraints_lhs"],
+            pypsa_friendly_tables["timeslice_snapshots"],
+        )
+    elif "custom_constraints_rhs" in pypsa_friendly_tables:
         _add_custom_constraints(
             network,
             pypsa_friendly_tables["custom_constraints_rhs"],

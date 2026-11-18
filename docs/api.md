@@ -51,6 +51,8 @@ Python script.
 
 ::: ispypsa.translator.create_pypsa_friendly_timeseries_inputs
 
+::: ispypsa.translator.create_pypsa_friendly_timeslice_snapshots
+
 
 ## Model Building & Execution
 

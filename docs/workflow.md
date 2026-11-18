@@ -221,6 +221,28 @@ step can be run using either the ISPyPSA CLI or API.
     write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
     ```
 
+!!! note "New table format"
+
+    With the `use_new_table_format` feature flag on, transmission limits and custom
+    constraints apply in named timeslices, so the model also needs a table listing the
+    timeslice active at each snapshot. Create it from the capacity expansion snapshots,
+    before writing the tables:
+
+    ```Python
+    from ispypsa.translator import create_pypsa_friendly_timeslice_snapshots
+
+    pypsa_friendly_input_tables["timeslice_snapshots"] = (
+        create_pypsa_friendly_timeslice_snapshots(
+            config,
+            "capacity_expansion",
+            ispypsa_tables["timeslices"],
+            pypsa_friendly_input_tables["snapshots"],
+            pypsa_friendly_input_tables["link_timeslice_limits"],
+            pypsa_friendly_input_tables["custom_constraints_rhs"],
+        )
+    )
+    ```
+
 ### Create operational timeseries data
 
 Optionally, if you want to run the operational model after running capacity expansion
@@ -277,6 +299,31 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     )
 
     write_csvs({"operational_snapshots": operational_snapshots}, pypsa_friendly_inputs_location)
+    ```
+
+!!! note "New table format"
+
+    With the `use_new_table_format` feature flag on, the operational model needs its own
+    table of the timeslice active at each snapshot, because its snapshots differ from the
+    capacity expansion model's. Create it from the operational snapshots and save it with
+    them:
+
+    ```Python
+    from ispypsa.translator import create_pypsa_friendly_timeslice_snapshots
+
+    operational_timeslice_snapshots = create_pypsa_friendly_timeslice_snapshots(
+        config,
+        "operational",
+        ispypsa_tables["timeslices"],
+        operational_snapshots,
+        pypsa_friendly_input_tables["link_timeslice_limits"],
+        pypsa_friendly_input_tables["custom_constraints_rhs"],
+    )
+
+    write_csvs(
+        {"operational_timeslice_snapshots": operational_timeslice_snapshots},
+        pypsa_friendly_inputs_location,
+    )
     ```
 
 ## PyPSA building and run
@@ -414,5 +461,21 @@ computational complexity.
         network,
         pypsa_outputs_directory,
         "operational"
+    )
+    ```
+
+!!! note "New table format"
+
+    With the `use_new_table_format` feature flag on, also pass the operational timeslice
+    table, so the transmission limits and custom constraints are rebuilt for the
+    operational snapshots:
+
+    ```Python
+    update_network_timeseries(
+        network,
+        pypsa_tables,
+        pypsa_tables["operational_snapshots"],
+        operational_timeseries_location,
+        timeslice_snapshots=pypsa_tables["operational_timeslice_snapshots"],
     )
     ```

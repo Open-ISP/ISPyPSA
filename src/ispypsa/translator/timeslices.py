@@ -1,7 +1,10 @@
 import logging
+from typing import Literal
 
 import pandas as pd
+from isp_trace_parser import construct_reference_year_mapping
 
+from ispypsa.config import ModelConfig
 from ispypsa.model_years import (
     _last_instant_of_interval,
     _model_year_of_interval_ends,
@@ -10,6 +13,84 @@ from ispypsa.model_years import (
 logger = logging.getLogger(__name__)
 
 _TIMESLICE_SNAPSHOT_COLUMNS = ["timeslice", "investment_periods", "snapshots"]
+
+
+def create_pypsa_friendly_timeslice_snapshots(
+    config: ModelConfig,
+    model_phase: Literal["capacity_expansion", "operational"],
+    timeslices: pd.DataFrame,
+    snapshots: pd.DataFrame,
+    link_timeslice_limits: pd.DataFrame,
+    custom_constraints_rhs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Creates the table listing the timeslice active at each snapshot of one
+    model phase.
+
+    The transmission limits and custom constraints that apply in a timeslice
+    are placed on the model's snapshots through this table, so it has to be
+    created from the snapshots the model will actually use: the ones returned
+    by create_pypsa_friendly_timeseries_inputs for the same model phase, after
+    any aggregation. The capacity expansion and operational models have
+    different snapshots, so each needs its own table.
+
+    A timeslice named by a transmission limit or custom constraint that ends
+    up with no snapshots is logged as a warning, since that limit or
+    constraint will never apply in this model phase.
+
+    Examples:
+        Create the capacity expansion snapshots, then the timeslice active at
+        each of them.
+        >>> snapshots = create_pypsa_friendly_timeseries_inputs(
+        ...     config,
+        ...     "capacity_expansion",
+        ...     ispypsa_tables,
+        ...     pypsa_friendly_inputs["generators"],
+        ...     Path("parsed_traces"),
+        ...     Path("pypsa_friendly/timeseries")
+        ... )
+        >>> timeslice_snapshots = create_pypsa_friendly_timeslice_snapshots(
+        ...     config,
+        ...     "capacity_expansion",
+        ...     ispypsa_tables["timeslices"],
+        ...     snapshots,
+        ...     pypsa_friendly_inputs["link_timeslice_limits"],
+        ...     pypsa_friendly_inputs["custom_constraints_rhs"],
+        ... )
+
+    Args:
+        config: ISPyPSA ModelConfig instance.
+        model_phase: Either "capacity_expansion" or "operational". Determines which
+            reference year cycle is used to place each timeslice's windows in
+            the model years.
+        timeslices: the ISPyPSA timeslices table.
+        snapshots: the snapshots of the model phase, with the columns
+            'investment_periods' (int) and 'snapshots' (datetime).
+        link_timeslice_limits: the PyPSA friendly link_timeslice_limits table
+            (from create_pypsa_friendly_inputs).
+        custom_constraints_rhs: the PyPSA friendly custom_constraints_rhs table
+            (from create_pypsa_friendly_inputs).
+
+    Returns:
+        pd.DataFrame with the columns 'timeslice', 'investment_periods' and
+        'snapshots': one row per snapshot and timeslice active at it.
+    """
+    if model_phase == "capacity_expansion":
+        reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
+    else:
+        reference_year_cycle = config.temporal.operational.reference_year_cycle
+
+    reference_year_mapping = construct_reference_year_mapping(
+        start_year=config.temporal.range.start_year,
+        end_year=config.temporal.range.end_year,
+        reference_years=reference_year_cycle,
+    )
+    timeslice_snapshots = _create_timeslice_snapshot_mapping(
+        timeslices, snapshots, reference_year_mapping, config.temporal.year_type
+    )
+    _log_referenced_timeslices_without_snapshots(
+        timeslice_snapshots, link_timeslice_limits, custom_constraints_rhs
+    )
+    return timeslice_snapshots
 
 
 def _create_timeslice_snapshot_mapping(
