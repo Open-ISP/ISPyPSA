@@ -28,8 +28,8 @@ custom_validation:
   - name: costs_cover_every_new_entrant_technology_and_year
     description: >
       Coverage spans every new-entrant technology type (in generators_new_entrant
-      and storage_new_entrant) and every model year: each must resolve to a row for
-      its build_cost once wildcards resolve.
+      and storage_new_entrant) and every model-config investment period: each must
+      resolve to a row for its build cost once wildcards resolve.
 columns:
   technology:
     type: string
