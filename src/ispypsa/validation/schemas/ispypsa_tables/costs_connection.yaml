@@ -23,7 +23,7 @@ custom_validation:
     description: >
       When this table is present, coverage spans every new-entrant option (each
       geo_id and technology pair in generators_new_entrant and storage_new_entrant)
-      and every model year: each must have a row. A row may leave connection_cost
+      and every model-config investment period: each must have a row. A row may leave connection_cost
       blank, e.g. offshore wind, whose connection costs are included in its build
       cost (see costs_new_entrant_build).
 columns:

@@ -1,4 +1,3 @@
-import logging
 import re
 
 import pandas as pd
@@ -1017,8 +1016,6 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
 
 
 def test_filter_table_by_isp_scenario_no_matching_rows_raises(csv_str_to_df):
-    # No rows have matching "Scenario" values - return empty df with non-'scenario'
-    # columns.
     table = csv_str_to_df("""
         scenario,       REZ ID,    value
         Step Change,    N1,         100
@@ -1028,7 +1025,7 @@ def test_filter_table_by_isp_scenario_no_matching_rows_raises(csv_str_to_df):
     with pytest.raises(
         ValueError, match=r"No rows matched scenario 'Winter' in test_example table."
     ):
-        result = _filter_table_by_isp_scenario(table, "Winter", "test_example")
+        _filter_table_by_isp_scenario(table, "Winter", "test_example")
 
 
 # --- _melt_financial_year_columns ---
