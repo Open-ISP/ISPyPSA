@@ -1,17 +1,30 @@
-"""End-to-end validation of ``custom_constraints_from_plexos``.
+"""Workbook-vs-PLEXOS validation of the templated custom-constraint LHS.
 
-For each validated constraint this module assembles its LHS two independent
-ways and asserts that the two agree, modulo a small explicit set of known
-differences:
+This is a helper module, not a test module: it provides
+``assert_lhs_matches_workbook_modulo_known_diffs``, which the full-pipeline
+test in ``tests/test_cli/test_create_ispypsa_inputs_new_table_formats.py``
+calls on the ``custom_constraints_lhs`` table it templates at sub_regions
+granularity.
 
-1. **PLEXOS route** -- the production templater
-   ``template_custom_constraints_from_plexos`` reads the PLEXOS extract.
+For each validated constraint the check compares its LHS assembled two
+independent ways and asserts that the two agree, modulo a small explicit set of
+known differences:
+
+1. **PLEXOS route** -- the ``custom_constraints_lhs`` table passed in. In the
+   full-pipeline test this is the output of the real templater: the shipped
+   PLEXOS extract, matched against the generator and storage tables templated
+   from the frozen 7.5 workbook cache.
 2. **Workbook route** -- ``workbook_extract_constraint_lhs`` (in
    ``scripts/workbook_extract_constraint.py``) independently expands each
    constraint's REZ Terms straight from ``rez_group_constraint_summary``
-   using the IASR unit summary tables.
+   using the IASR unit summary tables. These are read from the directory of
+   IASR tables the caller passes in -- in the full-pipeline test, the same
+   workbook cache the templater read, so both routes describe the same units.
+   The frozen 7.5 cache has no ``rez_group_constraint_summary`` or
+   ``new_entrant_electrolysers_summary``, so those two tables come from the
+   fixture under ``data/custom_constraints_validation/workbook``.
 
-If the two drift, the test fails and names the unexpected terms.
+If the two drift, the check fails and names the constraint.
 
 
 Why are there *any* differences?
@@ -67,14 +80,13 @@ Why are there *any* differences?
 
 The ``EXPECTED_DELTAS`` table below names every known mismatch with an
 inline comment giving the reason. Any new unexpected mismatch in either
-direction fails the test.
+direction fails the check.
 """
 
 import sys
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 # Make ``scripts/`` importable -- the workbook extraction lives there as a
 # stand-alone validation tool. Same pattern as tests/test_scripts/conftest.py.
@@ -85,16 +97,13 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from workbook_extract_constraint import workbook_extract_constraint_lhs  # noqa: E402
 
 from ispypsa.data_fetch.csv_read_write import read_csvs  # noqa: E402
-from ispypsa.templater.custom_constraints_from_plexos import (  # noqa: E402
-    template_custom_constraints_from_plexos,
-)
 
 _FIXTURE_DIR = Path(__file__).parent / "data" / "custom_constraints_validation"
 
 
 # Each entry lists the (term_type, variable_name, coefficient) tuples that
-# we expect to be PLEXOS-only or workbook-only after running both routes on
-# the fixture. New unexpected differences in either direction fail the test;
+# we expect to be PLEXOS-only or workbook-only after running both routes.
+# New unexpected differences in either direction fail the check;
 # expected differences gone missing also fail (meaning behaviour changed and
 # the known-diff list should be updated).
 EXPECTED_DELTAS: dict[str, dict[str, set[tuple[str, str, float]]]] = {
@@ -167,37 +176,73 @@ EXPECTED_DELTAS: dict[str, dict[str, set[tuple[str, str, float]]]] = {
 }
 
 
-@pytest.fixture(scope="module")
-def iasr_tables():
-    return read_csvs(_FIXTURE_DIR / "workbook")
+def assert_lhs_matches_workbook_modulo_known_diffs(
+    plexos_lhs: pd.DataFrame, iasr_tables_dir: Path
+) -> None:
+    """Assert that, for each constraint in EXPECTED_DELTAS, the terms in
+    plexos_lhs and the terms the workbook route gives differ only by the
+    known differences listed there.
 
+    Args:
+        plexos_lhs: a templated custom_constraints_lhs table; columns used:
+            constraint_id, term_type, variable_name, coefficient.
+        iasr_tables_dir: directory of IASR table CSVs the workbook route reads
+            its unit summaries and flow paths from. Pass the cache plexos_lhs
+            was templated from, so both routes see the same units.
 
-@pytest.fixture(scope="module")
-def plexos_lhs(iasr_tables):
-    out = template_custom_constraints_from_plexos(
-        iasr_tables,
-        iasr_workbook_version="7.5",
-        plexos_extract_dir=_FIXTURE_DIR / "plexos",
-    )
-    return out["custom_constraints_lhs"]
+    I/O Example:
+        plexos_lhs (abbreviated to two of NQ1's terms):
+            constraint_id  term_type         variable_name  coefficient
+            NQ1            generator_output  KSP1           1.0
+            NQ1            generator_output  EMERASF1       1.0
 
+        tables the workbook route reads (abbreviated). The first two are in
+        iasr_tables_dir; the last two are added from the fixture.
 
-@pytest.mark.parametrize("constraint_id", list(EXPECTED_DELTAS))
-def test_workbook_matches_plexos_modulo_known_diffs(
-    constraint_id, iasr_tables, plexos_lhs
-):
-    plexos_terms = _term_set(plexos_lhs[plexos_lhs["constraint_id"] == constraint_id])
-    workbook_terms = _term_set(
-        workbook_extract_constraint_lhs(constraint_id, iasr_tables)
-    )
+            existing_committed_anticipated_additional_generator_summary:
+                IASR ID / DLT names  Sub-region  REZ ID
+                KSP1                 NQ          Q2
+                EMERASF1             NQ          Q4       # in sub-region NQ, but not in one of NQ1's REZs
 
-    expected = EXPECTED_DELTAS[constraint_id]
-    assert (plexos_terms - workbook_terms) == expected["plexos_only"], (
-        f"{constraint_id}: PLEXOS-only LHS terms diverged from EXPECTED_DELTAS"
-    )
-    assert (workbook_terms - plexos_terms) == expected["workbook_only"], (
-        f"{constraint_id}: workbook-only LHS terms diverged from EXPECTED_DELTAS"
-    )
+            flow_path_transfer_capability:
+                Flow Paths
+                CQ-NQ
+
+            rez_group_constraint_summary:
+                Term  Group constraint ID
+                Q1    NQ1                  # NQ1's terms are the REZs Q1, Q2 and Q3
+
+            new_entrant_electrolysers_summary:
+                IASR ID / DLT names                                REZ ID
+                Q1 to NQ Flexible Electrolyser Piped for Domestic  Q1
+
+        terms each route gives for NQ1 (abbreviated):
+            term_type         variable_name                                      PLEXOS route  workbook route
+            generator_output  KSP1                                               yes           yes
+            generator_output  EMERASF1                                           yes           no              # in EXPECTED_DELTAS["NQ1"]["plexos_only"]
+            load              Q1 to NQ Flexible Electrolyser Piped for Domestic  no            yes             # in EXPECTED_DELTAS["NQ1"]["workbook_only"]
+
+        passes: every term that only one route gives is listed in
+        EXPECTED_DELTAS, and every listed term does differ. If EMERASF1 were
+        missing from plexos_lhs, or KSP1 were, the assertion for NQ1 fails.
+    """
+    iasr_tables = read_csvs(iasr_tables_dir)
+    # rez_group_constraint_summary and new_entrant_electrolysers_summary, which
+    # the frozen 7.5 cache doesn't hold.
+    iasr_tables.update(read_csvs(_FIXTURE_DIR / "workbook"))
+    for constraint_id, expected in EXPECTED_DELTAS.items():
+        plexos_terms = _term_set(
+            plexos_lhs[plexos_lhs["constraint_id"] == constraint_id]
+        )
+        workbook_terms = _term_set(
+            workbook_extract_constraint_lhs(constraint_id, iasr_tables)
+        )
+        assert (plexos_terms - workbook_terms) == expected["plexos_only"], (
+            f"{constraint_id}: PLEXOS-only LHS terms diverged from EXPECTED_DELTAS"
+        )
+        assert (workbook_terms - plexos_terms) == expected["workbook_only"], (
+            f"{constraint_id}: workbook-only LHS terms diverged from EXPECTED_DELTAS"
+        )
 
 
 def _term_set(lhs: pd.DataFrame) -> set[tuple[str, str, float]]:

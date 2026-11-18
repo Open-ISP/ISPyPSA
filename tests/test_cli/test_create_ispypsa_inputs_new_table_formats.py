@@ -57,6 +57,9 @@ from ispypsa.templater.custom_constraints_from_plexos import (
     _CUSTOM_CONSTRAINTS_RHS_COLUMNS,
 )
 
+from ..test_templater.custom_constraints_validation import (
+    assert_lhs_matches_workbook_modulo_known_diffs,
+)
 from .cli_test_helpers import (
     assert_task_ran,
     assert_task_up_to_date,
@@ -499,6 +502,15 @@ def test_create_ispypsa_inputs_new_format(
         constraint_ids = set(constraints["constraint_id"])
         assert set(lhs["constraint_id"]) <= constraint_ids
         assert set(rhs["constraint_id"]) <= constraint_ids
+        # Cross-check five constraints' LHS terms against the workbook's own
+        # description of them, read from the same workbook cache the CLI just
+        # templated from. This LHS comes from the real templated generator and
+        # storage tables, so a unit the templater leaves out shows up here as
+        # an unexpected workbook-only term. The known differences and their
+        # reasons are in tests/test_templater/custom_constraints_validation.py.
+        assert_lhs_matches_workbook_modulo_known_diffs(
+            lhs, iasr_tables_dir=prepare_test_cache_new_format
+        )
     else:
         assert constraints.empty
         assert list(constraints.columns) == _CUSTOM_CONSTRAINTS_COLUMNS
