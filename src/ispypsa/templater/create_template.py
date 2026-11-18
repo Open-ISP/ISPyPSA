@@ -4,7 +4,10 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.feature_flags import FEATURE_FLAGS
-from ispypsa.templater.connection_and_build_costs import _template_connection_costs
+from ispypsa.templater.connection_and_build_costs import (
+    _template_connection_costs,
+    _template_costs_new_entrant_build,
+)
 from ispypsa.templater.custom_constraints_from_plexos import (
     empty_custom_constraint_tables,
     template_custom_constraints_from_plexos,
@@ -106,6 +109,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "timeslices",
     "costs_connection",
     "costs_fuel_prices",
+    "costs_new_entrant_build",
     "generators_existing_planned",
     "generators_new_entrant",
     "storage_existing_planned",
@@ -265,7 +269,12 @@ def create_ispypsa_inputs_template(
             template["storage_new_entrant"],
             sub_regional_geography,
         )
-
+        template["costs_new_entrant_build"] = _template_costs_new_entrant_build(
+            iasr_tables,
+            scenario,
+            template["generators_new_entrant"],
+            template["storage_new_entrant"],
+        )
         template["generators_existing_planned"] = _template_generators_existing_planned(
             iasr_tables, regional_granularity, sub_regional_geography
         )

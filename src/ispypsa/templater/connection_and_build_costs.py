@@ -2,27 +2,25 @@
 # data with time-varying (spanning multiple years) values. These tables contain
 # data that applies to both generation and storage (new entrant).
 import logging
-import re
 
 import numpy as np
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _best_fuzzy_match,
     _filter_table_by_isp_scenario,
-    _financial_year_string_to_end_year_int,
-    _fuzzy_map_to_allowed_values,
-    _looks_like_financial_year,
+    _melt_financial_year_columns,
     _where_any_substring_appears,
 )
 
-_VRE_COLUMN_RENAMES = {
+_COST_TABLE_COLUMN_RENAMES = {
+    "Region": "region_id",
     "REZ ID": "geo_id",
     "Connection capacity (MVA)": "connection_capacity",
-}
-_NON_VRE_COLUMN_RENAMES = {
-    "Region": "region_id",
+    "Scenario": "scenario",
+    "IASR Scenario": "scenario",
     "Generator Type": "technology",
-    "Connection capacity (MVA)": "connection_capacity",
+    "Technology": "technology",
 }
 
 # NOTE: the VRE / non-VRE split below is approximate, not strict. The IASR
@@ -32,7 +30,7 @@ _NON_VRE_COLUMN_RENAMES = {
 # are handled once more of the templater (and schema validation) is in place.
 _VRE_TECHNOLOGY_STRINGS = ["solar", "wind"]
 _IBR_TECHNOLOGY_STRINGS = _VRE_TECHNOLOGY_STRINGS + ["battery", "batteries"]
-_NON_VRE_EXCLUDED_TECHNOLOGIES = ["Alkaline Electrolyser", "BOTN - Cethana"]
+_EXCLUDED_TECHNOLOGIES = {"Alkaline Electrolyser"}
 
 
 def _template_connection_costs(
@@ -48,8 +46,10 @@ def _template_connection_costs(
     Produces a long-format table with columns (geo_id, technology, year,
     connection_cost, system_strength_cost). VRE (wind/solar) costs are templated
     per-REZ; non-VRE costs are templated per-region and expanded to geo_id level
-    based on ``regional_granularity``. System strength costs ($/MW) are merged in
-    for all IBR technologies (wind, solar, battery).
+    based on ``regional_granularity``. Non-VRE technologies in _EXCLUDED_TECHNOLOGIES
+    are dropped, and the rest are respelt to match the new entrant tables (see
+    _canonicalise_technologies). System strength costs ($/MW) are merged in for all
+    IBR technologies (wind, solar, battery).
 
     Args:
         iasr_tables: dict containing the following keys:
@@ -76,7 +76,8 @@ def _template_connection_costs(
     Returns:
         One row per (geo_id, technology, year). connection_cost and
         system_strength_cost are in $/MW; system_strength_cost is 0.0 for
-        non-IBR technologies and solar thermal.
+        non-IBR technologies and solar thermal. For IBR technologies it is NaN in
+        years the system strength table doesn't cover (2025 and 2055 at v7.5).
 
     I/O Example:
         Inputs (abbreviated; regional_granularity="nem_regions"):
@@ -98,27 +99,27 @@ def _template_connection_costs(
                 NSW     CCGT            400
 
             efficient_level_of_system_strength_cost:
-                                        2024-25   2025-26
-                IBR remediation $/kW    163.24    148.88
+                Unnamed: 1                  2025-26   2026-27
+                IBR remediation cost $/kW   163.24    148.88
 
             generators_new_entrant:
                 geo_id  technology
                 N1      Wind
                 N1      Large scale Solar PV
-                NNSW    CCGT
+                NSW     CCGT
 
             storage_new_entrant: (empty)
 
         Returns:
             geo_id  technology              year  connection_cost  system_strength_cost
-            N1      Wind                    2025  182500.0         163240.0  # VRE IBR
-            N1      Wind                    2026  185000.0         148880.0
-            N1      Large scale Solar PV    2025  182500.0         163240.0  # VRE IBR
-            N1      Large scale Solar PV    2026  185000.0         148880.0
+            N1      Wind                    2025  182500.0         NaN       # no 2024-25 value
+            N1      Wind                    2026  185000.0         163240.0  # VRE IBR
+            N1      Large scale Solar PV    2025  182500.0         NaN
+            N1      Large scale Solar PV    2026  185000.0         163240.0
             NSW     CCGT                    2025  100000.0         0.0       # non-VRE, non-IBR
             NSW     CCGT                    2026  105000.0         0.0
     """
-
+    logging.info("Creating a template for new entrant connection costs.")
     system_strength_costs = _normalise_system_strength_cost_frame(
         iasr_tables["efficient_level_of_system_strength_cost"]
     )
@@ -219,16 +220,18 @@ def _template_vre_connection_costs(
         canonical_technology_geo_id_pairs
     )
     scenario_cost_forecast = _filter_table_by_isp_scenario(
-        connection_cost_forecast_vre,
+        connection_cost_forecast_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
-        "Scenario",
-        "VRE connection cost forecast",
+        "scenario",
+        "connection_cost_forecast_vre",
     )
     merged_df = scenario_cost_forecast.merge(
-        connection_costs_for_vre, how="left", on=["REZ ID"]
+        connection_costs_for_vre.rename(columns=_COST_TABLE_COLUMN_RENAMES),
+        how="left",
+        on=["geo_id"],
     )
     normalised_df = _normalise_connection_cost_forecast_frame(
-        merged_df, id_cols_rename=_VRE_COLUMN_RENAMES
+        merged_df, id_cols=["geo_id", "connection_capacity"]
     )
     costs_per_mw = _calculate_connection_cost_per_mw(normalised_df)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["geo_id"])
@@ -329,19 +332,17 @@ def _template_non_vre_connection_costs(
 ) -> pd.DataFrame:
     """Templates connection costs for non-VRE new entrant technologies.
 
-    Filters the cost forecast to the given scenario, merges in connection capacity,
-    normalises to long format and $/MW units, canonicalises technology names, then
-    expands costs to geo_id level based on ``regional_granularity``. Batteries
-    located in REZs receive additional rows keyed to their REZ geo_id using costs
-    from their parent NEM region — see :func:`_create_additional_rez_battery_rows`.
+    Filters the cost forecast to the given scenario, merges in connection capacity
+    and melts to long format. It then drops _EXCLUDED_TECHNOLOGIES and maps the
+    remaining technologies to match ``canon_tech_geo_id_pairs`` (see
+    _canonicalise_technologies), converts costs to $/MW, and expands them to geo_id
+    level based on ``regional_granularity``. Batteries located in REZs receive
+    additional rows keyed to their REZ geo_id using costs from their parent NEM
+    region — see _create_non_vre_rez_cost_rows.
 
-    ``canonical_technologies`` should be the union of technology names from the
-    templated new entrant generators and storage tables.
-
-    NOTE: 'BOTN - Cethana' is excluded (see ``_NON_VRE_EXCLUDED_TECHNOLOGIES``).
-    The IASR workbook defines a $0.0 connection cost for BOTN - Cethana, and it is
-    the only entry identified by name rather than technology type — TBD how to
-    handle it in the translator.
+    ``canon_tech_geo_id_pairs`` holds the deduplicated (geo_id, technology) pairs from
+    the new entrant generators and storage tables (see
+    _get_canon_technology_and_geo_id_pairs).
 
     I/O Example:
         connection_cost_forecast_other:
@@ -386,20 +387,22 @@ def _template_non_vre_connection_costs(
     """
 
     scenario_cost_forecast = _filter_table_by_isp_scenario(
-        connection_cost_forecast_other,
+        connection_cost_forecast_other.rename(columns=_COST_TABLE_COLUMN_RENAMES),
         scenario,
-        "Scenario",
-        "Non-VRE connection cost forecast",
+        "scenario",
+        "connection_cost_forecast_other",
     )
     merged_df = scenario_cost_forecast.merge(
-        connection_capacity_df, how="left", on=["Region", "Generator Type"]
+        connection_capacity_df.rename(columns=_COST_TABLE_COLUMN_RENAMES),
+        how="left",
+        on=["region_id", "technology"],
     )
     normalised_df = _normalise_connection_cost_forecast_frame(
-        merged_df, id_cols_rename=_NON_VRE_COLUMN_RENAMES
+        merged_df, id_cols=["region_id", "technology", "connection_capacity"]
     )
     canonical_technologies = set(canon_tech_geo_id_pairs["technology"])
-    canonicalised_df = _canonicalise_non_vre_technologies(
-        normalised_df, canonical_technologies
+    canonicalised_df = _canonicalise_technologies(
+        normalised_df, canonical_technologies, "templating non-VRE connection costs"
     )
     costs_per_mw = _calculate_connection_cost_per_mw(canonicalised_df)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["region_id", "technology"])
@@ -409,55 +412,6 @@ def _template_non_vre_connection_costs(
         canon_tech_geo_id_pairs,
         sub_regional_geography,
     )
-
-
-def _canonicalise_non_vre_technologies(
-    df: pd.DataFrame, canonical_technologies: set[str]
-) -> pd.DataFrame:
-    """Drops unsupported technology rows and maps IASR names to canonical ISPyPSA names.
-
-    Removes rows for technologies listed in ``_NON_VRE_EXCLUDED_TECHNOLOGIES`` (special
-    cases, e.g. 'BOTN - Cethana' or not-yet-handled technologies). Remaining values in the
-    ``technology`` column are fuzzy-matched to ``canonical_technologies`` at
-    threshold=85; any value that cannot be matched raises ValueError.
-
-    NOTE: An empty canonical set means no new-entrant technologies are being
-    modelled (e.g. a brownfield-only run) — there is nothing to map costs onto,
-    so an empty df (with the same columns and dtypes as input df) is returned.
-
-    I/O Example:
-        df:
-            region_id  technology          year  connection_capacity  connection_cost
-            NSW        CCGT                2025  400                  40000000.0
-            NSW        OCGT small GT       2025  400                  32000000.0   # slight variation
-            TAS        BOTN - Cethana      2025  250                  0.0          # excluded explicitly
-            QLD        CCGT                2025  300                  36000000.0
-
-        canonical_technologies: {"CCGT", "OCGT (small GT)"}
-
-        returns:
-            region_id  technology       year  connection_capacity  connection_cost
-            NSW        CCGT             2025  400                  40000000.0
-            NSW        OCGT (small GT)  2025  400                  32000000.0  # fuzzy-matched
-            QLD        CCGT             2025  300                  36000000.0
-            # BOTN - Cethana row dropped (listed in ``_NON_VRE_EXCLUDED_TECHNOLOGIES``)
-    """
-    # NOTE: an only-VRE canonical set (non-empty, but no non-VRE techs) still raises
-    # via _fuzzy_map_to_allowed_values when the forecast has non-VRE rows.
-    # Intentional (for now) — kinda related to https://github.com/Open-ISP/ISPyPSA/discussions/103 and the final role(s) of validator.
-    if not canonical_technologies:
-        return pd.DataFrame(columns=df.columns).astype(df.dtypes)
-
-    excluded = _where_any_substring_appears(
-        df["technology"], _NON_VRE_EXCLUDED_TECHNOLOGIES
-    )
-    result = df.loc[~excluded].copy()
-    result["technology"] = _fuzzy_map_to_allowed_values(
-        result["technology"],
-        canonical_technologies,
-        task_desc="canonicalising non-VRE connection cost `technology` values",
-    )
-    return result
 
 
 def _create_non_vre_rez_cost_rows(
@@ -686,6 +640,9 @@ def _merge_and_filter_system_strength_costs(
     Solar thermal contains "solar" so matches ``_IBR_TECHNOLOGY_STRINGS`` but does
     not incur a system strength cost, so it is zeroed separately.
 
+    Years missing from ``system_strength_costs`` get NaN for IBR technologies. At
+    v7.5 that's 2025 and 2055, since the system strength table covers 2026-2054.
+
     I/O Example:
         connection_costs:
             geo_id  technology              year  connection_cost
@@ -711,46 +668,30 @@ def _merge_and_filter_system_strength_costs(
 def _normalise_system_strength_cost_frame(
     system_strength_cost_table: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Reshapes the wide system strength cost table to long format and converts
-    units from $/kW to $/MW.
+    """Melts the wide system strength cost table to one row per year and converts
+    costs from $/kW to $/MW.
 
-    Year column names (e.g. '2024-25') are converted to the financial-year ending
-    year as an int (2025) — see :func:`_financial_year_string_to_end_year_int`.
-    Any non-year columns (columns not containing cost data) are dropped.
+    The financial-year columns are melted by _melt_financial_year_columns, which
+    drops the row-label column.
 
     I/O Example:
         system_strength_cost_table:
-                                    2025-26     2026-27
-            IBR remediation $/kW    10          12
+            Unnamed: 1                 2025-26  2026-27
+            IBR remediation cost $/kW  163.24   148.88
 
         returns:
             year  system_strength_cost
-            2025  10000.0    # 10 $/kW * 1000 = 10000 $/MW
-            2026  12000.0
+            2026  163240.0    # 163.24 $/kW * 1000
+            2027  148880.0
     """
-
-    # NOTE: ``efficient_level_of_system_strength_cost`` table direct from IASR
-    # has some 'year' columns that are formatted as '2032-2033' (those years onwards)
-    # manual fix here:
-    year_cols = {
-        c: c.replace("-20", "-", 1)
-        for c in system_strength_cost_table.columns
-        if _looks_like_financial_year(c.replace("-20", "-", 1))
-    }
-    system_strength_cost_table = system_strength_cost_table.rename(columns=year_cols)
-    long_system_strength_costs = system_strength_cost_table.melt(
-        value_vars=list(year_cols.values()),
-        value_name="system_strength_cost",
-        var_name="year",
+    long = _melt_financial_year_columns(
+        system_strength_cost_table, [], "system_strength_cost"
     )
-    long_system_strength_costs["system_strength_cost"] = pd.to_numeric(
-        long_system_strength_costs["system_strength_cost"], errors="coerce"
+    long["system_strength_cost"] = pd.to_numeric(
+        long["system_strength_cost"], errors="coerce"
     )
-    long_system_strength_costs["system_strength_cost"] *= 1000  # convert to $/MW
-    long_system_strength_costs["year"] = long_system_strength_costs["year"].map(
-        _financial_year_string_to_end_year_int
-    )
-    return long_system_strength_costs[["year", "system_strength_cost"]]
+    long["system_strength_cost"] *= 1000  # convert to $/MW
+    return long
 
 
 def _set_non_ibr_system_strength_cost_to_zero(
@@ -783,45 +724,33 @@ def _set_solar_thermal_system_strength_costs_to_zero(
 
 
 def _normalise_connection_cost_forecast_frame(
-    connection_cost_forecast: pd.DataFrame, id_cols_rename: dict[str, str]
+    connection_cost_forecast: pd.DataFrame, id_cols: list[str]
 ) -> pd.DataFrame:
-    """Reshapes wide multi-year cost frame to long format.
+    """Melts the financial-year columns of a connection cost forecast to one row per
+    ``id_cols`` row and year (see _melt_financial_year_columns), then coerces
+    connection_cost and connection_capacity to numeric.
 
-    Year column names (e.g. '2024-25') are converted to the financial-year ending
-    year as an int (2025) — see :func:`_financial_year_string_to_end_year_int`.
-
-    Empty/null/NaN values are retained.
+    ``id_cols`` must include connection_capacity. NaN costs are kept.
 
     I/O Example:
-        connection_cost_forecast (VRE):
-            REZ ID  Connection capacity (MVA)   2024-25
-            N1      400                         73000000
-            Q9      1800                        854000000
-            R99     150                         NaN         # R99: fictional REZ, no cost data
+        connection_cost_forecast (VRE, headers already renamed):
+            geo_id  connection_capacity  2024-25
+            N1      400                  73000000
+            Q9      1800                 854000000
+            R99     150                  NaN         # R99: fictional REZ, no cost data
 
-        id_cols_rename: {"REZ ID": "geo_id", "Connection capacity (MVA)": "connection_capacity"}
+        id_cols: ["geo_id", "connection_capacity"]
 
         returns:
-            geo_id  year  connection_capacity  connection_cost
-            N1      2025  400                  73000000
-            Q9      2025  1800                 854000000
-            R99     2025  150                  NaN          # NaN preserved
+            geo_id  connection_capacity  year  connection_cost
+            N1      400                  2025  73000000
+            Q9      1800                 2025  854000000
+            R99     150                  2025  NaN          # NaN preserved
     """
-
-    year_cols = [
-        c for c in connection_cost_forecast.columns if _looks_like_financial_year(c)
-    ]
-    melted = connection_cost_forecast.melt(
-        id_vars=list(id_cols_rename.keys()),
-        value_vars=year_cols,
-        var_name="year",
-        value_name="connection_cost",
-        ignore_index=True,
+    melted = _melt_financial_year_columns(
+        connection_cost_forecast, id_cols, "connection_cost"
     )
-    melted = melted.rename(columns=id_cols_rename)
-    melted = _enforce_numeric_cols(melted, ["connection_cost", "connection_capacity"])
-    melted["year"] = melted["year"].map(_financial_year_string_to_end_year_int)
-    return melted
+    return _enforce_numeric_cols(melted, ["connection_cost", "connection_capacity"])
 
 
 def _enforce_numeric_cols(df: pd.DataFrame, numeric_cols: list[str]) -> pd.DataFrame:
@@ -866,7 +795,8 @@ def _warn_nan_connection_costs(
     costs_per_mw: pd.DataFrame,
     id_cols: list[str],
 ) -> None:
-    """Logs a WARNING for any (id_cols, year) combinations where connection_cost is NaN.
+    """Logs one WARNING listing every (id_cols, year) combination where
+    connection_cost is NaN.
 
     Note: A NaN (or zero) connection cost means no additional cost above the base build cost
     is applied for that generator/geo_id/year combination. It does not imply the absence
@@ -889,3 +819,153 @@ def _warn_nan_connection_costs(
         f"NaN connection cost after per-MW calculation for: {all_nan_costs} "
         "— no additional connection cost will be applied here"
     )
+
+
+# ----------- Build Costs --------------
+
+
+def _template_costs_new_entrant_build(
+    iasr_tables: dict[str, pd.DataFrame],
+    scenario: str,
+    generators_new_entrant: pd.DataFrame,
+    storage_new_entrant: pd.DataFrame,
+) -> pd.DataFrame:
+    """Templates new entrant build costs: one cost per technology and year, in $/MW.
+
+    Filters the IASR build_costs table to ``scenario``, then drops the technologies in
+    _EXCLUDED_TECHNOLOGIES and maps the rest to match the technology names in
+    ``generators_new_entrant`` and ``storage_new_entrant`` (see
+    _canonicalise_technologies). Finally, the financial-year columns are melted to one
+    row per year, and costs are converted from $/kW to $/MW.
+
+    I/O Example (scenario="Step Change"):
+        iasr_tables["build_costs"] ($/kW):
+            Technology                      IASR Scenario  2024-25
+            Wind                            Step Change    3412
+            Wind                            Slower Growth  3500    # other scenario
+            Solar Thermal (16hrs Storage)   Step Change    6892    # mapped to canonical
+            Battery storage (2hrs storage)  Step Change    1238
+            Alkaline Electrolyser           Step Change    2755    # excluded
+
+        generators_new_entrant:
+            geo_id  technology
+            N1      Wind
+            Q4      Solar Thermal (16hrs storage)
+
+        storage_new_entrant:
+            geo_id  technology
+            N1      Battery storage (2hrs storage)
+
+        returns ($/MW):
+            technology                      year  cost
+            Wind                            2025  3412000
+            Solar Thermal (16hrs storage)   2025  6892000   # canonical - lower case 'storage'
+            Battery storage (2hrs storage)  2025  1238000
+    """
+    logging.info("Creating a template for new entrant build costs.")
+    build_costs = _filter_table_by_isp_scenario(
+        iasr_tables["build_costs"].rename(columns=_COST_TABLE_COLUMN_RENAMES),
+        scenario,
+        "scenario",
+        "build_costs",
+    )
+    canonical = _get_canon_technology_and_geo_id_pairs(
+        generators_new_entrant, storage_new_entrant
+    )
+    build_costs = _canonicalise_technologies(
+        build_costs, set(canonical["technology"]), "templating new entrant build costs"
+    )
+    build_costs = _melt_financial_year_columns(build_costs, ["technology"], "cost")
+    build_costs["cost"] *= 1000  # $/kW -> $/MW
+    return build_costs
+
+
+def _canonicalise_technologies(
+    df: pd.DataFrame, canonical: set[str], task_desc: str
+) -> pd.DataFrame:
+    """Drops _EXCLUDED_TECHNOLOGIES from ``df``, then maps its remaining
+    technologies to match ``canonical`` (see _map_to_canonical_technologies).
+
+    Exclusions go first because they are known to have no counterpart in ``canonical``;
+    matching them would always raise.
+
+    I/O Example (canonical={"Wind", "Solar Thermal (16hrs storage)"}):
+        df:
+            technology                     2024-25
+            Wind                           3412
+            Solar Thermal (16hrs Storage)  6892     # fuzzy matched -> replaced
+            Alkaline Electrolyser          2755     # excluded
+
+        returns:
+            technology                     2024-25
+            Wind                           3412
+            Solar Thermal (16hrs storage)  6892
+    """
+    clean = _drop_excluded_technologies(df, _EXCLUDED_TECHNOLOGIES, task_desc)
+    clean["technology"] = _map_to_canonical_technologies(
+        clean["technology"], canonical, task_desc
+    )
+    return clean
+
+
+def _map_to_canonical_technologies(
+    technologies: pd.Series, canonical: set[str], task_desc: str
+) -> pd.Series:
+    """Replaces each technology with no exact match in ``canonical`` by its closest
+    fuzzy match, logging each replacement as a FUZZY MATCH warning.
+
+    Interim handling until the team discusses how far fuzzy matching may 'decide'
+    (Open-ISP/ISPyPSA#TBD). Each warning marks a spelling difference that could
+    become an IASR table edit.
+
+    A technology with no match meeting a fuzz.ratio threshold of 90 or more raises.
+
+    I/O Example:
+        technologies = ["Wind", "Solar Thermal (16hrs Storage)"]
+        canonical = {"Wind", "Solar Thermal (16hrs storage)"}
+
+        returns:
+            ["Wind",                            # exact match, unchanged
+             "Solar Thermal (16hrs storage)"]   # FUZZY MATCH warning logged
+    """
+    misses = sorted(set(technologies) - canonical)
+    matches = {
+        name: _best_fuzzy_match(name, canonical, threshold=90) for name in misses
+    }
+    unmatched = [name for name, match in matches.items() if match is None]
+    if unmatched:
+        raise ValueError(
+            f"Could not fuzzy match to an allowed value whilst {task_desc}: {unmatched}"
+        )
+    for name, match in matches.items():
+        logging.warning(
+            f"FUZZY MATCH: no exact match for '{name}' found whilst {task_desc}. "
+            f"Replaced by best fuzzy match '{match}'."
+        )
+    return technologies.replace(matches)
+
+
+def _drop_excluded_technologies(
+    df: pd.DataFrame, exclusions: set[str], task_desc: str
+) -> pd.DataFrame:
+    """Drops the rows whose technology is in ``exclusions``, logging the dropped
+    technologies once at INFO.
+
+    I/O Example (exclusions={"Alkaline Electrolyser"}):
+        df:
+            region_id  technology
+            NSW        CCGT
+            NSW        Alkaline Electrolyser  # dropped
+            QLD        Alkaline Electrolyser  # dropped, logged once
+
+        returns:
+            region_id  technology
+            NSW        CCGT
+    """
+    to_exclude = df["technology"].isin(exclusions)
+    dropped = sorted(df.loc[to_exclude, "technology"].unique())
+    if dropped:
+        logging.info(
+            f"KNOWN EXCLUSION: technology(s) {dropped} excluded while {task_desc}."
+        )
+    return df.loc[~to_exclude].copy()
