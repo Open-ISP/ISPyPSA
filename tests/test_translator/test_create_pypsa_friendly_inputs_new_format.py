@@ -11,7 +11,6 @@ import pytest
 
 from ispypsa.translator import (
     create_pypsa_friendly_inputs,
-    create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
     create_pypsa_friendly_timeslice_snapshots,
     list_timeseries_files,
@@ -100,7 +99,8 @@ def test_create_pypsa_friendly_inputs_new_format(
     # investment period (REZ expansion is off in sample_model_config).
     assert len(result["links"]) == 4
 
-    # A p_max_pu and a p_min_pu row for each of the six path limit rows.
+    # One row for each of the six path limit rows, with attribute p_max_pu for
+    # a forward limit and p_min_pu for a reverse limit.
     assert list(result["link_timeslice_limits"].columns) == [
         "name",
         "attribute",
@@ -162,10 +162,9 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
         "generators",
         "stores",
     ]
-    expected_snapshots = create_pypsa_friendly_snapshots(
-        sample_model_config, "capacity_expansion"
-    )
-    assert len(result) == len(expected_snapshots)
+    # Half-hourly snapshots for financial years 2026 to 2028: 1096 days
+    # (2028 includes a leap day) of 48 snapshots.
+    assert len(result) == 52608
 
     # Generators and demand aren't translated from the new tables yet, so no
     # timeseries files are saved or listed.

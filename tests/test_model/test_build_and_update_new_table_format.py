@@ -146,22 +146,22 @@ def test_update_rebuilds_link_limits_and_custom_constraints_for_new_snapshots(
     _save_demand_trace(tables["snapshots"], tmp_path)
     network = build_pypsa_network(tables, tmp_path)
 
-    # The operational snapshots are a different day, with the timeslices at
-    # different positions, and none of them is in the capacity expansion
-    # timeslice_snapshots above.
+    # The first two operational snapshots are also capacity expansion
+    # snapshots, but in different timeslices: 01:00 was peak and is now in
+    # neither, 02:00 was shoulder and is now peak. The last two are a new day.
     operational_snapshots = _snapshots(
         [
+            "2025-01-01 01:00",
+            "2025-01-01 02:00",
             "2025-06-01 00:00",
             "2025-06-01 01:00",
-            "2025-06-01 02:00",
-            "2025-06-01 03:00",
         ]
     )
     operational_timeslice_snapshots = csv_str_to_df("""
         timeslice,  investment_periods,  snapshots
+        peak,       2025,                2025-01-01 02:00:00
         shoulder,   2025,                2025-06-01 00:00:00
-        peak,       2025,                2025-06-01 02:00:00
-        peak,       2025,                2025-06-01 03:00:00
+        peak,       2025,                2025-06-01 01:00:00
     """)
     _save_demand_trace(operational_snapshots, tmp_path)
 
@@ -174,14 +174,16 @@ def test_update_rebuilds_link_limits_and_custom_constraints_for_new_snapshots(
     )
     network.optimize.solve_model(solver_name="highs")
 
-    # 00:00 is shoulder (CHEAP_CAP: 30 MW), 01:00 is in neither timeslice
-    # (fallback limit: 100 MW), 02:00 and 03:00 are peak (0.5 per unit: 50 MW).
+    # Peak is 0.5 per unit (50 MW), shoulder has CHEAP_CAP (30 MW), and a
+    # snapshot in neither timeslice takes the fallback limit (100 MW). The two
+    # shared snapshots take their operational timeslices: a limit kept from
+    # capacity expansion would give 50 MW at 01:00 and 30 MW at 02:00.
     expected = csv_str_to_df("""
         investment_periods,  snapshots,            flow
+        2025,                2025-01-01 01:00:00,  100.0
+        2025,                2025-01-01 02:00:00,  50.0
         2025,                2025-06-01 00:00:00,  30.0
-        2025,                2025-06-01 01:00:00,  100.0
-        2025,                2025-06-01 02:00:00,  50.0
-        2025,                2025-06-01 03:00:00,  50.0
+        2025,                2025-06-01 01:00:00,  50.0
     """)
     expected["snapshots"] = pd.to_datetime(expected["snapshots"])
     pd.testing.assert_frame_equal(
