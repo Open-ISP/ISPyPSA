@@ -29,6 +29,14 @@ def optimize_with_rolling_horizon(
     only such terms, like expansion limits, are left out: the capacity expansion
     model that chose the capacities already enforced them.
 
+    Storage levels are tracked across windows. Each storage unit starts the first
+    window half full and starts every later window at the level it reached just
+    before that window. To do this the network's storage units are changed in
+    place: `cyclic_state_of_charge` is set to False and `state_of_charge_initial`
+    to half of `p_nom` x `max_hours`. Call
+    `network.optimize.fix_optimal_capacities()` first, so that `p_nom` holds the
+    capacity that was built.
+
     Examples:
         >>> from ispypsa.pypsa_build import (
         ...     optimize_with_rolling_horizon,
@@ -64,6 +72,7 @@ def optimize_with_rolling_horizon(
 
     Returns: None
     """
+    _track_state_of_charge_across_windows(network)
     # Capacities don't change between windows, so this is done once up front.
     rhs, lhs = _move_fixed_capacity_terms_to_rhs(
         network,
@@ -81,3 +90,29 @@ def optimize_with_rolling_horizon(
             network, rhs, lhs
         ),
     )
+
+
+def _track_state_of_charge_across_windows(network: pypsa.Network) -> None:
+    """Sets the network's storage units up to carry their state of charge from
+    one rolling horizon window to the next, starting the first window half full.
+
+    Before each window after the first, PyPSA sets state_of_charge_initial to
+    the level the storage unit reached just before that window. A unit with
+    cyclic_state_of_charge=True ignores that value: it picks its own starting
+    level for each window and returns to it by the window's end. Turning the
+    cycling off makes each window start from the carried level. The value set
+    here is only used by the first window.
+
+    I/O Example:
+        network.storage_units:
+            name     p_nom  max_hours  cyclic_state_of_charge  state_of_charge_initial
+            battery  5      8          True                    0
+
+        network.storage_units afterwards:
+            name     p_nom  max_hours  cyclic_state_of_charge  state_of_charge_initial
+            battery  5      8          False                   20                       # 0.5 x 5 x 8
+    """
+    storage_units = network.storage_units
+    energy_capacity = storage_units["p_nom"] * storage_units["max_hours"]
+    storage_units["cyclic_state_of_charge"] = False
+    storage_units["state_of_charge_initial"] = 0.5 * energy_capacity

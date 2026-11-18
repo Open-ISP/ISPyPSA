@@ -70,22 +70,22 @@ def _expand_then_operate_with_rolling_horizon(
     tables["snapshots"] = csv_str_to_df(
         """
         investment_periods,  snapshots,            generators,  objective,  stores
-        2025,                2025-01-01__00:00:00,  1.0,         1.0,        1.0
-        2026,                2026-01-01__00:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 00:00:00,  1.0,         1.0,        1.0
+        2026,                2026-01-01 00:00:00,  1.0,         1.0,        1.0
         """,
         parse_dates=["snapshots"],
     )
     operational_snapshots = csv_str_to_df(
         """
         investment_periods,  snapshots,            generators,  objective,  stores
-        2025,                2025-01-01__00:00:00,  1.0,         1.0,        1.0
-        2025,                2025-01-01__01:00:00,  1.0,         1.0,        1.0
-        2025,                2025-01-01__02:00:00,  1.0,         1.0,        1.0
-        2025,                2025-01-01__03:00:00,  1.0,         1.0,        1.0
-        2026,                2026-01-01__00:00:00,  1.0,         1.0,        1.0
-        2026,                2026-01-01__01:00:00,  1.0,         1.0,        1.0
-        2026,                2026-01-01__02:00:00,  1.0,         1.0,        1.0
-        2026,                2026-01-01__03:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 00:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 01:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 02:00:00,  1.0,         1.0,        1.0
+        2025,                2025-01-01 03:00:00,  1.0,         1.0,        1.0
+        2026,                2026-01-01 00:00:00,  1.0,         1.0,        1.0
+        2026,                2026-01-01 01:00:00,  1.0,         1.0,        1.0
+        2026,                2026-01-01 02:00:00,  1.0,         1.0,        1.0
+        2026,                2026-01-01 03:00:00,  1.0,         1.0,        1.0
         """,
         parse_dates=["snapshots"],
     )
@@ -123,18 +123,19 @@ def test_rolling_horizon_respects_dispatch_constraint(tmp_path, csv_str_to_df):
 
     flows = _expand_then_operate_with_rolling_horizon(tmp_path, csv_str_to_df, rhs, lhs)
 
-    # Without SQ_flow the link would carry the whole 100 MW load.
+    # Without SQ_flow the link would carry the whole 100 MW load. SQ_flow has
+    # no SQ_relax term, so SQ_relax can't lift the 40 MW limit.
     expected = csv_str_to_df(
         """
-        period,  timestep,              NQ-SQ
-        2025,    2025-01-01__00:00:00,  40.0
-        2025,    2025-01-01__01:00:00,  40.0
-        2025,    2025-01-01__02:00:00,  40.0
-        2025,    2025-01-01__03:00:00,  40.0
-        2026,    2026-01-01__00:00:00,  40.0
-        2026,    2026-01-01__01:00:00,  40.0
-        2026,    2026-01-01__02:00:00,  40.0
-        2026,    2026-01-01__03:00:00,  40.0
+        period,  timestep,             NQ-SQ
+        2025,    2025-01-01 00:00:00,  40.0
+        2025,    2025-01-01 01:00:00,  40.0
+        2025,    2025-01-01 02:00:00,  40.0
+        2025,    2025-01-01 03:00:00,  40.0
+        2026,    2026-01-01 00:00:00,  40.0
+        2026,    2026-01-01 01:00:00,  40.0
+        2026,    2026-01-01 02:00:00,  40.0
+        2026,    2026-01-01 03:00:00,  40.0
         """,
         parse_dates=["timestep"],
     )
@@ -163,19 +164,90 @@ def test_rolling_horizon_respects_dispatch_and_capacity_constraint(
     # to 60 MW. Without SQ_flow the link would carry the whole 100 MW load.
     expected = csv_str_to_df(
         """
-        period,  timestep,              NQ-SQ
-        2025,    2025-01-01__00:00:00,  60.0
-        2025,    2025-01-01__01:00:00,  60.0
-        2025,    2025-01-01__02:00:00,  60.0
-        2025,    2025-01-01__03:00:00,  60.0
-        2026,    2026-01-01__00:00:00,  60.0
-        2026,    2026-01-01__01:00:00,  60.0
-        2026,    2026-01-01__02:00:00,  60.0
-        2026,    2026-01-01__03:00:00,  60.0
+        period,  timestep,             NQ-SQ
+        2025,    2025-01-01 00:00:00,  60.0
+        2025,    2025-01-01 01:00:00,  60.0
+        2025,    2025-01-01 02:00:00,  60.0
+        2025,    2025-01-01 03:00:00,  60.0
+        2026,    2026-01-01 00:00:00,  60.0
+        2026,    2026-01-01 01:00:00,  60.0
+        2026,    2026-01-01 02:00:00,  60.0
+        2026,    2026-01-01 03:00:00,  60.0
         """,
         parse_dates=["timestep"],
     )
     pd.testing.assert_frame_equal(flows, expected, check_dtype=False)
+
+
+def test_rolling_horizon_tracks_state_of_charge_across_windows(csv_str_to_df):
+    # The load is 90 MW with a 110 MW peak at the third and sixth snapshots.
+    # Gas (10 $/MWh) can serve up to 100 MW, so a peak needs the peaker
+    # (100 $/MWh) or the battery.
+    snapshots = csv_str_to_df(
+        """
+        investment_periods,  snapshots,            load
+        2025,                2025-01-01 00:00:00,  90.0
+        2025,                2025-01-01 01:00:00,  90.0
+        2025,                2025-01-01 02:00:00,  110.0
+        2026,                2026-01-01 00:00:00,  90.0
+        2026,                2026-01-01 01:00:00,  90.0
+        2026,                2026-01-01 02:00:00,  110.0
+        """,
+        parse_dates=["snapshots"],
+    )
+    snapshots = snapshots.set_index(["investment_periods", "snapshots"])
+    network = pypsa.Network(snapshots=snapshots.index, investment_periods=[2025, 2026])
+    network.add("Bus", "NQ")
+    network.add("Load", "NQ_load", bus="NQ", p_set=snapshots["load"])
+    network.add("Generator", "gas", bus="NQ", p_nom=100.0, marginal_cost=10.0)
+    network.add("Generator", "peaker", bus="NQ", p_nom=100.0, marginal_cost=100.0)
+    # A 5 MW battery holding up to 20 MWh (4 hours). It is added with
+    # cyclic_state_of_charge=True, which is what the translator sets on every
+    # battery, so the test shows optimize_with_rolling_horizon turning it off.
+    # Left on, the battery would ignore the level carried from the previous
+    # window.
+    network.add(
+        "StorageUnit",
+        "battery",
+        bus="NQ",
+        p_nom=5.0,
+        max_hours=4.0,
+        cyclic_state_of_charge=True,
+    )
+    tables = {
+        "custom_constraints_rhs": pd.DataFrame(columns=_RHS_COLUMNS),
+        "custom_constraints_lhs": pd.DataFrame(columns=_LHS_COLUMNS),
+    }
+
+    # Three windows of two snapshots each, with no overlap.
+    optimize_with_rolling_horizon(network, tables, horizon=2, overlap=0)
+
+    state_of_charge = network.storage_units_t.state_of_charge[["battery"]]
+    state_of_charge = state_of_charge.reset_index().rename_axis(columns=None)
+
+    # The battery starts half full, at 10 MWh.
+    # Window 1 has no peak in it, so the battery discharges its full 5 MW at
+    # both snapshots to save gas, and ends empty.
+    # Window 2 starts from that empty level, not from 10 MWh again. It opens
+    # with the peak that window 1 couldn't see, so the battery has nothing to
+    # give, and with no peak later in the window it stays empty.
+    # Window 3 has the second peak in view, so the battery charges 5 MWh
+    # ahead of it and discharges into it.
+    expected = csv_str_to_df(
+        """
+        period,  timestep,             battery
+        2025,    2025-01-01 00:00:00,  5.0
+        2025,    2025-01-01 01:00:00,  0.0
+        2025,    2025-01-01 02:00:00,  0.0
+        2026,    2026-01-01 00:00:00,  0.0
+        2026,    2026-01-01 01:00:00,  5.0
+        2026,    2026-01-01 02:00:00,  0.0
+        """,
+        parse_dates=["timestep"],
+    )
+    pd.testing.assert_frame_equal(
+        state_of_charge, expected, check_dtype=False, check_exact=False
+    )
 
 
 def _network_with_fixed_and_extendable_capacities() -> pypsa.Network:
