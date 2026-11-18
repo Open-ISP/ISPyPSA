@@ -8,12 +8,19 @@ from isp_trace_parser import construct_reference_year_mapping
 from ispypsa.config import (
     ModelConfig,
 )
+from ispypsa.feature_flags import FEATURE_FLAGS
+from ispypsa.templater.custom_constraints_from_plexos import (
+    empty_custom_constraint_tables,
+)
 from ispypsa.translator.buses import (
     _create_single_region_bus,
     _translate_isp_sub_regions_to_buses,
     _translate_nem_regions_to_buses,
     _translate_rezs_to_buses,
     create_pypsa_friendly_bus_demand_timeseries,
+)
+from ispypsa.translator.constraints import (
+    _translate_custom_constraints as _translate_custom_constraints_from_new_format_tables,
 )
 from ispypsa.translator.custom_constraints import (
     _append_if_not_empty,
@@ -29,6 +36,10 @@ from ispypsa.translator.generators import (
 )
 from ispypsa.translator.helpers import convert_to_numeric_if_possible
 from ispypsa.translator.links import _translate_flow_paths_to_links
+from ispypsa.translator.network import (
+    _translate_network_geography_to_buses,
+    _translate_network_to_links,
+)
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_links,
 )
@@ -54,6 +65,42 @@ _BASE_TRANSLATOR_OUTPUTS = [
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "custom_constraints_generators",
+]
+
+# Outputs of the new-format translator path: only the tables translated from
+# the new format so far, plus a generators table (empty), which is a required
+# input for pypsa_build.
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TRANSLATOR_OUTPUTS and
+# delete _BASE_TRANSLATOR_OUTPUTS above.
+_NEW_FORMAT_TRANSLATOR_OUTPUTS = [
+    "snapshots",
+    "investment_period_weights",
+    "buses",
+    "links",
+    "link_timeslice_limits",
+    "timeslice_snapshots",
+    "generators",
+    "custom_constraints_lhs",
+    "custom_constraints_rhs",
+    "custom_constraints_generators",
+]
+
+# The columns of the header-only generators table the new-format path emits
+# until generators are translated from the new tables: the ones the custom
+# constraint translation and pypsa_build read.
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: delete once generators are
+# translated from the new tables.
+_UNTRANSLATED_GENERATOR_COLUMNS = [
+    "isp_name",
+    "name",
+    "carrier",
+    "bus",
+    "p_nom",
+    "p_nom_extendable",
+    "build_year",
+    "lifetime",
+    "capital_cost",
+    "marginal_cost",
 ]
 
 
@@ -90,6 +137,45 @@ def create_pypsa_friendly_inputs(
     Returns: dictionary of dataframes in the `PyPSA` friendly format. (add link to
         pypsa friendly format table docs)
     """
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep this branch, dedented,
+    # and delete the legacy body below it.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        pypsa_inputs = {}
+        pypsa_inputs["investment_period_weights"] = (
+            _create_investment_period_weightings(
+                config.temporal.capacity_expansion.investment_periods,
+                config.temporal.range.end_year,
+                config.discount_rate,
+            )
+        )
+        pypsa_inputs["buses"] = _translate_network_geography_to_buses(
+            ispypsa_tables["network_geography"], config.network.nodes.rezs
+        )
+        links, link_timeslice_limits = _translate_network_to_links(
+            ispypsa_tables, config
+        )
+        pypsa_inputs["links"] = links
+        pypsa_inputs["link_timeslice_limits"] = link_timeslice_limits
+
+        # Header-only stand-ins until generators, storage and demand are
+        # translated from the new tables. The templated custom constraints
+        # have terms on those components, so they are left out with them:
+        # only the expansion limit constraints are built.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: replace each stand-in
+        # with the table translated from the new format.
+        generators = pd.DataFrame(columns=_UNTRANSLATED_GENERATOR_COLUMNS)
+        storage = pd.DataFrame(columns=["isp_name", "name", "build_year", "lifetime"])
+        demand_nodes = pd.DataFrame(columns=["name"])
+        constraint_tables = ispypsa_tables | empty_custom_constraint_tables()
+        pypsa_inputs["generators"] = generators
+
+        pypsa_inputs.update(
+            _translate_custom_constraints_from_new_format_tables(
+                constraint_tables, links, generators, storage, demand_nodes, config
+            )
+        )
+        return pypsa_inputs
+
     pypsa_inputs = {}
 
     pypsa_inputs["investment_period_weights"] = _create_investment_period_weightings(
@@ -284,6 +370,16 @@ def create_pypsa_friendly_timeseries_inputs(
         pd.DataFrame containing the snapshots used for the timeseries.
     """
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
+    # generators and demand are translated from the new tables. Until then
+    # there are no traces to save, and the snapshots can't use an aggregation
+    # that needs them (named_representative_weeks).
+    if FEATURE_FLAGS["use_new_table_format"]:
+        snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+        return _add_snapshot_weightings(
+            snapshots, config.temporal.capacity_expansion.resolution_min
+        )
+
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
     else:
@@ -392,6 +488,12 @@ def list_timeseries_files(
         KeyError: If required ISPyPSA tables are missing
         ValueError: If required columns are missing from tables
     """
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
+    # generators and demand are translated from the new tables. Until then
+    # the new-format path saves no timeseries files.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        return []
+
     files = []
 
     # Validate required tables exist
@@ -516,7 +618,11 @@ def _filter_and_save_timeseries(
 
 
 def list_translator_output_files(output_path: Path | None = None) -> list[Path]:
-    files = _BASE_TRANSLATOR_OUTPUTS
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the legacy list.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        files = _NEW_FORMAT_TRANSLATOR_OUTPUTS
+    else:
+        files = _BASE_TRANSLATOR_OUTPUTS
     if output_path is not None:
         files = [output_path / Path(file + ".csv") for file in files]
     return files

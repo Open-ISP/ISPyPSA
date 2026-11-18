@@ -117,16 +117,16 @@ def _add_generators_to_network(
     # This is needed because numbers can be converted to strings if the data has been saved to a csv.
     generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
 
-    generators.apply(
-        lambda row: _add_generator_to_network(
+    # A loop rather than apply(axis=1): on a table with no rows, apply calls the
+    # function once with an empty row, which would add a generator named "nan".
+    for _, row in generators.iterrows():
+        _add_generator_to_network(
             row.to_dict(),
             network,
             path_to_solar_traces,
             path_to_wind_traces,
             path_to_marginal_costs,
-        ),
-        axis=1,
-    )
+        )
 
 
 def _add_custom_constraint_generators_to_network(

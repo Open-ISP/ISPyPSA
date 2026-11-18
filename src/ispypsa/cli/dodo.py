@@ -15,6 +15,7 @@ from ispypsa.data_fetch import (
     read_csvs,
     write_csvs,
 )
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.iasr_table_caching import build_local_cache, list_cache_files
 from ispypsa.logging import configure_logging
 from ispypsa.plotting import (
@@ -41,6 +42,7 @@ from ispypsa.translator import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
     create_pypsa_friendly_timeseries_inputs,
+    create_pypsa_friendly_timeslice_snapshots,
     list_timeseries_files,
     list_translator_output_files,
 )
@@ -235,7 +237,13 @@ def get_pypsa_friendly_input_files():
 @return_empty_list_if_no_config
 def get_operational_snapshots_file():
     """Get list with operational snapshots file."""
-    return [get_pypsa_friendly_directory() / "operational_snapshots.csv"]
+    files = [get_pypsa_friendly_directory() / "operational_snapshots.csv"]
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the condition.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        files.append(
+            get_pypsa_friendly_directory() / "operational_timeslice_snapshots.csv"
+        )
+    return files
 
 
 @return_empty_list_if_no_config
@@ -493,6 +501,17 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
         capacity_expansion_timeseries_location,
     )
 
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the condition.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        pypsa_tables["timeslice_snapshots"] = create_pypsa_friendly_timeslice_snapshots(
+            config,
+            "capacity_expansion",
+            ispypsa_tables["timeslices"],
+            pypsa_tables["snapshots"],
+            pypsa_tables["link_timeslice_limits"],
+            pypsa_tables["custom_constraints_rhs"],
+        )
+
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
 
@@ -585,7 +604,22 @@ def create_operational_timeseries() -> None:
         operational_timeseries_location,
     )
 
-    write_csvs({"operational_snapshots": operational_snapshots}, output_tables_dir)
+    operational_tables = {"operational_snapshots": operational_snapshots}
+
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop the condition.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        operational_tables["operational_timeslice_snapshots"] = (
+            create_pypsa_friendly_timeslice_snapshots(
+                config,
+                "operational",
+                ispypsa_tables["timeslices"],
+                operational_snapshots,
+                pypsa_friendly_input_tables["link_timeslice_limits"],
+                pypsa_friendly_input_tables["custom_constraints_rhs"],
+            )
+        )
+
+    write_csvs(operational_tables, output_tables_dir)
 
 
 def create_and_run_operational_model() -> None:
@@ -611,11 +645,16 @@ def create_and_run_operational_model() -> None:
     network = pypsa.Network(capacity_expansion_pypsa_file)
 
     # Update network timeseries
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: index the table directly; it
+    # is only absent under the old table format.
     update_network_timeseries(
         network,
         pypsa_friendly_input_tables,
         pypsa_friendly_input_tables["operational_snapshots"],
         operational_timeseries_location,
+        timeslice_snapshots=pypsa_friendly_input_tables.get(
+            "operational_timeslice_snapshots"
+        ),
     )
 
     # Fix optimal capacities from capacity expansion

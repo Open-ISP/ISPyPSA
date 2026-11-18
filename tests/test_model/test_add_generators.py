@@ -4,6 +4,7 @@ import pytest
 
 from ispypsa.pypsa_build.generators import (
     _add_generator_to_network,
+    _add_generators_to_network,
 )
 
 
@@ -191,3 +192,13 @@ def test_add_generator_to_network_with_traces(mock_network, mock_trace_paths):
     assert all(
         expected_values == mock_network.generators_t.p_max_pu["solar_gen"].values
     )
+
+
+def test_add_generators_to_network_with_no_generators(mock_network, tmp_path):
+    generators = pd.DataFrame(
+        columns=["name", "carrier", "bus", "p_nom", "marginal_cost"]
+    )
+
+    _add_generators_to_network(mock_network, generators, tmp_path)
+
+    assert list(mock_network.generators.index) == []
