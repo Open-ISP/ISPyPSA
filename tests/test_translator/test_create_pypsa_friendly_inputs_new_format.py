@@ -11,7 +11,10 @@ import pytest
 
 from ispypsa.translator import (
     create_pypsa_friendly_inputs,
+    create_pypsa_friendly_snapshots,
+    create_pypsa_friendly_timeseries_inputs,
     create_pypsa_friendly_timeslice_snapshots,
+    list_timeseries_files,
     list_translator_output_files,
 )
 from ispypsa.translator.create_pypsa_friendly import _UNTRANSLATED_GENERATOR_COLUMNS
@@ -137,6 +140,39 @@ def test_create_pypsa_friendly_inputs_new_format(
     assert len(result["custom_constraints_generators"]) == 0
 
 
+def test_create_pypsa_friendly_timeseries_inputs_new_format(
+    sample_model_config, new_table_format, tmp_path
+):
+    # Wiring only: the snapshots themselves are covered by the snapshot tests.
+    timeseries_location = tmp_path / "capacity_expansion_timeseries"
+
+    result = create_pypsa_friendly_timeseries_inputs(
+        sample_model_config,
+        "capacity_expansion",
+        {},
+        pd.DataFrame(),
+        tmp_path / "parsed_traces",
+        timeseries_location,
+    )
+
+    assert list(result.columns) == [
+        "investment_periods",
+        "snapshots",
+        "objective",
+        "generators",
+        "stores",
+    ]
+    expected_snapshots = create_pypsa_friendly_snapshots(
+        sample_model_config, "capacity_expansion"
+    )
+    assert len(result) == len(expected_snapshots)
+
+    # Generators and demand aren't translated from the new tables yet, so no
+    # timeseries files are saved or listed.
+    assert not timeseries_location.exists()
+    assert list_timeseries_files(sample_model_config, {}, timeseries_location) == []
+
+
 def test_create_pypsa_friendly_timeslice_snapshots(
     csv_str_to_df, sample_model_config, caplog
 ):
@@ -191,3 +227,48 @@ def test_create_pypsa_friendly_timeslice_snapshots(
         "in the model (these limits will never apply): ['qld_summer_typical']"
     ) in caplog.text
     assert "Timeslices referenced by custom constraints" not in caplog.text
+
+
+def test_operational_timeslice_snapshots_use_the_operational_reference_years(
+    csv_str_to_df, sample_model_config
+):
+    # The capacity expansion phase replays reference year 2024 and the
+    # operational phase 2023, and the peak window differs between the two.
+    config = sample_model_config.model_copy(deep=True)
+    config.temporal.operational.reference_year_cycle = [2023]
+    timeslices = csv_str_to_df("""
+        timeslice,        reference_year,  start_month_day,  end_month_day
+        qld_peak_demand,  2023,            01-20,            01-22
+        qld_peak_demand,  2024,            01-13,            01-15
+    """)
+    snapshots = csv_str_to_df("""
+        investment_periods,  snapshots
+        2026,                2026-01-13 12:00:00
+        2026,                2026-01-20 12:00:00
+    """)
+    snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
+    link_timeslice_limits = csv_str_to_df("""
+        name,            attribute,  timeslice,        value
+        CQ-NQ_existing,  p_max_pu,   qld_peak_demand,  0.8
+        CQ-NQ_existing,  p_max_pu,   ,                 1.0
+    """)
+    custom_constraints_rhs = csv_str_to_df("""
+        constraint_name,  investment_period,  timeslice,  rhs,  constraint_type
+    """)
+
+    result = create_pypsa_friendly_timeslice_snapshots(
+        config,
+        "operational",
+        timeslices,
+        snapshots,
+        link_timeslice_limits,
+        custom_constraints_rhs,
+    )
+
+    # 20 January is in the 2023 peak window; 13 January is only in the 2024 one.
+    expected = csv_str_to_df("""
+        timeslice,        investment_periods,  snapshots
+        qld_peak_demand,  2026,                2026-01-20 12:00:00
+    """)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+    pd.testing.assert_frame_equal(result, expected)
