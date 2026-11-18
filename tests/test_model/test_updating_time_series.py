@@ -472,3 +472,92 @@ def test_update_timeseries_with_matching_snapshots(csv_str_to_df):
 
         # Verify the model was built successfully (no xarray dimension error)
         assert network.model is not None
+
+
+def test_update_timeseries_applies_operational_snapshot_weightings(
+    csv_str_to_df, tmp_path
+):
+    """The updated network takes every snapshot's weightings from the operational
+    snapshots table, whether or not the snapshot was in the capacity expansion model.
+    """
+    demand_dir = tmp_path / "demand_traces"
+    demand_dir.mkdir()
+
+    capacity_expansion_snapshots = csv_str_to_df("""
+        investment_periods,  snapshots,            objective,  generators,  stores
+        2025,                2025-01-01 01:00:00,  4380.0,     4380.0,      1.0
+        2025,                2025-01-01 02:00:00,  4380.0,     4380.0,      1.0
+    """)
+
+    # Half-hourly, where capacity expansion is hourly. The first snapshot is also a
+    # capacity expansion snapshot; the other two are not.
+    operational_snapshots = csv_str_to_df("""
+        investment_periods,  snapshots,            objective,  generators,  stores
+        2025,                2025-01-01 01:00:00,  2920.0,     2920.0,      0.5
+        2025,                2025-01-08 00:30:00,  2920.0,     2920.0,      0.5
+        2025,                2025-01-08 01:00:00,  2920.0,     2920.0,      0.5
+    """)
+
+    buses = csv_str_to_df("""
+        name
+        bus1
+    """)
+
+    generators = csv_str_to_df("""
+        name,  carrier,  bus,   p_nom,  p_nom_extendable,  p_nom_max,  capital_cost,  marginal_cost
+        gas,   Gas,      bus1,  200,    False,             200,        0,             50
+    """)
+
+    investment_period_weights = csv_str_to_df("""
+        period,  years,  objective
+        2025,    1,      1
+    """)
+
+    pypsa_friendly_inputs = {
+        "snapshots": capacity_expansion_snapshots,
+        "buses": buses,
+        "generators": generators,
+        "investment_period_weights": investment_period_weights,
+        "custom_constraints_lhs": pd.DataFrame(),
+        "custom_constraints_rhs": pd.DataFrame(),
+        "custom_constraints_generators": pd.DataFrame(),
+    }
+
+    capacity_expansion_demand = csv_str_to_df("""
+        investment_periods,  snapshots,            p_set
+        2025,                2025-01-01 01:00:00,  100
+        2025,                2025-01-01 02:00:00,  100
+    """)
+    capacity_expansion_demand["snapshots"] = pd.to_datetime(
+        capacity_expansion_demand["snapshots"]
+    )
+    capacity_expansion_demand.to_parquet(demand_dir / "bus1.parquet")
+
+    network = build_pypsa_network(pypsa_friendly_inputs, tmp_path)
+
+    operational_demand = csv_str_to_df("""
+        investment_periods,  snapshots,            p_set
+        2025,                2025-01-01 01:00:00,  100
+        2025,                2025-01-08 00:30:00,  100
+        2025,                2025-01-08 01:00:00,  100
+    """)
+    operational_demand["snapshots"] = pd.to_datetime(operational_demand["snapshots"])
+    operational_demand.to_parquet(demand_dir / "bus1.parquet")
+
+    update_network_timeseries(
+        network, pypsa_friendly_inputs, operational_snapshots, tmp_path
+    )
+
+    # Without the operational weightings applied, 2025-01-01 01:00 would keep the
+    # capacity expansion weightings (4380, 4380, 1.0) and the two 2025-01-08
+    # snapshots would get PyPSA's default of 1.0 in every column.
+    expected_weightings = csv_str_to_df("""
+        period,  timestep,             objective,  generators,  stores
+        2025,    2025-01-01 01:00:00,  2920.0,     2920.0,      0.5
+        2025,    2025-01-08 00:30:00,  2920.0,     2920.0,      0.5
+        2025,    2025-01-08 01:00:00,  2920.0,     2920.0,      0.5
+    """)
+    expected_weightings["timestep"] = pd.to_datetime(expected_weightings["timestep"])
+    pd.testing.assert_frame_equal(
+        network.snapshot_weightings.reset_index(), expected_weightings
+    )

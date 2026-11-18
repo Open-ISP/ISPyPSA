@@ -224,6 +224,7 @@ class DummyConfigTwo:
 
 def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     tmp_path,
+    csv_str_to_df,
     sample_ispypsa_tables: dict[str, pd.DataFrame],
 ):
     """Test create_pypsa_friendly_timeseries_inputs for capacity expansion mode."""
@@ -296,6 +297,17 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
         output_dir,
     )
 
+    # One representative week at the capacity expansion resolution of 60 min is 168
+    # snapshots, so objective and generators are 8760 / 168 and stores is 60 / 60.
+    expected_weightings = csv_str_to_df("""
+        objective,  generators,  stores
+        52.142857,  52.142857,   1.0
+    """)
+    pd.testing.assert_frame_equal(
+        snapshots[["objective", "generators", "stores"]].drop_duplicates(),
+        expected_weightings,
+    )
+
     # Verify outputs
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
@@ -351,6 +363,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
 
 def test_create_pypsa_friendly_timeseries_inputs_operational(
     tmp_path,
+    csv_str_to_df,
     sample_ispypsa_tables: dict[str, pd.DataFrame],
 ):
     """Test create_pypsa_friendly_timeseries_inputs for operational mode."""
@@ -407,6 +420,18 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
         generators,
         parsed_trace_path,
         output_dir,
+    )
+
+    # Two representative weeks at the operational resolution of 30 min are 672
+    # snapshots, so objective and generators are 8760 / 672 and stores is 30 / 60,
+    # not the 60 / 60 of the capacity expansion resolution.
+    expected_weightings = csv_str_to_df("""
+        objective,  generators,  stores
+        13.035714,  13.035714,   0.5
+    """)
+    pd.testing.assert_frame_equal(
+        snapshots[["objective", "generators", "stores"]].drop_duplicates(),
+        expected_weightings,
     )
 
     # Verify outputs
