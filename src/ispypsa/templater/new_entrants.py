@@ -10,7 +10,8 @@ There are two independent public orchestrators, one per output table. Each one:
     1. Filters the summary to its technology group (generators or storage)
     2. Renames the carried-over summary columns to their schema names
     3. Derives geo_id (REZ ID or sub-region)
-    4. (Generators only) Derives resource_type from the VRE code in the IASR ID
+    4. (Generators only) Derives resource_type from the VRE code in the IASR ID, and
+       resource_zone from the REZ ID (or the REZ sub-area, e.g. Q8a, in the IASR ID)
     5. Merges in per-technology property values — each a single number looked up by
        technology, via helpers._merge_category_keyed_properties (see the property
        merge maps in mappings.py, e.g. _GENERATORS_NEW_ENTRANT_PROPERTY_MAP).
@@ -54,6 +55,7 @@ from ispypsa.templater.mappings import (
     _GENERATORS_NEW_ENTRANT_PROPERTY_MAP,
     _STORAGE_BATTERY_PROPERTY_MAP,
     _STORAGE_PHES_PROPERTY_MAP,
+    _SUB_REZ_AREA_TO_REZ_ID,
     _SUMMARY_COLUMN_RENAMES,
 )
 
@@ -61,6 +63,7 @@ _GENERATOR_IDENTITY_COLUMNS = [
     "name",
     "technology",
     "resource_type",
+    "resource_zone",
     "geo_id",
     "fuel_type",
 ]
@@ -103,7 +106,12 @@ _STORAGE_PROPERTY_COLUMNS = [
 
 # Columns that define a distinct sub-region-located technology option for granularity
 # collapse (see _collapse_geo_id_to_granularity).
-_GENERATOR_GEO_ID_GROUP_KEYS = ["technology", "resource_type", "fuel_type"]
+_GENERATOR_GEO_ID_GROUP_KEYS = [
+    "technology",
+    "resource_type",
+    "resource_zone",
+    "fuel_type",
+]
 _STORAGE_GEO_ID_GROUP_KEYS = ["technology", "fuel_type"]
 
 
@@ -150,8 +158,9 @@ def _template_generators_new_entrant(
     """Templates the new entrant generators table from the IASR summary and properties.
 
     Keeps only generator rows, renames the carried-over summary columns to schema
-    names, derives geo_id (REZ ID or sub-region) and resource_type (from the VRE
-    resource code in the IASR ID), merges in the per-technology property columns
+    names, derives geo_id (REZ ID or sub-region), resource_type (from the VRE
+    resource code in the IASR ID) and resource_zone (see ``_add_resource_zone``),
+    merges in the per-technology property columns
     (see ``_GENERATORS_NEW_ENTRANT_PROPERTY_MAP``) and the two locational cost factors
     (``lcf_build`` per geo_id+technology, ``lcf_om`` per geo_id), collapses geo_id to
     ``regional_granularity`` (see ``_collapse_geo_id_to_granularity``), and returns
@@ -186,6 +195,7 @@ def _template_generators_new_entrant(
     gens = gens.rename(columns=_SUMMARY_COLUMN_RENAMES)
     gens = _set_geo_id(gens)
     gens = _add_resource_type(gens)
+    gens = _add_resource_zone(gens)
     gens = _merge_category_keyed_properties(
         gens, iasr_tables, _GENERATORS_NEW_ENTRANT_PROPERTY_MAP, df_key_col="technology"
     )
@@ -685,4 +695,43 @@ def _add_resource_type(gens: pd.DataFrame) -> pd.DataFrame:
     gens = gens.copy()
     resource_code = gens["name"].str.extract(_RESOURCE_CODE_PATTERN, expand=False)
     gens["resource_type"] = resource_code.map(_RESOURCE_QUALITY_CODE_TO_TYPE)
+    return gens
+
+
+def _add_resource_zone(gens: pd.DataFrame) -> pd.DataFrame:
+    """Adds ``resource_zone``: the REZ a generator sits in, or its REZ sub-area.
+
+    For most REZ-located generators this is just the REZ ID. The exception in v7.5
+    is the REZ sub-areas in ``_SUB_REZ_AREA_TO_REZ_ID`` (Q8a/b/c): the IASR keys
+    their resource limits by sub-area, but new_entrants_summary gives them the
+    parent REZ ID (Q8), so the sub-area is taken from the leading token of the
+    IASR ID instead. Note: this method relies on the IASR naming convention for
+    REZ-located VRE, which uses underscores to separate components.
+
+    Other prefixes that aren't declared in ``_SUB_REZ_AREA_TO_REZ_ID``
+    are never read, e.g. DREZ, which is IASR's naming prefix for the DN1–3 REZs.
+    Sub-region-located generators get NaN.
+
+    I/O Example:
+        gens:
+            name                   REZ ID
+            Q1_WH_Far North QLD    Q1
+            Q8a_WH_Darling Downs   Q8
+            DREZ_SAT_Dubbo         DN1
+            CNSW OCGT Small        Not Applicable
+
+        returns (adds resource_zone):
+            name                   REZ ID          resource_zone
+            Q1_WH_Far North QLD    Q1              Q1
+            Q8a_WH_Darling Downs   Q8              Q8a  # known sub-area prefix
+            DREZ_SAT_Dubbo         DN1             DN1  # unknown prefix, so REZ ID
+            CNSW OCGT Small        Not Applicable  NaN  # sub-region-located
+    """
+    gens = gens.copy()
+    name_prefix = gens["name"].str.split("_").str[0]
+    is_sub_area = name_prefix.isin(_SUB_REZ_AREA_TO_REZ_ID)
+    is_rez_located = gens["REZ ID"] != "Not Applicable"
+    gens["resource_zone"] = (
+        gens["REZ ID"].where(is_rez_located).mask(is_sub_area, name_prefix)
+    )
     return gens

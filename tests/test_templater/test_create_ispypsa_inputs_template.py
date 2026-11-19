@@ -652,6 +652,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "name",
         "technology",
         "resource_type",
+        "resource_zone",
         "geo_id",
         "fuel_type",
         "fom",
