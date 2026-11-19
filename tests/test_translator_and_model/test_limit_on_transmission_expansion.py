@@ -185,7 +185,7 @@ def test_flow_path_expansion_limit_respected(csv_str_to_df, tmp_path, monkeypatc
     pypsa_timeseries_dir.mkdir(parents=True)
 
     # Create demand traces for the network model with custom snapshots
-    returned_snapshots = create_pypsa_friendly_timeseries_inputs(
+    returned_snapshots, _ = create_pypsa_friendly_timeseries_inputs(
         config=config,
         model_phase="capacity_expansion",
         ispypsa_tables=ispypsa_tables,

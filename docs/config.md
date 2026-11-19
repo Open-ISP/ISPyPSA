@@ -321,6 +321,39 @@ Examples:
 
 ```named_representative_weeks: [residual-peak-demand, minimum-demand]```
 
+#### temporal.capacity_expansion.aggregation.tsam
+
+Merges consecutive time intervals into segments of varying length using the
+[tsam](https://github.com/FZJ-IEK3-VSA/tsam) package, so that stretches of time where
+little changes are modelled as a few long intervals. It is applied after any representative
+weeks have been chosen, and is only available for the capacity expansion phase. See
+[Segments](method.md#segments) for how the segments are chosen.
+
+Options:
+
+- "None": Time intervals are not merged.
+- `features`: which traces are used to decide which intervals to merge. Every trace is
+  averaged over the resulting segments, whichever option is chosen.
+    - `demand`: the demand trace of each node in the model.
+    - `all-traces`: the demand traces and every wind and solar trace.
+- `segments`: the number of segments to merge the intervals into. Exactly one of the
+  following must be set:
+    - `n_segments_per_year`: segments are chosen across each whole model year. Cannot
+      be combined with `representative_weeks` or `named_representative_weeks`.
+    - `n_segments_per_week`: each week (Monday-Sunday) is divided into segments
+      separately. A week cut short by the start or end of a model year gets a share of
+      the segments in proportion to its length.
+    - `n_segments_per_day`: each day is divided into segments separately.
+
+Examples:
+
+```yaml
+tsam:
+  features: demand
+  segments:
+    n_segments_per_day: 8
+```
+
 ### temporal.operational
 
 The temporal settings for the operational phase of the modelling.

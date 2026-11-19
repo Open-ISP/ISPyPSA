@@ -1072,12 +1072,93 @@ def create_pypsa_friendly_new_entrant_generator_timeseries(
         if not output_trace_path.exists():
             output_trace_path.mkdir(parents=True)
 
+    generator_traces = _get_new_entrant_generator_traces(
+        new_entrant_generators,
+        trace_data_path,
+        generator_types,
+        reference_year_mapping,
+        year_type,
+    )
+
+    for fuel_type in generator_traces:
+        _filter_and_save_generator_traces(
+            generator_traces[fuel_type], snapshots, output_paths[fuel_type]
+        )
+
+
+def _filter_and_save_generator_traces(
+    generator_traces: dict[str, pd.DataFrame],
+    snapshots: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    """Saves each generator's trace at the model's snapshots as
+    <output_path>/<generator name>.parquet, with the columns investment_periods,
+    snapshots and p_max_pu. Raises if a trace doesn't cover every snapshot.
+    """
+    for name, trace in generator_traces.items():
+        trace = trace.rename(columns={"datetime": "snapshots", "value": "p_max_pu"})
+
+        trace = _time_series_filter(trace, snapshots)
+        _check_time_series(
+            trace["snapshots"],
+            snapshots["snapshots"],
+            "generator trace data",
+            str(name),
+        )
+        trace = pd.merge(trace, snapshots, on="snapshots")
+        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
+        trace.to_parquet(Path(output_path, f"{name}.parquet"), index=False)
+
+
+def _get_new_entrant_generator_traces(
+    new_entrant_generators: pd.DataFrame,
+    trace_data_path: Path | str,
+    generator_types: List[Literal["solar", "wind"]],
+    reference_year_mapping: dict[int, int],
+    year_type: Literal["fy", "calendar"],
+) -> dict[str, dict[str, pd.DataFrame]]:
+    """Gets the trace of each new entrant generator of the given types, taken from
+    the trace of its REZ and resource type, for every year in the reference year
+    mapping. The traces are returned in the same layout as
+    `create_pypsa_friendly_ecaa_generator_timeseries` returns them: by generator
+    type, then by generator name.
+
+    I/O Example (generator_types ["solar", "wind"]):
+        new_entrant_generators:
+            generator       isp_resource_type  fuel_type  rez_id
+            wind_wh_N1      WH                 Wind       N1
+            solar_sat_N1    SAT                Solar      N1
+            gas_ccgt_NNSW   CCGT               Gas        NNSW    # not a requested type
+
+        trace data found under trace_data_path / "zone":
+            zone  resource_type  datetime             value
+            N1    WH             2024-07-01 00:30:00  0.4
+            N1    SAT            2024-07-01 00:30:00  0.0
+
+        returns:
+            {
+                "solar": {"solar_sat_N1": <trace>},
+                "wind": {"wind_wh_N1": <trace>},
+            }
+
+        where each trace keeps the generator and trace data columns:
+            generator   isp_resource_type  fuel_type  rez_id  zone  resource_type  datetime             value
+            wind_wh_N1  WH                 wind       N1      N1    WH             2024-07-01 00:30:00  0.4
+    """
+    generator_traces = {gen_type: {} for gen_type in generator_types}
+
+    if new_entrant_generators.empty:
+        return generator_traces
+
     where_gen_type = _where_any_substring_appears(
         new_entrant_generators["fuel_type"], generator_types
     )
     generators = new_entrant_generators.loc[
         where_gen_type, ["generator", "isp_resource_type", "fuel_type", "rez_id"]
     ]
+    if generators.empty:
+        return generator_traces
+
     generators["fuel_type"] = generators["fuel_type"].str.lower()
     generators = generators.drop_duplicates()
 
@@ -1101,15 +1182,6 @@ def create_pypsa_friendly_new_entrant_generator_timeseries(
     for (name, fuel_type), trace in trace_data.groupby(["generator", "fuel_type"]):
         # datetime in nanoseconds required by PyPSA
         trace["datetime"] = trace["datetime"].astype("datetime64[ns]")
-        trace = trace.rename(columns={"datetime": "snapshots", "value": "p_max_pu"})
+        generator_traces[fuel_type][name] = trace
 
-        trace = _time_series_filter(trace, snapshots)
-        _check_time_series(
-            trace["snapshots"],
-            snapshots["snapshots"],
-            "generator trace data",
-            str(name),
-        )
-        trace = pd.merge(trace, snapshots, on="snapshots")
-        trace = trace.loc[:, ["investment_periods", "snapshots", "p_max_pu"]]
-        trace.to_parquet(Path(output_paths[fuel_type], f"{name}.parquet"), index=False)
+    return generator_traces

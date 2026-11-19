@@ -484,7 +484,7 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
     pypsa_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
     # Create capacity expansion timeseries
-    pypsa_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         ispypsa_tables,
@@ -492,6 +492,8 @@ def create_pypsa_inputs_for_capacity_expansion_model() -> None:
         parsed_trace_dir,
         capacity_expansion_timeseries_location,
     )
+    pypsa_tables["snapshots"] = snapshots
+    pypsa_tables["snapshot_map"] = snapshot_map
 
     write_csvs(pypsa_tables, pypsa_friendly_dir)
 
@@ -576,7 +578,9 @@ def create_operational_timeseries() -> None:
     pypsa_friendly_input_tables = read_csvs(pypsa_friendly_dir)
 
     # Create operational timeseries
-    operational_snapshots = create_pypsa_friendly_timeseries_inputs(
+    # Snapshots are never merged into segments for the operational phase, so
+    # its snapshot map has no rows and isn't written.
+    operational_snapshots, _ = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,
