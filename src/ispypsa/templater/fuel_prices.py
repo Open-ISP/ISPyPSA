@@ -3,10 +3,10 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _collapse_geo_id_and_average,
     _filter_table_by_isp_scenario,
-    _financial_year_string_to_end_year_int,
-    _looks_like_financial_year,
     _map_geo_id_to_granularity,
+    _melt_financial_year_columns,
     _set_geo_id,
 )
 from ispypsa.templater.mappings import _SUMMARY_COLUMN_RENAMES
@@ -230,13 +230,17 @@ def _template_fuel_prices(
     )
 
     # fuel-wide prices
-    biomass_prices = _melt_fuel_prices_to_long(
+    biomass_prices = _melt_financial_year_columns(
         price_tables["biomass_fuel_price"],
         ["fuel_type"],
+        "price",
+        "biomass_fuel_price",
     )
-    hydrogen_prices = _melt_fuel_prices_to_long(
+    hydrogen_prices = _melt_financial_year_columns(
         price_tables["hydrogen_prices"],
         ["fuel_type"],
+        "price",
+        "hydrogen_prices",
     )
     biomethane_prices = _template_biomethane_prices(price_tables["biomethane_prices"])
 
@@ -326,7 +330,6 @@ def _prepare_price_tables(
         name: _filter_table_by_isp_scenario(
             iasr_tables[name].rename(columns=_PRICE_TABLE_COLUMN_RENAMES),
             scenario,
-            "scenario",
             name,
         )
         for name in _FUEL_PRICE_TABLES
@@ -362,7 +365,9 @@ def _template_station_keyed_prices(
     """
     generators = _select_generator_keys(summary_existing, fuel_types)
     merged = _merge_prices_onto_generators(prices, generators, price_table_name)
-    return _melt_fuel_prices_to_long(merged, _STATION_KEY_COLS)
+    return _melt_financial_year_columns(
+        merged, _STATION_KEY_COLS, "price", price_table_name
+    )
 
 
 def _combine_gas_price_tables(price_tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
@@ -416,9 +421,8 @@ def _template_secondary_liquid_fuel_prices(
     )
     # manually set fuel_type -> otherwise would be 'Gas' from the merge still.
     merged = merged.assign(fuel_type="Liquid Fuel")
-    return _melt_fuel_prices_to_long(
-        merged,
-        _STATION_KEY_COLS,
+    return _melt_financial_year_columns(
+        merged, _STATION_KEY_COLS, "price", "gpg_secondary_fuel_prices"
     )
 
 
@@ -450,7 +454,7 @@ def _template_new_entrant_gas_prices(
     option names, so it's dropped, and options left sharing a technology, geo_id
     and fuel_cost_mapping (the WOO options, which sit in CNSW) are de-duplicated.
     The rest are priced per sub-region, then collapsed to the regional granularity
-    (see _collapse_new_entrant_gas_prices_to_granularity).
+    (see _collapse_geo_id_and_average).
 
     I/O Example:
         Inputs:
@@ -508,47 +512,15 @@ def _template_new_entrant_gas_prices(
         generators,
         "gas_prices_new_entrants",
     )
-    long = _melt_fuel_prices_to_long(
-        merged,
-        _NEW_ENTRANT_KEY_COLS,
+    long = _melt_financial_year_columns(
+        merged, _NEW_ENTRANT_KEY_COLS, "price", "gas_prices_new_entrants"
     )
-    return _collapse_new_entrant_gas_prices_to_granularity(
-        long, regional_granularity, sub_regional_geography
-    )
-
-
-def _collapse_new_entrant_gas_prices_to_granularity(
-    prices: pd.DataFrame,
-    regional_granularity: str,
-    sub_regional_geography: pd.DataFrame,
-) -> pd.DataFrame:
-    """Maps each price's geo_id to ``regional_granularity`` and averages rows that
-    share a fuel_type, technology, geo_id and year.
-
-    I/O Example:
-        Inputs:
-            prices:
-                fuel_type  technology       geo_id  year  price
-                Gas        OCGT (small GT)  CNSW    2026  16.0
-                Gas        OCGT (small GT)  SQ      2026  13.0
-
-            sub_regional_geography:
-                geo_id  geo_type   region_id
-                CNSW    subregion  NSW
-                SQ      subregion  QLD
-
-            regional_granularity="single_region"
-
-        returns:
-            fuel_type  technology       geo_id  year  price
-            Gas        OCGT (small GT)  NEM     2026  14.50  # mean(16, 13); geo_id -> NEM
-    """
-    prices = prices.copy()
-    prices["geo_id"] = _map_geo_id_to_granularity(
-        prices["geo_id"], regional_granularity, sub_regional_geography
-    )
-    return (
-        prices.groupby(_NEW_ENTRANT_KEY_COLS + ["year"])["price"].mean().reset_index()
+    return _collapse_geo_id_and_average(
+        long,
+        _NEW_ENTRANT_KEY_COLS + ["year"],
+        "price",
+        regional_granularity,
+        sub_regional_geography,
     )
 
 
@@ -574,7 +546,9 @@ def _template_biomethane_prices(
     # Filter for the specific 'Biomethane price'-type specified in IASR note:
     prices = prices[prices["fuel_type"] == _BIOMETHANE_PRICE_TYPE]
     prices = prices.assign(fuel_type="Biomethane")
-    return _melt_fuel_prices_to_long(prices, ["fuel_type"])
+    return _melt_financial_year_columns(
+        prices, ["fuel_type"], "price", "biomethane_prices"
+    )
 
 
 def _zero_cost_rows() -> pd.DataFrame:
@@ -686,32 +660,3 @@ def _raise_on_unpriced_generators(merged: pd.DataFrame, message: str) -> None:
     )
     if unmatched:
         raise ValueError(f"{message}: {unmatched}")
-
-
-def _melt_fuel_prices_to_long(table: pd.DataFrame, id_cols: list[str]) -> pd.DataFrame:
-    """Melts the financial-year columns of ``table`` into one row per ``id_cols`` row and year.
-
-    Each year is the one its financial year ends in, and a price that isn't numeric
-    raises. Columns that are neither in ``id_cols`` nor a financial year (e.g.
-    fuel_cost_mapping after a merge) are dropped.
-
-    I/O Example (id_cols=["power_station"]):
-        table:
-            power_station  fuel_cost_mapping  2024-25  2025-26
-            Bayswater      Bayswater          4.12     3.95
-
-        returns:
-            power_station  year  price
-            Bayswater      2025  4.12
-            Bayswater      2026  3.95
-    """
-    year_cols = [c for c in table.columns if _looks_like_financial_year(c)]
-    long = table.melt(
-        id_vars=id_cols,
-        value_vars=year_cols,
-        var_name="year",
-        value_name="price",
-    )
-    long["year"] = long["year"].map(_financial_year_string_to_end_year_int)
-    long["price"] = pd.to_numeric(long["price"])
-    return long
