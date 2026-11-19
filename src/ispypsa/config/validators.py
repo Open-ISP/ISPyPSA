@@ -47,6 +47,34 @@ class NetworkConfig(BaseModel):
     transmission_default_limit: float
 
 
+class TsamSegmentsConfig(BaseModel):
+    n_segments_per_year: int | None = None
+    n_segments_per_week: int | None = None
+    n_segments_per_day: int | None = None
+
+    @model_validator(mode="after")
+    def validate_exactly_one_option_is_set(self):
+        options = [
+            self.n_segments_per_year,
+            self.n_segments_per_week,
+            self.n_segments_per_day,
+        ]
+        set_options = [option for option in options if option is not None]
+        if len(set_options) != 1:
+            raise ValueError(
+                "config tsam segments must set exactly one of n_segments_per_year, "
+                "n_segments_per_week and n_segments_per_day"
+            )
+        if set_options[0] < 1:
+            raise ValueError("config tsam segments must be at least 1")
+        return self
+
+
+class TsamConfig(BaseModel):
+    features: Literal["demand", "all-traces"]
+    segments: TsamSegmentsConfig
+
+
 class TemporalAggregationConfig(BaseModel):
     representative_weeks: list[int] | None
     named_representative_weeks: (
@@ -62,6 +90,28 @@ class TemporalAggregationConfig(BaseModel):
         ]
         | None
     ) = None
+    tsam: TsamConfig | None = None
+
+    @model_validator(mode="after")
+    def validate_yearly_segments_are_not_combined_with_weeks(self):
+        # Representative weeks leave gaps in the year, and a segment that spanned
+        # a gap would average half-hours that aren't adjacent in time. Weekly and
+        # daily segments can't span a gap, so they can be combined with weeks.
+        uses_weeks = (
+            self.representative_weeks is not None
+            or self.named_representative_weeks is not None
+        )
+        if (
+            self.tsam is not None
+            and self.tsam.segments.n_segments_per_year is not None
+            and uses_weeks
+        ):
+            raise ValueError(
+                "config tsam n_segments_per_year cannot be combined with "
+                "representative_weeks or named_representative_weeks, use "
+                "n_segments_per_week or n_segments_per_day instead"
+            )
+        return self
 
 
 class TemporalRangeConfig(BaseModel):
@@ -104,6 +154,16 @@ class TemporalDetailedConfig(BaseModel):
 class TemporalOperationalConfig(TemporalDetailedConfig):
     horizon: int
     overlap: int
+
+    @model_validator(mode="after")
+    def validate_tsam_is_not_used(self):
+        # The rolling horizon counts its windows in snapshots, which assumes
+        # every snapshot is the same length. Segments are not.
+        if self.aggregation.tsam is not None:
+            raise ValueError(
+                "config tsam aggregation is only available for capacity_expansion"
+            )
+        return self
 
 
 class TemporalCapacityInvestmentConfig(TemporalDetailedConfig):

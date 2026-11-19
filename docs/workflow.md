@@ -209,7 +209,7 @@ step can be run using either the ISPyPSA CLI or API.
     pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
     # Create timeseries inputs
-    pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         ispypsa_tables,
@@ -217,6 +217,10 @@ step can be run using either the ISPyPSA CLI or API.
         parsed_traces_directory,
         capacity_expansion_timeseries_location,
     )
+    pypsa_friendly_input_tables["snapshots"] = snapshots
+    # Which snapshots were merged into each segment, if the config sets tsam
+    # aggregation. Otherwise this table has no rows.
+    pypsa_friendly_input_tables["snapshot_map"] = snapshot_map
 
     write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
     ```
@@ -291,7 +295,7 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     )
 
     # Create timeseries inputs
-    operational_snapshots = create_pypsa_friendly_timeseries_inputs(
+    operational_snapshots, _ = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         ispypsa_tables,

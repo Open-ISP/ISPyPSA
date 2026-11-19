@@ -194,6 +194,37 @@ config inputs.
 - If both `representative_weeks` and `named_representative_weeks` are given, then weeks from both aggregations are used.
   If the same week is selected twice only one instance is kept.
 
+### Segments
+
+The `tsam` input in the model config merges consecutive time intervals into segments of
+varying length, using the [tsam](https://github.com/FZJ-IEK3-VSA/tsam) package:
+
+- The time intervals are first split into blocks: model years, weeks (Monday to Sunday) or
+days, depending on which of `n_segments_per_year`, `n_segments_per_week` and
+`n_segments_per_day` is set. Each block is divided into the given number of segments
+separately, so a segment never crosses from one block into the next.
+- Within a block, the neighbouring intervals whose values are most alike are merged first, so
+quiet stretches end up as a few long segments and fast-changing stretches as many short ones.
+The values compared are the traces chosen by `features`: the demand trace of each node, or
+the demand traces and every wind and solar trace. Each trace is scaled to its own range
+within the block before the comparison.
+- Every demand, wind and solar trace is then averaged over each segment. The order of the
+segments in time is kept, so storage levels still carry from one segment to the next.
+- Each segment is weighted by its length. A segment of four half-hours counts for four times
+as much of the year as a single half-hour, and storage charges or discharges over it for two
+hours.
+- A segment is labelled with the time it ends, in the same way a half-hourly interval is.
+- Segments can be combined with representative weeks when `n_segments_per_week` or
+`n_segments_per_day` is used: the weeks are chosen first and then divided into segments.
+`n_segments_per_year` cannot be combined with representative weeks, because a segment could
+then span the gap between two weeks.
+- Segments are only available for capacity expansion, using the
+[temporal.capacity_expansion.aggregation.tsam](config.md#temporalcapacity_expansionaggregationtsam)
+config input. The operational phase is solved in windows of a fixed number of intervals, which
+assumes every interval is the same length.
+- The table recording which time intervals each segment replaced is saved next to the
+snapshots table, as `snapshot_map.csv`. It has no rows when segments are not used.
+
 ## Capacity expansion
 
 Capacity expansion is the first modelling phase. In this phase investment in generation and capacity expansion are

@@ -28,11 +28,11 @@ from ispypsa.translator.custom_constraints import (
 )
 from ispypsa.translator.generators import (
     _create_unserved_energy_generators,
+    _get_new_entrant_generator_traces,
     _translate_ecaa_generators,
     _translate_new_entrant_generators,
     create_pypsa_friendly_dynamic_marginal_costs,
     create_pypsa_friendly_ecaa_generator_timeseries,
-    create_pypsa_friendly_new_entrant_generator_timeseries,
 )
 from ispypsa.translator.helpers import convert_to_numeric_if_possible
 from ispypsa.translator.links import _translate_flow_paths_to_links
@@ -52,12 +52,18 @@ from ispypsa.translator.storage import (
     _translate_ecaa_batteries,
     _translate_new_entrant_batteries,
 )
+from ispypsa.translator.temporal_aggregation import (
+    _SNAPSHOT_MAP_COLUMNS,
+    _add_segment_snapshot_weightings,
+    _segment_snapshots_and_traces,
+)
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
 from ispypsa.translator.timeslices import _add_interval_model_year_and_month_day
 
 _BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
+    "snapshot_map",
     "investment_period_weights",
     "buses",
     "links",
@@ -302,13 +308,19 @@ def create_pypsa_friendly_timeseries_inputs(
     parsed_traces_directory: Path,
     pypsa_friendly_timeseries_inputs_location: Path,
     snapshots: pd.DataFrame | None = None,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Creates snapshots and timeseries data files in PyPSA friendly format for generation
     and demand.
 
     - First creates snapshots based on the temporal configuration, optionally using
       named_representative_weeks and/or representative_weeks if configured. If snapshots
       are provided, they are used instead of generating new ones.
+
+    - If the model phase's temporal config sets aggregation.tsam, consecutive snapshots
+      are then merged into segments of varying length and every wind, solar and demand
+      time series below is averaged over each segment (see
+      ispypsa.translator.temporal_aggregation). The table recording which snapshots
+      each segment replaced is returned as the snapshot map.
 
     - a time series file is created for each wind and solar generator in the new_entrant_generators
     table (table in ispypsa_tables dict). The time series data is saved in parquet files
@@ -344,7 +356,7 @@ def create_pypsa_friendly_timeseries_inputs(
         >>> pypsa_friendly_inputs = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
         Create timeseries inputs for capacity expansion modelling.
-        >>> snapshots = create_pypsa_friendly_timeseries_inputs(
+        >>> snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         ...     config,
         ...     "capacity_expansion",
         ...     ispypsa_tables,
@@ -368,12 +380,20 @@ def create_pypsa_friendly_timeseries_inputs(
             'snapshots' (datetime) and 'investment_periods' (int) columns.
 
     Returns:
-        pd.DataFrame containing the snapshots used for the timeseries, with the
-        columns 'investment_periods' and 'snapshots', the snapshot weightings
-        'objective', 'generators' and 'stores', and 'model_year': the financial
-        or calendar year (per config.temporal.year_type) each snapshot falls in.
-        The 'stores' weighting is the resolution of the given model phase in
-        hours.
+        A tuple of two pd.DataFrames:
+
+        - The snapshots used for the timeseries, with the columns
+          'investment_periods' and 'snapshots', the snapshot weightings
+          'objective', 'generators' and 'stores', and 'model_year': the
+          financial or calendar year (per config.temporal.year_type) each
+          snapshot falls in. The 'stores' weighting is the length of the
+          snapshot in hours: the resolution of the given model phase, or the
+          length of the segment when aggregation.tsam is set.
+        - The snapshot map, with the columns 'investment_periods',
+          'original_snapshots' and 'snapshots': one row for each snapshot that
+          was merged into a segment, naming the segment (a row of the snapshots
+          table) it was merged into. It has no rows when aggregation.tsam is
+          not set, as no snapshots are merged.
     """
 
     # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
@@ -385,16 +405,20 @@ def create_pypsa_friendly_timeseries_inputs(
         snapshots = _add_snapshot_weightings(
             snapshots, config.temporal.capacity_expansion.resolution_min
         )
-        return _add_interval_model_year_and_month_day(
+        snapshots = _add_interval_model_year_and_month_day(
             snapshots, config.temporal.year_type
         ).drop(columns="month_day")
+        # No traces are loaded, so there is nothing to segment.
+        return snapshots, pd.DataFrame(columns=_SNAPSHOT_MAP_COLUMNS)
 
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
         resolution_min = config.temporal.capacity_expansion.resolution_min
+        tsam_config = config.temporal.capacity_expansion.aggregation.tsam
     else:
         reference_year_cycle = config.temporal.operational.reference_year_cycle
         resolution_min = config.temporal.operational.resolution_min
+        tsam_config = config.temporal.operational.aggregation.tsam
 
     reference_year_mapping = construct_reference_year_mapping(
         start_year=config.temporal.range.start_year,
@@ -435,34 +459,39 @@ def create_pypsa_friendly_timeseries_inputs(
             generator_traces=all_generator_traces,
         )
 
-    if generator_traces_by_type is not None:
-        # Filter and save generator timeseries by type
-        for gen_type, gen_traces in generator_traces_by_type.items():
-            if gen_traces:
-                _filter_and_save_timeseries(
-                    gen_traces,
-                    snapshots,
-                    pypsa_friendly_timeseries_inputs_location,
-                    f"{gen_type}_traces",
-                )
-
-    # Filter and save demand timeseries
-    _filter_and_save_timeseries(
-        demand_traces,
-        snapshots,
-        pypsa_friendly_timeseries_inputs_location,
-        "demand_traces",
-    )
-
-    create_pypsa_friendly_new_entrant_generator_timeseries(
+    new_entrant_traces_by_type = _get_new_entrant_generator_traces(
         ispypsa_tables["new_entrant_generators"],
         parsed_traces_directory,
-        pypsa_friendly_timeseries_inputs_location,
         generator_types=["solar", "wind"],
         reference_year_mapping=reference_year_mapping,
         year_type=config.temporal.year_type,
-        snapshots=snapshots,
     )
+
+    if generator_traces_by_type is None:
+        generator_traces_by_type = {"solar": {}, "wind": {}}
+
+    # The traces to save, by the directory they are saved in.
+    traces = {
+        "demand_traces": demand_traces,
+        "solar_traces": generator_traces_by_type["solar"]
+        | new_entrant_traces_by_type["solar"],
+        "wind_traces": generator_traces_by_type["wind"]
+        | new_entrant_traces_by_type["wind"],
+    }
+
+    snapshot_map = pd.DataFrame(columns=_SNAPSHOT_MAP_COLUMNS)
+    if tsam_config is not None:
+        snapshots, traces, snapshot_map = _segment_snapshots_and_traces(
+            snapshots, traces, tsam_config, config.temporal.year_type, resolution_min
+        )
+
+    for trace_type in traces:
+        _filter_and_save_timeseries(
+            traces[trace_type],
+            snapshots,
+            pypsa_friendly_timeseries_inputs_location,
+            trace_type,
+        )
 
     # This is needed because numbers can be converted to strings if the data has been saved to a csv.
     generators = convert_to_numeric_if_possible(generators, cols=["marginal_cost"])
@@ -475,7 +504,12 @@ def create_pypsa_friendly_timeseries_inputs(
         pypsa_friendly_timeseries_inputs_location,
     )
 
-    snapshots = _add_snapshot_weightings(snapshots, resolution_min)
+    if tsam_config is None:
+        snapshots = _add_snapshot_weightings(snapshots, resolution_min)
+    else:
+        snapshots = _add_segment_snapshot_weightings(
+            snapshots, snapshot_map, resolution_min
+        )
 
     # The model year each snapshot falls in, which can differ from its
     # investment period: a 2030 investment period that runs to 2034 has
@@ -484,7 +518,7 @@ def create_pypsa_friendly_timeseries_inputs(
         snapshots, config.temporal.year_type
     ).drop(columns="month_day")
 
-    return snapshots
+    return snapshots, snapshot_map
 
 
 def list_timeseries_files(

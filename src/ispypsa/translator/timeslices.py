@@ -40,7 +40,7 @@ def create_pypsa_friendly_timeslice_snapshots(
     Examples:
         Create the capacity expansion snapshots, then the timeslice active at
         each of them.
-        >>> snapshots = create_pypsa_friendly_timeseries_inputs(
+        >>> snapshots, _ = create_pypsa_friendly_timeseries_inputs(
         ...     config,
         ...     "capacity_expansion",
         ...     ispypsa_tables,
