@@ -31,7 +31,10 @@ def build_pypsa_network(
         >>> from ispypsa.pypsa_build import build_pypsa_network
 
         Read in PyPSA friendly tables from CSV.
-        >>> pypsa_input_tables = read_csvs(Path("pypsa_friendly_inputs_directory"))
+        >>> pypsa_input_tables = read_csvs(
+        ...     Path("pypsa_friendly_inputs_directory"),
+        ...     schemas="pypsa_friendly_tables",
+        ... )
 
         >>> pypsa_friendly_inputs = build_pypsa_network(
         ... pypsa_friendly_tables=pypsa_input_tables,
