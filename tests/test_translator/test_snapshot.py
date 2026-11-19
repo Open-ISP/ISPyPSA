@@ -183,21 +183,52 @@ def test_add_investment_periods_financial_year_mapping():
 
 
 def test_add_investment_periods_financial_year_boundary():
-    """Test timestamps exactly at the financial year boundary."""
-    # Setup test data - dates exactly on July 1st
-    timestamps = ["2017-06-30", "2017-07-01"]
+    """Test timestamps either side of the financial year boundary. Snapshots are
+    stamped with their interval's end time, so the stamp of exactly midnight on
+    1 July is the last interval of the financial year just ended."""
+    timestamps = ["2017-06-30 23:30", "2017-07-01 00:00", "2017-07-01 00:30"]
     df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
     investment_periods = [2016, 2018]
 
     # Expected result:
-    # 2017-06-30 -> FY2017 (maps to 2016)
-    # 2017-07-01 -> FY2018 (maps to 2018)
+    # 2017-06-30 23:30 -> FY2017 (maps to 2016)
+    # 2017-07-01 00:00 -> FY2017 (maps to 2016): the interval ending at midnight
+    # 2017-07-01 00:30 -> FY2018 (maps to 2018)
     expected = pd.DataFrame(
-        {"investment_periods": [2016, 2018], "snapshots": pd.to_datetime(timestamps)}
+        {
+            "investment_periods": [2016, 2016, 2018],
+            "snapshots": pd.to_datetime(timestamps),
+        }
     )
 
     # Call function
     result = _add_investment_periods(df, investment_periods, "fy")
+
+    # Assert
+    assert_frame_equal(result, expected)
+
+
+def test_add_investment_periods_calendar_year_boundary():
+    """Test timestamps either side of the calendar year boundary. Snapshots are
+    stamped with their interval's end time, so the stamp of exactly midnight on
+    1 January is the last interval of the calendar year just ended."""
+    timestamps = ["2017-12-31 23:30", "2018-01-01 00:00", "2018-01-01 00:30"]
+    df = pd.DataFrame({"snapshots": pd.to_datetime(timestamps)})
+    investment_periods = [2016, 2018]
+
+    # Expected result:
+    # 2017-12-31 23:30 -> 2017 (maps to 2016)
+    # 2018-01-01 00:00 -> 2017 (maps to 2016): the interval ending at midnight
+    # 2018-01-01 00:30 -> 2018 (maps to 2018)
+    expected = pd.DataFrame(
+        {
+            "investment_periods": [2016, 2016, 2018],
+            "snapshots": pd.to_datetime(timestamps),
+        }
+    )
+
+    # Call function
+    result = _add_investment_periods(df, investment_periods, "calendar")
 
     # Assert
     assert_frame_equal(result, expected)
