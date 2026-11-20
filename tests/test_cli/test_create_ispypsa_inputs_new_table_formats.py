@@ -340,6 +340,14 @@ _EXPECTED_CARBON_BUDGET_ROWS_75 = 3
 # Emissions reduction table is granularity invariant: one fuel type, 2026-2055
 _EXPECTED_EMISSIONS_REDUCTION_ROWS_75 = 30
 
+# Resource limits are also granularity invariant, but a bit more complex to count:
+# limit_type -> resource = 46 (resource zones) * 3 (resource types)
+#                           - 3 (DREZ wind_medium, known empty limit)
+#                           + 5 (offshore zones) * 2 (resource types) = 145
+# limit_type -> land_use = 46 (resource_zones) * 2 ('solar' | 'Wind') = 92
+# resource + land_use limits = 237
+_EXPECTED_RESOURCE_LIMIT_ROWS_75 = 237
+
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
 # granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
@@ -399,6 +407,7 @@ def test_create_ispypsa_inputs_new_format(
     costs_fuel_prices = pd.read_csv(output_dir / "costs_fuel_prices.csv")
     costs_new_entrant_build = pd.read_csv(output_dir / "costs_new_entrant_build.csv")
     emissions_reduction = pd.read_csv(output_dir / "emissions_reduction.csv")
+    resource_limits = pd.read_csv(output_dir / "resource_limits.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert (
@@ -497,6 +506,9 @@ def test_create_ispypsa_inputs_new_format(
     # carbon_budgets - detailed content covered by test_carbon_budgets.py.
     carbon_budgets = pd.read_csv(output_dir / "carbon_budgets.csv")
     assert len(carbon_budgets) == _EXPECTED_CARBON_BUDGET_ROWS_75
+
+    # granularity invariant
+    assert len(resource_limits) == _EXPECTED_RESOURCE_LIMIT_ROWS_75
 
     # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
     # should match granularity, but NaNs are allowed (wildcard) so dropped before
