@@ -143,7 +143,7 @@ def _template_resource_limits(
 
     initial_resource_limits = iasr_tables["initial_resource_limits"]
     resource_limits = _melt_resource_limits(initial_resource_limits)
-    resource_limits = _add_relaxation_penalty(initial_resource_limits, resource_limits)
+    resource_limits = _add_relaxation_penalty(resource_limits, initial_resource_limits)
     resource_limits = _remove_penalty_for_hard_limited_resources(resource_limits)
 
     land_use_columns = _LAND_USE_COLUMNS_BY_SCENARIO[scenario]
@@ -195,8 +195,8 @@ def _melt_resource_limits(limits: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_relaxation_penalty(
-    limits: pd.DataFrame,
     resource_limits: pd.DataFrame,
+    limits: pd.DataFrame,
 ) -> pd.DataFrame:
     """Adds each REZ's ``relaxation_penalty`` to its resource limit rows, in $/MW.
 
@@ -228,7 +228,7 @@ def _add_relaxation_penalty(
     }
     penalty = limits[list(penalty_cols)].rename(columns=penalty_cols)
     penalty["relaxation_penalty"] *= 1e6  # convert $M/MW -> $/MW
-    return resource_limits.merge(penalty, how="outer", on="resource_zone")
+    return resource_limits.merge(penalty, how="left", on="resource_zone")
 
 
 def _remove_penalty_for_hard_limited_resources(limits: pd.DataFrame) -> pd.DataFrame:

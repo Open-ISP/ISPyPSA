@@ -139,7 +139,7 @@ def test_add_relaxation_penalty(csv_str_to_df):
         V8,             wind_offshore_fixed,  54996,  resource
     """)
 
-    result = _add_relaxation_penalty(limits, resource_limits)
+    result = _add_relaxation_penalty(resource_limits, limits)
 
     expected = csv_str_to_df("""
         resource_zone,  resource_type,        limit,  limit_type,  relaxation_penalty
