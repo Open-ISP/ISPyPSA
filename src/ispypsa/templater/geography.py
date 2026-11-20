@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 
+from ispypsa.templater.helpers import _map_geo_id_to_granularity
 from ispypsa.templater.mappings import (
     _NEM_REGION_IDS,
     _NON_REZ_GEOGRAPHIES,
@@ -280,6 +281,65 @@ def _rez_rows_for_single_region(
 def _extract_subregion_id(series: pd.Series) -> pd.Series:
     """Extract subregion ID from 'Name (ID)' format, e.g. 'Northern Queensland (NQ)' -> 'NQ'."""
     return series.str.extract(r"\(([A-Z]+)\)", expand=False)
+
+
+# --- demand ---
+
+
+def _template_demand_subregions(
+    sub_regional_geography: pd.DataFrame, regional_granularity: str
+) -> pd.DataFrame:
+    """Creates the demand_subregions table: every ISP sub-region, against the
+    geography its demand is placed at.
+
+    Demand traces are published per ISP sub-region whatever granularity the
+    model is built at, and network_geography only lists sub-regions at
+    "sub_regions" granularity. This table keeps the sub-regions at every
+    granularity, so the translator can tell which sub-regions' traces sum
+    into which bus. The REZ rows of ``sub_regional_geography`` are left out:
+    a REZ has no demand of its own.
+
+    Args:
+        sub_regional_geography: the network_geography table as templated at
+            "sub_regions" granularity, whatever ``regional_granularity`` is.
+        regional_granularity: one of "sub_regions", "nem_regions", or
+            "single_region".
+
+    I/O Example:
+        sub_regional_geography:
+            geo_id  geo_type   region_id  subregion_id
+            NQ      subregion  QLD        NQ
+            CNSW    subregion  NSW        CNSW
+            SNW     subregion  NSW        SNW
+            Q1      rez        QLD        NQ
+
+        regional_granularity = "sub_regions":
+            subregion_id  geo_id
+            NQ            NQ
+            CNSW          CNSW
+            SNW           SNW
+
+        regional_granularity = "nem_regions":
+            subregion_id  geo_id
+            NQ            QLD
+            CNSW          NSW
+            SNW           NSW
+
+        regional_granularity = "single_region":
+            subregion_id  geo_id
+            NQ            NEM
+            CNSW          NEM
+            SNW           NEM
+    """
+    is_subregion = sub_regional_geography["geo_type"] == "subregion"
+    subregions = sub_regional_geography[is_subregion]
+    geo_id = _map_geo_id_to_granularity(
+        subregions["geo_id"], regional_granularity, sub_regional_geography
+    )
+    demand_subregions = pd.DataFrame(
+        {"subregion_id": subregions["subregion_id"], "geo_id": geo_id}
+    )
+    return demand_subregions.reset_index(drop=True)
 
 
 # --- non-REZ geographies ---

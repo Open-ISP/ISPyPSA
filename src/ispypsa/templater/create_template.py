@@ -32,6 +32,7 @@ from ispypsa.templater.flow_paths import (
 from ispypsa.templater.fuel_prices import _template_fuel_prices
 from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
+    _template_demand_subregions,
     _template_network_geography,
 )
 from ispypsa.templater.helpers import _build_geo_region_lookup
@@ -102,6 +103,7 @@ _BASE_TEMPLATE_OUTPUTS = [
 # delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_geography",
+    "demand_subregions",
     "network_transmission_paths",
     "network_transmission_path_limits",
     "network_expansion_options",
@@ -211,6 +213,9 @@ def create_ispypsa_inputs_template(
                 iasr_tables["renewable_energy_zones"],
                 regional_granularity,
             )
+        template["demand_subregions"] = _template_demand_subregions(
+            sub_regional_geography, regional_granularity
+        )
         region_lookup = _build_geo_region_lookup(sub_regional_geography)
         flow_path_options = _filter_flow_path_augmentations_to_granularity(
             _extract_flow_path_options_from_iasr(iasr_tables),

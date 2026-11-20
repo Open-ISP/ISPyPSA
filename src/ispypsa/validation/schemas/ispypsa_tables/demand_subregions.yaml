@@ -1,0 +1,39 @@
+table: demand_subregions
+required: true
+unique:
+  - [subregion_id]
+description: >
+  The ISP sub-regions whose demand the model serves, and the geography each
+  one's demand is placed at.
+
+  Demand traces are published per ISP sub-region, whatever regional granularity
+  the model is built at. Each row places one sub-region's demand at a geography
+  in `network_geography`: the sub-region itself at "sub_regions" granularity,
+  its NEM region at "nem_regions", and the single "NEM" geography at
+  "single_region". The demand at a geography is the sum of the demand traces of
+  the sub-regions placed there. A sub-region with no row has no demand in the
+  model.
+
+  Source tables:
+    - `sub_regional_reference_nodes`
+custom_validation:
+  - name: demand_is_not_placed_at_a_rez
+    description: >
+      geo_id must not name a `network_geography` row with geo_type "rez".
+      Demand is placed at sub-region and region geographies only. For example,
+      a row placing CNSW's demand at the REZ N3 is invalid.
+columns:
+  subregion_id:
+    type: string
+    required: true
+    description: >
+      ISP sub-region identifier, as used to name the sub-region's demand
+      traces, e.g. CNSW.
+  geo_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - network_geography: geo_id
+    description: >
+      The geography the sub-region's demand is placed at. Several sub-regions
+      may share one geography.
