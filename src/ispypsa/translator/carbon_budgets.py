@@ -262,9 +262,22 @@ def _build_emissions_trajectory(
     For example, budgets of 290 Mt for 2027 to 2030 and 583 Mt for 2027 to
     2050 give this path:
 
-        start of 2027    115.7 Mt a year
-        end of 2030       29.3 Mt a year    # 290 Mt emitted so far
-        end of 2050        0.0 Mt a year    # 583 Mt emitted so far
+        Mt a year
+            115.7 *
+                  |*
+                  | *
+                  |  *
+             29.3 |   *
+                  |          *
+                  |                *
+                0 +---+-------------------*
+                2027 2030                2050
+                  |290|      293 Mt       |
+                  | Mt|    (583 - 290)    |
+
+    The path starts at 115.7 Mt a year at the start of 2027, falls to 29.3 by
+    the end of 2030 and to zero by the end of 2050. The budgets are the areas
+    under it: 290 Mt up to the end of 2030 and 583 Mt up to the end of 2050.
 
     A year's emissions are the area under the path for that year. Modelled
     years outside the multi-year budgets aren't returned. Budgets on a single
