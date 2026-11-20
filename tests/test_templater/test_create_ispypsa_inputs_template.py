@@ -538,7 +538,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     """)
     # wind_medium resource limit set to 0.0 -> no raise on unmatched non-zero limit
     initial_resource_limits = pd.DataFrame(
-        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        [("Q1", 570.0, 0.0, float("nan"), float("nan"), 1100.0, 0.3, 6764, 16234)],
         columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
     )
     with (
@@ -811,7 +811,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert len(carbon_budgets) == 2
     # At all granularities, 4 resource limits:
     # Q1, Wind | solar, land_use
-    # Q1, wind_medium | solar, resource
+    # Q1, wind_high | solar, resource
     resource_limits = result["resource_limits"]
     assert set(resource_limits.columns) == {
         "geo_id",
@@ -918,7 +918,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         BOTN - Cethana,                 Step Change,        3665,       3595
     """)
     initial_resource_limits = pd.DataFrame(
-        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        [("Q1", 570.0, 0.0, float("nan"), float("nan"), 1100.0, 0.3, 6764, 16234)],
         columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
     )
     with (
@@ -1081,7 +1081,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
 
     # At all granularities, 4 resource limits:
     # Q1, Wind | solar, land_use
-    # Q1, wind_medium | solar, resource
+    # Q1, wind_high | solar, resource
     resource_limits = result["resource_limits"]
     assert len(resource_limits) == 4
 
@@ -1161,7 +1161,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         BOTN - Cethana,                 Step Change,        3665,       3595
     """)
     initial_resource_limits = pd.DataFrame(
-        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        [("Q1", 570.0, 0.0, float("nan"), float("nan"), 1100.0, 0.3, 6764, 16234)],
         columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
     )
     with (
@@ -1317,6 +1317,6 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     # At all granularities, 4 resource limits:
     # Q1, Wind | solar, land_use
-    # Q1, wind_medium | solar, resource
+    # Q1, wind_high | solar, resource
     resource_limits = result["resource_limits"]
     assert len(resource_limits) == 4
