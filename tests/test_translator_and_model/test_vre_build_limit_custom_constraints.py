@@ -234,8 +234,11 @@ def test_vre_build_limit_constraint(csv_str_to_df, tmp_path, monkeypatch):
     )
     snapshots["snapshots"] = pd.to_datetime(snapshots["snapshots"])
 
-    # Override the longer snapshots that would have auto generated.
-    pypsa_tables["snapshots"] = snapshots
+    # Override the longer snapshots that would have auto generated. The network
+    # build needs the snapshot weightings; 1.0 is what PyPSA defaults to.
+    pypsa_tables["snapshots"] = snapshots.assign(
+        objective=1.0, generators=1.0, stores=1.0
+    )
 
     # Create timeseries data directory structure for PyPSA inputs
     pypsa_timeseries_dir = pypsa_dir / "timeseries"

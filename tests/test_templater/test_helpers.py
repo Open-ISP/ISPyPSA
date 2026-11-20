@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.helpers import (
+    _add_emissions_intensity_sent_out,
     _assert_table_valid,
     _build_geo_region_lookup,
     _derive_phes_symmetric_efficiency,
@@ -467,6 +468,44 @@ def test_is_storage_row(csv_str_to_df):
     # Battery,  Distributed Resources Batteries and Pumped Hydro all match.
     # Solar thermal still does not.
     assert list(result) == [True, True, False, True, False]
+
+
+# --- _add_emissions_intensity_sent_out ---
+
+
+def test_add_emissions_intensity_sent_out(csv_str_to_df):
+    generators = csv_str_to_df("""
+        name,   emissions_intensity_as_generated,   auxiliary_load
+        BW01,   0.88,                               12.0
+        TALWA1, 0.49,                               2.0
+        Q1G1,   0.0,                                0.01
+    """)
+
+    result = _add_emissions_intensity_sent_out(generators)
+
+    # BW01 uses 12% of its generation itself, so its 0.88 t per MWh generated
+    # is 0.88 / (1 - 0.12) = 1.0 t per MWh sent out. TALWA1's is
+    # 0.49 / (1 - 0.02) = 0.5.
+    expected = csv_str_to_df("""
+        name,   emissions_intensity_as_generated,   auxiliary_load, emissions_intensity
+        BW01,   0.88,                               12.0,           1.0
+        TALWA1, 0.49,                               2.0,            0.5
+        Q1G1,   0.0,                                0.01,           0.0
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=False)
+
+
+def test_add_emissions_intensity_sent_out_empty(csv_str_to_df):
+    generators = pd.DataFrame(
+        columns=["name", "emissions_intensity_as_generated", "auxiliary_load"]
+    )
+
+    result = _add_emissions_intensity_sent_out(generators)
+
+    expected = csv_str_to_df("""
+        name,   emissions_intensity_as_generated,   auxiliary_load, emissions_intensity
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 # --- _derive_phes_symmetric_efficiency ---

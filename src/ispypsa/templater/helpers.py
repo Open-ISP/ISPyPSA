@@ -775,6 +775,33 @@ def _derive_phes_symmetric_efficiency(phes: pd.DataFrame) -> pd.DataFrame:
     return phes.drop(columns=["round_trip_efficiency"])
 
 
+def _add_emissions_intensity_sent_out(generators: pd.DataFrame) -> pd.DataFrame:
+    """Adds emissions_intensity: each generator's emissions per MWh sent out.
+
+    The IASR workbook gives emissions per MWh generated. The model dispatches
+    energy sent out, which is what's left of a unit's generation after its
+    auxiliary load (the % of generation the power station uses itself), so the
+    same emissions are spread over fewer MWh.
+
+    I/O Example:
+        generators:
+            name    emissions_intensity_as_generated  auxiliary_load
+            BW01    0.88                              12.0
+            Q1G1    0.0                               0.01
+
+        returns (adds emissions_intensity):
+            name    ...  emissions_intensity
+            BW01    ...  1.0                    # 0.88 / (1 - 0.12)
+            Q1G1    ...  0.0
+    """
+    generators = generators.copy()
+    share_sent_out = 1 - generators["auxiliary_load"] / 100
+    generators["emissions_intensity"] = (
+        generators["emissions_intensity_as_generated"] / share_sent_out
+    )
+    return generators
+
+
 def _standardise_storage_capitalisation(series: pd.Series) -> pd.Series:
     """
     Standardises capitalisation of "storage" in a pandas Series.

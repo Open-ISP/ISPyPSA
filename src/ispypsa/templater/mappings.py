@@ -755,6 +755,17 @@ _GENERATORS_NEW_ENTRANT_PROPERTY_MAP = {
         key_col="Technology",
         value_col="Heat rate (GJ/MWh)",
     ),
+    "emissions_intensity_as_generated": dict(
+        table="emissions_intensity_new_entrants",
+        key_col="Technology",
+        value_col="Scope 1 emissions intensity (kg/MWh as-gen)",
+        scale=0.001,  # kg/MWh -> t/MWh
+    ),
+    "auxiliary_load": dict(
+        table="auxiliary_load_new_entrants",
+        key_col="Generator",
+        value_col="Auxiliary load (% of generation)",
+    ),
 }
 
 _STORAGE_BATTERY_PROPERTY_MAP = {
@@ -851,6 +862,17 @@ _GENERATORS_EXISTING_PLANNED_PROPERTY_MAP = {
         table="expected_closure_years",
         key_col="IASR ID",
         value_col="Expected Closure Year (Calendar year)",
+    ),
+    "emissions_intensity_as_generated": dict(
+        table="emissions_intensity_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Scope 1 emissions intensity (kg/MWh as-gen)",
+        scale=0.001,  # kg/MWh -> t/MWh
+    ),
+    "auxiliary_load": dict(
+        table="auxiliary_load_existing_committed_anticipated_additional_generators",
+        key_col="IASR ID",
+        value_col="Auxiliary load (% of generation)",
     ),
 }
 

@@ -51,6 +51,24 @@ def test_valid_config(
     ModelConfig(**config)
 
 
+@pytest.mark.parametrize(
+    "carbon_budget_scaling", ["none", "prorata", "linear_trajectory_to_zero"]
+)
+def test_valid_carbon_budget_scaling(carbon_budget_scaling):
+    config = get_valid_config()
+    config["carbon_budget_scaling"] = carbon_budget_scaling
+
+    result = ModelConfig(**config)
+
+    assert result.carbon_budget_scaling == carbon_budget_scaling
+
+
+def test_carbon_budget_scaling_defaults_to_none():
+    result = ModelConfig(**get_valid_config())
+
+    assert result.carbon_budget_scaling == "none"
+
+
 def get_valid_config():
     """Return a valid config dictionary that can be modified for tests.
 
@@ -297,6 +315,11 @@ def invalid_trace_dataset_year(config):
     return config, ValidationError
 
 
+def invalid_carbon_budget_scaling(config):
+    config["carbon_budget_scaling"] = "linear"
+    return config, ValidationError
+
+
 def invalid_named_representative_weeks(config):
     config["temporal"]["capacity_expansion"]["aggregation"][
         "named_representative_weeks"
@@ -341,6 +364,7 @@ def invalid_named_representative_weeks(config):
         invalid_trace_dataset_type,
         invalid_trace_dataset_year,
         invalid_named_representative_weeks,
+        invalid_carbon_budget_scaling,
     ],
     ids=lambda f: f.__name__,  # Use function name as test ID
 )
