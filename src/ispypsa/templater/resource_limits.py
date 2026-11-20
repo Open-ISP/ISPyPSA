@@ -2,7 +2,10 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.mappings import _HARD_LIMIT_RESOURCE_TYPES
+from ispypsa.templater.mappings import (
+    _HARD_LIMIT_RESOURCE_TYPES,
+    _SUB_REZ_AREA_TO_REZ_ID,
+)
 
 # Literal v7.5 header names in initial_resource_limits.
 _REZ_ID_COLUMN = "REZ ID"
@@ -31,6 +34,19 @@ _LAND_USE_COLUMNS_BY_SCENARIO = {
     },
 }
 
+# The resource_limits columns that pick out which assets a row applies to. A blank
+# key matches any value (see the resource_limits schema description).
+_LIMIT_KEY_COLUMNS = ["geo_id", "resource_zone", "technology", "resource_type"]
+
+# Non-zero limits that IASR gives but no new entrant can count against: the
+# distribution REZs have wind_medium limits, but only have wind_high and solar new
+# entrant options. Labelled per the structure created in _describe_limits.
+_KNOWN_UNMATCHED_NON_ZERO_LIMITS = {
+    "DN1 wind_medium resource",
+    "DN2 wind_medium resource",
+    "DN3 wind_medium resource",
+}
+
 
 def _template_resource_limits(
     iasr_tables: dict[str, pd.DataFrame],
@@ -44,7 +60,9 @@ def _template_resource_limits(
     one row per REZ and resource_type, attaches each REZ's relaxation penalty to
     those rows (except the hard-limited resource types, see
     ``_HARD_LIMIT_RESOURCE_TYPES``), and adds the wind and solar land use limits
-    for ``scenario``. Land use rows never get a penalty.
+    for ``scenario``. Land use rows never get a penalty. Rows matching no new
+    entrant generator are dropped (see ``_drop_limits_matching_no_new_entrant``),
+    then the remaining blank limits become 0.
 
     Args:
         iasr_tables: IASR tables; uses ``initial_resource_limits``.
@@ -71,7 +89,15 @@ def _template_resource_limits(
     all_limits = pd.concat(
         [resource_limits, wind_land_use, solar_land_use], axis=0, ignore_index=True
     )
-    return pd.DataFrame()
+    # add geo_id column
+    all_limits["geo_id"] = all_limits["resource_zone"].replace(_SUB_REZ_AREA_TO_REZ_ID)
+
+    all_limits = _drop_limits_matching_no_new_entrant(
+        all_limits, generators_new_entrant
+    )
+    # set the remaining blank limits to 0
+    all_limits["limit"] = all_limits["limit"].fillna(0.0)
+    return all_limits
 
 
 def _melt_resource_limits(limits: pd.DataFrame) -> pd.DataFrame:
@@ -203,3 +229,112 @@ def _extract_solar_land_use(limits: pd.DataFrame, column: str) -> pd.DataFrame:
         columns={_REZ_ID_COLUMN: "resource_zone", column: "limit"}
     )
     return land_use.assign(resource_type="solar", limit_type="land_use")
+
+
+def _drop_limits_matching_no_new_entrant(
+    limits: pd.DataFrame, generators_new_entrant: pd.DataFrame
+) -> pd.DataFrame:
+    """Drops limit rows that no new entrant generator matches.
+
+    Most dropped rows are blank or 0 in IASR (e.g. offshore resource rows for
+    onshore REZs): they limit nothing and say there's nothing to build, so they're
+    dropped without a log. A non-zero row with no match is IASR resource the model
+    has no option to build. The ones in ``_KNOWN_UNMATCHED_NON_ZERO_LIMITS`` are
+    logged at INFO, any other non-zero limits with no match raise.
+
+    Raises:
+        ValueError: if a non-zero limit outside ``_KNOWN_UNMATCHED_NON_ZERO_LIMITS``
+            matches no generator.
+
+    I/O Example:
+        limits:
+            geo_id  resource_zone  technology  resource_type  limit_type  limit
+            Q1      Q1             Wind                       land_use    6764
+            Q3      Q3                         wind_high      resource          # blank, but matched
+            V8      V8                         solar          resource          # no V8 solar
+            DN1     DN1                        wind_medium    resource    792   # known
+
+        generators_new_entrant (key columns):
+            geo_id  resource_zone  technology  resource_type
+            Q1      Q1             Wind        wind_high
+            Q3      Q3             Wind        wind_high
+            DN1     DN1            Wind        wind_high
+
+        returns:
+            geo_id  resource_zone  technology  resource_type  limit_type  limit
+            Q1      Q1             Wind                       land_use    6764
+            Q3      Q3                         wind_high      resource          # kept blank
+
+        logs (INFO):
+            Non-zero resource limits matching no new entrant generator, dropped:
+            ['DN1 wind_medium resource']
+    """
+    matched = limits.apply(_matches_any_unit, axis=1, units=generators_new_entrant)
+    # NaN > 0 is False, so blank limits are also caught here under 'non-zero'
+    non_zero_unmatched = limits[~matched & (limits["limit"] > 0)]
+    _assert_unmatched_non_zero_limits_are_known(non_zero_unmatched)
+    if not non_zero_unmatched.empty:
+        logging.info(
+            "Non-zero resource limits matching no new entrant generator, dropped: "
+            f"{sorted(_describe_limits(non_zero_unmatched))}"
+        )
+    return limits[matched].reset_index(drop=True)
+
+
+def _matches_any_unit(limit_row: pd.Series, units: pd.DataFrame) -> bool:
+    """Whether any unit matches every key that the limit row fills in.
+
+    Blank keys on the limit row are left out, so they essentially match any value
+    that a unit has in the same key column. A unit that has a blank value in a key
+    column never matches a non-blank key in the limit row.
+
+    I/O Example:
+        limit_row:
+            geo_id  resource_zone  technology  resource_type
+            Q1      Q1             Wind                        # resource_type blank
+
+        units:
+            geo_id  resource_zone  technology            resource_type
+            Q1      Q1             Wind                  wind_high   # matches
+            Q1      Q1             Large scale Solar PV  solar
+            CNSW                   OCGT (small GT)
+
+        returns:
+            True
+    """
+    filled_keys = limit_row[_LIMIT_KEY_COLUMNS].dropna()
+    return (units[filled_keys.index] == filled_keys).all(axis=1).any()
+
+
+def _assert_unmatched_non_zero_limits_are_known(
+    non_zero_unmatched: pd.DataFrame,
+) -> None:
+    """Raises if any row of ``non_zero_unmatched`` isn't in
+    ``_KNOWN_UNMATCHED_NON_ZERO_LIMITS``."""
+    labels = set(_describe_limits(non_zero_unmatched))
+    unexpected = labels - _KNOWN_UNMATCHED_NON_ZERO_LIMITS
+    if unexpected:
+        raise ValueError(
+            "Non-zero limits in 'initial_resource_limits' match no new entrant "
+            f"generator: {sorted(unexpected)}"
+        )
+
+
+def _describe_limits(limits: pd.DataFrame) -> pd.Series:
+    """Labels each limit row by its zone, what it limits, and its limit_type.
+
+    I/O Example:
+        limits:
+            geo_id  resource_zone  technology  resource_type  limit_type
+            DN1     DN1                        wind_medium    resource
+            Q1      Q1             Wind                       land_use
+            NQ                     CCGT                       land_use
+
+        returns:
+            "DN1 wind_medium resource"
+            "Q1 Wind land_use"
+            "NQ CCGT land_use"
+    """
+    location = limits["resource_zone"].fillna(limits["geo_id"])
+    limited = limits["resource_type"].fillna(limits["technology"])
+    return location + " " + limited + " " + limits["limit_type"]
