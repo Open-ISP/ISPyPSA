@@ -1,3 +1,61 @@
+"""Template the resource_limits table from IASR's initial_resource_limits table.
+
+Resource limits cap how much new entrant capacity the model can build in each REZ.
+This module reads IASR's per-REZ resource and land use limits and turns them into
+one row per limit, keyed to the new entrant generators that limit applies to. For
+now, only new entrant generators are covered by these limits.
+
+Input: initial_resource_limits, one row per REZ. The headers are abbreviated here,
+and the offshore floating and Accelerated Transition land use columns are left
+out. The full names are in the constants below.
+
+    REZ ID  Wind_High  Wind_Medium  Offshore -fixed  Solar   Penalty ($M/MW)  Land use_Wind  Land use_Solar
+    Q1      570        1710                          1100    0.3              6764.2         16234.0
+    Q8a     560        1680                          2796.8  0.3              3206.3         7695.2
+    V8                              54996
+
+Output: resource_limits, one row per limit:
+
+    geo_id  resource_zone  technology  resource_type        limit_type  limit    relaxation_penalty
+    Q1      Q1                         wind_high            resource    570
+    Q1      Q1                         wind_medium          resource    1710     300000
+    Q1      Q1                         solar                resource    1100     300000
+    Q8      Q8a                        wind_high            resource    560
+    V8      V8                         wind_offshore_fixed  resource    54996
+    Q1      Q1             Wind                             land_use    6764.2
+    Q1      Q1                         solar                land_use    16234.0
+
+The geo_id, resource_zone, technology and resource_type columns are the row's
+keys. They say which new entrant generators the limit applies to, and a blank key
+matches any value. For example, the Q1 wind land use row has technology "Wind"
+and a blank resource_type, so it caps wind_high and wind_medium builds in Q1
+together. relaxation_penalty is the cost ($/MW) of building past the limit, and
+a blank penalty makes the limit a hard one.
+
+Pipeline:
+
+1. Melt the resource limit columns into one row per REZ and resource_type, with
+   limit_type "resource".
+2. Attach each REZ's relaxation penalty to its resource rows, converting $M/MW to
+   $/MW. IASR gives the offshore REZs no penalty, so their limits are hard.
+3. Remove the penalty from wind_high rows, making them hard limits too. IASR gives
+   one penalty per REZ, but the ISP only relaxes the wind_medium and solar limits.
+4. Add the wind and solar land use limits for the scenario, with limit_type
+   "land_use" and no penalty. Wind land use is keyed on technology "Wind", so it
+   covers both wind resource types. Solar land use is keyed on resource_type
+   "solar", so it covers both SAT and CST technologies.
+5. Set geo_id from resource_zone. The two are the same except for Q8's sub-areas
+   (Q8a, Q8b and Q8c), which share geo_id Q8 but keep their own limits.
+6. Drop the limits that match no new entrant generator, since they would have no
+   effect in the model. Most of these are blank or zero in IASR (e.g. the offshore
+   columns for an onshore REZ) and are dropped quietly. Known mon-zero drops are logged,
+   and any non-zero drop outside the known exceptions below raises an error.
+7. Set the remaining blank limits to 0. A blank limit that survives step 6 still
+   applies to at least one generator. With no penalty, none of that resource can
+   be built. With a penalty, it can only be built by paying that penalty on every
+   MW.
+"""
+
 import logging
 
 import pandas as pd
@@ -38,6 +96,17 @@ _LAND_USE_COLUMNS_BY_SCENARIO = {
 # key matches any value (see the resource_limits schema description).
 _LIMIT_KEY_COLUMNS = ["geo_id", "resource_zone", "technology", "resource_type"]
 
+# Expected column order per schema definition:
+_EXPECTED_COLUMN_ORDER = [
+    "geo_id",
+    "resource_zone",
+    "technology",
+    "resource_type",
+    "limit_type",
+    "limit",
+    "relaxation_penalty",
+]
+
 # Non-zero limits that IASR gives but no new entrant can count against: the
 # distribution REZs have wind_medium limits, but only have wind_high and solar new
 # entrant options. Labelled per the structure created in _describe_limits.
@@ -52,7 +121,6 @@ def _template_resource_limits(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
     generators_new_entrant: pd.DataFrame,
-    storage_new_entrant: pd.DataFrame,
 ) -> pd.DataFrame:
     """Templates the resource_limits table from IASR's ``initial_resource_limits``.
 
@@ -70,7 +138,6 @@ def _template_resource_limits(
             ``_LAND_USE_COLUMNS_BY_SCENARIO``), e.g. "Accelerated Transition".
         generators_new_entrant: templated new entrant generators, used to drop
             limit rows that match no generator.
-        storage_new_entrant: templated new entrant storage, used likewise.
     """
     logging.info("Creating a template for resource and land-use limits")
 
@@ -97,7 +164,7 @@ def _template_resource_limits(
     )
     # set the remaining blank limits to 0
     all_limits["limit"] = all_limits["limit"].fillna(0.0)
-    return all_limits
+    return all_limits[_EXPECTED_COLUMN_ORDER]
 
 
 def _melt_resource_limits(limits: pd.DataFrame) -> pd.DataFrame:

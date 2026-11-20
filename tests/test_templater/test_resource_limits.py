@@ -6,7 +6,86 @@ from ispypsa.templater.resource_limits import (
     _drop_limits_matching_no_new_entrant,
     _melt_resource_limits,
     _remove_penalty_for_hard_limited_resources,
+    _template_resource_limits,
 )
+
+# --- orchestrator ---
+
+
+@pytest.mark.parametrize(
+    "scenario, wind_land_use, solar_land_use",
+    [
+        ("Step Change", 3200.0, 7700.0),
+        ("Slower Growth", 3200.0, 7700.0),
+        ("Accelerated Transition", 16000.0, 38500.0),
+    ],
+)
+def test_template_resource_limits(
+    csv_str_to_df, scenario, wind_land_use, solar_land_use
+):
+    limits = pd.DataFrame(
+        {
+            "REZ ID": ["Q8a", "Q3", "V8"],
+            "Wind generation total limits (MW)_High": [560.0, None, None],
+            "Wind generation total limits (MW)_Medium": [1680.0, None, None],
+            "Wind generation total limits (MW)_Offshore -fixed": [None, None, 54996.0],
+            "Wind generation total limits (MW)_Offshore -floating": [
+                None,
+                None,
+                5000.0,
+            ],
+            "Solar PV plus Solar thermal Limits (MW)_Solar": [None, 1100.0, None],
+            "REZ resource limit violation penalty factor ($M/MW)": [0.3, 0.3, None],
+            "Land use limits in MW_Wind": [3200.0, None, 0.0],
+            "Land use limits in MW_Solar": [None, 7700.0, None],
+            "Land use limits in MW Accelerated Transition scenario_Wind": [
+                16000.0,
+                None,
+                0.0,
+            ],
+            "Land use limits in MW Accelerated Transition scenario_Solar": [
+                None,
+                38500.0,
+                None,
+            ],
+        }
+    )
+    iasr_tables = {"initial_resource_limits": limits}
+    generators_new_entrant = csv_str_to_df("""
+        geo_id,  resource_zone,  technology,                  resource_type
+        Q8,      Q8a,            Wind,                        wind_high
+        Q8,      Q8a,            Wind,                        wind_medium
+        Q3,      Q3,             Wind,                        wind_high
+        Q3,      Q3,             Large scale Solar PV,        solar
+        V8,      V8,             Wind - offshore (fixed),     wind_offshore_fixed
+        V8,      V8,             Wind - offshore (floating),  wind_offshore_floating
+        CNSW,    ,               OCGT (small GT),
+    """)
+
+    result = _template_resource_limits(iasr_tables, scenario, generators_new_entrant)
+
+    # Q8a wind_high is hard (no penalty), and its geo_id is Q8. Q3's wind_high and
+    # wind land use limits are blank in IASR but match a wind_high new entrant, so
+    # they become 0. V8's 0 wind land use is dropped, since offshore technologies
+    # aren't "Wind". Every other blank limit matches no generator and is dropped.
+    expected = csv_str_to_df(f"""
+        geo_id,  resource_zone,  technology,  resource_type,           limit_type,  limit,             relaxation_penalty
+        Q8,      Q8a,            ,            wind_high,               resource,    560.0,
+        Q8,      Q8a,            ,            wind_medium,             resource,    1680.0,            300000.0
+        Q3,      Q3,             ,            wind_high,               resource,    0.0,
+        Q3,      Q3,             ,            solar,                   resource,    1100.0,            300000.0
+        V8,      V8,             ,            wind_offshore_fixed,     resource,    54996.0,
+        V8,      V8,             ,            wind_offshore_floating,  resource,    5000.0,
+        Q8,      Q8a,            Wind,        ,                        land_use,    {wind_land_use},
+        Q3,      Q3,             Wind,        ,                        land_use,    0.0,
+        Q3,      Q3,             ,            solar,                   land_use,    {solar_land_use},
+    """)
+    sort_columns = ["limit_type", "resource_zone", "resource_type"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_columns).reset_index(drop=True),
+        expected.sort_values(sort_columns).reset_index(drop=True),
+    )
+
 
 # --- resource limits ---
 

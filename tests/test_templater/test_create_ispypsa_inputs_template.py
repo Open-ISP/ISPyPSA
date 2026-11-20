@@ -26,6 +26,18 @@ _FP_AUG_OPTION_COLS = [
     _FLOW_PATH_REVERSE_MW_COL,
 ]
 
+_INITIAL_RESOURCE_LIMIT_COLUMNS = [
+    "REZ ID",
+    "Wind generation total limits (MW)_High",
+    "Wind generation total limits (MW)_Medium",
+    "Wind generation total limits (MW)_Offshore -fixed",
+    "Wind generation total limits (MW)_Offshore -floating",
+    "Solar PV plus Solar thermal Limits (MW)_Solar",
+    "REZ resource limit violation penalty factor ($M/MW)",
+    "Land use limits in MW_Wind",
+    "Land use limits in MW_Solar",
+]
+
 
 def _stub_custom_constraints_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     """Identifiable, non-empty stand-in for ``template_custom_constraints_from_plexos``.
@@ -524,7 +536,11 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         OCGT (small GT),                Step Change,        2471,       2498
         BOTN - Cethana,                 Step Change,        3665,       3595
     """)
-
+    # wind_medium resource limit set to 0.0 -> no raise on unmatched non-zero limit
+    initial_resource_limits = pd.DataFrame(
+        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
+    )
     with (
         patch(
             "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -558,6 +574,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "build_costs": build_costs,
+                "initial_resource_limits": initial_resource_limits,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -792,6 +809,20 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "budget",
     }
     assert len(carbon_budgets) == 2
+    # At all granularities, 4 resource limits:
+    # Q1, Wind | solar, land_use
+    # Q1, wind_medium | solar, resource
+    resource_limits = result["resource_limits"]
+    assert set(resource_limits.columns) == {
+        "geo_id",
+        "resource_zone",
+        "technology",
+        "resource_type",
+        "limit_type",
+        "limit",
+        "relaxation_penalty",
+    }
+    assert len(resource_limits) == 4
 
     # At all granularities: 2x years, one fuel_type, one scenario
     emissions_reduction = result["emissions_reduction"]
@@ -886,6 +917,10 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         OCGT (small GT),                Step Change,        2471,       2498
         BOTN - Cethana,                 Step Change,        3665,       3595
     """)
+    initial_resource_limits = pd.DataFrame(
+        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
+    )
     with (
         patch(
             "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -919,6 +954,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "build_costs": build_costs,
+                "initial_resource_limits": initial_resource_limits,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -1043,6 +1079,12 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # At all granularities: 2x years, one fuel_type, one scenario
     assert len(result["emissions_reduction"]) == 2
 
+    # At all granularities, 4 resource limits:
+    # Q1, Wind | solar, land_use
+    # Q1, wind_medium | solar, resource
+    resource_limits = result["resource_limits"]
+    assert len(resource_limits) == 4
+
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # CQ is included so the CQ-NQ flow path's region prefix resolves at the
@@ -1118,7 +1160,10 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         OCGT (small GT),                Step Change,        2471,       2498
         BOTN - Cethana,                 Step Change,        3665,       3595
     """)
-
+    initial_resource_limits = pd.DataFrame(
+        [("Q1", 570.0, 0.0, pd.NA, pd.NA, 1100.0, 0.3, 6764, 16234)],
+        columns=_INITIAL_RESOURCE_LIMIT_COLUMNS,
+    )
     with (
         patch(
             "ispypsa.templater.create_template.FEATURE_FLAGS",
@@ -1150,6 +1195,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 "connection_cost_forecast_other": connection_cost_forecast_other,
                 "efficient_level_of_system_strength_cost": efficient_level_of_system_strength_cost,
                 "build_costs": build_costs,
+                "initial_resource_limits": initial_resource_limits,
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
@@ -1268,3 +1314,9 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     # At all granularities: 2x years, one fuel_type, one scenario
     assert len(result["emissions_reduction"]) == 2
+
+    # At all granularities, 4 resource limits:
+    # Q1, Wind | solar, land_use
+    # Q1, wind_medium | solar, resource
+    resource_limits = result["resource_limits"]
+    assert len(resource_limits) == 4
