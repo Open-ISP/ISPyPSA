@@ -309,6 +309,16 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     )
 
     # Verify outputs
+    # The returned snapshots carry the snapshot weightings and the model year.
+    assert list(snapshots.columns) == [
+        "investment_periods",
+        "snapshots",
+        "objective",
+        "generators",
+        "stores",
+        "model_year",
+    ]
+
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()
@@ -435,6 +445,16 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     )
 
     # Verify outputs
+    # The returned snapshots carry the snapshot weightings and the model year.
+    assert list(snapshots.columns) == [
+        "investment_periods",
+        "snapshots",
+        "objective",
+        "generators",
+        "stores",
+        "model_year",
+    ]
+
     # 1. Check that solar_traces directory was created with the right files
     solar_dir = output_dir / "solar_traces"
     assert solar_dir.exists()

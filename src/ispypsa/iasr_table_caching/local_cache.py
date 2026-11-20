@@ -78,6 +78,11 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "hydrogen_prices",
             "biomethane_prices",
             "build_costs",
+            "emissions_intensity_existing_committed_anticipated_additional_generators",
+            "emissions_intensity_new_entrants",
+            "auxiliary_load_existing_committed_anticipated_additional_generators",
+            "auxiliary_load_new_entrants",
+            "nem_carbon_budget",
         ] + augmentation
 
     else:

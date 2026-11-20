@@ -403,6 +403,16 @@ def test_template_generators_existing_planned(csv_str_to_df):
         IASR ID,  Technology Type,  Min Stable Level (MW)
         ANGAS1,   CCGT,             3.0
     """)  # not used, but needs to be non-empty else table validation raises
+    emissions_intensity = csv_str_to_df("""
+        IASR ID,    Scope 1 emissions intensity (kg/MWh as-gen)
+        BW01,       880.0
+        Q1G1,       0.0
+    """)
+    auxiliary_load = csv_str_to_df("""
+        IASR ID,    Auxiliary load (% of generation)
+        BW01,       12.0
+        Q1G1,       0.0
+    """)
     iasr_tables = {
         "existing_committed_anticipated_additional_generator_summary": summary,
         "pumped_hydro_existing_committed_anticipated_additional_properties": phes_properties,
@@ -412,6 +422,8 @@ def test_template_generators_existing_planned(csv_str_to_df):
         "expected_closure_years": closure_years,
         "coal_minimum_stable_level": coal,
         "gpg_min_stable_level_existing_generators": gas,
+        "emissions_intensity_existing_committed_anticipated_additional_generators": emissions_intensity,
+        "auxiliary_load_existing_committed_anticipated_additional_generators": auxiliary_load,
     }
     sub_regional_geography = csv_str_to_df("""
         geo_id,     geo_type,   region_id
@@ -434,6 +446,7 @@ def test_template_generators_existing_planned(csv_str_to_df):
         "commissioning_date",
         "closure_year",
         "minimum_load",
+        "emissions_intensity",
     ]
     assert len(result) == 2
 

@@ -1,0 +1,52 @@
+table: carbon_budgets
+required: false
+unique:
+  - [constraint_name]
+description: >
+  The carbon budgets that apply to the model: one row per constraint
+  pypsa_build adds, limiting the emissions of every generator over the
+  snapshots whose model year is in the budget's window. Consumed by
+  ispypsa.pypsa_build.carbon_budgets._add_carbon_budgets, together with the
+  model_year and stores columns of the pypsa-friendly snapshots table and the
+  emissions_intensity column of the pypsa-friendly generators table.
+
+  Source tables:
+    - `carbon_budgets`
+
+  Source notes:
+  The source table is an ISPyPSA table, translated by
+  ispypsa.translator.carbon_budgets. Budgets with no modelled year in their
+  window are dropped. A budget with only part of its window modelled is scaled
+  to the modelled years, as set by the model config's carbon_budget_scaling
+  option.
+
+  If absent (or empty):
+  No carbon budget constraints are added to the model.
+columns:
+  constraint_name:
+    type: string
+    required: true
+    description: >
+      Name of the linopy constraint, taken from the budget's budget_id (e.g.
+      nem_2027_to_2050).
+  year_from:
+    type: int
+    required: true
+    description: >
+      First model year of the budget's window, as in the ISPyPSA table. It is
+      not moved to the first modelled year when the window starts earlier.
+  year_to:
+    type: int
+    required: true
+    description: >
+      Last model year of the budget's window, as in the ISPyPSA table. It is
+      not moved to the last modelled year when the window ends later.
+  rhs:
+    type: float
+    required: true
+    units: Mt CO2-e
+    gte: 0.0
+    description: >
+      The most the generators may emit over the modelled years in the window:
+      the budget itself when the whole window is modelled, otherwise the budget
+      scaled to the modelled years.

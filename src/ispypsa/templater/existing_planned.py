@@ -46,6 +46,7 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _add_emissions_intensity_sent_out,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_match_names,
@@ -79,6 +80,7 @@ _GENERATOR_COLUMNS = [
     "commissioning_date",
     "closure_year",
     "minimum_load",
+    "emissions_intensity",
 ]
 
 _STORAGE_COLUMNS = [
@@ -182,6 +184,7 @@ def _template_generators_existing_planned(
     )
     generators = _format_commissioning_date(generators)
     generators = _merge_minimum_load(generators, iasr_tables)
+    generators = _add_emissions_intensity_sent_out(generators)
     return generators[_GENERATOR_COLUMNS]
 
 

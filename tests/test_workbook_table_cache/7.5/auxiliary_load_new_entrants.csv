@@ -1,0 +1,22 @@
+Generator,Auxiliary load (% of generation)
+OCGT (small GT),1.5
+OCGT (large GT),1.09999999999999
+CCGT,2.5
+CCGT with CCS,9.2
+Biomass,7.3
+Large scale Solar PV,0.0143
+Solar Thermal (16hrs storage),6.7
+Battery storage (1hr storage),0.85
+Battery storage (2hrs storage),0.95
+Battery storage (4hrs storage),1.2
+Battery storage (8hrs storage),1.75
+Wind,0.07
+Wind - offshore (fixed),0.07
+Wind - offshore (floating),0.07
+Pumped Hydro (10hrs storage),1.0
+Pumped Hydro (24hrs storage),1.0
+Pumped Hydro (48hrs storage),1.0
+Distributed Resources Solar,2.9
+Distributed Resources Batteries,0.95
+Alkaline Electrolyser,5.0
+BOTN - Cethana,1.0

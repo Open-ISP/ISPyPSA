@@ -37,6 +37,7 @@ import logging
 import pandas as pd
 
 from ispypsa.templater.helpers import (
+    _add_emissions_intensity_sent_out,
     _assert_table_valid,
     _derive_phes_symmetric_efficiency,
     _fuzzy_map_to_allowed_values,
@@ -74,6 +75,7 @@ _GENERATOR_PROPERTY_COLUMNS = [
     "lifetime_economic",
     "heat_rate",
     "minimum_stable_level",
+    "emissions_intensity",
 ]
 
 _STORAGE_IDENTITY_COLUMNS = [
@@ -190,6 +192,7 @@ def _template_generators_new_entrant(
     _assert_build_cost_zone_matches_geo_id(gens)
     gens = _merge_lcf_build(gens, iasr_tables["technology_specific_lcfs"])
     gens = _merge_lcf_om(gens, iasr_tables["locational_cost_factors"])
+    gens = _add_emissions_intensity_sent_out(gens)
     gens = gens[_GENERATOR_IDENTITY_COLUMNS + _GENERATOR_PROPERTY_COLUMNS]
     return _collapse_geo_id_to_granularity(
         gens,
