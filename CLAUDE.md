@@ -81,8 +81,10 @@ they are.
 
 How much a docstring says depends on the function's role:
 
-- **Ordinary helpers** get a one-line summary and an I/O Example. This is most functions: a
-  helper that names its own columns and serves one caller needs nothing more.
+- **Ordinary helpers** get a short summary and an I/O Example. This is most functions: a
+  helper that names its own columns and serves one caller needs little more. Add a short
+  second paragraph only when the summary leaves out something a caller needs, such as how
+  a derived quantity is defined.
 - **Entry points and generic helpers** get an orienting docstring, described below. These
   are the two places where the docstring is the only place the full story exists.
 - **Helpers that implement a method** (a numerical routine, a derived formula) also
@@ -146,11 +148,9 @@ The first signal is the gate; the other two raise the stakes.
 An orienting docstring is a short narrative, one idea per paragraph, in this order. Not
 every function needs every part: leave out a part that has nothing to say.
 
-1. **Summary line: one idea, the function's effect.** "Adjusts each carbon budget to the
-   years the model covers." Don't also pack in who uses the result or the shape of the
-   output; those have their own paragraphs. The summary should earn the function's name: if
-   it is called `_resolve_*`, the summary should say what gets resolved. For a generic
-   helper, name the parameters it connects.
+1. **Summary line.** The summary rules under "Wording rules" apply. Who uses the result
+   and the shape of the output have their own paragraphs below, so keep them out of it.
+   For a generic helper, name the parameters it connects.
 
 2. **The concept and the problem.** Before any behaviour, say what the data is and why the
    function exists. For an entry point this is the domain idea and the gap the function
@@ -248,6 +248,17 @@ Worked example: `_build_emissions_trajectory` in
 
 These apply to every docstring, and matter most in the orienting ones.
 
+- **The summary says one thing: the function's effect.** "Adjusts each carbon budget to
+  the years the model covers." Don't hang a definition or a second idea off it with a
+  colon: give that its own paragraph.
+- **The summary earns the function's name.** Use the name's own verb and say what it acts
+  on. A `_resolve_*` function says what gets resolved. `_weight_snapshots_by_model_year`
+  says what the weight is ("Weights each snapshot by the hours of its model year that it
+  represents"), not "Gives each snapshot the hours it stands for", which leaves the reader
+  to work out that those hours are the weight.
+- **Say what the result is for when the name doesn't.** A helper that works out a derived
+  quantity should say how it is used: "so that output in MW times the weight gives energy
+  in MWh".
 - **Define a term where it first appears.** A reader shouldn't meet "window", "rhs" or "key
   column" before being told what it is. For vocabulary derived from the signature, pin it
   down inline: "a key column: any column of `table` not in `value_columns`". A term defined
