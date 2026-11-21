@@ -109,8 +109,13 @@ def _add_window_years(budgets: pd.DataFrame) -> pd.DataFrame:
             NEM carbon budget from 2026-27 to 2049-50 (Mt CO2-e)   2027       2050
             2035 emissions reduction target in 2034-35             2035       2035
     """
+    # A list of the financial years in each description. For the two rows in
+    # the I/O Example:
+    #     ["2026-27", "2049-50"]
+    #     ["2034-35"]
     financial_years = budgets["description"].str.findall(_FINANCIAL_YEAR_PATTERN)
     budgets = budgets.copy()
+    # .str[0] takes the first of each list and .str[-1] the last.
     budgets["year_from"] = financial_years.str[0].map(
         _financial_year_string_to_end_year_int
     )

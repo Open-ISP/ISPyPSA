@@ -53,45 +53,7 @@ def _translate_carbon_budgets(
     The budgets are applied to the whole model whatever regions it covers. A
     warning is logged when the model is filtered to some regions only.
 
-    I/O Example (config: modelled years 2031 to 2050, carbon_budget_scaling
-    "prorata"):
-        carbon_budgets:
-            budget_id         year_from  year_to  budget
-            nem_2027_to_2030  2027       2030     290.0   # no modelled years: dropped
-            nem_2027_to_2050  2027       2050     583.0   # 20 of its 24 years modelled
-            nem_2035_to_2035  2035       2035     23.0
-
-        returns:
-            constraint_name   year_from  year_to  rhs
-            nem_2027_to_2050  2027       2050     485.833333   # 583 x 20 / 24
-            nem_2035_to_2035  2035       2035     23.0
-    """
-    filtered_to = config.filter_by_nem_regions or config.filter_by_isp_sub_regions
-    if filtered_to and not carbon_budgets.empty:
-        logging.warning(
-            f"The carbon budgets are for the whole NEM but the model is filtered "
-            f"to {sorted(filtered_to)}: the budgets are applied to it unscaled."
-        )
-    return _scale_budgets_to_modelled_years(
-        carbon_budgets,
-        config.temporal.range.start_year,
-        config.temporal.range.end_year,
-        config.carbon_budget_scaling,
-    )
-
-
-def _scale_budgets_to_modelled_years(
-    carbon_budgets: pd.DataFrame, start_year: int, end_year: int, scaling: str
-) -> pd.DataFrame:
-    """Scales each budget to the part of its window that is modelled.
-
-    The modelled years are every year from start_year to end_year, both
-    inclusive. Each budget is shared out over the years of its window in the way scaling
-    says (the carbon_budget_scaling options listed in
-    _translate_carbon_budgets). The scaled budget, returned as rhs, is the sum
-    of the shares of the modelled years.
-
-    I/O Example (modelled years 2029 to 2050):
+    I/O Example (config: modelled years 2029 to 2050):
         carbon_budgets:
             budget_id         year_from  year_to  budget
             nem_2025_to_2025  2025       2025     60.0    # no modelled years: dropped
@@ -99,20 +61,26 @@ def _scale_budgets_to_modelled_years(
             nem_2027_to_2050  2027       2050     583.0   # 22 of its 24 years modelled
             nem_2035_to_2035  2035       2035     23.0
 
-        returns (scaling "prorata"):
+        returns (carbon_budget_scaling "prorata"):
             constraint_name   year_from  year_to  rhs
             nem_2027_to_2030  2027       2030     145.0        # 290 x 2 / 4
             nem_2027_to_2050  2027       2050     534.416667   # 583 x 22 / 24
             nem_2035_to_2035  2035       2035     23.0
 
-        returns (scaling "linear_trajectory_to_zero"):
+        returns (carbon_budget_scaling "linear_trajectory_to_zero"):
             constraint_name   year_from  year_to  rhs
             nem_2027_to_2030  2027       2030     101.8   # the trajectory in 2029 and 2030
             nem_2027_to_2050  2027       2050     394.8   # 101.8 + 293 for 2031 to 2050
             nem_2035_to_2035  2035       2035     23.0
 
-        raises (scaling "none"), as two windows are only partly modelled
+        raises (carbon_budget_scaling "none"), as two windows are only partly
+        modelled
     """
+    _warn_if_model_is_region_filtered(carbon_budgets, config)
+    start_year = config.temporal.range.start_year
+    end_year = config.temporal.range.end_year
+    scaling = config.carbon_budget_scaling
+
     budgets = _drop_budgets_with_no_modelled_years(carbon_budgets, start_year, end_year)
     if scaling == "none":
         _raise_on_partly_modelled_windows(budgets, start_year, end_year)
@@ -131,6 +99,23 @@ def _scale_budgets_to_modelled_years(
         budget_years["budget_share"] = budget_years["budget"] / window_length
 
     return _sum_shares_into_rhs(budget_years)
+
+
+def _warn_if_model_is_region_filtered(
+    carbon_budgets: pd.DataFrame, config: ModelConfig
+) -> None:
+    """Warns when there are carbon budgets and the model is filtered to some
+    regions.
+
+    The budgets are for the whole NEM, and are applied to a filtered model as
+    they are.
+    """
+    filtered_to = config.filter_by_nem_regions or config.filter_by_isp_sub_regions
+    if filtered_to and not carbon_budgets.empty:
+        logging.warning(
+            f"The carbon budgets are for the whole NEM but the model is filtered "
+            f"to {sorted(filtered_to)}: the budgets are applied to it unscaled."
+        )
 
 
 def _sum_shares_into_rhs(budget_years: pd.DataFrame) -> pd.DataFrame:
