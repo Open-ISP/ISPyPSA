@@ -60,7 +60,7 @@ def _network() -> pypsa.Network:
 
 def _snapshots(csv_str_to_df) -> pd.DataFrame:
     """The network's snapshots as the pypsa-friendly snapshots table. Each is
-    the only snapshot in its model year, so it stands for all 8760 hours of
+    the only snapshot in its model year, so it represents all 8760 hours of
     it."""
     return csv_str_to_df("""
         investment_periods,  snapshots,            model_year,  stores
@@ -124,7 +124,7 @@ def test_budget_sums_the_emitters_over_the_snapshots_in_its_window(csv_str_to_df
     _add_carbon_budgets(network, carbon_budgets, _snapshots(csv_str_to_df), generators)
 
     assert _carbon_budget_constraint_names(network) == ["nem_2027_to_2028"]
-    # Each snapshot stands for 8760 hours, so a MW of BW01 (1.0 t/MWh) emits
+    # Each snapshot represents 8760 hours, so a MW of BW01 (1.0 t/MWh) emits
     # 8760 t, or 0.00876 Mt, and a MW of TALWA1 (0.5 t/MWh) half that. Only the
     # 2027 and 2028 snapshots are in the window.
     expected = csv_str_to_df("""
@@ -186,7 +186,7 @@ def test_each_snapshot_is_weighted_by_its_share_of_its_model_year(csv_str_to_df)
     _add_carbon_budgets(network, carbon_budgets, snapshots, generators)
 
     # Model year 2027 has four hours modelled. The first snapshot covers one of
-    # them, so it stands for a quarter of the year (2190 hours), and the second
+    # them, so it represents a quarter of the year (2190 hours), and the second
     # for the other three quarters (6570 hours). The weighting is within the
     # model year: the 2031 snapshots, in another investment period and model
     # year, don't come into it.
@@ -381,7 +381,7 @@ def test_weight_snapshots_by_model_year(csv_str_to_df):
     result = _weight_snapshots_by_model_year(snapshots)
 
     # Model year 2027 has four hours modelled, split one to three between its
-    # snapshots. 2028 has a single snapshot, which stands for the whole year
+    # snapshots. 2028 has a single snapshot, which represents the whole year
     # even though it shares an investment period with 2027's. The snapshots
     # arrive as text, as they would from a CSV, and come back as timestamps.
     expected = csv_str_to_df("""

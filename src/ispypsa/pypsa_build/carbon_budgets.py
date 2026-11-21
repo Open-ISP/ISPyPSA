@@ -74,9 +74,13 @@ def _add_carbon_budgets(
 
 
 def _weight_snapshots_by_model_year(snapshots: pd.DataFrame) -> pd.DataFrame:
-    """Gives each snapshot the hours of its model year that it stands for:
-    its length (stores), scaled so that the snapshots of each model year add
-    up to 8760 hours.
+    """Weights each snapshot by the hours of its model year that it represents
+    (hours_represented), so that output in MW times the weight gives energy in
+    MWh.
+
+    The weight is the snapshot's length (stores), scaled so that the weights of
+    each model year's snapshots sum to 8760 hours. A model year with a few
+    representative weeks is then counted as a whole year.
 
     The result is indexed by (period, timestep), as the network's snapshots
     are, so its rows can be matched to the model's variables.
@@ -116,7 +120,7 @@ def _sum_emissions(
 ) -> linopy.LinearExpression:
     """The total emissions, in Mt, of the emitters over the snapshots in
     hours_represented: each generator's output at each snapshot times its
-    emissions intensity and the hours the snapshot stands for.
+    emissions intensity and the hours the snapshot represents.
 
     I/O Example:
         emitters:
