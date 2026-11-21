@@ -94,7 +94,7 @@ def _scale_budgets_to_modelled_years(
     I/O Example (modelled years 2029 to 2050):
         carbon_budgets:
             budget_id         year_from  year_to  budget
-            nem_2020_to_2025  2020       2025     600.0   # no modelled years: dropped
+            nem_2025_to_2025  2025       2025     60.0    # no modelled years: dropped
             nem_2027_to_2030  2027       2030     290.0   # 2 of its 4 years modelled
             nem_2027_to_2050  2027       2050     583.0   # 22 of its 24 years modelled
             nem_2035_to_2035  2035       2035     23.0
@@ -280,15 +280,15 @@ def _share_budgets_along_trajectory(
     The trajectory is built from every multi-year budget in carbon_budgets,
     including those with no modelled years, as they still shape it.
 
-    I/O Example (a model of two years, 2030 and 2035):
+    I/O Example (rows for two of the modelled years, 2030 and 2035):
         carbon_budgets:
             budget_id         year_from  year_to  budget
             nem_2027_to_2030  2027       2030     290.0
             nem_2027_to_2050  2027       2050     583.0
             nem_2035_to_2035  2035       2035     23.0
 
-        budget_years, each budget above paired with the modelled years in its
-        window:
+        budget_years, each budget above paired with those two years where
+        they are in its window:
             budget_id         year_from  year_to  budget  year
             nem_2027_to_2030  2027       2030     290.0   2030
             nem_2027_to_2050  2027       2050     583.0   2030
@@ -371,9 +371,14 @@ def _build_emissions_trajectory(
     - They all start in the same year and end in different years, so that each
       sits inside the next longer one. 2027 to 2030 alongside 2027 to 2050 is
       fine. 2027 to 2030 alongside 2031 to 2050 is not.
-    - Emissions never have to rise to use the budgets in full. They would if
-      a later run of years were allowed more emissions a year than the years
-      before it, or if a longer budget were smaller than a shorter one.
+    - No budget is smaller than a shorter one inside it. A 2027 to 2050 budget
+      of 200 Mt alongside 290 Mt for 2027 to 2030 would leave less than
+      nothing for 2031 to 2050.
+    - Emissions never have to rise to use the budgets in full. In the chart,
+      2031 to 2050 starts at 29.3 Mt a year, and 2027 to 2030 falls to meet
+      it. Had the longer budget been 1100 Mt, 2031 to 2050 would start at 81
+      Mt a year. 2027 to 2030 is only allowed 72.5 Mt a year on average, so
+      it would have to start at 64 and rise to 81.
 
     I/O Example:
         carbon_budgets:
@@ -466,10 +471,11 @@ def _emissions_rate_at_each_knot(
     """Works out the rate of emissions, in Mt a year, at each knot of the
     trajectory.
 
-    A knot is the end of a year at which the trajectory changes slope.
-    knot_years holds those years in order, and cumulative_budget the total
-    emissions allowed from the first knot up to each one. The trajectory is
-    then the straight lines joining the rates returned here.
+    A knot is the end of a year at which the trajectory starts, ends or
+    changes slope. knot_years holds those years in order, and
+    cumulative_budget the total emissions allowed from the first knot
+    up to each one. The trajectory is then the straight lines joining
+    the rates returned here.
 
     The rate at the last knot is zero. Each earlier rate is worked out from
     the one after it: between two knots the rate is a straight line, so its
@@ -504,8 +510,9 @@ def _raise_if_emissions_would_rise(knot_years: np.ndarray, rates: np.ndarray) ->
 
     They would when the rate at a knot is higher than the rate at the knot
     before it. The trajectory is meant to fall all the way to zero, so budgets
-    that need a rise can't be scaled this way. Each run of years over which
-    emissions would rise is named in the error as (first year, last year).
+    that need a rise can't be scaled this way. Each stretch between two knots
+    over which emissions would rise is named in the error as (first year,
+    last year).
 
     I/O Example:
         knot_years:  [2026, 2030, 2040, 2050]
@@ -514,8 +521,8 @@ def _raise_if_emissions_would_rise(knot_years: np.ndarray, rates: np.ndarray) ->
         raises ValueError: "With carbon_budget_scaling
         'linear_trajectory_to_zero', emissions would have to rise over the
         years [(2031, 2040)] to use the carbon budgets in full. Either the
-        budgets allow more emissions a year after those years than during
-        them, or a longer budget is smaller than a shorter one."
+        budgets allow too many emissions after those years for the trajectory
+        to keep falling, or a longer budget is smaller than a shorter one."
     """
     rises = rates[:-1] < rates[1:] - _RISING_RATE_TOLERANCE
     if rises.any():
@@ -524,7 +531,7 @@ def _raise_if_emissions_would_rise(knot_years: np.ndarray, rates: np.ndarray) ->
         raise ValueError(
             f"With carbon_budget_scaling 'linear_trajectory_to_zero', emissions "
             f"would have to rise over the years {list(zip(first_years, last_years))} "
-            f"to use the carbon budgets in full. Either the budgets allow more "
-            f"emissions a year after those years than during them, or a longer "
-            f"budget is smaller than a shorter one."
+            f"to use the carbon budgets in full. Either the budgets allow too "
+            f"many emissions after those years for the trajectory to keep "
+            f"falling, or a longer budget is smaller than a shorter one."
         )

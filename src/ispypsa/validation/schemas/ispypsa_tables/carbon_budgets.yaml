@@ -48,11 +48,11 @@ custom_validation:
     description: >
       Using every multi-year budget in full must not need emissions to rise.
       A longer budget must be larger than the shorter ones inside it, and the
-      extra years it adds must not be allowed more emissions a year than the
-      years before them. For example a 2027-2050 budget of 200 fails
-      alongside a 2027-2030 budget of 290, as it would leave less than nothing
-      for 2031-2050. Only needed when the model config's carbon_budget_scaling
-      is linear_trajectory_to_zero.
+      extra years it adds must not be allowed too much compared with the years
+      before them: with two budgets, no more than half as much a year. For
+      example a 2027-2050 budget of 200 fails alongside a 2027-2030 budget of
+      290, as it would leave less than nothing for 2031-2050. Only needed when
+      the model config's carbon_budget_scaling is linear_trajectory_to_zero.
 columns:
   budget_id:
     type: string

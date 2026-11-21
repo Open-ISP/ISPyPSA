@@ -118,9 +118,13 @@ def _weight_snapshots_by_model_year(snapshots: pd.DataFrame) -> pd.DataFrame:
 def _sum_emissions(
     model: linopy.Model, emitters: pd.DataFrame, hours_represented: pd.Series
 ) -> linopy.LinearExpression:
-    """The total emissions, in Mt, of the emitters over the snapshots in
-    hours_represented: each generator's output at each snapshot times its
-    emissions intensity and the hours the snapshot represents.
+    """Sums the emissions, in Mt, of the emitters over the snapshots in
+    hours_represented.
+
+    Each term is a generator's output at a snapshot times its emissions
+    intensity and the hours the snapshot represents. hours_represented must be
+    indexed by (period, timestep), as the model's variables are, since linopy
+    matches the two by those names.
 
     I/O Example:
         emitters:
