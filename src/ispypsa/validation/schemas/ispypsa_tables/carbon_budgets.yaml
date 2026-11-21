@@ -43,8 +43,8 @@ custom_validation:
       longer one. For example 2027-2030 alongside 2027-2050 is valid, but
       2027-2030 alongside 2031-2050 is not. Only needed when the model
       config's carbon_budget_scaling is linear_trajectory_to_zero, which draws
-      a single path of emissions through the budgets.
-  - name: multi_year_budgets_allow_a_falling_path
+      a single trajectory of emissions through the budgets.
+  - name: multi_year_budgets_allow_a_falling_trajectory
     description: >
       Using every multi-year budget in full must not need emissions to rise.
       A longer budget must be larger than the shorter ones inside it, and the

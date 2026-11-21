@@ -3,15 +3,16 @@ import pandas as pd
 import pytest
 
 from ispypsa.translator.carbon_budgets import (
-    _add_shares_along_trajectory,
     _build_emissions_trajectory,
     _drop_budgets_with_no_modelled_years,
     _emissions_rate_at_each_knot,
+    _pair_budgets_with_modelled_years,
     _raise_if_budgets_are_not_nested,
     _raise_if_emissions_would_rise,
     _raise_on_partly_modelled_windows,
     _scale_budgets_to_modelled_years,
-    _sum_shares_into_limits,
+    _share_budgets_along_trajectory,
+    _sum_shares_into_rhs,
     _translate_carbon_budgets,
 )
 
@@ -20,8 +21,8 @@ _CARBON_BUDGET_COLUMNS = ["budget_id", "year_from", "year_to", "budget"]
 
 def _step_change_budgets(csv_str_to_df) -> pd.DataFrame:
     """The 7.5 workbook's Step Change budgets. Under linear_trajectory_to_zero
-    they give a path falling from 115.7 Mt a year at the start of 2027 to 29.3
-    at the end of 2030, then to zero at the end of 2050."""
+    they give a trajectory falling from 115.7 Mt a year at the start of 2027 to
+    29.3 at the end of 2030, then to zero at the end of 2050."""
     return csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget
         nem_2027_to_2030,   2027,       2030,       290.0
@@ -100,7 +101,7 @@ def test_scale_budgets_keeps_fully_modelled_budgets_whole(csv_str_to_df, scaling
 
     result = _scale_budgets_to_modelled_years(carbon_budgets, 2025, 2052, scaling)
 
-    # Every window sits inside 2025 to 2052, so each limit is the budget
+    # Every window sits inside 2025 to 2052, so each rhs is the budget
     # itself whatever the scaling.
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
@@ -135,10 +136,10 @@ def test_scale_budgets_linear_trajectory_to_zero(csv_str_to_df):
         carbon_budgets, 2029, 2040, "linear_trajectory_to_zero"
     )
 
-    # The path gives 2029 and 2030 61.7 + 40.1 = 101.8, which is the first
-    # budget's limit. The second stretch (293 over 2031 to 2050) falls in a
-    # straight line to zero, so its first half (2031 to 2040) has three
-    # quarters of it, 219.75, and the second budget's limit is 101.8 + 219.75.
+    # The trajectory gives 2029 and 2030 61.7 + 40.1 = 101.8, which is the
+    # first budget's rhs. The second stretch (293 over 2031 to 2050) falls in
+    # a straight line to zero, so its first half (2031 to 2040) has three
+    # quarters of it, 219.75, and the second budget's rhs is 101.8 + 219.75.
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2027_to_2030,   2027,       2030,       101.8
@@ -204,20 +205,20 @@ def test_scale_budgets_empty_table(csv_str_to_df, scaling):
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
-# --- _sum_shares_into_limits ---
+# --- _sum_shares_into_rhs ---
 
 
-def test_sum_shares_into_limits(csv_str_to_df):
-    yearly = csv_str_to_df("""
+def test_sum_shares_into_rhs(csv_str_to_df):
+    budget_years = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget,     year,   budget_share
         nem_2027_to_2030,   2027,       2030,       290.0,      2029,   72.5
         nem_2027_to_2030,   2027,       2030,       290.0,      2030,   72.5
         nem_2035_to_2035,   2035,       2035,       23.0,       2035,   23.0000004
     """)
 
-    result = _sum_shares_into_limits(yearly)
+    result = _sum_shares_into_rhs(budget_years)
 
-    # The limit is rounded to the nearest tonne (six decimal places of a Mt).
+    # The rhs is rounded to the nearest tonne (six decimal places of a Mt).
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2027_to_2030,   2027,       2030,       145.0
@@ -302,30 +303,62 @@ def test_raise_on_partly_modelled_windows_passes_when_windows_are_modelled(
     _raise_on_partly_modelled_windows(budgets, 2029, 2050)
 
 
-# --- _add_shares_along_trajectory ---
+# --- _pair_budgets_with_modelled_years ---
 
 
-def test_add_shares_along_trajectory(csv_str_to_df):
-    yearly = csv_str_to_df("""
+def test_pair_budgets_with_modelled_years(csv_str_to_df):
+    budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2035_to_2035,   2035,       2035,       23.0
+        nem_2049_to_2052,   2049,       2052,       10.0
+    """)
+
+    result = _pair_budgets_with_modelled_years(budgets, 2029, 2050)
+
+    # The first budget loses 2027 and 2028, which are before the modelled
+    # years, and the last loses 2051 and 2052, which are after them.
+    expected = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget,     year
+        nem_2027_to_2030,   2027,       2030,       290.0,      2029
+        nem_2027_to_2030,   2027,       2030,       290.0,      2030
+        nem_2035_to_2035,   2035,       2035,       23.0,       2035
+        nem_2049_to_2052,   2049,       2052,       10.0,       2049
+        nem_2049_to_2052,   2049,       2052,       10.0,       2050
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_pair_budgets_with_modelled_years_no_budgets(csv_str_to_df):
+    budgets = pd.DataFrame(columns=["budget_id", "year_from", "year_to", "budget"])
+
+    result = _pair_budgets_with_modelled_years(budgets, 2029, 2050)
+
+    expected = csv_str_to_df("""
+        budget_id,  year_from,  year_to,    budget,     year
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+# --- _share_budgets_along_trajectory ---
+
+
+def test_share_budgets_along_trajectory(csv_str_to_df):
+    budget_years = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget,     year
         nem_2027_to_2030,   2027,       2030,       290.0,      2030
         nem_2027_to_2050,   2027,       2050,       583.0,      2030
         nem_2027_to_2050,   2027,       2050,       583.0,      2035
         nem_2035_to_2035,   2035,       2035,       23.0,       2035
     """)
-    modelled_years = csv_str_to_df("""
-        year
-        2030
-        2035
-    """)
 
-    result = _add_shares_along_trajectory(
-        yearly, _step_change_budgets(csv_str_to_df), modelled_years
+    result = _share_budgets_along_trajectory(
+        budget_years, _step_change_budgets(csv_str_to_df)
     )
 
-    # Both multi-year budgets take the path's 2030 emissions (40.1). In 2035
-    # the long budget takes the path's (29.3 less 4.5 years' fall of 1.465),
-    # while the one-year 2035 budget takes its own 23.
+    # Both multi-year budgets take the trajectory's 2030 emissions (40.1). In
+    # 2035 the long budget takes the trajectory's (29.3 less 4.5 years' fall
+    # of 1.465), while the one-year 2035 budget takes its own 23.
     expected = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget,     year,   budget_share
         nem_2027_to_2030,   2027,       2030,       290.0,      2030,   40.1
@@ -334,6 +367,19 @@ def test_add_shares_along_trajectory(csv_str_to_df):
         nem_2035_to_2035,   2035,       2035,       23.0,       2035,   23.0
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False)
+
+
+def test_share_budgets_along_trajectory_no_budgets(csv_str_to_df):
+    columns = ["budget_id", "year_from", "year_to", "budget"]
+    budget_years = pd.DataFrame(columns=[*columns, "year"])
+    carbon_budgets = pd.DataFrame(columns=columns)
+
+    result = _share_budgets_along_trajectory(budget_years, carbon_budgets)
+
+    expected = csv_str_to_df("""
+        budget_id,  year_from,  year_to,    budget,     year,   budget_share
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 # --- _build_emissions_trajectory ---
@@ -354,7 +400,8 @@ def test_build_emissions_trajectory(csv_str_to_df):
         _step_change_budgets(csv_str_to_df), modelled_years
     )
 
-    # 2026 and 2051 are outside the multi-year budgets, so not on the path.
+    # 2026 and 2051 are outside the multi-year budgets, so not on the
+    # trajectory.
     # 2027 to 2030 falls from 115.7 to 29.3 (21.6 a year) and 2031 to 2050
     # from 29.3 to zero (1.465 a year); each year takes the level half way
     # through it.
@@ -379,8 +426,8 @@ def test_build_emissions_trajectory_adds_up_to_each_budget(csv_str_to_df):
         lambda year: "2027_to_2030" if year <= 2030 else "2031_to_2050"
     )
     totals = result.groupby("window", as_index=False)["emissions"].sum()
-    # The path's emissions over 2027 to 2030 are the first budget (290), and
-    # over 2031 to 2050 are what the second leaves (583 - 290).
+    # The trajectory's emissions over 2027 to 2030 are the first budget (290),
+    # and over 2031 to 2050 are what the second leaves (583 - 290).
     expected = csv_str_to_df("""
         window,         emissions
         2027_to_2030,   290.0
@@ -421,8 +468,8 @@ def test_build_emissions_trajectory_three_nested_budgets(csv_str_to_df):
 
     result = _build_emissions_trajectory(carbon_budgets, modelled_years)
 
-    # Whatever order the rows are in, the path runs through the budgets in
-    # order of length. 2041 to 2050 is allowed 83 Mt and ends at zero, so it
+    # Whatever order the rows are in, the trajectory runs through the budgets
+    # in order of length. 2041 to 2050 is allowed 83 Mt and ends at zero, so it
     # starts at 16.6 Mt a year. 2031 to 2040 is allowed 210 Mt (21 a year) and
     # ends at 16.6, so it starts at 25.4. 2027 to 2030 is allowed 290 Mt (72.5
     # a year) and ends at 25.4, so it starts at 119.6. Each year below is the

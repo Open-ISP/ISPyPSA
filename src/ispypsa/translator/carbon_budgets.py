@@ -15,21 +15,40 @@ _RISING_RATE_TOLERANCE = 1e-9
 def _translate_carbon_budgets(
     carbon_budgets: pd.DataFrame, config: ModelConfig
 ) -> pd.DataFrame:
-    """Translates the carbon budgets into the limits
-    ispypsa.pypsa_build.carbon_budgets adds to the model as constraints: one
-    row per budget, with its limit on the emissions of the modelled years.
+    """Adjusts each carbon budget to the years the model covers.
 
-    Only budgets with a modelled year (config.temporal.range) in their window
-    are returned. The rhs is the budget itself when every year of its window
-    is modelled. Otherwise config.carbon_budget_scaling decides:
+    A carbon budget is a cap, in Mt, on the NEM's total emissions over a
+    window of years. The model may cover only some of those years
+    (config.temporal.range), so the cap has to be adjusted to match.
+
+    The adjusted budgets are returned as a table with one row per budget and
+    the columns:
+
+    - constraint_name: the budget's budget_id.
+    - year_from, year_to: the first and last year of the budget's window,
+      both inclusive and unchanged from the input.
+    - rhs: the adjusted cap, in Mt.
+
+    ispypsa.pypsa_build.carbon_budgets adds one constraint to the model per
+    row: the emissions of the modelled years in the window must be no more
+    than rhs.
+
+    How a budget is adjusted depends on how much of its window is modelled:
+
+    1. All of it: the rhs is the budget, unchanged.
+    2. None of it: the budget is dropped, as there is nothing for it to
+       constrain.
+    3. Part of it: config.carbon_budget_scaling decides.
+
+    The carbon_budget_scaling options for a partly modelled window are:
 
     - "none": raises a ValueError naming the budgets.
-    - "prorata": every year of the budget window gets an equal share of the budget,
-      and the rhs is the modelled years' shares added up.
-    - "linear_trajectory_to_zero": the yearly shares follow a path of emissions
-      that falls in straight lines to zero at the end of the last budget (see
-      _build_emissions_trajectory), and the rhs is again the modelled years'
-      shares added up.
+    - "prorata": every year of the window gets an equal share of the budget,
+      and the rhs is the sum of the shares of the modelled years.
+    - "linear_trajectory_to_zero": the same, but the yearly shares are not
+      equal. They follow a trajectory of emissions that falls in straight
+      lines to zero at the end of the last budget (see
+      _build_emissions_trajectory).
 
     The budgets are applied to the whole model whatever regions it covers. A
     warning is logged when the model is filtered to some regions only.
@@ -64,14 +83,13 @@ def _translate_carbon_budgets(
 def _scale_budgets_to_modelled_years(
     carbon_budgets: pd.DataFrame, start_year: int, end_year: int, scaling: str
 ) -> pd.DataFrame:
-    """Works out each budget's limit on the emissions of the modelled years in
-    its window.
+    """Scales each budget to the part of its window that is modelled.
 
-    Each budget is shared out over the years of its window, and its limit is
-    the shares of the modelled years added up. So a budget whose whole window
-    is modelled keeps its full size whatever the scaling. Budgets with no
-    modelled years are dropped, and with scaling "none" a budget with only part
-    of its window modelled raises.
+    The modelled years are every year from start_year to end_year, both
+    inclusive. Each budget is shared out over the years of its window in the way scaling
+    says (the carbon_budget_scaling options listed in
+    _translate_carbon_budgets). The scaled budget, returned as rhs, is the sum
+    of the shares of the modelled years.
 
     I/O Example (modelled years 2029 to 2050):
         carbon_budgets:
@@ -89,7 +107,7 @@ def _scale_budgets_to_modelled_years(
 
         returns (scaling "linear_trajectory_to_zero"):
             constraint_name   year_from  year_to  rhs
-            nem_2027_to_2030  2027       2030     101.8   # the path's 2029 and 2030
+            nem_2027_to_2030  2027       2030     101.8   # the trajectory in 2029 and 2030
             nem_2027_to_2050  2027       2050     394.8   # 101.8 + 293 for 2031 to 2050
             nem_2035_to_2035  2035       2035     23.0
 
@@ -99,26 +117,31 @@ def _scale_budgets_to_modelled_years(
     if scaling == "none":
         _raise_on_partly_modelled_windows(budgets, start_year, end_year)
 
-    # One row per budget and modelled year in its window.
-    modelled_years = pd.DataFrame({"year": range(start_year, end_year + 1)})
-    yearly = budgets.merge(modelled_years, how="cross")
-    yearly = yearly[yearly["year"].between(yearly["year_from"], yearly["year_to"])]
+    budget_years = _pair_budgets_with_modelled_years(budgets, start_year, end_year)
 
     if scaling == "linear_trajectory_to_zero":
-        yearly = _add_shares_along_trajectory(yearly, carbon_budgets, modelled_years)
+        # The trajectory depends on every budget, so it is built from
+        # carbon_budgets: the table before the budgets with no modelled years
+        # were dropped.
+        budget_years = _share_budgets_along_trajectory(budget_years, carbon_budgets)
     else:
-        window_length = yearly["year_to"] - yearly["year_from"] + 1
-        yearly["budget_share"] = yearly["budget"] / window_length
+        # Equal shares, for "prorata" and for "none". With "none" every window
+        # left is modelled in full, so its shares sum back to the whole budget.
+        window_length = budget_years["year_to"] - budget_years["year_from"] + 1
+        budget_years["budget_share"] = budget_years["budget"] / window_length
 
-    return _sum_shares_into_limits(yearly)
+    return _sum_shares_into_rhs(budget_years)
 
 
-def _sum_shares_into_limits(yearly: pd.DataFrame) -> pd.DataFrame:
-    """Adds up each budget's yearly shares into its limit, named and laid out
-    as the pypsa-friendly carbon_budgets table.
+def _sum_shares_into_rhs(budget_years: pd.DataFrame) -> pd.DataFrame:
+    """Sums each budget's yearly shares into its rhs.
+
+    The result has the columns of the pypsa-friendly carbon_budgets table:
+    budget_id becomes constraint_name, and rhs is rounded to the nearest
+    tonne.
 
     I/O Example:
-        yearly:
+        budget_years:
             budget_id         year_from  year_to  year  budget_share
             nem_2027_to_2030  2027       2030     2029  72.5
             nem_2027_to_2030  2027       2030     2030  72.5
@@ -129,21 +152,24 @@ def _sum_shares_into_limits(yearly: pd.DataFrame) -> pd.DataFrame:
             nem_2027_to_2030  2027       2030     145.0
             nem_2035_to_2035  2035       2035     23.0
     """
-    limits = yearly.groupby(["budget_id", "year_from", "year_to"], as_index=False)[
-        "budget_share"
-    ].sum()
-    limits = limits.rename(columns={"budget_id": "constraint_name"})
+    budgets = budget_years.groupby(
+        ["budget_id", "year_from", "year_to"], as_index=False
+    )["budget_share"].sum()
+    budgets = budgets.rename(columns={"budget_id": "constraint_name"})
     # To the nearest tonne, which also clears the float noise left by adding up
     # the yearly shares. A table with no rows has no numeric dtype to round.
-    limits["rhs"] = limits["budget_share"].astype("float64").round(6)
-    return limits[_CARBON_BUDGET_COLUMNS]
+    budgets["rhs"] = budgets["budget_share"].astype("float64").round(6)
+    return budgets[_CARBON_BUDGET_COLUMNS]
 
 
 def _drop_budgets_with_no_modelled_years(
     carbon_budgets: pd.DataFrame, start_year: int, end_year: int
 ) -> pd.DataFrame:
-    """Drops the budgets whose window has no year between start_year and
-    end_year, and logs them.
+    """Drops the budgets with no modelled year in their window.
+
+    The modelled years are every year from start_year to end_year, both
+    inclusive. The dropped budgets are logged, as they are in the
+    carbon_budgets table but put no constraint on the model.
 
     I/O Example (start_year 2031, end_year 2050):
         carbon_budgets:
@@ -174,8 +200,15 @@ def _drop_budgets_with_no_modelled_years(
 def _raise_on_partly_modelled_windows(
     budgets: pd.DataFrame, start_year: int, end_year: int
 ) -> None:
-    """Raises when a budget's window starts before start_year or ends after
-    end_year.
+    """Raises when only part of a budget's window is modelled.
+
+    A window is partly modelled when it starts before start_year or ends after
+    end_year. Every such budget is named in the error. This is the check for
+    carbon_budget_scaling "none", where a budget is applied in full or not at
+    all.
+
+    The budgets with no modelled year in their window must already have been
+    dropped, as they would be named too.
 
     I/O Example (start_year 2029, end_year 2050):
         budgets:
@@ -203,47 +236,83 @@ def _raise_on_partly_modelled_windows(
         )
 
 
-def _add_shares_along_trajectory(
-    yearly: pd.DataFrame, carbon_budgets: pd.DataFrame, modelled_years: pd.DataFrame
+def _pair_budgets_with_modelled_years(
+    budgets: pd.DataFrame, start_year: int, end_year: int
 ) -> pd.DataFrame:
-    """Adds each budget's share for each year: the emissions of that year on
-    the linear_trajectory_to_zero path, or the whole budget when it is on a
-    single year.
+    """Pairs each budget with every modelled year in its window.
 
-    The path is built from every multi-year budget in carbon_budgets, including
-    those with no modelled years, as they still shape it.
+    The result has one row per budget and year. The modelled years are every
+    year from start_year to end_year, both inclusive.
 
-    I/O Example:
-        yearly:
+    I/O Example (start_year 2029, end_year 2050):
+        budgets:
+            budget_id         year_from  year_to  budget
+            nem_2027_to_2030  2027       2030     290.0   # 2027 and 2028 aren't modelled
+            nem_2035_to_2035  2035       2035     23.0
+
+        returns:
             budget_id         year_from  year_to  budget  year
+            nem_2027_to_2030  2027       2030     290.0   2029
             nem_2027_to_2030  2027       2030     290.0   2030
-            nem_2027_to_2050  2027       2050     583.0   2030
             nem_2035_to_2035  2035       2035     23.0    2035
+    """
+    modelled_years = pd.DataFrame({"year": range(start_year, end_year + 1)})
+    budget_years = budgets.merge(modelled_years, how="cross")
+    is_in_window = budget_years["year"].between(
+        budget_years["year_from"], budget_years["year_to"]
+    )
+    return budget_years[is_in_window].reset_index(drop=True)
 
+
+def _share_budgets_along_trajectory(
+    budget_years: pd.DataFrame, carbon_budgets: pd.DataFrame
+) -> pd.DataFrame:
+    """Shares each budget out over the years of its window along the
+    trajectory, adding the budget_share column.
+
+    The share depends on the length of the budget's window:
+
+    - More than one year: the share for a year is the trajectory's emissions
+      in that year (see _build_emissions_trajectory).
+    - A single year: there is nothing to share out, so that year takes the
+      whole budget, as it would with equal shares.
+
+    The trajectory is built from every multi-year budget in carbon_budgets,
+    including those with no modelled years, as they still shape it.
+
+    I/O Example (a model of two years, 2030 and 2035):
         carbon_budgets:
             budget_id         year_from  year_to  budget
             nem_2027_to_2030  2027       2030     290.0
             nem_2027_to_2050  2027       2050     583.0
             nem_2035_to_2035  2035       2035     23.0
 
-        modelled_years:
-            year
-            2030
-            2035
+        budget_years, each budget above paired with the modelled years in its
+        window:
+            budget_id         year_from  year_to  budget  year
+            nem_2027_to_2030  2027       2030     290.0   2030
+            nem_2027_to_2050  2027       2050     583.0   2030
+            nem_2027_to_2050  2027       2050     583.0   2035
+            nem_2035_to_2035  2035       2035     23.0    2035
 
-        returns:
+        returns, where the trajectory's emissions are 40.1 Mt in 2030 and
+        22.7075 Mt in 2035:
             budget_id         year_from  year_to  budget  year  budget_share
-            nem_2027_to_2030  2027       2030     290.0   2030  40.1    # the path in 2030
+            nem_2027_to_2030  2027       2030     290.0   2030  40.1
             nem_2027_to_2050  2027       2050     583.0   2030  40.1
-            nem_2035_to_2035  2035       2035     23.0    2035  23.0    # one year: its budget
+            nem_2027_to_2050  2027       2050     583.0   2035  22.7075
+            nem_2035_to_2035  2035       2035     23.0    2035  23.0      # one year: its budget
     """
+    modelled_years = budget_years[["year"]].drop_duplicates()
     trajectory = _build_emissions_trajectory(carbon_budgets, modelled_years)
-    yearly = yearly.merge(trajectory, on="year", how="left")
-    # A single-year budget's share is the whole budget. Every other row takes
-    # the path's emissions for its year.
-    is_single_year = yearly["year_from"] == yearly["year_to"]
-    yearly["budget_share"] = yearly["budget"].where(is_single_year, yearly["emissions"])
-    return yearly.drop(columns="emissions")
+    budget_years = budget_years.merge(trajectory, on="year", how="left")
+    # A budget on a single year has nothing to share out: its year takes all
+    # of it, as it would with equal shares.
+    follows_trajectory = budget_years["year_from"] < budget_years["year_to"]
+    budget_years["budget_share"] = budget_years["emissions"].where(
+        follows_trajectory, budget_years["budget"]
+    )
+    return budget_years.drop(columns="emissions")
 
 
 def _build_emissions_trajectory(
@@ -252,7 +321,7 @@ def _build_emissions_trajectory(
     """Returns the emissions assumed for each modelled year under the
     linear_trajectory_to_zero scaling option.
 
-    The trajectory is an assumed path of yearly emissions over the years the
+    The trajectory is a line of assumed yearly emissions over the years the
     multi-year carbon budgets cover. It is drawn so that:
 
     - The emissions over each budget's window add up to exactly that budget.
@@ -260,7 +329,7 @@ def _build_emissions_trajectory(
       reach zero at the end of the last budget.
 
     For example, budgets of 290 Mt for 2027 to 2030 and 583 Mt for 2027 to
-    2050 give this path:
+    2050 give this trajectory:
 
         Mt a year
             115.7 *
@@ -275,15 +344,16 @@ def _build_emissions_trajectory(
                   |290|      293 Mt       |
                   | Mt|    (583 - 290)    |
 
-    The path starts at 115.7 Mt a year at the start of 2027, falls to 29.3 by
-    the end of 2030 and to zero by the end of 2050. The budgets are the areas
-    under it: 290 Mt up to the end of 2030 and 583 Mt up to the end of 2050.
+    The trajectory starts at 115.7 Mt a year at the start of 2027, falls to
+    29.3 by the end of 2030 and to zero by the end of 2050. The budgets are
+    the areas under it: 290 Mt up to the end of 2030 and 583 Mt up to the end
+    of 2050.
 
-    A year's emissions are the area under the path for that year. Modelled
-    years outside the multi-year budgets aren't returned. Budgets on a single
-    year take no part in the path, as they never need scaling.
+    A year's emissions are the area under the trajectory for that year.
+    Modelled years outside the multi-year budgets aren't returned. Budgets on
+    a single year take no part in the trajectory, as they never need scaling.
 
-    How the path is built:
+    How the trajectory is built:
 
     1. A knot is placed at the start of the budgets and at the end of each
        budget's window, with the emissions allowed up to it: 0 at the start of
@@ -295,8 +365,8 @@ def _build_emissions_trajectory(
     3. The rate between two knots is a straight line from one to the other, so
        a year's emissions are the rate half way through it.
 
-    The multi-year budgets must fit together into a single falling path. A
-    ValueError is raised unless:
+    The multi-year budgets must fit together into a single falling
+    trajectory. A ValueError is raised unless:
 
     - They all start in the same year and end in different years, so that each
       sits inside the next longer one. 2027 to 2030 alongside 2027 to 2050 is
@@ -310,11 +380,11 @@ def _build_emissions_trajectory(
             budget_id         year_from  year_to  budget
             nem_2027_to_2030  2027       2030     290.0
             nem_2027_to_2050  2027       2050     583.0
-            nem_2035_to_2035  2035       2035     23.0    # one year: not part of the path
+            nem_2035_to_2035  2035       2035     23.0    # one year: not on the trajectory
 
         modelled_years:
             year
-            2026    # before the path starts: not returned
+            2026    # before the trajectory starts: not returned
             2027
             2030
             2031
@@ -341,25 +411,31 @@ def _build_emissions_trajectory(
     rates = _emissions_rate_at_each_knot(knot_years, cumulative_budget)
     _raise_if_emissions_would_rise(knot_years, rates)
 
-    # The path only covers the years the multi-year budgets do: from the year
-    # they all start in to the year the longest one ends.
-    is_on_path = modelled_years["year"].between(first_year, budgets["year_to"].max())
-    # Keep the modelled years on the path, and number the rows from zero again
-    # so the emissions worked out below line up with them row by row.
-    trajectory = modelled_years[is_on_path].reset_index(drop=True)
-    # The rate half way through a year is the area under the path for that
-    # year. A year ends at its own number on the knots' scale, so half way
-    # through it is half a year before that.
+    # The trajectory only covers the years the multi-year budgets do: from the
+    # year they all start in to the year the longest one ends.
+    is_on_trajectory = modelled_years["year"].between(
+        first_year, budgets["year_to"].max()
+    )
+    # Keep the modelled years on the trajectory, and number the rows from zero
+    # again so the emissions worked out below line up with them row by row.
+    trajectory = modelled_years[is_on_trajectory].reset_index(drop=True)
+    # The rate half way through a year is the area under the trajectory for
+    # that year. A year ends at its own number on the knots' scale, so half
+    # way through it is half a year before that.
     trajectory["emissions"] = np.interp(trajectory["year"] - 0.5, knot_years, rates)
     return trajectory
 
 
 def _raise_if_budgets_are_not_nested(budgets: pd.DataFrame) -> None:
-    """Raises unless the budgets all start in the same year and end in
-    different years, so that each sits inside the next longer one.
+    """Raises unless the budgets are nested.
 
-    Only then is each budget the emissions allowed from that shared first year
-    to the end of its window, which is what the trajectory is drawn through.
+    Budgets are nested when they all start in the same year and end in
+    different years, so that each sits inside the next longer one. Only then
+    is each budget the total emissions allowed from the shared first year to
+    the end of its window, which is what the trajectory is drawn through.
+
+    Every budget that starts later than the earliest, or ends in the same year
+    as another, is named in the error.
 
     I/O Example:
         budgets:
@@ -387,7 +463,13 @@ def _raise_if_budgets_are_not_nested(budgets: pd.DataFrame) -> None:
 def _emissions_rate_at_each_knot(
     knot_years: np.ndarray, cumulative_budget: np.ndarray
 ) -> np.ndarray:
-    """The rate of emissions, in Mt a year, at each knot of the trajectory.
+    """Works out the rate of emissions, in Mt a year, at each knot of the
+    trajectory.
+
+    A knot is the end of a year at which the trajectory changes slope.
+    knot_years holds those years in order, and cumulative_budget the total
+    emissions allowed from the first knot up to each one. The trajectory is
+    then the straight lines joining the rates returned here.
 
     The rate at the last knot is zero. Each earlier rate is worked out from
     the one after it: between two knots the rate is a straight line, so its
@@ -417,8 +499,13 @@ def _emissions_rate_at_each_knot(
 
 
 def _raise_if_emissions_would_rise(knot_years: np.ndarray, rates: np.ndarray) -> None:
-    """Raises when the rate of emissions at a knot is higher than at the knot
-    before it, as the trajectory is meant to fall all the way to zero.
+    """Raises when emissions would have to rise between two knots of the
+    trajectory.
+
+    They would when the rate at a knot is higher than the rate at the knot
+    before it. The trajectory is meant to fall all the way to zero, so budgets
+    that need a rise can't be scaled this way. Each run of years over which
+    emissions would rise is named in the error as (first year, last year).
 
     I/O Example:
         knot_years:  [2026, 2030, 2040, 2050]
