@@ -11,26 +11,29 @@ _SNAPSHOT_COLUMNS = ["investment_periods", "snapshots", "model_year", "stores"]
 _GENERATOR_COLUMNS = ["name", "emissions_intensity"]
 
 
-def _network() -> pypsa.Network:
-    """Two investment periods (2027 and 2031), each with one snapshot in each
-    of two financial years, a 50 MW load, and four generators:
+_ONE_SNAPSHOT_IN_EACH_FINANCIAL_YEAR = [
+    "2026-07-01 12:00:00",
+    "2027-07-01 12:00:00",
+    "2030-07-01 12:00:00",
+    "2031-07-01 12:00:00",
+]
+
+
+def _network(timesteps=_ONE_SNAPSHOT_IN_EACH_FINANCIAL_YEAR) -> pypsa.Network:
+    """Two investment periods (2027 and 2031) with two snapshots each, a 50 MW
+    load, and four generators:
 
     - BW01 and TALWA1, which are in service throughout.
     - ER01, which retires after the 2027 investment period.
     - NQ OCGT_2031, which is built in the 2031 investment period.
 
+    The first two timesteps go in the 2027 investment period and the last two
+    in 2031. By default each of the four is in a different financial year.
+
     The linopy model is built, so constraints can be added.
     """
     periods = [2027, 2027, 2031, 2031]
-    timesteps = pd.to_datetime(
-        [
-            "2026-07-01 12:00:00",
-            "2027-07-01 12:00:00",
-            "2030-07-01 12:00:00",
-            "2031-07-01 12:00:00",
-        ]
-    )
-    index = pd.MultiIndex.from_arrays([periods, timesteps])
+    index = pd.MultiIndex.from_arrays([periods, pd.to_datetime(timesteps)])
     network = pypsa.Network(snapshots=index, investment_periods=[2027, 2031])
     network.add("Bus", "NSW")
     network.add("Generator", "BW01", bus="NSW", p_nom=100, marginal_cost=1)
@@ -166,7 +169,15 @@ def test_window_can_start_and_end_part_way_through_investment_periods(csv_str_to
 
 
 def test_each_snapshot_is_weighted_by_its_share_of_its_model_year(csv_str_to_df):
-    network = _network()
+    # Two snapshots in financial year 2027, where the shared network has one.
+    network = _network(
+        [
+            "2026-07-01 12:00:00",
+            "2026-07-02 00:00:00",
+            "2030-07-01 12:00:00",
+            "2031-07-01 12:00:00",
+        ]
+    )
     carbon_budgets = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2027_to_2027,   2027,       2027,       290.0
@@ -174,9 +185,9 @@ def test_each_snapshot_is_weighted_by_its_share_of_its_model_year(csv_str_to_df)
     snapshots = csv_str_to_df("""
         investment_periods,  snapshots,            model_year,  stores
         2027,                2026-07-01 12:00:00,  2027,        1.0
-        2027,                2027-07-01 12:00:00,  2027,        3.0
+        2027,                2026-07-02 00:00:00,  2027,        3.0
         2031,                2030-07-01 12:00:00,  2031,        12.0
-        2031,                2031-07-01 12:00:00,  2031,        12.0
+        2031,                2031-07-01 12:00:00,  2032,        12.0
     """)
     generators = csv_str_to_df("""
         name,       emissions_intensity
@@ -187,13 +198,13 @@ def test_each_snapshot_is_weighted_by_its_share_of_its_model_year(csv_str_to_df)
 
     # Model year 2027 has four hours modelled. The first snapshot covers one of
     # them, so it represents a quarter of the year (2190 hours), and the second
-    # for the other three quarters (6570 hours). The weighting is within the
-    # model year: the 2031 snapshots, in another investment period and model
-    # year, don't come into it.
+    # represents the other three quarters (6570 hours). The weighting is within the
+    # model year: the snapshots of the 2031 investment period, in model years
+    # 2031 and 2032, don't come into it.
     expected = csv_str_to_df("""
         investment_periods,  snapshots,            generator,  coefficient,  sign,  rhs
         2027,                2026-07-01 12:00:00,  BW01,       0.00219,      <=,    290.0
-        2027,                2027-07-01 12:00:00,  BW01,       0.00657,      <=,    290.0
+        2027,                2026-07-02 00:00:00,  BW01,       0.00657,      <=,    290.0
     """)
     pd.testing.assert_frame_equal(
         _constraint_terms(network, "nem_2027_to_2027"), expected, check_dtype=False
@@ -351,17 +362,19 @@ def test_budget_limits_emissions_in_the_solved_model(csv_str_to_df):
 
     network.optimize.solve_model(solver_name="highs")
 
+    # The two snapshots of the 2027 investment period are model years 2027 and
+    # 2028. Each is the only snapshot in its model year, so it represents the
+    # whole year: 8760 hours. BW01 and ER01 emit 1 t/MWh.
     output = network.generators_t.p.loc[2027]
-    emitters_output = (output["BW01"] + output["ER01"]).sum()
-    result = pd.DataFrame({"emitters_output": [emitters_output]})
+    emitters_mwh = (output["BW01"] + output["ER01"]) * 8760
+    result = pd.DataFrame({"emissions_mt": [emitters_mwh.sum() / 1e6]})
     # BW01 and ER01 are the cheapest, so without the budget they would meet
-    # the whole 50 MW load in both 2027 snapshots (100 MW in total), emitting
-    # 100 MW x 8760 h x 1 t/MWh = 0.876 Mt. The budget is half that, so their
-    # output over the two snapshots is held to 50 MW and clean TALWA1 covers
-    # the rest.
+    # the whole 50 MW load in both years, emitting 0.438 Mt in each, 0.876 Mt
+    # in all. The budget for the two years is half that, so they run until it
+    # is used up and clean TALWA1 covers the rest.
     expected = csv_str_to_df("""
-        emitters_output
-        50.0
+        emissions_mt
+        0.438
     """)
     pd.testing.assert_frame_equal(result, expected, check_exact=False)
 

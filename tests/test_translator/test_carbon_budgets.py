@@ -1,22 +1,21 @@
-import numpy as np
+import re
+
 import pandas as pd
 import pytest
 
-from ispypsa.translator.carbon_budgets import (
-    _build_emissions_trajectory,
-    _drop_budgets_with_no_modelled_years,
-    _emissions_rate_at_each_knot,
-    _pair_budgets_with_modelled_years,
-    _raise_if_budgets_are_not_nested,
-    _raise_if_emissions_would_rise,
-    _raise_on_partly_modelled_windows,
-    _scale_budgets_to_modelled_years,
-    _share_budgets_along_trajectory,
-    _sum_shares_into_rhs,
-    _translate_carbon_budgets,
-)
+from ispypsa.translator.carbon_budgets import _translate_carbon_budgets
 
 _CARBON_BUDGET_COLUMNS = ["budget_id", "year_from", "year_to", "budget"]
+_SCALING_OPTIONS = ["none", "prorata", "linear_trajectory_to_zero"]
+
+
+def _config(sample_model_config, start_year: int, end_year: int, scaling: str):
+    """The sample config with the modelled years and carbon_budget_scaling
+    set."""
+    sample_model_config.temporal.range.start_year = start_year
+    sample_model_config.temporal.range.end_year = end_year
+    sample_model_config.carbon_budget_scaling = scaling
+    return sample_model_config
 
 
 def _step_change_budgets(csv_str_to_df) -> pd.DataFrame:
@@ -31,75 +30,17 @@ def _step_change_budgets(csv_str_to_df) -> pd.DataFrame:
     """)
 
 
-# --- _translate_carbon_budgets ---
+# --- Whatever the scaling ---
 
 
-def test_translate_carbon_budgets(csv_str_to_df, sample_model_config):
-    sample_model_config.carbon_budget_scaling = "prorata"
-    carbon_budgets = _step_change_budgets(csv_str_to_df)
-
-    result = _translate_carbon_budgets(carbon_budgets, sample_model_config)
-
-    # The sample config models 2026 to 2028, which covers 2027 and 2028 of the
-    # two multi-year budgets' windows: 290 x 2 / 4 and 583 x 2 / 24. The 2035
-    # budget has no modelled year, so it is dropped.
-    expected = csv_str_to_df("""
-        constraint_name,    year_from,  year_to,    rhs
-        nem_2027_to_2030,   2027,       2030,       145.0
-        nem_2027_to_2050,   2027,       2050,       48.583333
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_translate_carbon_budgets_no_budgets(csv_str_to_df, sample_model_config):
-    carbon_budgets = pd.DataFrame(columns=_CARBON_BUDGET_COLUMNS)
-
-    result = _translate_carbon_budgets(carbon_budgets, sample_model_config)
-
-    expected = csv_str_to_df("""
-        constraint_name,  year_from,  year_to,  rhs
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-def test_translate_carbon_budgets_warns_when_model_is_region_filtered(
-    csv_str_to_df, sample_model_config, caplog
+@pytest.mark.parametrize("scaling", _SCALING_OPTIONS)
+def test_fully_modelled_budgets_are_kept_whole(
+    csv_str_to_df, sample_model_config, scaling
 ):
-    sample_model_config.carbon_budget_scaling = "prorata"
-    sample_model_config.filter_by_nem_regions = ["VIC", "NSW"]
-
-    with caplog.at_level("WARNING"):
-        _translate_carbon_budgets(
-            _step_change_budgets(csv_str_to_df), sample_model_config
-        )
-
-    assert (
-        "The carbon budgets are for the whole NEM but the model is filtered to "
-        "['NSW', 'VIC']: the budgets are applied to it unscaled."
-    ) in caplog.text
-
-
-def test_translate_carbon_budgets_does_not_warn_when_model_is_not_filtered(
-    csv_str_to_df, sample_model_config, caplog
-):
-    sample_model_config.carbon_budget_scaling = "prorata"
-
-    with caplog.at_level("WARNING"):
-        _translate_carbon_budgets(
-            _step_change_budgets(csv_str_to_df), sample_model_config
-        )
-
-    assert "The carbon budgets are for the whole NEM" not in caplog.text
-
-
-# --- _scale_budgets_to_modelled_years ---
-
-
-@pytest.mark.parametrize("scaling", ["none", "prorata", "linear_trajectory_to_zero"])
-def test_scale_budgets_keeps_fully_modelled_budgets_whole(csv_str_to_df, scaling):
     carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2025, 2052, scaling)
 
-    result = _scale_budgets_to_modelled_years(carbon_budgets, 2025, 2052, scaling)
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
     # Every window sits inside 2025 to 2052, so each rhs is the budget
     # itself whatever the scaling.
@@ -112,10 +53,88 @@ def test_scale_budgets_keeps_fully_modelled_budgets_whole(csv_str_to_df, scaling
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_scale_budgets_prorata(csv_str_to_df):
-    carbon_budgets = _step_change_budgets(csv_str_to_df)
+@pytest.mark.parametrize("scaling", _SCALING_OPTIONS)
+def test_budgets_with_no_modelled_years_are_dropped_and_logged(
+    csv_str_to_df, sample_model_config, caplog, scaling
+):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2035_to_2035,   2035,       2035,       23.0
+        nem_2055_to_2055,   2055,       2055,       5.0
+    """)
+    config = _config(sample_model_config, 2035, 2050, scaling)
 
-    result = _scale_budgets_to_modelled_years(carbon_budgets, 2029, 2040, "prorata")
+    with caplog.at_level("INFO"):
+        result = _translate_carbon_budgets(carbon_budgets, config)
+
+    # nem_2027_to_2030 ends before 2035 and nem_2055_to_2055 starts after
+    # 2050. Neither has a modelled year, so both are dropped, and under "none"
+    # neither raises: only a window that is partly modelled does.
+    expected = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2035_to_2035,   2035,       2035,       23.0
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+    assert (
+        "Carbon budgets with no modelled year (2035 to 2050) in their window "
+        "(not applied): ['nem_2027_to_2030', 'nem_2055_to_2055']"
+    ) in caplog.text
+
+
+def test_nothing_is_logged_when_every_budget_has_a_modelled_year(
+    csv_str_to_df, sample_model_config, caplog
+):
+    carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2025, 2052, "none")
+
+    with caplog.at_level("INFO"):
+        _translate_carbon_budgets(carbon_budgets, config)
+
+    assert "Carbon budgets with no modelled year" not in caplog.text
+
+
+@pytest.mark.parametrize("scaling", _SCALING_OPTIONS)
+def test_no_budgets(csv_str_to_df, sample_model_config, scaling):
+    carbon_budgets = pd.DataFrame(columns=_CARBON_BUDGET_COLUMNS)
+    config = _config(sample_model_config, 2029, 2040, scaling)
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
+
+    expected = csv_str_to_df("""
+        constraint_name,  year_from,  year_to,  rhs
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+# --- carbon_budget_scaling "none" ---
+
+
+def test_none_raises_on_partly_modelled_windows(csv_str_to_df, sample_model_config):
+    carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2029, 2040, "none")
+
+    # 2027 and 2028 of both multi-year budgets aren't modelled, nor is 2041 to
+    # 2050 of the longer one. nem_2035_to_2035 is modelled in full.
+    expected_message = (
+        "Carbon budgets with only part of their window in the modelled years "
+        "(2029 to 2040): ['nem_2027_to_2030', 'nem_2027_to_2050']. Set "
+        "carbon_budget_scaling to 'prorata' or 'linear_trajectory_to_zero' in "
+        "the config to scale them to the modelled years, or remove them from "
+        "the carbon_budgets table."
+    )
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
+
+
+# --- carbon_budget_scaling "prorata" ---
+
+
+def test_prorata(csv_str_to_df, sample_model_config):
+    carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2029, 2040, "prorata")
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
     # 2029 and 2030 are 2 of the first budget's 4 years: 290 x 2 / 4. 2029 to
     # 2040 are 12 of the second's 24 years: 583 x 12 / 24. The 2035 budget is
@@ -129,17 +148,77 @@ def test_scale_budgets_prorata(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_scale_budgets_linear_trajectory_to_zero(csv_str_to_df):
+def test_prorata_rounds_rhs_to_the_nearest_tonne(csv_str_to_df, sample_model_config):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2050,   2027,       2050,       583.0
+    """)
+    config = _config(sample_model_config, 2027, 2027, "prorata")
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
+
+    # One year of 24 is 583 / 24 = 24.291666... Mt. The rhs is kept to six
+    # decimal places of a Mt, which is the nearest tonne.
+    expected = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2050,   2027,       2050,       24.291667
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_exact=True)
+
+
+def test_prorata_does_not_need_nested_budgets(csv_str_to_df, sample_model_config):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2031_to_2050,   2031,       2050,       293.0
+    """)
+    config = _config(sample_model_config, 2029, 2040, "prorata")
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
+
+    # These budgets start in different years, which linear_trajectory_to_zero
+    # refuses. Under prorata each is scaled on its own: 290 x 2 / 4 and
+    # 293 x 10 / 20.
+    expected = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2030,   2027,       2030,       145.0
+        nem_2031_to_2050,   2031,       2050,       146.5
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+# --- carbon_budget_scaling "linear_trajectory_to_zero" ---
+
+
+def test_linear_trajectory_to_zero(csv_str_to_df, sample_model_config):
     carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2029, 2040, "linear_trajectory_to_zero")
 
-    result = _scale_budgets_to_modelled_years(
-        carbon_budgets, 2029, 2040, "linear_trajectory_to_zero"
-    )
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
-    # The trajectory gives 2029 and 2030 61.7 + 40.1 = 101.8, which is the
-    # first budget's rhs. The second stretch (293 over 2031 to 2050) falls in
-    # a straight line to zero, so its first half (2031 to 2040) has three
-    # quarters of it, 219.75, and the second budget's rhs is 101.8 + 219.75.
+    # The modelled years are 2029 to 2040. Each budget's rhs is the sum of the
+    # trajectory's emissions over the modelled years in its window.
+    #
+    # 1. The budgets are 290 Mt for 2027 to 2030 and 583 Mt for 2027 to 2050,
+    #    which leaves 583 - 290 = 293 Mt for 2031 to 2050.
+    # 2. 2031 to 2050 is 293 Mt over 20 years, an average of 14.65 Mt a year.
+    #    The trajectory is a straight line over those years, so its average
+    #    is (start + end) / 2, which gives start = 2 x average - end. It ends
+    #    at zero, so it starts at 2 x 14.65 - 0 = 29.3 Mt a year.
+    # 3. 2027 to 2030 is 290 Mt over 4 years, an average of 72.5 Mt a year.
+    #    It ends where 2031 starts, at 29.3, so by the same rule it starts at
+    #    2 x 72.5 - 29.3 = 115.7.
+    # 4. From 115.7 to 29.3 over 4 years is a fall of 21.6 a year. A year's
+    #    emissions are the rate half way through it:
+    #        2027: 104.9    2028: 83.3    2029: 61.7    2030: 40.1
+    # 5. From 29.3 to zero over 20 years is a fall of 1.465 a year:
+    #        2031: 28.5675    ...    2040: 15.3825
+    #    Those ten years average (28.5675 + 15.3825) / 2 = 21.975, so they
+    #    add up to 219.75.
+    # 6. nem_2027_to_2030 has 2029 and 2030 modelled: 61.7 + 40.1 = 101.8.
+    # 7. nem_2027_to_2050 has 2029 to 2040 modelled: 101.8 + 219.75 = 321.55.
+    # 8. nem_2035_to_2035 is on a single year, which is modelled, so it keeps
+    #    its 23.
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2027_to_2030,   2027,       2030,       101.8
@@ -149,18 +228,27 @@ def test_scale_budgets_linear_trajectory_to_zero(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_scale_budgets_linear_trajectory_uses_budgets_with_no_modelled_years(
-    csv_str_to_df,
+def test_linear_trajectory_uses_budgets_with_no_modelled_years(
+    csv_str_to_df, sample_model_config
 ):
     carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2050, 2050, "linear_trajectory_to_zero")
 
-    result = _scale_budgets_to_modelled_years(
-        carbon_budgets, 2050, 2050, "linear_trajectory_to_zero"
-    )
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
-    # nem_2027_to_2030 has no modelled years, so it is dropped, but it still
-    # leaves only 293 of the longer budget for 2031 to 2050. The last of
-    # those 20 years has 1/400 of the area under a line to zero: 0.7325.
+    # Only 2050 is modelled.
+    #
+    # 1. nem_2027_to_2030 has no modelled years, so it is dropped. It still
+    #    shapes the trajectory: it uses 290 Mt by the end of 2030, leaving
+    #    583 - 290 = 293 Mt of the longer budget for 2031 to 2050.
+    # 2. 2031 to 2050 is 293 Mt over 20 years, an average of 14.65 Mt a year.
+    #    The trajectory is a straight line over those years, so its average
+    #    is (start + end) / 2, which gives start = 2 x average - end. It ends
+    #    at zero, so it starts at 2 x 14.65 - 0 = 29.3 Mt a year.
+    # 3. From 29.3 to zero over 20 years is a fall of 29.3 / 20 = 1.465 a
+    #    year, so the rate is 1.465 at the start of 2050 and zero at its end.
+    # 4. 2050's emissions are its average rate times one year:
+    #    (1.465 + 0) / 2 x 1 = 0.7325 Mt. That is 1/400 of the 293 Mt.
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2027_to_2050,   2027,       2050,       0.7325
@@ -168,456 +256,226 @@ def test_scale_budgets_linear_trajectory_uses_budgets_with_no_modelled_years(
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_scale_budgets_none_raises_on_partly_modelled_window(csv_str_to_df):
+def test_linear_trajectory_leaves_single_year_budgets_whole(
+    csv_str_to_df, sample_model_config
+):
     carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2035, 2035, "linear_trajectory_to_zero")
 
-    with pytest.raises(ValueError, match=r"\['nem_2027_to_2030', 'nem_2027_to_2050'\]"):
-        _scale_budgets_to_modelled_years(carbon_budgets, 2029, 2040, "none")
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
-
-def test_scale_budgets_none_ignores_budgets_with_no_modelled_years(csv_str_to_df):
-    carbon_budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget
-        nem_2027_to_2030,   2027,       2030,       290.0
+    # Only 2035 is modelled, so each rhs is that budget's share for 2035.
+    #
+    # 1. As in the tests above, the trajectory is at 29.3 Mt a year at the
+    #    start of 2031 and falls 1.465 a year.
+    # 2. Half way through 2035 is 4.5 years later, so nem_2027_to_2050's
+    #    share is 29.3 - 4.5 x 1.465 = 22.7075.
+    # 3. nem_2035_to_2035 is on a single year. It takes no part in the
+    #    trajectory and keeps its whole 23, not the trajectory's 22.7075.
+    expected = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2050,   2027,       2050,       22.7075
         nem_2035_to_2035,   2035,       2035,       23.0
     """)
+    pd.testing.assert_frame_equal(result, expected)
 
-    result = _scale_budgets_to_modelled_years(carbon_budgets, 2035, 2035, "none")
 
-    # nem_2027_to_2030 has no modelled year at all, so it is dropped and
-    # doesn't raise. Only a window that is partly modelled raises.
+def test_linear_trajectory_with_only_single_year_budgets(
+    csv_str_to_df, sample_model_config
+):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2035_to_2035,   2035,       2035,       23.0
+        nem_2040_to_2040,   2040,       2040,       10.0
+    """)
+    config = _config(sample_model_config, 2035, 2040, "linear_trajectory_to_zero")
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
+
+    # With no multi-year budgets there is no trajectory, and nothing to scale.
     expected = csv_str_to_df("""
         constraint_name,    year_from,  year_to,    rhs
         nem_2035_to_2035,   2035,       2035,       23.0
+        nem_2040_to_2040,   2040,       2040,       10.0
     """)
     pd.testing.assert_frame_equal(result, expected)
 
 
-@pytest.mark.parametrize("scaling", ["none", "prorata", "linear_trajectory_to_zero"])
-def test_scale_budgets_empty_table(csv_str_to_df, scaling):
-    carbon_budgets = pd.DataFrame(columns=_CARBON_BUDGET_COLUMNS)
-
-    result = _scale_budgets_to_modelled_years(carbon_budgets, 2029, 2040, scaling)
-
-    expected = csv_str_to_df("""
-        constraint_name,  year_from,  year_to,  rhs
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# --- _sum_shares_into_rhs ---
-
-
-def test_sum_shares_into_rhs(csv_str_to_df):
-    budget_years = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget,     year,   budget_share
-        nem_2027_to_2030,   2027,       2030,       290.0,      2029,   72.5
-        nem_2027_to_2030,   2027,       2030,       290.0,      2030,   72.5
-        nem_2035_to_2035,   2035,       2035,       23.0,       2035,   23.0000004
-    """)
-
-    result = _sum_shares_into_rhs(budget_years)
-
-    # The rhs is rounded to the nearest tonne (six decimal places of a Mt).
-    expected = csv_str_to_df("""
-        constraint_name,    year_from,  year_to,    rhs
-        nem_2027_to_2030,   2027,       2030,       145.0
-        nem_2035_to_2035,   2035,       2035,       23.0
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-# --- _drop_budgets_with_no_modelled_years ---
-
-
-def test_drop_budgets_with_no_modelled_years(csv_str_to_df, caplog):
-    carbon_budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget
-        nem_2027_to_2030,   2027,       2030,       290.0
-        nem_2027_to_2050,   2027,       2050,       583.0
-        nem_2031_to_2031,   2031,       2031,       30.0
-        nem_2055_to_2055,   2055,       2055,       1.0
-    """)
-
-    with caplog.at_level("INFO"):
-        result = _drop_budgets_with_no_modelled_years(carbon_budgets, 2031, 2050)
-
-    # 2027 to 2030 ends before the modelled years and 2055 is after them. A
-    # window that only touches the first modelled year (2031) is kept.
-    expected = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget
-        nem_2027_to_2050,   2027,       2050,       583.0
-        nem_2031_to_2031,   2031,       2031,       30.0
-    """)
-    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
-    assert (
-        "Carbon budgets with no modelled year (2031 to 2050) in their window "
-        "(not applied): ['nem_2027_to_2030', 'nem_2055_to_2055']"
-    ) in caplog.text
-
-
-def test_drop_budgets_with_no_modelled_years_does_not_log_when_none_dropped(
-    csv_str_to_df, caplog
-):
-    carbon_budgets = _step_change_budgets(csv_str_to_df)
-
-    with caplog.at_level("INFO"):
-        result = _drop_budgets_with_no_modelled_years(carbon_budgets, 2027, 2050)
-
-    pd.testing.assert_frame_equal(result, carbon_budgets)
-    assert "Carbon budgets with no modelled year" not in caplog.text
-
-
-# --- _raise_on_partly_modelled_windows ---
-
-
-def test_raise_on_partly_modelled_windows(csv_str_to_df):
-    budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to
-        nem_2027_to_2030,   2027,       2030
-        nem_2035_to_2035,   2035,       2035
-        nem_2040_to_2060,   2040,       2060
-    """)
-
-    # 2027 and 2028 come before the modelled years, and 2051 to 2060 after.
-    expected_message = (
-        r"Carbon budgets with only part of their window in the modelled years "
-        r"\(2029 to 2050\): \['nem_2027_to_2030', 'nem_2040_to_2060'\]. Set "
-        r"carbon_budget_scaling to 'prorata' or 'linear_trajectory_to_zero' in "
-        r"the config to scale them to the modelled years, or remove them from "
-        r"the carbon_budgets table."
-    )
-    with pytest.raises(ValueError, match=expected_message):
-        _raise_on_partly_modelled_windows(budgets, 2029, 2050)
-
-
-def test_raise_on_partly_modelled_windows_passes_when_windows_are_modelled(
-    csv_str_to_df,
-):
-    budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to
-        nem_2029_to_2050,   2029,       2050
-        nem_2035_to_2035,   2035,       2035
-    """)
-
-    _raise_on_partly_modelled_windows(budgets, 2029, 2050)
-
-
-# --- _pair_budgets_with_modelled_years ---
-
-
-def test_pair_budgets_with_modelled_years(csv_str_to_df):
-    budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget
-        nem_2027_to_2030,   2027,       2030,       290.0
-        nem_2035_to_2035,   2035,       2035,       23.0
-        nem_2049_to_2052,   2049,       2052,       10.0
-    """)
-
-    result = _pair_budgets_with_modelled_years(budgets, 2029, 2050)
-
-    # The first budget loses 2027 and 2028, which are before the modelled
-    # years, and the last loses 2051 and 2052, which are after them.
-    expected = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget,     year
-        nem_2027_to_2030,   2027,       2030,       290.0,      2029
-        nem_2027_to_2030,   2027,       2030,       290.0,      2030
-        nem_2035_to_2035,   2035,       2035,       23.0,       2035
-        nem_2049_to_2052,   2049,       2052,       10.0,       2049
-        nem_2049_to_2052,   2049,       2052,       10.0,       2050
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_pair_budgets_with_modelled_years_no_budgets(csv_str_to_df):
-    budgets = pd.DataFrame(columns=["budget_id", "year_from", "year_to", "budget"])
-
-    result = _pair_budgets_with_modelled_years(budgets, 2029, 2050)
-
-    expected = csv_str_to_df("""
-        budget_id,  year_from,  year_to,    budget,     year
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# --- _share_budgets_along_trajectory ---
-
-
-def test_share_budgets_along_trajectory(csv_str_to_df):
-    budget_years = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget,     year
-        nem_2027_to_2030,   2027,       2030,       290.0,      2030
-        nem_2027_to_2050,   2027,       2050,       583.0,      2030
-        nem_2027_to_2050,   2027,       2050,       583.0,      2035
-        nem_2035_to_2035,   2035,       2035,       23.0,       2035
-    """)
-
-    result = _share_budgets_along_trajectory(
-        budget_years, _step_change_budgets(csv_str_to_df)
-    )
-
-    # Both multi-year budgets take the trajectory's 2030 emissions (40.1). In
-    # 2035 the long budget takes the trajectory's (29.3 less 4.5 years' fall
-    # of 1.465), while the one-year 2035 budget takes its own 23.
-    expected = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget,     year,   budget_share
-        nem_2027_to_2030,   2027,       2030,       290.0,      2030,   40.1
-        nem_2027_to_2050,   2027,       2050,       583.0,      2030,   40.1
-        nem_2027_to_2050,   2027,       2050,       583.0,      2035,   22.7075
-        nem_2035_to_2035,   2035,       2035,       23.0,       2035,   23.0
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_exact=False)
-
-
-def test_share_budgets_along_trajectory_no_budgets(csv_str_to_df):
-    columns = ["budget_id", "year_from", "year_to", "budget"]
-    budget_years = pd.DataFrame(columns=[*columns, "year"])
-    carbon_budgets = pd.DataFrame(columns=columns)
-
-    result = _share_budgets_along_trajectory(budget_years, carbon_budgets)
-
-    expected = csv_str_to_df("""
-        budget_id,  year_from,  year_to,    budget,     year,   budget_share
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-# --- _build_emissions_trajectory ---
-
-
-def test_build_emissions_trajectory(csv_str_to_df):
-    modelled_years = csv_str_to_df("""
-        year
-        2026
-        2027
-        2030
-        2031
-        2050
-        2051
-    """)
-
-    result = _build_emissions_trajectory(
-        _step_change_budgets(csv_str_to_df), modelled_years
-    )
-
-    # 2026 and 2051 are outside the multi-year budgets, so not on the
-    # trajectory.
-    # 2027 to 2030 falls from 115.7 to 29.3 (21.6 a year) and 2031 to 2050
-    # from 29.3 to zero (1.465 a year); each year takes the level half way
-    # through it.
-    expected = csv_str_to_df("""
-        year,   emissions
-        2027,   104.9
-        2030,   40.1
-        2031,   28.5675
-        2050,   0.7325
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_exact=False)
-
-
-def test_build_emissions_trajectory_adds_up_to_each_budget(csv_str_to_df):
-    modelled_years = pd.DataFrame({"year": range(2027, 2051)})
-
-    result = _build_emissions_trajectory(
-        _step_change_budgets(csv_str_to_df), modelled_years
-    )
-
-    result["window"] = result["year"].map(
-        lambda year: "2027_to_2030" if year <= 2030 else "2031_to_2050"
-    )
-    totals = result.groupby("window", as_index=False)["emissions"].sum()
-    # The trajectory's emissions over 2027 to 2030 are the first budget (290),
-    # and over 2031 to 2050 are what the second leaves (583 - 290).
-    expected = csv_str_to_df("""
-        window,         emissions
-        2027_to_2030,   290.0
-        2031_to_2050,   293.0
-    """)
-    pd.testing.assert_frame_equal(totals, expected, check_exact=False)
-
-
-def test_build_emissions_trajectory_no_multi_year_budgets(csv_str_to_df):
-    carbon_budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to,    budget
-        nem_2035_to_2035,   2035,       2035,       23.0
-    """)
-    modelled_years = pd.DataFrame({"year": range(2030, 2041)})
-
-    result = _build_emissions_trajectory(carbon_budgets, modelled_years)
-
-    expected = csv_str_to_df("""
-        year,   emissions
-    """)
-    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
-
-
-def test_build_emissions_trajectory_three_nested_budgets(csv_str_to_df):
+def test_linear_trajectory_three_nested_budgets(csv_str_to_df, sample_model_config):
     carbon_budgets = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget
         nem_2027_to_2050,   2027,       2050,       583.0
         nem_2027_to_2030,   2027,       2030,       290.0
         nem_2027_to_2040,   2027,       2040,       500.0
     """)
-    modelled_years = csv_str_to_df("""
-        year
-        2027
-        2031
-        2041
-        2050
-    """)
+    config = _config(sample_model_config, 2031, 2031, "linear_trajectory_to_zero")
 
-    result = _build_emissions_trajectory(carbon_budgets, modelled_years)
+    result = _translate_carbon_budgets(carbon_budgets, config)
 
-    # Whatever order the rows are in, the trajectory runs through the budgets
-    # in order of length. 2041 to 2050 is allowed 83 Mt and ends at zero, so it
-    # starts at 16.6 Mt a year. 2031 to 2040 is allowed 210 Mt (21 a year) and
-    # ends at 16.6, so it starts at 25.4. 2027 to 2030 is allowed 290 Mt (72.5
-    # a year) and ends at 25.4, so it starts at 119.6. Each year below is the
-    # rate half way through it.
+    # Only 2031 is modelled, so each rhs is the trajectory's emissions in
+    # 2031. Whatever order the rows are in, the trajectory runs through the
+    # budgets in order of length, and is worked out from the last back.
+    #
+    # 1. 2041 to 2050 is left 583 - 500 = 83 Mt over 10 years, an average of
+    #    8.3. It ends at zero, so it starts at 2 x 8.3 - 0 = 16.6 Mt a year.
+    # 2. 2031 to 2040 is left 500 - 290 = 210 Mt over 10 years, an average of
+    #    21. It ends at 16.6, so it starts at 2 x 21 - 16.6 = 25.4.
+    # 3. From 25.4 to 16.6 over 10 years is a fall of 0.88 a year. Half way
+    #    through 2031 the rate is 25.4 - 0.5 x 0.88 = 24.96.
+    # 4. 2031 is in the window of both longer budgets, so each gets 24.96.
+    #    nem_2027_to_2030 has no modelled year and is dropped.
     expected = csv_str_to_df("""
-        year,   emissions
-        2027,   107.825
-        2031,   24.96
-        2041,   15.77
-        2050,   0.83
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2040,   2027,       2040,       24.96
+        nem_2027_to_2050,   2027,       2050,       24.96
     """)
-    pd.testing.assert_frame_equal(result, expected, check_exact=False)
+    pd.testing.assert_frame_equal(result, expected)
 
 
-def test_build_emissions_trajectory_raises_when_budgets_are_not_nested(csv_str_to_df):
+def test_linear_trajectory_allows_a_flat_stretch(csv_str_to_df, sample_model_config):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2027_to_2040,   2027,       2040,       583.0
+        nem_2027_to_2050,   2027,       2050,       729.5
+    """)
+    config = _config(sample_model_config, 2031, 2034, "linear_trajectory_to_zero")
+
+    result = _translate_carbon_budgets(carbon_budgets, config)
+
+    # The modelled years are 2031 to 2034, the first four of the ten years
+    # between the first two budgets' ends.
+    #
+    # 1. 2041 to 2050 is left 729.5 - 583 = 146.5 Mt over 10 years, an average
+    #    of 14.65. It ends at zero, so it starts at 2 x 14.65 - 0 = 29.3.
+    # 2. 2031 to 2040 is left 583 - 290 = 293 Mt over 10 years, an average of
+    #    29.3. It ends at 29.3, so it starts at 2 x 29.3 - 29.3 = 29.3.
+    # 3. The trajectory is flat at 29.3 from 2031 to 2040. Only a rise is an
+    #    error, so this is allowed.
+    # 4. Each modelled year's emissions are 29.3, so the four add up to
+    #    4 x 29.3 = 117.2 for both of the budgets they are in.
+    #
+    # Modelling all of 2031 to 2040 would not show the stretch is flat: those
+    # ten years add up to 293 whatever shape the trajectory takes between
+    # them. Four years at one end only add up to 117.2 if the rate really is
+    # 29.3 throughout.
+    expected = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2040,   2027,       2040,       117.2
+        nem_2027_to_2050,   2027,       2050,       117.2
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_linear_trajectory_raises_when_budgets_start_in_different_years(
+    csv_str_to_df, sample_model_config
+):
     carbon_budgets = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget
         nem_2027_to_2030,   2027,       2030,       290.0
         nem_2031_to_2050,   2031,       2050,       293.0
+        nem_2029_to_2060,   2029,       2060,       400.0
     """)
-    modelled_years = pd.DataFrame({"year": range(2027, 2051)})
+    config = _config(sample_model_config, 2027, 2050, "linear_trajectory_to_zero")
 
-    with pytest.raises(ValueError, match=r"\['nem_2031_to_2050'\]"):
-        _build_emissions_trajectory(carbon_budgets, modelled_years)
+    # The earliest start is 2027. The other two budgets start later.
+    expected_message = (
+        "Carbon budgets that start later than the earliest budget, or end in the "
+        "same year as another: ['nem_2029_to_2060', 'nem_2031_to_2050']. With "
+        "carbon_budget_scaling 'linear_trajectory_to_zero', the multi-year "
+        "budgets must all start in the same year and end in different years."
+    )
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
 
 
-def test_build_emissions_trajectory_raises_when_longer_budget_is_smaller(
-    csv_str_to_df,
+def test_linear_trajectory_raises_when_budgets_end_in_the_same_year(
+    csv_str_to_df, sample_model_config
+):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,  year_from,  year_to,    budget
+        federal,    2027,       2050,       583.0
+        state,      2027,       2050,       600.0
+        nem_2030,   2027,       2030,       290.0
+    """)
+    config = _config(sample_model_config, 2027, 2050, "linear_trajectory_to_zero")
+
+    # Both of the budgets that share an end year are named.
+    expected_message = "or end in the same year as another: ['federal', 'state']."
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
+
+
+def test_linear_trajectory_raises_when_emissions_would_rise(
+    csv_str_to_df, sample_model_config
+):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2027_to_2040,   2027,       2040,       350.0
+        nem_2027_to_2050,   2027,       2050,       450.0
+    """)
+    config = _config(sample_model_config, 2027, 2050, "linear_trajectory_to_zero")
+
+    # 1. 2041 to 2050 is left 450 - 350 = 100 Mt over 10 years, an average of
+    #    10. It ends at zero, so it starts at 2 x 10 - 0 = 20 Mt a year.
+    # 2. 2031 to 2040 is left 350 - 290 = 60 Mt over 10 years, an average of
+    #    6. It ends at 20, so it would start at 2 x 6 - 20 = -8, and rise.
+    expected_message = (
+        "With carbon_budget_scaling 'linear_trajectory_to_zero', emissions would "
+        "have to rise over the years [(2031, 2040)] to use the carbon budgets "
+        "in full. Either the budgets allow too many emissions after those "
+        "years for the trajectory to keep falling, or a longer budget is "
+        "smaller than a shorter one."
+    )
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
+
+
+def test_linear_trajectory_raises_when_a_longer_budget_is_smaller(
+    csv_str_to_df, sample_model_config
 ):
     carbon_budgets = csv_str_to_df("""
         budget_id,          year_from,  year_to,    budget
         nem_2027_to_2030,   2027,       2030,       290.0
         nem_2027_to_2050,   2027,       2050,       200.0
     """)
-    modelled_years = pd.DataFrame({"year": range(2027, 2051)})
+    config = _config(sample_model_config, 2027, 2050, "linear_trajectory_to_zero")
 
-    # The longer budget leaves -90 Mt for 2031 to 2050, which would need a
-    # rate below zero at the end of 2030 rising to zero by the end of 2050.
-    with pytest.raises(ValueError, match=r"rise over the years \[\(2031, 2050\)\]"):
-        _build_emissions_trajectory(carbon_budgets, modelled_years)
-
-
-# --- _raise_if_budgets_are_not_nested ---
-
-
-def test_raise_if_budgets_are_not_nested_passes_nested_budgets(csv_str_to_df):
-    budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to
-        nem_2027_to_2030,   2027,       2030
-        nem_2027_to_2040,   2027,       2040
-        nem_2027_to_2050,   2027,       2050
-    """)
-
-    _raise_if_budgets_are_not_nested(budgets)
+    # The longer budget leaves 200 - 290 = -90 Mt for 2031 to 2050, which
+    # would need a rate below zero at the start of 2031 rising to zero by the
+    # end of 2050.
+    expected_message = "emissions would have to rise over the years [(2031, 2050)]"
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
 
 
-def test_raise_if_budgets_are_not_nested_raises_on_a_later_start(csv_str_to_df):
-    budgets = csv_str_to_df("""
-        budget_id,          year_from,  year_to
-        nem_2027_to_2030,   2027,       2030
-        nem_2031_to_2050,   2031,       2050
-        nem_2029_to_2060,   2029,       2060
-    """)
-
-    expected_message = (
-        r"Carbon budgets that start later than the earliest budget, or end in the "
-        r"same year as another: \['nem_2029_to_2060', 'nem_2031_to_2050'\]. With "
-        r"carbon_budget_scaling 'linear_trajectory_to_zero', the multi-year "
-        r"budgets must all start in the same year and end in different years."
-    )
-    with pytest.raises(ValueError, match=expected_message):
-        _raise_if_budgets_are_not_nested(budgets)
+# --- Models filtered to some regions ---
 
 
-def test_raise_if_budgets_are_not_nested_raises_on_a_shared_end_year(csv_str_to_df):
-    budgets = csv_str_to_df("""
-        budget_id,  year_from,  year_to
-        federal,    2027,       2050
-        state,      2027,       2050
-        nem_2030,   2027,       2030
-    """)
+def test_warns_when_model_is_region_filtered(
+    csv_str_to_df, sample_model_config, caplog
+):
+    carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2025, 2052, "none")
+    config.filter_by_nem_regions = ["VIC", "NSW"]
 
-    with pytest.raises(ValueError, match=r"as another: \['federal', 'state'\]"):
-        _raise_if_budgets_are_not_nested(budgets)
+    with caplog.at_level("WARNING"):
+        _translate_carbon_budgets(carbon_budgets, config)
 
-
-# --- _emissions_rate_at_each_knot ---
-
-
-def test_emissions_rate_at_each_knot():
-    knot_years = np.array([2026.0, 2030.0, 2050.0])
-    cumulative_budget = np.array([0.0, 290.0, 583.0])
-
-    result = _emissions_rate_at_each_knot(knot_years, cumulative_budget)
-
-    # 2030 to 2050 is allowed 293 Mt over 20 years, an average of 14.65, and
-    # ends at zero, so it starts at 29.3. 2026 to 2030 is allowed 290 Mt over
-    # 4 years, an average of 72.5, and ends at 29.3, so it starts at 115.7.
-    expected = np.array([115.7, 29.3, 0.0])
-    np.testing.assert_allclose(result, expected)
+    assert (
+        "The carbon budgets are for the whole NEM but the model is filtered to "
+        "['NSW', 'VIC']: the budgets are applied to it unscaled."
+    ) in caplog.text
 
 
-def test_emissions_rate_at_each_knot_single_budget():
-    knot_years = np.array([2026.0, 2050.0])
-    cumulative_budget = np.array([0.0, 480.0])
+def test_does_not_warn_when_model_is_not_filtered(
+    csv_str_to_df, sample_model_config, caplog
+):
+    carbon_budgets = _step_change_budgets(csv_str_to_df)
+    config = _config(sample_model_config, 2025, 2052, "none")
 
-    result = _emissions_rate_at_each_knot(knot_years, cumulative_budget)
+    with caplog.at_level("WARNING"):
+        _translate_carbon_budgets(carbon_budgets, config)
 
-    # One budget is a single straight line to zero: 480 Mt over 24 years
-    # averages 20, so it starts at 40.
-    expected = np.array([40.0, 0.0])
-    np.testing.assert_allclose(result, expected)
-
-
-def test_emissions_rate_at_each_knot_no_budgets():
-    knot_years = np.array([np.nan])
-    cumulative_budget = np.array([0.0])
-
-    result = _emissions_rate_at_each_knot(knot_years, cumulative_budget)
-
-    # With no multi-year budgets there is only the starting knot.
-    expected = np.array([0.0])
-    np.testing.assert_allclose(result, expected)
-
-
-# --- _raise_if_emissions_would_rise ---
-
-
-def test_raise_if_emissions_would_rise():
-    # 2031 to 2040 is allowed 6 Mt a year but 2041 to 2050 is allowed 10, so
-    # the rate at the end of 2040 (20) is above the rate at the end of 2030.
-    knot_years = np.array([2026.0, 2030.0, 2040.0, 2050.0])
-    rates = np.array([153.0, -8.0, 20.0, 0.0])
-
-    expected_message = (
-        r"With carbon_budget_scaling 'linear_trajectory_to_zero', emissions would "
-        r"have to rise over the years \[\(2031, 2040\)\] to use the carbon budgets "
-        r"in full. Either the budgets allow too many emissions after those "
-        r"years for the trajectory to keep falling, or a longer budget is "
-        r"smaller than a shorter one."
-    )
-    with pytest.raises(ValueError, match=expected_message):
-        _raise_if_emissions_would_rise(knot_years, rates)
-
-
-def test_raise_if_emissions_would_rise_passes_falling_and_flat_rates():
-    # Flat from 2030 to 2040 is allowed: only a rise is an error.
-    knot_years = np.array([2026.0, 2030.0, 2040.0, 2050.0])
-    rates = np.array([115.7, 29.3, 29.3, 0.0])
-
-    _raise_if_emissions_would_rise(knot_years, rates)
+    assert "The carbon budgets are for the whole NEM" not in caplog.text

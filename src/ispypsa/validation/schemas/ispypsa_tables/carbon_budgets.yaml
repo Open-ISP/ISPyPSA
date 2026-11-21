@@ -13,10 +13,6 @@ description: >
   this table is enforced, and a year can fall inside several budgets' windows,
   in which case its emissions count against each of them.
 
-  The year columns hold model years and are matched against the years of the
-  model config's temporal range. The templater writes them as financial years
-  ending, so 2026-27 is 2027.
-
   When the modelled years cover only part of a budget's window, the model
   config's carbon_budget_scaling option sets how much of the budget applies to
   the years that are modelled (or that the run should fail). A budget with no
@@ -47,12 +43,13 @@ custom_validation:
   - name: multi_year_budgets_allow_a_falling_trajectory
     description: >
       Using every multi-year budget in full must not need emissions to rise.
-      A longer budget must be larger than the shorter ones inside it, and the
-      extra years it adds must not be allowed too much compared with the years
-      before them: with two budgets, no more than half as much a year. For
-      example a 2027-2050 budget of 200 fails alongside a 2027-2030 budget of
-      290, as it would leave less than nothing for 2031-2050. Only needed when
-      the model config's carbon_budget_scaling is linear_trajectory_to_zero.
+      A longer budget must be at least as large as the shorter ones inside it,
+      and the extra years it adds must not be allowed too much compared with
+      the years before them: with two budgets, no more than half as much a
+      year. For example a 2027-2050 budget of 200 fails alongside a 2027-2030
+      budget of 290, as it would leave less than nothing for 2031-2050. Only
+      needed when the model config's carbon_budget_scaling is
+      linear_trajectory_to_zero.
 columns:
   budget_id:
     type: string
