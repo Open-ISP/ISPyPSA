@@ -783,6 +783,10 @@ def _add_emissions_intensity_sent_out(generators: pd.DataFrame) -> pd.DataFrame:
     auxiliary load (the % of generation the power station uses itself), so the
     same emissions are spread over fewer MWh.
 
+    A generator with a blank auxiliary_load raises a ValueError. Its
+    emissions_intensity would otherwise be blank too, and its output would not
+    be counted against any carbon budget.
+
     I/O Example:
         generators:
             name    emissions_intensity_as_generated  auxiliary_load
@@ -793,7 +797,18 @@ def _add_emissions_intensity_sent_out(generators: pd.DataFrame) -> pd.DataFrame:
             name    ...  emissions_intensity
             BW01    ...  1.0                    # 0.88 / (1 - 0.12)
             Q1G1    ...  0.0
+
+        Had BW01's auxiliary_load been blank, raises ValueError: "Generators
+        with no auxiliary load, so their emissions per MWh sent out can't be
+        worked out: ['BW01']"
     """
+    has_no_auxiliary_load = generators["auxiliary_load"].isna()
+    missing = sorted(generators.loc[has_no_auxiliary_load, "name"])
+    if missing:
+        raise ValueError(
+            f"Generators with no auxiliary load, so their emissions per MWh sent "
+            f"out can't be worked out: {missing}"
+        )
     generators = generators.copy()
     share_sent_out = 1 - generators["auxiliary_load"] / 100
     generators["emissions_intensity"] = (

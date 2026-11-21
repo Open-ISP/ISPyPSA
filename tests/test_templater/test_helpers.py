@@ -495,6 +495,26 @@ def test_add_emissions_intensity_sent_out(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_exact=False)
 
 
+def test_add_emissions_intensity_sent_out_raises_on_blank_auxiliary_load(
+    csv_str_to_df,
+):
+    generators = csv_str_to_df("""
+        name,   emissions_intensity_as_generated,   auxiliary_load
+        TALWA1, 0.49,
+        ER01,   0.9,                                6.0
+        Q1G1,   0.0,
+    """)
+
+    # TALWA1 and Q1G1 have a blank auxiliary_load. Q1G1 is named even though
+    # it emits nothing: any blank raises.
+    expected_message = (
+        "Generators with no auxiliary load, so their emissions per MWh sent out "
+        "can't be worked out: ['Q1G1', 'TALWA1']"
+    )
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _add_emissions_intensity_sent_out(generators)
+
+
 def test_add_emissions_intensity_sent_out_empty(csv_str_to_df):
     generators = pd.DataFrame(
         columns=["name", "emissions_intensity_as_generated", "auxiliary_load"]

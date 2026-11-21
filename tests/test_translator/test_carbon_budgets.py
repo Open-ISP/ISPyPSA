@@ -389,6 +389,29 @@ def test_linear_trajectory_raises_when_budgets_start_in_different_years(
         _translate_carbon_budgets(carbon_budgets, config)
 
 
+def test_linear_trajectory_raises_on_unnested_budgets_even_when_fully_modelled(
+    csv_str_to_df, sample_model_config
+):
+    carbon_budgets = csv_str_to_df("""
+        budget_id,          year_from,  year_to,    budget
+        nem_2027_to_2030,   2027,       2030,       290.0
+        nem_2031_to_2050,   2031,       2050,       293.0
+    """)
+    config = _config(sample_model_config, 2025, 2052, "linear_trajectory_to_zero")
+
+    # Both windows sit inside 2025 to 2052, so neither budget needs scaling.
+    # The budgets are still checked, and nem_2031_to_2050 starts later than
+    # 2027.
+    expected_message = (
+        "Carbon budgets that start later than the earliest budget, or end in the "
+        "same year as another: ['nem_2031_to_2050']. With "
+        "carbon_budget_scaling 'linear_trajectory_to_zero', the multi-year "
+        "budgets must all start in the same year and end in different years."
+    )
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        _translate_carbon_budgets(carbon_budgets, config)
+
+
 def test_linear_trajectory_raises_when_budgets_end_in_the_same_year(
     csv_str_to_df, sample_model_config
 ):
