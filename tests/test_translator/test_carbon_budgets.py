@@ -607,9 +607,9 @@ def test_raise_if_emissions_would_rise():
     expected_message = (
         r"With carbon_budget_scaling 'linear_trajectory_to_zero', emissions would "
         r"have to rise over the years \[\(2031, 2040\)\] to use the carbon budgets "
-        r"in full. Either the budgets allow more emissions a year after those "
-        r"years than during them, or a longer budget is smaller than a shorter "
-        r"one."
+        r"in full. Either the budgets allow too many emissions after those "
+        r"years for the trajectory to keep falling, or a longer budget is "
+        r"smaller than a shorter one."
     )
     with pytest.raises(ValueError, match=expected_message):
         _raise_if_emissions_would_rise(knot_years, rates)
