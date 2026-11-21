@@ -67,23 +67,42 @@ through testing. Let the code fail clearly when preconditions aren't met.
 
 No backwards compatibility unless explicitly requested — update all call sites directly.
 
-### Docstrings: I/O Example
+### Docstrings
 
-Every non-trivial function should include an `I/O Example:` section in its docstring
-showing a concrete input → output mapping. The goal is that a reviewer can understand
-the function's behaviour from the docstring alone, without reading the body.
+A docstring tells the reader how to use a function and what it does or returns. It does not
+walk through the body step by step: a reader who needs the steps is going to read the code
+anyway. The goal is that a reviewer can understand the function's behaviour from the
+docstring alone, without reading the body.
 
-Conventions:
+This guidance applies to new docstrings, and to an existing docstring when it needs a
+significant rewrite anyway. Don't go through the codebase updating docstrings to match it:
+existing module docstrings, and `Args` and `Returns` sections on private helpers, stay as
+they are.
 
-- Use a plain CSV-like table format for DataFrame inputs and outputs — no need to
-  wrap in runnable `csv_str_to_df` calls, since this is illustrative, not a doctest.
-- Always lay DataFrame examples out as full tables — a header row plus example rows,
-  each table in its own block — even when a single row would do. Never condense a
-  table into `column=value` prose. Abbreviated column sets, row sets and column
-  names are fine when the full table would otherwise be large; point at the
-  relevant constants for the real names.
-- Cover representative edge cases in the same example, with trailing `# comment`
-  notes on the rows that demonstrate each case.
+How much a docstring says depends on the function's role:
+
+- **Ordinary helpers** get a one-line summary and an I/O Example. This is most functions: a
+  helper that names its own columns and serves one caller needs nothing more.
+- **Entry points and generic helpers** get an orienting docstring, described below. These
+  are the two places where the docstring is the only place the full story exists.
+- **Helpers that implement a method** (a numerical routine, a derived formula) also
+  describe how the result is built. This is rare; see below.
+- **Modules** get no docstring. The entry point's docstring orients the reader instead.
+
+#### I/O Example
+
+Every non-trivial function should include an `I/O Example:` section showing a concrete
+input → output mapping.
+
+- Use a plain CSV-like table format for DataFrame inputs and outputs. There is no need to
+  wrap them in runnable `csv_str_to_df` calls, since this is illustrative, not a doctest.
+- Always lay DataFrame examples out as full tables: a header row plus example rows, each
+  table in its own block, even when a single row would do. Never condense a table into
+  `column=value` prose. Abbreviated column sets, row sets and column names are fine when
+  the full table would otherwise be large; point at the relevant constants for the real
+  names.
+- Cover representative edge cases in the same example, with trailing `# comment` notes on
+  the rows that demonstrate each case.
 - For trivial utility functions, one-line input → output cases are enough.
 
 ```python
@@ -102,123 +121,184 @@ def _duplicate_for_both_directions(limits: pd.DataFrame) -> pd.DataFrame:
     """
 ```
 
-### Docstrings: generic helpers
+#### Which functions get an orienting docstring
 
-Most helpers don't need this section — a one-line summary and an I/O Example
-is right for a helper that names its own columns and serves one caller.
-Apply this guide when a helper is *generic*: the signals are that
+**Entry points.** A function called from outside its module: the `_template_*` or
+`_translate_*` function a pipeline orchestrator calls. (Public API functions follow the
+same order, with the extra sections described further down.) Someone
+arriving at the module reads this docstring first, and it has to make sense to a reader who
+has not seen the table formats or the rest of the pipeline. Where a module has several
+entry points, each gets an orienting docstring covering its own output. Define a shared
+concept in the first and point to it from the others.
 
-- column or key names arrive as parameters instead of appearing literally in
-  the body, so the body alone can't tell the reader what the data means;
-- it has (or is written to invite) several call sites with different domain
-  meanings; and
-- it enforces a rule its callers depend on but don't restate — a precedence
-  order, a validation contract, a guarantee about the output's shape.
+**Generic helpers.** The signals are that
 
-The first signal is the gate; the other two raise the stakes. For these
-functions the docstring is the only place the full story exists, so it earns
-a longer, structured treatment — a short narrative, one idea per paragraph,
-in this order:
+- column or key names arrive as parameters instead of appearing literally in the body, so
+  the body alone can't tell the reader what the data means;
+- it has (or is written to invite) several call sites with different domain meanings; and
+- it enforces a rule its callers depend on but don't restate: a precedence order, a
+  validation contract, a guarantee about the output's shape.
 
-1. **Summary line: the function's effect, naming the parameters it
-   connects.** "Resolve which row of ``table`` applies to each key
-   combination in ``allowed_values``, returning one explicit row per
-   combination." The summary should earn the function's name — if it is
-   called _resolve_*, the summary should say what gets resolved.
+The first signal is the gate; the other two raise the stakes.
 
-2. **The input's story.** Before any mechanism, explain what the input data
-   is and why it looks the way it does — especially the oddity the function
-   exists to handle ("Rather than write out a row for every key, the user
-   may leave a key cell blank…"). Motivating the weirdness is what makes the
-   mechanism paragraph land.
+#### The orienting docstring
 
-3. **What each remaining parameter represents**, in domain terms rather than
-   shape ("every value the model needs an entry for — e.g. the enabled
-   expansion elements").
+An orienting docstring is a short narrative, one idea per paragraph, in this order. Not
+every function needs every part: leave out a part that has nothing to say.
 
-4. **The mechanism** — how the function connects the inputs, precise enough
-   to cover the compound cases (see below).
+1. **Summary line: one idea, the function's effect.** "Adjusts each carbon budget to the
+   years the model covers." Don't also pack in who uses the result or the shape of the
+   output; those have their own paragraphs. The summary should earn the function's name: if
+   it is called `_resolve_*`, the summary should say what gets resolved. For a generic
+   helper, name the parameters it connects.
 
-5. **The failure contract last** — what happens when the work can't be
-   completed for some of the data (raise, fallback, or log-and-continue),
-   and why that response is the right one.
+2. **The concept and the problem.** Before any behaviour, say what the data is and why the
+   function exists. For an entry point this is the domain idea and the gap the function
+   closes ("A carbon budget is a cap, in Mt, on the NEM's total emissions over a window of
+   years. The model may cover only some of those years, so the cap has to be adjusted to
+   match."). For a generic helper it is the input's story: why the data looks the way it
+   does, especially the oddity the function exists to handle ("Rather than write out a row
+   for every key, the user may leave a key cell blank…"). This paragraph is what makes the
+   later ones land, and it comes before any mention of rows or columns.
 
-Wording rules, beyond the general terminology guidance:
+3. **What the parameters represent,** where the signature doesn't already say. Use domain
+   terms rather than shape ("every value the model needs an entry for, e.g. the enabled
+   expansion elements"). For an entry point this is usually a mention of the config
+   settings it reads, and can be folded into the paragraphs that use them.
 
-- **Define derived vocabulary from the signature at first mention.** If the
-  prose says "key columns", pin it down inline: "a key column — any column
-  of ``table`` not in ``value_columns``". A term defined only by the body's
-  code is a term the docstring hasn't defined.
-- **State behaviour for the compound case, not just the simple one.** "Each
-  blank is expanded to one row per value" is vague about a row with two
-  blanks; "one row per combination of ``allowed_values`` across its blank
-  columns" is not.
-- **Phrase rules to cover every case the code handles.** A tie-break
-  described as "an expanded row vs one that named the key directly"
-  misdescribes two expanded rows colliding; "where several rows land on the
-  same key, the one that started with fewer blanks wins" covers both.
-- **Borrow concrete names from the I/O Example in the prose** (direction,
-  path_id). A generic function documented only in generic nouns is hard to
-  follow; the example's columns give the prose something to point at.
-- **Prefer a concrete failing input to set-membership phrasing.** "A
-  direction of, say, 'sideways' raises" beats "non-blank values must be
-  among the listed values".
-- **Don't let one word do double duty.** "A key column *listed* in
-  ``allowed_values``" and "among the *listed* values" use one word for two
-  different lookups.
-- **Verify claims about callers and upstream schemas against the code.**
-  A docstring that states where a parameter's values come from is making a
-  testable claim — check the call sites first, and describe what callers
-  actually pass rather than the provenance you assume.
+4. **What is returned.** Say it is a table and state its grain ("a table with one row per
+   budget"). Then:
 
-Worked examples: `_resolve_wildcards` in `src/ispypsa/translator/helpers.py`
-(a raising failure contract) and `_fuzzy_match_names` in
-`src/ispypsa/templater/helpers.py` (a fallback-and-log contract).
+   - **Six columns or fewer:** list each column and what it holds, including what the
+     example can't show: units, whether a bound is inclusive, which input column it came
+     from.
+   - **More than six:** describe only the columns the function adds or changes, and name
+     the schema file under `validation/schemas/` that documents the rest.
 
-### Module docstrings
+   Where it helps the reader see what the output is for, add a sentence on what the next
+   stage does with it.
 
-A module docstring orients a reader who has never seen the module before. By
-the time they finish it they should know what the module turns into what, the
-path the data takes through it, and the handful of terms the rest of the file
-leans on. Write it in full sentences — not a condensed, telegraphic style — so
-an unfamiliar reader can parse it on the first pass. Keep inline-code markup
-light: these docstrings are read in source, not rendered, so lean on snake_case
-names and quotes rather than wrapping every identifier in backticks.
+5. **The behaviour.** How the function connects its inputs to its output, at the level a
+   caller needs. This is not a walk through the body.
 
-Use these sections, in order:
+   - **When the behaviour splits into cases, say so and list them.** State the one thing
+     the cases turn on ("How a budget is adjusted depends on how much of its window is
+     modelled:") and give each case its own line. Don't thread the cases through a
+     paragraph of "when… otherwise…", and don't leave one to be inferred from what is
+     missing from the output.
+   - **Keep options separate from cases.** If a config setting only matters in one case,
+     list its options in their own list after the cases.
+   - **Be precise enough to cover the compound case** (see the wording rules).
 
-1. **Intro (one or two sentences).** What the module does and where it sits in
-   the wider pipeline.
-2. **I/O framing.** The shape of the input and the output, each with a small
-   block of literal example data. This is the whole-module version of the
-   per-function `I/O Example`: the reader sees what goes in and what comes out
-   before reading how. Let the example's header row introduce the column names
-   rather than also listing them in prose; keep only the prose the example
-   can't carry, such as each table's grain ("one row per …").
-3. **Pipeline story.** A high-level, step-by-step narrative of what the module
-   does, in execution order. Keep most steps to a sentence; spend extra words
-   only on the conceptually tricky or opinionated steps, where the "why it's
-   done this way" wouldn't be obvious from the code. Where the story first
-   reaches a term it will reuse, state what happens in plain words and then
-   attach the name ("…, which we call *triggering*"), rather than dropping the
-   bare term in as though it were already defined.
-4. **Keystone vocabulary (only when the module needs it).** Prefer wording
-   clear enough that no term needs a glossary — a reader should rarely have to
-   learn special vocabulary to follow well-written docs, and the best outcome
-   is that this section is empty or absent. Add it only when a term genuinely
-   recurs across the file and its helpers *and* carries a context-specific
-   meaning that inline wording keeps having to re-explain. When that bar is
-   met, pin the term down once here, grounded in the domain model (say what the
-   thing actually is, not just how it's used), so helpers reuse it without
-   redefining it. This section's presence is a deliberate call that the jargon
-   earns its keep — never a slot to fill, and never a reason to coin a term
-   where plain words would do.
-5. **Reference detail.** The hardcoded decisions — translations/mappings,
-   systematic name renames, and the rows that get dropped and why. These are
-   lookups the reader returns to rather than narrative, so they come last.
+6. **The failure contract.** What happens when the work can't be completed for some of the
+   data (raise, fallback, or log-and-continue), and why that response is the right one. It
+   comes last, unless raising is itself one of the listed cases or options, in which case
+   it stays in the list.
 
-See `src/ispypsa/templater/custom_constraints_from_plexos.py` for a worked
-example.
+7. **The I/O Example.**
+
+An orienting docstring is long, and that is only justified by the function's role. Don't
+give an ordinary helper this treatment, and once the entry point has defined a term, the
+helpers below it use the term without redefining it.
+
+#### Public API functions
+
+The functions listed in `docs/api.md` are rendered on the documentation site by
+mkdocstrings, and are read there by someone calling the function from their own script.
+They use Google-style sections so the page renders properly:
+
+- **Summary and orienting prose**, in the order above, kept short: a user needs the concept
+  and what comes back, not the internals.
+- **Examples:** a short snippet showing a typical call, including where its arguments come
+  from (the config, the previous pipeline step). This takes the place of the I/O Example: a
+  public function usually returns a dictionary of tables, too large to show as one.
+- **Args:** one entry per parameter, in domain terms.
+- **Returns:** what is returned. For a dictionary of tables, name the keys or point to
+  where they are documented.
+- **Raises:** only the errors a user can cause and act on.
+
+Private functions don't use `Args` and `Returns` sections. The type hints and the I/O
+Example already say what goes in and what comes out, and a parameter that needs explaining
+gets a sentence in the prose.
+
+#### Helpers that implement a method
+
+A few helpers implement a numerical or algorithmic method: an interpolation, a recursion, a
+formula that had to be derived. Well-written code can show what such a method does at each
+line, but not why it gives the right answer. The test: could a reader check the body is
+correct by reading it alone? If they would first need the derivation, the docstring
+carries it.
+
+This is the one place a docstring describes the method step by step. After the summary,
+give:
+
+1. **What the result looks like.** A small chart or picture often says this better than
+   prose.
+2. **How the result is built.** Numbered steps giving the reasoning behind the method, with
+   a worked example on real numbers. Describe the method, not the lines of code.
+3. **The preconditions** the method relies on, and what is raised when they don't hold.
+
+Hard-to-read data manipulation doesn't qualify. If pandas code needs its steps explained,
+simplify it or split it into named helpers. Expect this kind of docstring to be rare.
+
+Worked example: `_build_emissions_trajectory` in
+`src/ispypsa/translator/carbon_budgets.py`.
+
+#### Wording rules
+
+These apply to every docstring, and matter most in the orienting ones.
+
+- **Define a term where it first appears.** A reader shouldn't meet "window", "rhs" or "key
+  column" before being told what it is. For vocabulary derived from the signature, pin it
+  down inline: "a key column: any column of `table` not in `value_columns`". A term defined
+  only by the body's code is a term the docstring hasn't defined.
+- **One word per thing, one thing per word.** Don't call the same value a "limit" in one
+  sentence and the "rhs" in the next: the reader will look for the difference. And don't
+  let one word do double duty: "a key column *listed* in `allowed_values`" and "among the
+  *listed* values" use one word for two different lookups.
+- **Say the thing; don't point at it.** "Named for where it goes" tells the reader an
+  explanation exists without giving it. Write the explanation ("the emissions of the
+  modelled years in the window must be no more than rhs") or cut the phrase.
+- **Use the plain, exact phrase.** "The sum of the shares of the modelled years", not "the
+  modelled years' shares added up".
+- **State behaviour for the compound case, not just the simple one.** "Each blank is
+  expanded to one row per value" is vague about a row with two blanks; "one row per
+  combination of `allowed_values` across its blank columns" is not.
+- **Phrase rules to cover every case the code handles.** A tie-break described as "an
+  expanded row vs one that named the key directly" misdescribes two expanded rows
+  colliding; "where several rows land on the same key, the one that started with fewer
+  blanks wins" covers both.
+- **Borrow concrete names from the I/O Example in the prose** (direction, path_id). A
+  function documented only in generic nouns is hard to follow; the example's columns give
+  the prose something to point at.
+- **Prefer a concrete failing input to set-membership phrasing.** "A direction of, say,
+  'sideways' raises" beats "non-blank values must be among the listed values".
+- **Verify claims about callers and upstream schemas against the code.** A docstring that
+  states where a parameter's values come from is making a testable claim. Check the call
+  sites first, and describe what callers actually pass rather than the provenance you
+  assume.
+- **Keep inline-code markup light.** Docstrings are read in source, not rendered, so lean
+  on snake_case names and quotes rather than wrapping every identifier in backticks.
+
+Worked examples: `_translate_carbon_budgets` in `src/ispypsa/translator/carbon_budgets.py`
+(an entry point), `_resolve_wildcards` in `src/ispypsa/translator/helpers.py` (a generic
+helper with a raising failure contract) and `_fuzzy_match_names` in
+`src/ispypsa/templater/helpers.py` (a generic helper with a fallback-and-log contract).
+
+#### No module docstrings
+
+New modules don't get a module docstring. The entry point's orienting docstring does the
+job of orienting a reader who has never seen the module, and it sits next to the code it
+describes, so it is less likely to go stale.
+
+The entry point's docstring doesn't have to carry everything a module docstring would
+have. It orients; the reader then gets the full story from the source and the helpers'
+docstrings. In particular:
+
+- **The step-by-step story is the entry point's body.** Written as an orchestrator, it
+  already reads as the sequence of steps.
+- **Hardcoded decisions go beside the code that makes them:** a comment on the mapping
+  constant, the docstring of the helper that drops the rows.
 
 ### External references
 
