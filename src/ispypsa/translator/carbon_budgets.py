@@ -50,6 +50,10 @@ def _translate_carbon_budgets(
       lines to zero at the end of the last budget (see
       _build_emissions_trajectory).
 
+    With "linear_trajectory_to_zero" the multi-year budgets are always checked
+    to fit a single falling trajectory, and a ValueError is raised if they
+    don't, even when every window is modelled in full and nothing is scaled.
+
     The budgets are applied to the whole model whatever regions it covers. A
     warning is logged when the model is filtered to some regions only.
 

@@ -211,6 +211,56 @@ def test_each_snapshot_is_weighted_by_its_share_of_its_model_year(csv_str_to_df)
     )
 
 
+def test_tables_are_matched_to_the_network_by_name_not_row_order(csv_str_to_df):
+    # Two snapshots in financial year 2027, where the shared network has one.
+    network = _network(
+        [
+            "2026-07-01 12:00:00",
+            "2026-07-02 00:00:00",
+            "2030-07-01 12:00:00",
+            "2031-07-01 12:00:00",
+        ]
+    )
+    carbon_budgets = csv_str_to_df("""
+        constraint_name,    year_from,  year_to,    rhs
+        nem_2027_to_2031,   2027,       2031,       290.0
+    """)
+    # The snapshots are in the reverse of the network's order, and so are the
+    # generators (the network has BW01 before TALWA1).
+    snapshots = csv_str_to_df("""
+        investment_periods,  snapshots,            model_year,  stores
+        2031,                2031-07-01 12:00:00,  2032,        12.0
+        2031,                2030-07-01 12:00:00,  2031,        12.0
+        2027,                2026-07-02 00:00:00,  2027,        3.0
+        2027,                2026-07-01 12:00:00,  2027,        1.0
+    """)
+    generators = csv_str_to_df("""
+        name,       emissions_intensity
+        TALWA1,     0.5
+        BW01,       1.0
+    """)
+
+    _add_carbon_budgets(network, carbon_budgets, snapshots, generators)
+
+    # Every snapshot and generator has a different weight, so a term given
+    # another row's hours or intensity would show up here. In model year 2027
+    # the 12:00 snapshot has 1 of the 4 hours modelled (2190 hours) and the
+    # 00:00 snapshot the other 3 (6570 hours). The 2031 snapshot represents
+    # all 8760 hours. TALWA1 (0.5 t/MWh) has half BW01's coefficient at each.
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            generator,  coefficient,  sign,  rhs
+        2027,                2026-07-01 12:00:00,  BW01,       0.00219,      <=,    290.0
+        2027,                2026-07-01 12:00:00,  TALWA1,     0.001095,     <=,    290.0
+        2027,                2026-07-02 00:00:00,  BW01,       0.00657,      <=,    290.0
+        2027,                2026-07-02 00:00:00,  TALWA1,     0.003285,     <=,    290.0
+        2031,                2030-07-01 12:00:00,  BW01,       0.00876,      <=,    290.0
+        2031,                2030-07-01 12:00:00,  TALWA1,     0.00438,      <=,    290.0
+    """)
+    pd.testing.assert_frame_equal(
+        _constraint_terms(network, "nem_2027_to_2031"), expected, check_dtype=False
+    )
+
+
 def test_generators_that_emit_nothing_are_left_out(csv_str_to_df):
     network = _network()
     carbon_budgets = csv_str_to_df("""
