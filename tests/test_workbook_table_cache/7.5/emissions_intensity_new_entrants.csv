@@ -1,0 +1,22 @@
+Technology,Scope 1 emissions intensity (kg/MWh as-gen)
+OCGT (small GT),548.7291065989848
+OCGT (large GT),563.2869868554095
+CCGT,373.55
+CCGT with CCS,46.58
+Biomass,21.042071197411
+Large scale Solar PV,0.0
+Solar Thermal (16hrs storage),0.0
+Battery Storage (1hr storage),0.0
+Battery storage (2hrs storage),0.0
+Battery storage (4hrs storage),0.0
+Battery storage (8hrs storage),0.0
+Wind,0.0
+Wind - offshore (fixed),0.0
+Wind - offshore (floating),0.0
+Pumped Hydro (10hrs storage),0.0
+Pumped Hydro (24hrs storage),0.0
+Pumped Hydro (48hrs storage),0.0
+Distributed Resources Solar,0.0
+Distributed Resources Batteries,0.0
+Alkaline Electrolyser,0.0
+BOTN - Cethana,0.0

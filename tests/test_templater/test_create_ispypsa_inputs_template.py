@@ -146,6 +146,18 @@ def _new_entrant_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             NQ,                 105.0
             TAS,                100.0
         """),
+        "emissions_intensity_new_entrants": csv_str_to_df("""
+            Technology,             Scope 1 emissions intensity (kg/MWh as-gen)
+            Wind,                   0.0
+            Large scale Solar PV,   0.0
+            OCGT (small GT),        549.0
+        """),
+        "auxiliary_load_new_entrants": csv_str_to_df("""
+            Generator,              Auxiliary load (% of generation)
+            Wind,                   0.07
+            Large scale Solar PV,   0.01
+            OCGT (small GT),        1.5
+        """),
     }
 
 
@@ -214,6 +226,35 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             IASR ID,    Technology Type,  Min Stable Level (MW)
             TALWA1,     CCGT,             190.0
             MSTUART1,   OCGT (small GT),  30.0
+        """),
+        "emissions_intensity_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Scope 1 emissions intensity (kg/MWh as-gen)
+            BW01,     880.0
+            TALWA1,   374.0
+            MSTUART1, 900.0
+            Q1G1,     0.0
+        """),
+        "auxiliary_load_existing_committed_anticipated_additional_generators": csv_str_to_df("""
+            IASR ID,  Auxiliary load (% of generation)
+            BW01,     5.5
+            TALWA1,   1.8
+            MSTUART1, 0.7
+            Q1G1,     0.01
+        """),
+    }
+
+
+def _carbon_budget_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The IASR NEM carbon budgets, wiring-only fixture.
+
+    Detailed behaviour is covered in test_carbon_budgets.py.
+    """
+    return {
+        "nem_carbon_budget": csv_str_to_df("""
+            Unnamed: 1,                                             Slower Growth,  Step Change
+            Global mean temperature increase by 2100 (°C),          2.6°C,          1.8°C
+            Long-term budget from 2026-27 to 2049-50 (Mt CO2-e),    727,            583
+            2035 emissions reduction target in 2034-35,             24,             23
         """),
     }
 
@@ -308,6 +349,7 @@ def test_list_templater_output_files_granularity_invariant():
         "custom_constraints_rhs",
         "timeslices",
         "costs_connection",
+        "carbon_budgets",
     } <= sub_regions
 
 
@@ -505,6 +547,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
+                **_carbon_budget_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -593,6 +636,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "lifetime_economic",
         "heat_rate",
         "minimum_stable_level",
+        "emissions_intensity",
     }
     # Wind + Large scale Solar PV (both Q1) + CNSW OCGT Small + SNW OCGT Small + NQ OCGT Small
     assert set(generators_new_entrant["geo_id"]) == {"NQ", "Q1", "CNSW", "SNW"}
@@ -636,6 +680,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "commissioning_date",
         "closure_year",
         "minimum_load",
+        "emissions_intensity",
     }
     assert set(generators_existing_planned["geo_id"]) == {"NQ", "CNSW", "Q1", "SNW"}
     assert len(generators_existing_planned) == 4
@@ -709,6 +754,17 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     costs_new_entrant_build = result["costs_new_entrant_build"]
     assert set(costs_new_entrant_build.columns) == {"technology", "year", "cost"}
     assert len(costs_new_entrant_build) == 10
+
+    # At all granularities: the long-term budget and the 2035 target. The
+    # temperature row is not a budget, so it is dropped.
+    carbon_budgets = result["carbon_budgets"]
+    assert set(carbon_budgets.columns) == {
+        "budget_id",
+        "year_from",
+        "year_to",
+        "budget",
+    }
+    assert len(carbon_budgets) == 2
 
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
@@ -830,6 +886,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
+                **_carbon_budget_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -930,6 +987,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # At all granularities: 5x new entrant technologies, 2 years each
     costs_new_entrant_build = result["costs_new_entrant_build"]
     assert len(costs_new_entrant_build) == 10
+
+    # At all granularities: the long-term budget and the 2035 target.
+    assert len(result["carbon_budgets"]) == 2
 
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
@@ -1041,6 +1101,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 **_new_entrant_tables(csv_str_to_df),
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
+                **_carbon_budget_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -1136,3 +1197,6 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # At all granularities: 5x new entrant technologies, 2 years each
     costs_new_entrant_build = result["costs_new_entrant_build"]
     assert len(costs_new_entrant_build) == 10
+
+    # At all granularities: the long-term budget and the 2035 target.
+    assert len(result["carbon_budgets"]) == 2

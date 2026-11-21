@@ -1,0 +1,77 @@
+table: carbon_budgets
+required: false
+unique:
+  - [budget_id]
+  - [year_from, year_to]
+description: >
+  Limits on the emissions of the whole modelled system over a window of years.
+
+  Each row is one budget: the emissions of every generator, added up over the
+  years from year_from to year_to inclusive, must not exceed it. A generator's
+  emissions are its generation multiplied by its emissions_intensity (in
+  `generators_existing_planned` and `generators_new_entrant`). Every budget in
+  this table is enforced, and a year can fall inside several budgets' windows,
+  in which case its emissions count against each of them.
+
+  When the modelled years cover only part of a budget's window, the model
+  config's carbon_budget_scaling option sets how much of the budget applies to
+  the years that are modelled (or that the run should fail). A budget with no
+  modelled years in its window is not applied.
+
+  Source tables:
+    - `nem_carbon_budget`
+
+  Source notes:
+  Only the NEM-wide budgets are templated. The IASR workbook's state budgets
+  (`regional_carbon_budget_summary`) are not.
+
+  If absent:
+  Emissions are not limited.
+custom_validation:
+  - name: year_to_is_not_before_year_from
+    description: >
+      A budget's year_to must be the same as or later than its year_from. For
+      example a budget from 2030 to 2027 fails.
+  - name: multi_year_budgets_are_nested
+    description: >
+      The budgets with a window of more than one year must all start in the
+      same year and end in different years, so that each sits inside the next
+      longer one. For example 2027-2030 alongside 2027-2050 is valid, but
+      2027-2030 alongside 2031-2050 is not. Only needed when the model
+      config's carbon_budget_scaling is linear_trajectory_to_zero, which draws
+      a single trajectory of emissions through the budgets.
+  - name: multi_year_budgets_allow_a_falling_trajectory
+    description: >
+      Using every multi-year budget in full must not need emissions to rise.
+      A longer budget must be at least as large as the shorter ones inside it,
+      and the extra years it adds must not be allowed too much compared with
+      the years before them: with two budgets, no more than half as much a
+      year. For example a 2027-2050 budget of 200 fails alongside a 2027-2030
+      budget of 290, as it would leave less than nothing for 2031-2050. Only
+      needed when the model config's carbon_budget_scaling is
+      linear_trajectory_to_zero.
+columns:
+  budget_id:
+    type: string
+    required: true
+    description: >
+      Unique identifier for the budget (e.g. nem_2027_to_2050). Used to name
+      the constraint in the model.
+  year_from:
+    type: int
+    required: true
+    description: First model year of the budget's window.
+  year_to:
+    type: int
+    required: true
+    description: >
+      Last model year of the budget's window. Equal to year_from for a limit on
+      a single year's emissions.
+  budget:
+    type: float
+    required: true
+    units: Mt CO2-e
+    gte: 0.0
+    description: >
+      The most the system may emit over the window, in million tonnes of CO2
+      equivalent.

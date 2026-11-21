@@ -330,6 +330,10 @@ _EXPECTED_STORAGE_EXISTING_PLANNED_ROWS_75 = 111
 # technology per year.
 _EXPECTED_BUILD_COST_ROWS_75 = 600
 
+# The NEM carbon budgets are granularity-invariant: the long-term budget, the
+# 2030 budget and the 2035 target.
+_EXPECTED_CARBON_BUDGET_ROWS_75 = 3
+
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
 # granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
@@ -467,6 +471,10 @@ def test_create_ispypsa_inputs_new_format(
 
     # granularity invariant
     assert len(costs_new_entrant_build) == _EXPECTED_BUILD_COST_ROWS_75
+
+    # carbon_budgets - detailed content covered by test_carbon_budgets.py.
+    carbon_budgets = pd.read_csv(output_dir / "carbon_budgets.csv")
+    assert len(carbon_budgets) == _EXPECTED_CARBON_BUDGET_ROWS_75
 
     # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
     # should match granularity, but NaNs are allowed (wildcard) so dropped before

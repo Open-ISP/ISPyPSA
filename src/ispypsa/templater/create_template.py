@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.feature_flags import FEATURE_FLAGS
+from ispypsa.templater.carbon_budgets import _template_carbon_budgets
 from ispypsa.templater.connection_and_build_costs import (
     _template_connection_costs,
     _template_costs_new_entrant_build,
@@ -117,6 +118,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "custom_constraints",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
+    "carbon_budgets",
 ]
 
 
@@ -297,6 +299,10 @@ def create_ispypsa_inputs_template(
             )
         else:
             template.update(empty_custom_constraint_tables())
+
+        template["carbon_budgets"] = _template_carbon_budgets(
+            iasr_tables["nem_carbon_budget"], scenario
+        )
         return template
 
     template = {}

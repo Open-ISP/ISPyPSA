@@ -26,6 +26,7 @@ def _initialise_network(snapshots: pd.DataFrame) -> pypsa.Network:
     )
     snapshots = snapshots.set_index(["period", "timestep"])
 
-    network.snapshot_weightings = snapshots
+    # The snapshots table also has columns that aren't weightings (model_year).
+    network.snapshot_weightings = snapshots[["objective", "generators", "stores"]]
 
     return network

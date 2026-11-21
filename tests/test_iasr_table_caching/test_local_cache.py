@@ -65,6 +65,16 @@ def test_build_required_tables_new_format():
     assert "hydrogen_prices" in result
     assert "biomethane_prices" in result
     assert "build_costs" in result
+    assert (
+        "emissions_intensity_existing_committed_anticipated_additional_generators"
+        in result
+    )
+    assert "emissions_intensity_new_entrants" in result
+    assert (
+        "auxiliary_load_existing_committed_anticipated_additional_generators" in result
+    )
+    assert "auxiliary_load_new_entrants" in result
+    assert "nem_carbon_budget" in result
 
 
 def test_build_required_tables_old_format():

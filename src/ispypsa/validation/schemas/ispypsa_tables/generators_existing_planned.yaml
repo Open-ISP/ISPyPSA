@@ -18,6 +18,8 @@ description: >
     - `expected_closure_years`
     - `gpg_min_stable_level_existing_generators`
     - `coal_minimum_stable_level`
+    - `emissions_intensity_existing_committed_anticipated_additional_generators`
+    - `auxiliary_load_existing_committed_anticipated_additional_generators`
 
   If absent:
   A greenfield model will be run — no existing generators will be modelled.
@@ -117,3 +119,21 @@ columns:
 
       If absent:
       No minimum operational load is applied to this generating unit.
+  emissions_intensity:
+    type: float
+    required: false
+    units: t CO2-e/MWh
+    gte: 0.0
+    nan_fill: 0.0
+    description: >
+      Scope 1 emissions of the generating unit per unit of energy sent out.
+
+      These values are used to count the unit's output against the limits in
+      `carbon_budgets`. The IASR workbook publishes them in kg per MWh
+      generated. The templater converts them to t per MWh sent out, using the
+      unit's auxiliary load: the share of its generation the power station
+      uses itself. For example 0.88 t/MWh generated with a 12% auxiliary load
+      is 0.88 / (1 - 0.12) = 1.0 t/MWh sent out.
+
+      If absent:
+      The generating unit's output is not counted against any carbon budget.
