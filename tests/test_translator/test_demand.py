@@ -293,6 +293,42 @@ def test_sum_subregion_traces_per_demand_node_no_traces(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
+def test_sum_subregion_traces_per_demand_node_no_demand_subregions(csv_str_to_df):
+    subregion_traces = csv_str_to_df(
+        """
+        subregion,  datetime,              value
+        CNSW,       2024-07-01 00:30:00,   5000.0
+        """,
+        parse_dates=["datetime"],
+    )
+    demand_subregions = pd.DataFrame(columns=["subregion_id", "geo_id"])
+
+    result = _sum_subregion_traces_per_demand_node(subregion_traces, demand_subregions)
+
+    expected = csv_str_to_df("""
+        geo_id,  datetime,  value
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+def test_sum_subregion_traces_per_demand_node_both_empty(csv_str_to_df):
+    subregion_traces = pd.DataFrame(
+        {
+            "subregion": pd.Series(dtype="object"),
+            "datetime": pd.Series(dtype="datetime64[us]"),
+            "value": pd.Series(dtype="float64"),
+        }
+    )
+    demand_subregions = pd.DataFrame(columns=["subregion_id", "geo_id"])
+
+    result = _sum_subregion_traces_per_demand_node(subregion_traces, demand_subregions)
+
+    expected = csv_str_to_df("""
+        geo_id,  datetime,  value
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
 def test_create_demand_node_traces_sub_regions(csv_str_to_df):
     hierarchy = _network_geography_hierarchy(csv_str_to_df)
     network_geography = csv_str_to_df("""
@@ -410,6 +446,39 @@ def test_create_demand_node_traces_no_log_when_every_subregion_has_a_trace(
         )
 
     assert "no demand trace data" not in caplog.text
+
+
+def test_demand_node_whose_subregions_all_lack_traces(csv_str_to_df, caplog):
+    hierarchy = _network_geography_hierarchy(csv_str_to_df)
+    # CQ is the only sub-region placed in this model, and it has no test trace.
+    network_geography = csv_str_to_df("""
+        geo_id,  geo_type
+        CQ,      subregion
+    """)
+
+    demand_nodes = _translate_demand_nodes(hierarchy, network_geography)
+    with caplog.at_level("WARNING"):
+        demand_traces = _create_demand_node_traces(
+            hierarchy,
+            network_geography,
+            _TRACE_DATA_PATH,
+            scenario="Step Change",
+            reference_year_mapping={2025: 2011, 2026: 2018},
+            year_type="fy",
+        )
+
+    # CQ is still listed as a demand node, but has no entry in the traces.
+    expected_demand_nodes = csv_str_to_df("""
+        name
+        CQ
+    """)
+    pd.testing.assert_frame_equal(demand_nodes, expected_demand_nodes)
+
+    assert demand_traces == {}
+    assert (
+        "ISP sub-regions with no demand trace data (their demand is left out of "
+        "the model): ['CQ']"
+    ) in caplog.text
 
 
 def test_create_demand_node_traces_no_subregions():

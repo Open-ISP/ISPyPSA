@@ -197,3 +197,18 @@ def test_template_network_geography_hierarchy(csv_str_to_df):
         Q1,      rez,        NQ,            QLD,        NEM
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_template_network_geography_hierarchy_empty(csv_str_to_df):
+    sub_regional_geography = pd.DataFrame(
+        columns=["geo_id", "geo_type", "region_id", "subregion_id"]
+    )
+
+    result = _template_network_geography_hierarchy(sub_regional_geography)
+
+    # With no sub-regions there are no NEM regions to add, only the NEM row.
+    expected = csv_str_to_df("""
+        geo_id,  geo_type,  subregion_id,  region_id,  nem_id
+        NEM,     nem,       ,              ,           NEM
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
