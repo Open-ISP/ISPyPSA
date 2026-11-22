@@ -58,19 +58,6 @@ def _network_geography_hierarchy(csv_str_to_df) -> pd.DataFrame:
     """)
 
 
-def _create_test_demand_node_traces(
-    hierarchy: pd.DataFrame, network_geography: pd.DataFrame
-) -> dict[str, pd.DataFrame]:
-    return _create_demand_node_traces(
-        hierarchy,
-        network_geography,
-        _TRACE_DATA_PATH,
-        scenario="Step Change",
-        reference_year_mapping={2025: 2011, 2026: 2018},
-        year_type="fy",
-    )
-
-
 def test_place_subregions_at_model_geographies_sub_regions(csv_str_to_df):
     hierarchy = _network_geography_hierarchy(csv_str_to_df)
     network_geography = csv_str_to_df("""
@@ -249,13 +236,13 @@ def test_translate_demand_nodes_empty(csv_str_to_df):
 def test_sum_subregion_traces_per_demand_node(csv_str_to_df):
     subregion_traces = csv_str_to_df(
         """
-        subregion,  datetime,               value
-        CNSW,       2024-07-01__00:30:00,   5000.0
-        NNSW,       2024-07-01__00:30:00,   500.0
-        SQ,         2024-07-01__00:30:00,   -20.0
-        CNSW,       2024-07-01__01:00:00,   4800.0
-        NNSW,       2024-07-01__01:00:00,   -100.0
-        SQ,         2024-07-01__01:00:00,   3400.0
+        subregion,  datetime,              value
+        CNSW,       2024-07-01 00:30:00,   5000.0
+        NNSW,       2024-07-01 00:30:00,   500.0
+        SQ,         2024-07-01 00:30:00,   -20.0
+        CNSW,       2024-07-01 01:00:00,   4800.0
+        NNSW,       2024-07-01 01:00:00,   -100.0
+        SQ,         2024-07-01 01:00:00,   3400.0
         """,
         parse_dates=["datetime"],
     )
@@ -273,11 +260,11 @@ def test_sum_subregion_traces_per_demand_node(csv_str_to_df):
     # alone, whose -20 is floored at zero.
     expected = csv_str_to_df(
         """
-        geo_id,  datetime,               value
-        NSW,     2024-07-01__00:30:00,   5500.0
-        NSW,     2024-07-01__01:00:00,   4700.0
-        QLD,     2024-07-01__00:30:00,   0.0
-        QLD,     2024-07-01__01:00:00,   3400.0
+        geo_id,  datetime,              value
+        NSW,     2024-07-01 00:30:00,   5500.0
+        NSW,     2024-07-01 01:00:00,   4700.0
+        QLD,     2024-07-01 00:30:00,   0.0
+        QLD,     2024-07-01 01:00:00,   3400.0
         """,
         parse_dates=["datetime"],
     )
@@ -315,7 +302,14 @@ def test_create_demand_node_traces_sub_regions(csv_str_to_df):
         SQ,      subregion
     """)
 
-    result = _create_test_demand_node_traces(hierarchy, network_geography)
+    result = _create_demand_node_traces(
+        hierarchy,
+        network_geography,
+        _TRACE_DATA_PATH,
+        scenario="Step Change",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+    )
 
     # Each sub-region is its own demand node and keeps its own trace.
     assert sorted(result) == ["CNSW", "NNSW", "SQ"]
@@ -337,14 +331,22 @@ def test_create_demand_node_traces_nem_regions(csv_str_to_df, caplog):
     """)
 
     with caplog.at_level("WARNING"):
-        result = _create_test_demand_node_traces(hierarchy, network_geography)
+        result = _create_demand_node_traces(
+            hierarchy,
+            network_geography,
+            _TRACE_DATA_PATH,
+            scenario="Step Change",
+            reference_year_mapping={2025: 2011, 2026: 2018},
+            year_type="fy",
+        )
 
     assert sorted(result) == ["NSW", "QLD"]
 
-    # NSW is the sum of the CNSW and NNSW traces.
-    expected_nsw = _read_subregion_demand("CNSW")
-    expected_nsw["value"] = (
-        expected_nsw["value"] + _read_subregion_demand("NNSW")["value"]
+    # NSW is the sum of the CNSW and NNSW traces, which cover the same datetimes.
+    cnsw = _read_subregion_demand("CNSW")
+    nnsw = _read_subregion_demand("NNSW")
+    expected_nsw = pd.DataFrame(
+        {"datetime": cnsw["datetime"], "value": cnsw["value"] + nnsw["value"]}
     )
     pd.testing.assert_frame_equal(result["NSW"], expected_nsw)
 
@@ -363,16 +365,26 @@ def test_create_demand_node_traces_single_region(csv_str_to_df):
         NEM,     region
     """)
 
-    result = _create_test_demand_node_traces(hierarchy, network_geography)
+    result = _create_demand_node_traces(
+        hierarchy,
+        network_geography,
+        _TRACE_DATA_PATH,
+        scenario="Step Change",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+    )
 
     assert sorted(result) == ["NEM"]
 
     # NEM is the sum of the three sub-region traces that exist (CNSW, NNSW, SQ).
-    expected_nem = _read_subregion_demand("CNSW")
-    expected_nem["value"] = (
-        expected_nem["value"]
-        + _read_subregion_demand("NNSW")["value"]
-        + _read_subregion_demand("SQ")["value"]
+    cnsw = _read_subregion_demand("CNSW")
+    nnsw = _read_subregion_demand("NNSW")
+    sq = _read_subregion_demand("SQ")
+    expected_nem = pd.DataFrame(
+        {
+            "datetime": cnsw["datetime"],
+            "value": cnsw["value"] + nnsw["value"] + sq["value"],
+        }
     )
     pd.testing.assert_frame_equal(result["NEM"], expected_nem)
 
@@ -388,7 +400,14 @@ def test_create_demand_node_traces_no_log_when_every_subregion_has_a_trace(
     """)
 
     with caplog.at_level("WARNING"):
-        _create_test_demand_node_traces(hierarchy, network_geography)
+        _create_demand_node_traces(
+            hierarchy,
+            network_geography,
+            _TRACE_DATA_PATH,
+            scenario="Step Change",
+            reference_year_mapping={2025: 2011, 2026: 2018},
+            year_type="fy",
+        )
 
     assert "no demand trace data" not in caplog.text
 
@@ -397,6 +416,13 @@ def test_create_demand_node_traces_no_subregions():
     hierarchy = pd.DataFrame(columns=_HIERARCHY_COLUMNS)
     network_geography = pd.DataFrame(columns=_GEOGRAPHY_COLUMNS)
 
-    result = _create_test_demand_node_traces(hierarchy, network_geography)
+    result = _create_demand_node_traces(
+        hierarchy,
+        network_geography,
+        _TRACE_DATA_PATH,
+        scenario="Step Change",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+    )
 
     assert result == {}

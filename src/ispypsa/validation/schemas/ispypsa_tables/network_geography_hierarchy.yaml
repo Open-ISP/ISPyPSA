@@ -15,14 +15,10 @@ description: >
   Tasmania is a NEM region with a single sub-region, and the two share the id
   TAS. It has one row, with geo_type "subregion".
 
-  The translator uses the hierarchy to place data given at one level at
-  another. Demand traces are published per ISP sub-region, so each sub-region's
-  demand is placed at the `network_geography` geography named in its
-  subregion_id, region_id or nem_id: the sub-region itself at "sub_regions"
-  granularity, its NEM region at "nem_regions", and "NEM" at "single_region".
-  The demand at a geography is the sum of the demand traces of the sub-regions
-  placed there. A sub-region with none of the three in `network_geography` has
-  no demand in the model.
+  The translator uses the hierarchy to take data given at one level and place
+  it at the level the model is built at. For example, demand traces are
+  published per ISP sub-region, and each sub-region's demand is placed at the
+  `network_geography` geography that is the sub-region itself or contains it.
 
   Source tables:
     - `sub_regional_reference_nodes`
@@ -36,12 +32,12 @@ custom_validation:
   - name: model_geographies_are_in_the_hierarchy
     description: >
       Every geo_id in `network_geography` must have a row in this table.
-  - name: model_geographies_do_not_nest
+  - name: each_geography_has_one_model_geography_above_rez_level
     description: >
-      No row may have more than one distinct value across subregion_id,
-      region_id and nem_id that is in `network_geography`. For example, a
-      `network_geography` holding both CNSW and NSW is invalid: CNSW's demand
-      would be placed at both.
+      `network_geography` must not hold both a sub-region, NEM region or the
+      NEM and another of those that contains it. For example, holding both
+      CNSW and NSW is invalid: data given for CNSW could be placed at either.
+      A REZ and the sub-region it sits inside may both be present.
 columns:
   geo_id:
     type: string
@@ -51,9 +47,7 @@ columns:
     type: string
     required: true
     allowed_values: [nem, region, subregion, rez]
-    description: >
-      Type of spatial entity. Demand traces are read for the geographies with
-      geo_type "subregion".
+    description: Type of spatial entity.
   subregion_id:
     type: string
     required: false
@@ -69,6 +63,8 @@ columns:
   region_id:
     type: string
     required: false
+    allowed_values_from:
+      - network_geography_hierarchy: geo_id
     description: >
       The NEM region the geography is or sits inside. For a NEM region, equals
       geo_id. TAS has no row with geo_type "region", so the region_id TAS
