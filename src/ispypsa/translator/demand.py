@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from typing import Literal
 
@@ -25,6 +24,10 @@ def _translate_demand_nodes(
     region and NEM it is or sits inside. A sub-region is a row whose geo_id
     equals its subregion_id.
 
+    Returns a table with one row per model geography that has a sub-region's
+    demand placed at it. Its one column, name, is the geo_id of that geography,
+    which is also the name of its bus.
+
     A sub-region's demand is placed at the model geography that is the
     sub-region itself or contains it. Where that is depends on the granularity
     network_geography was templated at:
@@ -37,9 +40,9 @@ def _translate_demand_nodes(
     or NEM is in network_geography, has no demand in the model. No sub-region
     sits inside a REZ, so a REZ never carries demand.
 
-    Returns a table with one row per model geography that has a sub-region's
-    demand placed at it. Its one column, name, is the geo_id of that geography,
-    which is also the name of its bus.
+    A sub-region with more than one such model geography, say CNSW when both
+    CNSW and NSW are in network_geography, raises a ValueError: its demand
+    could be placed at either, and placing it at both would count it twice.
 
     I/O Example:
         network_geography_hierarchy:
@@ -100,9 +103,12 @@ def _create_demand_node_traces(
     first and the node's total is then floored at zero, so one sub-region's
     negative demand still offsets its neighbours' at the same node.
 
-    A sub-region with no trace data is named in a warning and adds nothing to
-    its node, and a node whose sub-regions all lack trace data has no entry in
-    the dictionary.
+    Every sub-region placed at a demand node must have a trace for every
+    reference year in reference_year_mapping. If one is not found, say there
+    is no CQ trace for reference year 2018, a ValueError names the sub-region
+    and reference year. Leaving the trace out instead would quietly understate
+    the node's demand, and a missing trace usually means a wrong
+    trace_data_path or scenario. So every demand node has a trace.
 
     I/O Example:
         network_geography_hierarchy:
@@ -110,12 +116,12 @@ def _create_demand_node_traces(
             CNSW    CNSW          NSW        NEM
             NNSW    NNSW          NSW        NEM
             SQ      SQ            QLD        NEM
-            CQ      CQ            QLD        NEM     # suppose CQ's trace is missing: logged, adds nothing
+            NQ      NQ            QLD        NEM     # NQ, QLD and NEM are not in the model: its trace is not read
 
         network_geography:
             geo_id  geo_type
             NSW     region
-            QLD     region
+            SQ      subregion
 
         sub-region traces read from trace_data_path:
             subregion  datetime             value
@@ -127,7 +133,7 @@ def _create_demand_node_traces(
             datetime             value
             2024-07-01 00:30:00  5500.0
 
-        returns["QLD"]:
+        returns["SQ"]:
             datetime             value
             2024-07-01 00:30:00  3500.0
     """
@@ -144,9 +150,11 @@ def _create_demand_node_traces(
         demand_type="OPSO_MODELLING",
         directory=Path(trace_data_path) / "demand",
         year_type=year_type,
-        select_columns=["subregion", "datetime", "value"],
+        select_columns=["subregion", "reference_year", "datetime", "value"],
     )
-    _log_subregions_without_traces(demand_subregions, subregion_traces)
+    _raise_if_a_subregion_trace_is_missing(
+        demand_subregions, subregion_traces, reference_year_mapping
+    )
     node_traces = _sum_subregion_traces_per_demand_node(
         subregion_traces, demand_subregions
     )
@@ -162,6 +170,9 @@ def _place_subregions_at_model_geographies(
     """Places each ISP sub-region at the model geography that is the
     sub-region itself or contains it.
 
+    Raises a ValueError if a sub-region has more than one such model
+    geography, say CNSW when both CNSW and NSW are in network_geography.
+
     I/O Example:
         network_geography_hierarchy:
             geo_id  subregion_id  region_id  nem_id
@@ -169,7 +180,7 @@ def _place_subregions_at_model_geographies(
             CNSW    CNSW          NSW        NEM
             NNSW    NNSW          NSW        NEM
             SQ      SQ            QLD        NEM
-            SEV     SEV           VIC        NEM
+            SEV    SEV           VIC        NEM
             TAS     TAS           TAS        NEM
             N3      CNSW          NSW        NEM
 
@@ -206,13 +217,47 @@ def _place_subregions_at_model_geographies(
         }
     )
     # TAS is both a sub-region and a NEM region, so it matches itself twice.
-    return demand_subregions.drop_duplicates().reset_index(drop=True)
+    demand_subregions = demand_subregions.drop_duplicates().reset_index(drop=True)
+    _raise_if_a_subregion_is_placed_twice(demand_subregions)
+    return demand_subregions
 
 
-def _log_subregions_without_traces(
-    demand_subregions: pd.DataFrame, subregion_traces: pd.DataFrame
+def _raise_if_a_subregion_is_placed_twice(demand_subregions: pd.DataFrame) -> None:
+    """Raises a ValueError naming the ISP sub-regions placed at more than one
+    model geography.
+
+    I/O Example:
+        demand_subregions:
+            subregion_id  geo_id
+            CNSW          CNSW
+            CNSW          NSW       # CNSW and the region containing it are both in the model
+            SQ            SQ
+
+        raises:
+            ValueError: ISP sub-regions with more than one model geography to
+            place their demand at: ['CNSW at CNSW', 'CNSW at NSW']
+    """
+    placed_twice = demand_subregions["subregion_id"].duplicated(keep=False)
+    placements = (
+        demand_subregions["subregion_id"] + " at " + demand_subregions["geo_id"]
+    )
+    if placed_twice.any():
+        raise ValueError(
+            "ISP sub-regions with more than one model geography to place their "
+            f"demand at: {sorted(placements[placed_twice])}"
+        )
+
+
+def _raise_if_a_subregion_trace_is_missing(
+    demand_subregions: pd.DataFrame,
+    subregion_traces: pd.DataFrame,
+    reference_year_mapping: dict[int, int],
 ) -> None:
-    """Warns about the sub-regions whose demand trace was not found.
+    """Raises a ValueError naming each ISP sub-region and reference year whose
+    demand trace was not found.
+
+    Every sub-region in demand_subregions needs a trace for every reference
+    year that reference_year_mapping maps a model year to.
 
     I/O Example:
         demand_subregions:
@@ -221,19 +266,29 @@ def _log_subregions_without_traces(
             CQ            QLD
 
         subregion_traces:
-            subregion  datetime             value
-            SQ         2024-07-01 00:30:00  3500.0
+            subregion  reference_year  datetime             value
+            SQ         2011            2024-07-01 00:30:00  3500.0
+            SQ         2018            2025-07-01 00:30:00  3600.0
+            CQ         2011            2024-07-01 00:30:00  1200.0
 
-        logs:
-            ISP sub-regions with no demand trace data (their demand is left
-            out of the model): ['CQ']
+        reference_year_mapping: {2025: 2011, 2026: 2018}
+
+        raises:
+            ValueError: No demand trace data found for these ISP sub-regions
+            and reference years: ['CQ (2018)']
     """
-    has_trace = demand_subregions["subregion_id"].isin(subregion_traces["subregion"])
-    without_trace = sorted(demand_subregions.loc[~has_trace, "subregion_id"])
-    if without_trace:
-        logging.warning(
-            "ISP sub-regions with no demand trace data (their demand is left "
-            f"out of the model): {without_trace}"
+    reference_years = pd.DataFrame(
+        {"reference_year": list(set(reference_year_mapping.values()))}
+    )
+    needed = demand_subregions.merge(reference_years, how="cross")
+    needed = needed["subregion_id"] + " (" + needed["reference_year"].astype(str) + ")"
+    found = subregion_traces[["subregion", "reference_year"]].drop_duplicates()
+    found = found["subregion"] + " (" + found["reference_year"].astype(str) + ")"
+    missing = sorted(set(needed) - set(found))
+    if missing:
+        raise ValueError(
+            "No demand trace data found for these ISP sub-regions and reference "
+            f"years: {missing}"
         )
 
 

@@ -1,6 +1,8 @@
+import re
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from ispypsa.translator.demand import (
     _create_demand_node_traces,
@@ -55,6 +57,19 @@ def _network_geography_hierarchy(csv_str_to_df) -> pd.DataFrame:
         CQ,      CQ,            QLD,        NEM
         NQ,      NQ,            QLD,        NEM
         N3,      CNSW,          NSW,        NEM
+    """)
+
+
+def _network_geography_hierarchy_with_traces(csv_str_to_df) -> pd.DataFrame:
+    """Three sub-regions across two NEM regions, each with a test trace."""
+    return csv_str_to_df("""
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        NSW,     ,              NSW,        NEM
+        QLD,     ,              QLD,        NEM
+        CNSW,    CNSW,          NSW,        NEM
+        NNSW,    NNSW,          NSW,        NEM
+        SQ,      SQ,            QLD,        NEM
     """)
 
 
@@ -159,6 +174,28 @@ def test_place_subregions_at_model_geographies_subregion_that_is_also_a_region(
         result.sort_values("subregion_id").reset_index(drop=True),
         expected.sort_values("subregion_id").reset_index(drop=True),
     )
+
+
+def test_place_subregions_at_model_geographies_raises_when_placed_twice(
+    csv_str_to_df,
+):
+    hierarchy = _network_geography_hierarchy(csv_str_to_df)
+    # CNSW and the region containing it, NSW, are both in the model. NNSW is
+    # only placed at NSW, so it is not named.
+    network_geography = csv_str_to_df("""
+        geo_id,  geo_type
+        CNSW,    subregion
+        NSW,     region
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "ISP sub-regions with more than one model geography to place their "
+            "demand at: ['CNSW at CNSW', 'CNSW at NSW']"
+        ),
+    ):
+        _place_subregions_at_model_geographies(hierarchy, network_geography)
 
 
 def test_place_subregions_at_model_geographies_empty_hierarchy(csv_str_to_df):
@@ -358,23 +395,22 @@ def test_create_demand_node_traces_sub_regions(csv_str_to_df):
     pd.testing.assert_frame_equal(result["NNSW"], expected_nnsw)
 
 
-def test_create_demand_node_traces_nem_regions(csv_str_to_df, caplog):
-    hierarchy = _network_geography_hierarchy(csv_str_to_df)
+def test_create_demand_node_traces_nem_regions(csv_str_to_df):
+    hierarchy = _network_geography_hierarchy_with_traces(csv_str_to_df)
     network_geography = csv_str_to_df("""
         geo_id,  geo_type
         NSW,     region
         QLD,     region
     """)
 
-    with caplog.at_level("WARNING"):
-        result = _create_demand_node_traces(
-            hierarchy,
-            network_geography,
-            _TRACE_DATA_PATH,
-            scenario="Step Change",
-            reference_year_mapping={2025: 2011, 2026: 2018},
-            year_type="fy",
-        )
+    result = _create_demand_node_traces(
+        hierarchy,
+        network_geography,
+        _TRACE_DATA_PATH,
+        scenario="Step Change",
+        reference_year_mapping={2025: 2011, 2026: 2018},
+        year_type="fy",
+    )
 
     assert sorted(result) == ["NSW", "QLD"]
 
@@ -386,16 +422,12 @@ def test_create_demand_node_traces_nem_regions(csv_str_to_df, caplog):
     )
     pd.testing.assert_frame_equal(result["NSW"], expected_nsw)
 
-    # CQ and NQ are placed at QLD but have no test traces, so QLD is SQ alone.
-    assert (
-        "ISP sub-regions with no demand trace data (their demand is left out of "
-        "the model): ['CQ', 'NQ']"
-    ) in caplog.text
+    # SQ is the only sub-region placed at QLD, so QLD is SQ alone.
     pd.testing.assert_frame_equal(result["QLD"], _read_subregion_demand("SQ"))
 
 
 def test_create_demand_node_traces_single_region(csv_str_to_df):
-    hierarchy = _network_geography_hierarchy(csv_str_to_df)
+    hierarchy = _network_geography_hierarchy_with_traces(csv_str_to_df)
     network_geography = csv_str_to_df("""
         geo_id,  geo_type
         NEM,     region
@@ -412,7 +444,7 @@ def test_create_demand_node_traces_single_region(csv_str_to_df):
 
     assert sorted(result) == ["NEM"]
 
-    # NEM is the sum of the three sub-region traces that exist (CNSW, NNSW, SQ).
+    # NEM is the sum of the three sub-region traces (CNSW, NNSW, SQ).
     cnsw = _read_subregion_demand("CNSW")
     nnsw = _read_subregion_demand("NNSW")
     sq = _read_subregion_demand("SQ")
@@ -425,17 +457,23 @@ def test_create_demand_node_traces_single_region(csv_str_to_df):
     pd.testing.assert_frame_equal(result["NEM"], expected_nem)
 
 
-def test_create_demand_node_traces_no_log_when_every_subregion_has_a_trace(
-    csv_str_to_df, caplog
+def test_create_demand_node_traces_raises_for_subregion_without_a_trace(
+    csv_str_to_df,
 ):
     hierarchy = _network_geography_hierarchy(csv_str_to_df)
-    # SQ is the only sub-region placed in this model, and it has a trace.
+    # SQ, CQ and NQ are placed at QLD. SQ has test traces; CQ and NQ have none.
     network_geography = csv_str_to_df("""
         geo_id,  geo_type
-        SQ,      subregion
+        QLD,     region
     """)
 
-    with caplog.at_level("WARNING"):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No demand trace data found for these ISP sub-regions and reference "
+            "years: ['CQ (2011)', 'CQ (2018)', 'NQ (2011)', 'NQ (2018)']"
+        ),
+    ):
         _create_demand_node_traces(
             hierarchy,
             network_geography,
@@ -445,40 +483,32 @@ def test_create_demand_node_traces_no_log_when_every_subregion_has_a_trace(
             year_type="fy",
         )
 
-    assert "no demand trace data" not in caplog.text
 
-
-def test_demand_node_whose_subregions_all_lack_traces(csv_str_to_df, caplog):
+def test_create_demand_node_traces_raises_for_trace_missing_one_reference_year(
+    csv_str_to_df,
+):
     hierarchy = _network_geography_hierarchy(csv_str_to_df)
-    # CQ is the only sub-region placed in this model, and it has no test trace.
     network_geography = csv_str_to_df("""
         geo_id,  geo_type
-        CQ,      subregion
+        SQ,      subregion
     """)
 
-    demand_nodes = _translate_demand_nodes(hierarchy, network_geography)
-    with caplog.at_level("WARNING"):
-        demand_traces = _create_demand_node_traces(
+    # SQ has a test trace for reference year 2011 but none for 2015.
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No demand trace data found for these ISP sub-regions and reference "
+            "years: ['SQ (2015)']"
+        ),
+    ):
+        _create_demand_node_traces(
             hierarchy,
             network_geography,
             _TRACE_DATA_PATH,
             scenario="Step Change",
-            reference_year_mapping={2025: 2011, 2026: 2018},
+            reference_year_mapping={2025: 2011, 2026: 2015},
             year_type="fy",
         )
-
-    # CQ is still listed as a demand node, but has no entry in the traces.
-    expected_demand_nodes = csv_str_to_df("""
-        name
-        CQ
-    """)
-    pd.testing.assert_frame_equal(demand_nodes, expected_demand_nodes)
-
-    assert demand_traces == {}
-    assert (
-        "ISP sub-regions with no demand trace data (their demand is left out of "
-        "the model): ['CQ']"
-    ) in caplog.text
 
 
 def test_create_demand_node_traces_no_subregions():
