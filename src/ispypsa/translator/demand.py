@@ -22,7 +22,8 @@ def _translate_demand_nodes(
     geographies nest: each REZ inside a sub-region, each sub-region inside a
     NEM region, and each NEM region inside the NEM. Its subregion_id,
     region_id and nem_id columns name, for each geography, the sub-region, NEM
-    region and NEM it is or sits inside.
+    region and NEM it is or sits inside. A sub-region is a row whose geo_id
+    equals its subregion_id.
 
     A sub-region's demand is placed at the model geography that is the
     sub-region itself or contains it. Where that is depends on the granularity
@@ -42,13 +43,13 @@ def _translate_demand_nodes(
 
     I/O Example:
         network_geography_hierarchy:
-            geo_id  geo_type   subregion_id  region_id  nem_id
-            NSW     region                   NSW        NEM
-            QLD     region                   QLD        NEM
-            CNSW    subregion  CNSW          NSW        NEM
-            NNSW    subregion  NNSW          NSW        NEM     # shares the NSW bus with CNSW
-            SQ      subregion  SQ            QLD        NEM
-            N3      rez        CNSW          NSW        NEM
+            geo_id  subregion_id  region_id  nem_id
+            NSW                   NSW        NEM
+            QLD                   QLD        NEM
+            CNSW    CNSW          NSW        NEM
+            NNSW    NNSW          NSW        NEM     # shares the NSW bus with CNSW
+            SQ      SQ            QLD        NEM
+            N3      CNSW          NSW        NEM
 
         network_geography:
             geo_id  geo_type
@@ -105,11 +106,11 @@ def _create_demand_node_traces(
 
     I/O Example:
         network_geography_hierarchy:
-            geo_id  geo_type   subregion_id  region_id  nem_id
-            CNSW    subregion  CNSW          NSW        NEM
-            NNSW    subregion  NNSW          NSW        NEM
-            SQ      subregion  SQ            QLD        NEM
-            CQ      subregion  CQ            QLD        NEM     # suppose CQ's trace is missing: logged, adds nothing
+            geo_id  subregion_id  region_id  nem_id
+            CNSW    CNSW          NSW        NEM
+            NNSW    NNSW          NSW        NEM
+            SQ      SQ            QLD        NEM
+            CQ      CQ            QLD        NEM     # suppose CQ's trace is missing: logged, adds nothing
 
         network_geography:
             geo_id  geo_type
@@ -163,14 +164,14 @@ def _place_subregions_at_model_geographies(
 
     I/O Example:
         network_geography_hierarchy:
-            geo_id  geo_type   subregion_id  region_id  nem_id
-            NSW     region                   NSW        NEM
-            CNSW    subregion  CNSW          NSW        NEM
-            NNSW    subregion  NNSW          NSW        NEM
-            SQ      subregion  SQ            QLD        NEM
-            SEV     subregion  SEV           VIC        NEM
-            TAS     subregion  TAS           TAS        NEM
-            N3      rez        CNSW          NSW        NEM
+            geo_id  subregion_id  region_id  nem_id
+            NSW                   NSW        NEM
+            CNSW    CNSW          NSW        NEM
+            NNSW    NNSW          NSW        NEM
+            SQ      SQ            QLD        NEM
+            SEV     SEV           VIC        NEM
+            TAS     TAS           TAS        NEM
+            N3      CNSW          NSW        NEM
 
         network_geography:
             geo_id  geo_type
@@ -187,7 +188,10 @@ def _place_subregions_at_model_geographies(
             TAS           TAS       # both its subregion_id and region_id match: one row
                                     # SEV has no row: SEV, VIC and NEM are not in the model
     """
-    is_subregion = network_geography_hierarchy["geo_type"] == "subregion"
+    is_subregion = (
+        network_geography_hierarchy["geo_id"]
+        == network_geography_hierarchy["subregion_id"]
+    )
     # One row per sub-region and geography it is or sits inside.
     containing = network_geography_hierarchy[is_subregion].melt(
         id_vars="geo_id",

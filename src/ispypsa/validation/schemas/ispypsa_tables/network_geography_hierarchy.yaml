@@ -12,8 +12,15 @@ description: >
   at: `network_geography` says which of these geographies the model is built
   from.
 
+  The table has no column for the type of geography, because the level columns
+  already say it: a sub-region is a row whose geo_id equals its subregion_id, a
+  NEM region one whose geo_id equals its region_id, and the NEM the row whose
+  geo_id equals its nem_id. A REZ is a row whose geo_id equals none of the
+  three.
+
   Tasmania is a NEM region with a single sub-region, and the two share the id
-  TAS. It has one row, with geo_type "subregion".
+  TAS. It has one row, with TAS as both its subregion_id and its region_id, so
+  it is both a sub-region and a NEM region.
 
   The translator uses the hierarchy to take data given at one level and place
   it at the level the model is built at. For example, demand traces are
@@ -43,11 +50,6 @@ columns:
     type: string
     required: true
     description: Unique identifier for the geography, e.g. CNSW.
-  geo_type:
-    type: string
-    required: true
-    allowed_values: [nem, region, subregion, rez]
-    description: Type of spatial entity.
   subregion_id:
     type: string
     required: false
@@ -67,8 +69,8 @@ columns:
       - network_geography_hierarchy: geo_id
     description: >
       The NEM region the geography is or sits inside. For a NEM region, equals
-      geo_id. TAS has no row with geo_type "region", so the region_id TAS
-      refers to the sub-region row TAS.
+      geo_id. The region_id TAS refers to the one TAS row, which is both a
+      sub-region and a NEM region.
 
       If empty:
       The geography is the NEM, which sits inside no NEM region.

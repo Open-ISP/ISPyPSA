@@ -11,7 +11,7 @@ from ispypsa.translator.demand import (
 
 _TRACE_DATA_PATH = Path(__file__).parent.parent / "trace_data" / "isp_2024"
 
-_HIERARCHY_COLUMNS = ["geo_id", "geo_type", "subregion_id", "region_id", "nem_id"]
+_HIERARCHY_COLUMNS = ["geo_id", "subregion_id", "region_id", "nem_id"]
 _GEOGRAPHY_COLUMNS = ["geo_id", "geo_type"]
 
 
@@ -45,16 +45,16 @@ def _network_geography_hierarchy(csv_str_to_df) -> pd.DataFrame:
     """Five sub-regions across two NEM regions, plus a REZ. The test trace
     data has traces for CNSW, NNSW and SQ, and none for CQ or NQ."""
     return csv_str_to_df("""
-        geo_id,  geo_type,   subregion_id,  region_id,  nem_id
-        NEM,     nem,        ,              ,           NEM
-        NSW,     region,     ,              NSW,        NEM
-        QLD,     region,     ,              QLD,        NEM
-        CNSW,    subregion,  CNSW,          NSW,        NEM
-        NNSW,    subregion,  NNSW,          NSW,        NEM
-        SQ,      subregion,  SQ,            QLD,        NEM
-        CQ,      subregion,  CQ,            QLD,        NEM
-        NQ,      subregion,  NQ,            QLD,        NEM
-        N3,      rez,        CNSW,          NSW,        NEM
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        NSW,     ,              NSW,        NEM
+        QLD,     ,              QLD,        NEM
+        CNSW,    CNSW,          NSW,        NEM
+        NNSW,    NNSW,          NSW,        NEM
+        SQ,      SQ,            QLD,        NEM
+        CQ,      CQ,            QLD,        NEM
+        NQ,      NQ,            QLD,        NEM
+        N3,      CNSW,          NSW,        NEM
     """)
 
 
@@ -136,9 +136,9 @@ def test_place_subregions_at_model_geographies_subregion_that_is_also_a_region(
     csv_str_to_df,
 ):
     hierarchy = csv_str_to_df("""
-        geo_id,  geo_type,   subregion_id,  region_id,  nem_id
-        TAS,     subregion,  TAS,           TAS,        NEM
-        SQ,      subregion,  SQ,            QLD,        NEM
+        geo_id,  subregion_id,  region_id,  nem_id
+        TAS,     TAS,           TAS,        NEM
+        SQ,      SQ,            QLD,        NEM
     """)
     network_geography = csv_str_to_df("""
         geo_id,  geo_type

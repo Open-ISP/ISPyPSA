@@ -183,18 +183,18 @@ def test_template_network_geography_hierarchy(csv_str_to_df):
     result = _template_network_geography_hierarchy(sub_regional_geography)
 
     # NSW is the region of both CNSW and SNW but has one row of its own. TAS
-    # is both a sub-region and its own region, so it has its sub-region row and
-    # no region row.
+    # is both a sub-region and its own region, so it has one row with TAS as
+    # both its subregion_id and its region_id.
     expected = csv_str_to_df("""
-        geo_id,  geo_type,   subregion_id,  region_id,  nem_id
-        NEM,     nem,        ,              ,           NEM
-        QLD,     region,     ,              QLD,        NEM
-        NSW,     region,     ,              NSW,        NEM
-        NQ,      subregion,  NQ,            QLD,        NEM
-        CNSW,    subregion,  CNSW,          NSW,        NEM
-        SNW,     subregion,  SNW,           NSW,        NEM
-        TAS,     subregion,  TAS,           TAS,        NEM
-        Q1,      rez,        NQ,            QLD,        NEM
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        QLD,     ,              QLD,        NEM
+        NSW,     ,              NSW,        NEM
+        NQ,      NQ,            QLD,        NEM
+        CNSW,    CNSW,          NSW,        NEM
+        SNW,     SNW,           NSW,        NEM
+        TAS,     TAS,           TAS,        NEM
+        Q1,      NQ,            QLD,        NEM
     """)
     pd.testing.assert_frame_equal(result, expected)
 
@@ -208,7 +208,7 @@ def test_template_network_geography_hierarchy_empty(csv_str_to_df):
 
     # With no sub-regions there are no NEM regions to add, only the NEM row.
     expected = csv_str_to_df("""
-        geo_id,  geo_type,  subregion_id,  region_id,  nem_id
-        NEM,     nem,       ,              ,           NEM
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
     """)
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)

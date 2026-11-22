@@ -306,16 +306,22 @@ def _template_network_geography_hierarchy(
     Returns the hierarchy table, with one row per geography:
 
     - geo_id: the geography.
-    - geo_type: "nem", "region", "subregion" or "rez".
     - subregion_id: the sub-region it is or sits inside. Blank for a NEM
       region and the NEM, which sit inside no sub-region.
     - region_id: the NEM region it is or sits inside. Blank for the NEM.
     - nem_id: "NEM" on every row, since every geography is or sits inside
       the NEM.
 
+    The table has no column for the type of geography, because the level
+    columns already say it: a sub-region is a row whose geo_id equals its
+    subregion_id, a NEM region one whose geo_id equals its region_id, and the
+    NEM the row whose geo_id equals its nem_id. A REZ is a row whose geo_id
+    equals none of the three.
+
     Tasmania is a NEM region with a single sub-region, and the two share the
-    id TAS. A geo_id can only have one row, so TAS has its sub-region row and
-    no separate region row.
+    id TAS. A geo_id can only have one row, so TAS has a single row whose
+    subregion_id and region_id are both TAS: it is both a sub-region and a
+    NEM region.
 
     The translator uses the hierarchy table to place data given at one level
     of the hierarchy at another, e.g. each sub-region's demand at the model geography
@@ -331,15 +337,15 @@ def _template_network_geography_hierarchy(
             Q1      rez        QLD        NQ
 
         returns:
-            geo_id  geo_type   subregion_id  region_id  nem_id
-            NEM     nem                                 NEM
-            QLD     region                   QLD        NEM
-            NSW     region                   NSW        NEM     # once, though two sub-regions share it
-            NQ      subregion  NQ            QLD        NEM
-            CNSW    subregion  CNSW          NSW        NEM
-            SNW     subregion  SNW           NSW        NEM
-            TAS     subregion  TAS           TAS        NEM     # also the region TAS: one row
-            Q1      rez        NQ            QLD        NEM
+            geo_id  subregion_id  region_id  nem_id
+            NEM                              NEM
+            QLD                   QLD        NEM
+            NSW                   NSW        NEM     # once, though two sub-regions share it
+            NQ      NQ            QLD        NEM
+            CNSW    CNSW          NSW        NEM
+            SNW     SNW           NSW        NEM
+            TAS     TAS           TAS        NEM     # both a sub-region and a region: one row
+            Q1      NQ            QLD        NEM
     """
     region_ids = _find_regions_needing_a_row(sub_regional_geography)
     nem_and_region_rows = _build_nem_and_region_rows(region_ids)
@@ -384,15 +390,13 @@ def _build_nem_and_region_rows(region_ids: pd.Series) -> pd.DataFrame:
         region_ids: pd.Series(["QLD", "NSW"])
 
         returns:
-            geo_id  geo_type  region_id
-            NEM     nem
-            QLD     region    QLD
-            NSW     region    NSW
+            geo_id  region_id
+            NEM
+            QLD     QLD
+            NSW     NSW
     """
-    nem_row = pd.DataFrame({"geo_id": [_SINGLE_REGION_ID], "geo_type": "nem"})
-    region_rows = pd.DataFrame(
-        {"geo_id": region_ids, "geo_type": "region", "region_id": region_ids}
-    )
+    nem_row = pd.DataFrame({"geo_id": [_SINGLE_REGION_ID]})
+    region_rows = pd.DataFrame({"geo_id": region_ids, "region_id": region_ids})
     return pd.concat([nem_row, region_rows], ignore_index=True)
 
 
@@ -402,11 +406,14 @@ def _add_rows_to_sub_regional_geography(
     """Adds the NEM and NEM region rows above the sub-region and REZ rows,
     and marks every geography as being inside the NEM.
 
+    The geo_type column of sub_regional_geography is dropped: in the hierarchy
+    table the level columns say what type each geography is.
+
     I/O Example:
         nem_and_region_rows:
-            geo_id  geo_type  region_id
-            NEM     nem
-            NSW     region    NSW
+            geo_id  region_id
+            NEM
+            NSW     NSW
 
         sub_regional_geography:
             geo_id  geo_type   region_id  subregion_id
@@ -414,17 +421,17 @@ def _add_rows_to_sub_regional_geography(
             N3      rez        NSW        CNSW
 
         returns:
-            geo_id  geo_type   subregion_id  region_id  nem_id
-            NEM     nem                                 NEM
-            NSW     region                   NSW        NEM
-            CNSW    subregion  CNSW          NSW        NEM
-            N3      rez        CNSW          NSW        NEM
+            geo_id  subregion_id  region_id  nem_id
+            NEM                              NEM
+            NSW                   NSW        NEM
+            CNSW    CNSW          NSW        NEM
+            N3      CNSW          NSW        NEM
     """
     hierarchy = pd.concat(
         [nem_and_region_rows, sub_regional_geography], ignore_index=True
     )
     hierarchy["nem_id"] = _SINGLE_REGION_ID
-    return hierarchy[["geo_id", "geo_type", "subregion_id", "region_id", "nem_id"]]
+    return hierarchy[["geo_id", "subregion_id", "region_id", "nem_id"]]
 
 
 # --- non-REZ geographies ---

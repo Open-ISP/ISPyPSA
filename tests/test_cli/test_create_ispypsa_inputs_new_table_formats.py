@@ -394,11 +394,15 @@ def test_create_ispypsa_inputs_new_format(
     # network_geography_hierarchy — the full hierarchy at every granularity:
     # every sub-region is listed, and every model geography has a row.
     assert hierarchy["geo_id"].is_unique
-    assert (hierarchy["geo_type"] == "subregion").sum() == _NUM_SUBREGIONS_75
-    # TAS shares its sub-region row, so it has no region row of its own.
-    assert (hierarchy["geo_type"] == "region").sum() == _NUM_REGIONS_75 - 1
-    assert (hierarchy["geo_type"] == "nem").sum() == 1
-    assert (hierarchy["geo_type"] == "rez").sum() == _NUM_REZS_75 + _NUM_NON_REZS_75
+    is_subregion = hierarchy["geo_id"] == hierarchy["subregion_id"]
+    is_region = hierarchy["geo_id"] == hierarchy["region_id"]
+    is_nem = hierarchy["geo_id"] == hierarchy["nem_id"]
+    assert is_subregion.sum() == _NUM_SUBREGIONS_75
+    # TAS is counted as a region through its one row, which is also a sub-region.
+    assert is_region.sum() == _NUM_REGIONS_75
+    assert is_nem.sum() == 1
+    is_rez = ~(is_subregion | is_region | is_nem)
+    assert is_rez.sum() == _NUM_REZS_75 + _NUM_NON_REZS_75
     assert set(geo["geo_id"]) <= set(hierarchy["geo_id"])
 
     # network_transmission_paths — derived from named structural quantities:

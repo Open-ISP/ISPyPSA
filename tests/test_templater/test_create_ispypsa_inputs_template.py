@@ -519,7 +519,6 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     hierarchy = result["network_geography_hierarchy"]
     assert set(hierarchy.columns) == {
         "geo_id",
-        "geo_type",
         "subregion_id",
         "region_id",
         "nem_id",
@@ -839,7 +838,6 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     hierarchy = result["network_geography_hierarchy"]
     assert set(hierarchy.columns) == {
         "geo_id",
-        "geo_type",
         "subregion_id",
         "region_id",
         "nem_id",
@@ -1049,7 +1047,6 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     hierarchy = result["network_geography_hierarchy"]
     assert set(hierarchy.columns) == {
         "geo_id",
-        "geo_type",
         "subregion_id",
         "region_id",
         "nem_id",
