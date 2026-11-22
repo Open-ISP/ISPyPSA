@@ -6,8 +6,8 @@ import pytest
 from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
     _extract_subregion_id,
-    _template_demand_subregions,
     _template_network_geography,
+    _template_network_geography_hierarchy,
 )
 
 
@@ -170,56 +170,30 @@ def test_add_non_rez_geographies_to_rez_table_guard_raises(csv_str_to_df):
         _add_non_rez_geographies_to_rez_table(iasr_tables)
 
 
-def _sub_regional_geography(csv_str_to_df) -> pd.DataFrame:
-    """Three sub-regions across two NEM regions, plus a REZ."""
-    return csv_str_to_df("""
+def test_template_network_geography_hierarchy(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
         geo_id,  geo_type,   region_id,  subregion_id
         NQ,      subregion,  QLD,        NQ
         CNSW,    subregion,  NSW,        CNSW
         SNW,     subregion,  NSW,        SNW
+        TAS,     subregion,  TAS,        TAS
         Q1,      rez,        QLD,        NQ
     """)
 
+    result = _template_network_geography_hierarchy(sub_regional_geography)
 
-def test_template_demand_subregions_sub_regions(csv_str_to_df):
-    sub_regional_geography = _sub_regional_geography(csv_str_to_df)
-
-    result = _template_demand_subregions(sub_regional_geography, "sub_regions")
-
-    # Each sub-region's demand stays at its own geography; the REZ Q1 has no row.
+    # NSW is the region of both CNSW and SNW but has one row of its own. TAS
+    # is both a sub-region and its own region, so it has its sub-region row and
+    # no region row.
     expected = csv_str_to_df("""
-        subregion_id,  geo_id
-        NQ,            NQ
-        CNSW,          CNSW
-        SNW,           SNW
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_template_demand_subregions_nem_regions(csv_str_to_df):
-    sub_regional_geography = _sub_regional_geography(csv_str_to_df)
-
-    result = _template_demand_subregions(sub_regional_geography, "nem_regions")
-
-    # CNSW and SNW are both in NSW, so both place their demand at NSW.
-    expected = csv_str_to_df("""
-        subregion_id,  geo_id
-        NQ,            QLD
-        CNSW,          NSW
-        SNW,           NSW
-    """)
-    pd.testing.assert_frame_equal(result, expected)
-
-
-def test_template_demand_subregions_single_region(csv_str_to_df):
-    sub_regional_geography = _sub_regional_geography(csv_str_to_df)
-
-    result = _template_demand_subregions(sub_regional_geography, "single_region")
-
-    expected = csv_str_to_df("""
-        subregion_id,  geo_id
-        NQ,            NEM
-        CNSW,          NEM
-        SNW,           NEM
+        geo_id,  geo_type,   subregion_id,  region_id,  nem_id
+        NEM,     nem,        ,              ,           NEM
+        QLD,     region,     ,              QLD,        NEM
+        NSW,     region,     ,              NSW,        NEM
+        NQ,      subregion,  NQ,            QLD,        NEM
+        CNSW,    subregion,  CNSW,          NSW,        NEM
+        SNW,     subregion,  SNW,           NSW,        NEM
+        TAS,     subregion,  TAS,           TAS,        NEM
+        Q1,      rez,        NQ,            QLD,        NEM
     """)
     pd.testing.assert_frame_equal(result, expected)

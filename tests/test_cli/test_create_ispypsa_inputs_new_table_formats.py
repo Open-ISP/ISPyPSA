@@ -372,7 +372,7 @@ def test_create_ispypsa_inputs_new_format(
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     verify_output_files(output_dir, _expected_output_files(granularity))
     geo = pd.read_csv(output_dir / "network_geography.csv")
-    demand_subregions = pd.read_csv(output_dir / "demand_subregions.csv")
+    hierarchy = pd.read_csv(output_dir / "network_geography_hierarchy.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
     options = pd.read_csv(output_dir / "network_expansion_options.csv")
@@ -391,12 +391,11 @@ def test_create_ispypsa_inputs_new_format(
     )
     assert geo["geo_id"].is_unique
 
-    # demand_subregions — one row per sub-region at every granularity, and
-    # between them they place demand at every non-REZ geography and no other.
-    assert len(demand_subregions) == _NUM_SUBREGIONS_75
-    assert demand_subregions["subregion_id"].is_unique
-    non_rez_geos = geo[geo["geo_type"] != "rez"]
-    assert set(demand_subregions["geo_id"]) == set(non_rez_geos["geo_id"])
+    # network_geography_hierarchy — the full hierarchy at every granularity:
+    # every sub-region is listed, and every model geography has a row.
+    assert hierarchy["geo_id"].is_unique
+    assert (hierarchy["geo_type"] == "subregion").sum() == _NUM_SUBREGIONS_75
+    assert set(geo["geo_id"]) <= set(hierarchy["geo_id"])
 
     # network_transmission_paths — derived from named structural quantities:
     # sub_regions = flow paths + REZ connections + parallel-path injections;

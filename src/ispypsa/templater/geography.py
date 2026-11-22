@@ -2,7 +2,6 @@ import logging
 
 import pandas as pd
 
-from ispypsa.templater.helpers import _map_geo_id_to_granularity
 from ispypsa.templater.mappings import (
     _NEM_REGION_IDS,
     _NON_REZ_GEOGRAPHIES,
@@ -283,27 +282,44 @@ def _extract_subregion_id(series: pd.Series) -> pd.Series:
     return series.str.extract(r"\(([A-Z]+)\)", expand=False)
 
 
-# --- demand ---
+# --- hierarchy ---
 
 
-def _template_demand_subregions(
-    sub_regional_geography: pd.DataFrame, regional_granularity: str
+def _template_network_geography_hierarchy(
+    sub_regional_geography: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Creates the demand_subregions table: every ISP sub-region, against the
-    geography its demand is placed at.
+    """Creates the network_geography_hierarchy table from the sub-regional
+    network geography.
 
-    Demand traces are published per ISP sub-region whatever granularity the
-    model is built at, and network_geography only lists sub-regions at
-    "sub_regions" granularity. This table keeps the sub-regions at every
-    granularity, so the translator can tell which sub-regions' traces sum
-    into which bus. The REZ rows of ``sub_regional_geography`` are left out:
-    a REZ has no demand of its own.
+    The ISP's geographies nest: a REZ sits in a sub-region, a sub-region in a
+    NEM region, and every NEM region in the NEM. network_geography lists only
+    the geographies the model is built from, so at "nem_regions" and
+    "single_region" granularity it no longer says which sub-regions make up a
+    region. The hierarchy records the nesting in full, and is the same
+    whatever granularity the model is built at.
 
-    Args:
-        sub_regional_geography: the network_geography table as templated at
-            "sub_regions" granularity, whatever ``regional_granularity`` is.
-        regional_granularity: one of "sub_regions", "nem_regions", or
-            "single_region".
+    ``sub_regional_geography`` is the network_geography table as templated at
+    "sub_regions" granularity, whatever the model's granularity is. It already
+    has a row for every sub-region and REZ; this adds a row for each NEM region
+    and one for the NEM.
+
+    Returns a table with one row per geography:
+
+    - geo_id: the geography.
+    - geo_type: "nem", "region", "subregion" or "rez".
+    - subregion_id: the sub-region it is or sits inside. Blank for a NEM
+      region and the NEM, which sit inside no sub-region.
+    - region_id: the NEM region it is or sits inside. Blank for the NEM.
+    - nem_id: "NEM" on every row, since every geography is or sits inside
+      the NEM.
+
+    Tasmania is a NEM region with a single sub-region, and the two share the
+    id TAS. A geo_id can only have one row, so TAS has its sub-region row and
+    no separate region row.
+
+    The translator uses the table to place data given at one level of the
+    hierarchy at another, e.g. each sub-region's demand at the model geography
+    that contains it.
 
     I/O Example:
         sub_regional_geography:
@@ -311,35 +327,35 @@ def _template_demand_subregions(
             NQ      subregion  QLD        NQ
             CNSW    subregion  NSW        CNSW
             SNW     subregion  NSW        SNW
+            TAS     subregion  TAS        TAS
             Q1      rez        QLD        NQ
 
-        regional_granularity = "sub_regions":
-            subregion_id  geo_id
-            NQ            NQ
-            CNSW          CNSW
-            SNW           SNW
-
-        regional_granularity = "nem_regions":
-            subregion_id  geo_id
-            NQ            QLD
-            CNSW          NSW
-            SNW           NSW
-
-        regional_granularity = "single_region":
-            subregion_id  geo_id
-            NQ            NEM
-            CNSW          NEM
-            SNW           NEM
+        returns:
+            geo_id  geo_type   subregion_id  region_id  nem_id
+            NEM     nem                                 NEM
+            QLD     region                   QLD        NEM
+            NSW     region                   NSW        NEM     # once, though two sub-regions share it
+            NQ      subregion  NQ            QLD        NEM
+            CNSW    subregion  CNSW          NSW        NEM
+            SNW     subregion  SNW           NSW        NEM
+            TAS     subregion  TAS           TAS        NEM     # also the region TAS: one row
+            Q1      rez        NQ            QLD        NEM
     """
     is_subregion = sub_regional_geography["geo_type"] == "subregion"
     subregions = sub_regional_geography[is_subregion]
-    geo_id = _map_geo_id_to_granularity(
-        subregions["geo_id"], regional_granularity, sub_regional_geography
+    shares_id_with_subregion = subregions["region_id"].isin(subregions["geo_id"])
+    region_ids = subregions.loc[~shares_id_with_subregion, "region_id"]
+    region_ids = region_ids.drop_duplicates()
+
+    nem_row = pd.DataFrame({"geo_id": [_SINGLE_REGION_ID], "geo_type": "nem"})
+    region_rows = pd.DataFrame(
+        {"geo_id": region_ids, "geo_type": "region", "region_id": region_ids}
     )
-    demand_subregions = pd.DataFrame(
-        {"subregion_id": subregions["subregion_id"], "geo_id": geo_id}
+    hierarchy = pd.concat(
+        [nem_row, region_rows, sub_regional_geography], ignore_index=True
     )
-    return demand_subregions.reset_index(drop=True)
+    hierarchy["nem_id"] = _SINGLE_REGION_ID
+    return hierarchy[["geo_id", "geo_type", "subregion_id", "region_id", "nem_id"]]
 
 
 # --- non-REZ geographies ---

@@ -1,0 +1,84 @@
+table: network_geography_hierarchy
+required: true
+unique:
+  - [geo_id]
+description: >
+  How the ISP's geographies nest inside one another.
+
+  A REZ sits in an ISP sub-region, a sub-region in a NEM region, and every NEM
+  region in the NEM. Each row names one geography and, in a column per level,
+  the sub-region, NEM region and NEM it is or sits inside. The table always
+  holds the full hierarchy, whatever regional granularity the model is built
+  at: `network_geography` says which of these geographies the model is built
+  from.
+
+  Tasmania is a NEM region with a single sub-region, and the two share the id
+  TAS. It has one row, with geo_type "subregion".
+
+  The translator uses the hierarchy to place data given at one level at
+  another. Demand traces are published per ISP sub-region, so each sub-region's
+  demand is placed at the `network_geography` geography named in its
+  subregion_id, region_id or nem_id: the sub-region itself at "sub_regions"
+  granularity, its NEM region at "nem_regions", and "NEM" at "single_region".
+  The demand at a geography is the sum of the demand traces of the sub-regions
+  placed there. A sub-region with none of the three in `network_geography` has
+  no demand in the model.
+
+  Source tables:
+    - `sub_regional_reference_nodes`
+    - `renewable_energy_zones`
+custom_validation:
+  - name: rez_region_matches_its_subregion
+    description: >
+      A row's region_id must equal the region_id of the row for its
+      subregion_id. For example, the REZ N3 with subregion_id CNSW and
+      region_id QLD is invalid when the CNSW row has region_id NSW.
+  - name: model_geographies_are_in_the_hierarchy
+    description: >
+      Every geo_id in `network_geography` must have a row in this table.
+  - name: model_geographies_do_not_nest
+    description: >
+      No row may have more than one distinct value across subregion_id,
+      region_id and nem_id that is in `network_geography`. For example, a
+      `network_geography` holding both CNSW and NSW is invalid: CNSW's demand
+      would be placed at both.
+columns:
+  geo_id:
+    type: string
+    required: true
+    description: Unique identifier for the geography, e.g. CNSW.
+  geo_type:
+    type: string
+    required: true
+    allowed_values: [nem, region, subregion, rez]
+    description: >
+      Type of spatial entity. Demand traces are read for the geographies with
+      geo_type "subregion".
+  subregion_id:
+    type: string
+    required: false
+    allowed_values_from:
+      - network_geography_hierarchy: geo_id
+    description: >
+      The ISP sub-region the geography is or sits inside. For a sub-region,
+      equals geo_id.
+
+      If empty:
+      The geography is a NEM region or the NEM, which sit inside no
+      sub-region.
+  region_id:
+    type: string
+    required: false
+    description: >
+      The NEM region the geography is or sits inside. For a NEM region, equals
+      geo_id. TAS has no row with geo_type "region", so the region_id TAS
+      refers to the sub-region row TAS.
+
+      If empty:
+      The geography is the NEM, which sits inside no NEM region.
+  nem_id:
+    type: string
+    required: true
+    allowed_values: [NEM]
+    description: >
+      The NEM, which every geography is or sits inside. "NEM" on every row.
