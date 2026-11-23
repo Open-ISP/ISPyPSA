@@ -29,6 +29,29 @@ def update_network_timeseries(
     but may also be useful in other circumstances, such as when running a capacity
     expansion model with different reference year cycles.
 
+    The network's snapshots are replaced with the ones in `snapshots`, and each new
+    snapshot takes its weightings from that table. The weightings the network had
+    before the update are discarded, including for snapshots present both before and
+    after.
+
+    I/O Example:
+        network.snapshot_weightings before the update:
+            period  timestep             objective  generators  stores
+            2025    2025-01-01 00:30:00  4380.0     4380.0      0.5
+            2025    2025-01-01 01:00:00  4380.0     4380.0      0.5
+
+        snapshots:
+            investment_periods  snapshots            objective  generators  stores
+            2025                2025-01-01 01:00:00  2920.0     2920.0      0.5  # also a snapshot before the update
+            2025                2025-01-08 00:30:00  2920.0     2920.0      0.5
+            2025                2025-01-08 01:00:00  2920.0     2920.0      0.5
+
+        network.snapshot_weightings after the update:
+            period  timestep             objective  generators  stores
+            2025    2025-01-01 01:00:00  2920.0     2920.0      0.5
+            2025    2025-01-08 00:30:00  2920.0     2920.0      0.5
+            2025    2025-01-08 01:00:00  2920.0     2920.0      0.5
+
     Examples:
         >>> import pandas as pd
         >>> from pathlib import Path
@@ -64,10 +87,11 @@ def update_network_timeseries(
         pypsa_friendly_input_tables: dictionary of dataframes in the `PyPSA` friendly
             format. (add link to pypsa friendly format table docs)
         snapshots: a pd.DataFrame containing the columns 'investment_periods' (int)
-            defining the investment a modelled inteval belongs to and 'snapshots'
-            (datetime) defining each time interval modelled. 'investment_periods'
-            periods are refered to by the year (financial or calander) in which they
-            begin.
+            defining the investment period a modelled interval belongs to, 'snapshots'
+            (datetime) defining each time interval modelled, and the snapshot
+            weightings 'objective', 'generators' and 'stores' (float), as returned by
+            `create_pypsa_friendly_timeseries_inputs`. Investment periods are
+            referred to by the year (financial or calendar) in which they begin.
         pypsa_friendly_timeseries_location: `Path` to `PyPSA` friendly time series
             data (add link to timeseries data docs).
         timeslice_snapshots: a pd.DataFrame with the columns 'timeslice',
@@ -86,6 +110,12 @@ def update_network_timeseries(
         [snapshots["investment_periods"], snapshots["snapshots"]]
     )
     network.snapshots = snapshots_as_indexes
+    # Replacing the snapshots leaves the old weightings on snapshots the network
+    # already had and 1.0 on the rest, so set them all from the new snapshots table,
+    # as _initialise_network does.
+    network.snapshot_weightings = snapshots.set_index(
+        ["investment_periods", "snapshots"]
+    )
     # Workaround for pandas behavior where DataFrame.reindex() on a MultiIndex
     # loses the MultiIndex.name attribute when old and new index values are
     # identical (e.g. when capacity expansion and operational snapshots match).

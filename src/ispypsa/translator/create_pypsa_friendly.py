@@ -367,7 +367,10 @@ def create_pypsa_friendly_timeseries_inputs(
             'snapshots' (datetime) and 'investment_periods' (int) columns.
 
     Returns:
-        pd.DataFrame containing the snapshots used for the timeseries.
+        pd.DataFrame containing the snapshots used for the timeseries, with the
+        columns 'investment_periods' and 'snapshots' and the snapshot weightings
+        'objective', 'generators' and 'stores'. The 'stores' weighting is the
+        resolution of the given model phase in hours.
     """
 
     # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
@@ -382,8 +385,10 @@ def create_pypsa_friendly_timeseries_inputs(
 
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
+        resolution_min = config.temporal.capacity_expansion.resolution_min
     else:
         reference_year_cycle = config.temporal.operational.reference_year_cycle
+        resolution_min = config.temporal.operational.resolution_min
 
     reference_year_mapping = construct_reference_year_mapping(
         start_year=config.temporal.range.start_year,
@@ -464,9 +469,7 @@ def create_pypsa_friendly_timeseries_inputs(
         pypsa_friendly_timeseries_inputs_location,
     )
 
-    snapshots = _add_snapshot_weightings(
-        snapshots, config.temporal.capacity_expansion.resolution_min
-    )
+    snapshots = _add_snapshot_weightings(snapshots, resolution_min)
 
     return snapshots
 
