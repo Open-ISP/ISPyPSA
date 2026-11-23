@@ -382,9 +382,12 @@ def create_pypsa_friendly_timeseries_inputs(
     # that needs them (named_representative_weeks).
     if FEATURE_FLAGS["use_new_table_format"]:
         snapshots = create_pypsa_friendly_snapshots(config, model_phase)
-        return _add_snapshot_weightings(
+        snapshots = _add_snapshot_weightings(
             snapshots, config.temporal.capacity_expansion.resolution_min
         )
+        return_add_interval_model_year_and_month_day(
+            snapshots, config.temporal.year_type
+        ).drop(columns="month_day")
 
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle

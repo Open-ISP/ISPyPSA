@@ -114,11 +114,11 @@ def update_network_timeseries(
     )
     network.snapshots = snapshots_as_indexes
     # Replacing the snapshots leaves the old weightings on snapshots the network
-    # already had and 1.0 on the rest, so set them all from the new snapshots table,
-    # as _initialise_network does.
-    network.snapshot_weightings = snapshots.set_index(
-        ["investment_periods", "snapshots"]
-    )
+    # already had and 1.0 on the rest, so set them all from the new snapshots table.
+    snapshots_by_index = snapshots.set_index(["investment_periods", "snapshots"])
+    network.snapshot_weightings = snapshots_by_index[
+        ["objective", "generators", "stores"]
+    ]
     # Workaround for pandas behavior where DataFrame.reindex() on a MultiIndex
     # loses the MultiIndex.name attribute when old and new index values are
     # identical (e.g. when capacity expansion and operational snapshots match).
