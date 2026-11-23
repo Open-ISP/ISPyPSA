@@ -303,6 +303,7 @@ def test_list_templater_output_files_granularity_invariant():
 
     assert sub_regions == nem_regions == single_region
     assert {
+        "network_geography_hierarchy",
         "custom_constraints",
         "custom_constraints_lhs",
         "custom_constraints_rhs",
@@ -523,6 +524,17 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id", "subregion_id"}
     # 6 subregions (NQ + CQ + CNSW + SNW + SEV + TAS) + 2 REZs + 2 non-REZs (N0, V0)
     assert len(geography) == 10
+
+    hierarchy = result["network_geography_hierarchy"]
+    assert set(hierarchy.columns) == {
+        "geo_id",
+        "subregion_id",
+        "region_id",
+        "nem_id",
+    }
+    # The NEM row + 3 NEM regions (QLD, NSW, VIC; TAS shares its subregion row)
+    # + 6 subregions + 2 REZs + 2 non-REZs
+    assert len(hierarchy) == 14
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -846,6 +858,18 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # 4 unique NEM regions (QLD, NSW, VIC, TAS) + 2 REZs + 2 non-REZs
     assert len(geography) == 8
 
+    hierarchy = result["network_geography_hierarchy"]
+    assert set(hierarchy.columns) == {
+        "geo_id",
+        "subregion_id",
+        "region_id",
+        "nem_id",
+    }
+    # The full hierarchy, though the model has no subregions: the NEM row
+    # + 3 NEM regions (QLD, NSW, VIC; TAS shares its subregion row)
+    # + 8 subregions + 2 REZs + 2 non-REZs
+    assert len(hierarchy) == 16
+
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
 
@@ -1055,6 +1079,18 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     geography = result["network_geography"]
     assert set(geography.columns) == {"geo_id", "geo_type", "region_id"}
     assert len(geography) == 5  # 1 NEM row + 2 REZs + 2 non-REZs
+
+    hierarchy = result["network_geography_hierarchy"]
+    assert set(hierarchy.columns) == {
+        "geo_id",
+        "subregion_id",
+        "region_id",
+        "nem_id",
+    }
+    # The full hierarchy, though the model has one geography: the NEM row
+    # + 3 NEM regions (QLD, NSW, VIC; TAS shares its subregion row)
+    # + 6 subregions + 2 REZs + 2 non-REZs
+    assert len(hierarchy) == 14
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}

@@ -7,6 +7,7 @@ from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
     _extract_subregion_id,
     _template_network_geography,
+    _template_network_geography_hierarchy,
 )
 
 
@@ -167,3 +168,47 @@ def test_add_non_rez_geographies_to_rez_table_guard_raises(csv_str_to_df):
     expected_msg = re.escape("Non-REZ ID(s) ['N0'] are already defined")
     with pytest.raises(ValueError, match=expected_msg):
         _add_non_rez_geographies_to_rez_table(iasr_tables)
+
+
+def test_template_network_geography_hierarchy(csv_str_to_df):
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        NQ,      subregion,  QLD,        NQ
+        CNSW,    subregion,  NSW,        CNSW
+        SNW,     subregion,  NSW,        SNW
+        TAS,     subregion,  TAS,        TAS
+        Q1,      rez,        QLD,        NQ
+    """)
+
+    result = _template_network_geography_hierarchy(sub_regional_geography)
+
+    # NSW is the region of both CNSW and SNW but has one row of its own. TAS
+    # is both a sub-region and its own region, so it has one row with TAS as
+    # both its subregion_id and its region_id.
+    expected = csv_str_to_df("""
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        QLD,     ,              QLD,        NEM
+        NSW,     ,              NSW,        NEM
+        NQ,      NQ,            QLD,        NEM
+        CNSW,    CNSW,          NSW,        NEM
+        SNW,     SNW,           NSW,        NEM
+        TAS,     TAS,           TAS,        NEM
+        Q1,      NQ,            QLD,        NEM
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_template_network_geography_hierarchy_empty(csv_str_to_df):
+    sub_regional_geography = pd.DataFrame(
+        columns=["geo_id", "geo_type", "region_id", "subregion_id"]
+    )
+
+    result = _template_network_geography_hierarchy(sub_regional_geography)
+
+    # With no sub-regions there are no NEM regions to add, only the NEM row.
+    expected = csv_str_to_df("""
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)

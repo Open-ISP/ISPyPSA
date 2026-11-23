@@ -379,6 +379,7 @@ def test_create_ispypsa_inputs_new_format(
     output_dir = tmp_path / "run_dir" / "test_run" / "ispypsa_inputs"
     verify_output_files(output_dir, _expected_output_files(granularity))
     geo = pd.read_csv(output_dir / "network_geography.csv")
+    hierarchy = pd.read_csv(output_dir / "network_geography_hierarchy.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
     options = pd.read_csv(output_dir / "network_expansion_options.csv")
@@ -397,6 +398,20 @@ def test_create_ispypsa_inputs_new_format(
         == _GEOS_PER_GRANULARITY_75[granularity] + _NUM_REZS_75 + _NUM_NON_REZS_75
     )
     assert geo["geo_id"].is_unique
+
+    # network_geography_hierarchy — the full hierarchy at every granularity:
+    # every sub-region is listed, and every model geography has a row.
+    assert hierarchy["geo_id"].is_unique
+    is_subregion = hierarchy["geo_id"] == hierarchy["subregion_id"]
+    is_region = hierarchy["geo_id"] == hierarchy["region_id"]
+    is_nem = hierarchy["geo_id"] == hierarchy["nem_id"]
+    assert is_subregion.sum() == _NUM_SUBREGIONS_75
+    # TAS is counted as a region through its one row, which is also a sub-region.
+    assert is_region.sum() == _NUM_REGIONS_75
+    assert is_nem.sum() == 1
+    is_rez = ~(is_subregion | is_region | is_nem)
+    assert is_rez.sum() == _NUM_REZS_75 + _NUM_NON_REZS_75
+    assert set(geo["geo_id"]) <= set(hierarchy["geo_id"])
 
     # network_transmission_paths — derived from named structural quantities:
     # sub_regions = flow paths + REZ connections + parallel-path injections;

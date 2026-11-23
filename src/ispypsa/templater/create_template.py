@@ -33,6 +33,7 @@ from ispypsa.templater.fuel_prices import _template_fuel_prices
 from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
     _template_network_geography,
+    _template_network_geography_hierarchy,
 )
 from ispypsa.templater.helpers import _build_geo_region_lookup
 from ispypsa.templater.iasr_table_edits import _apply_edits_to_iasr_tables
@@ -102,6 +103,7 @@ _BASE_TEMPLATE_OUTPUTS = [
 # delete _BASE_TEMPLATE_OUTPUTS above.
 _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_geography",
+    "network_geography_hierarchy",
     "network_transmission_paths",
     "network_transmission_path_limits",
     "network_expansion_options",
@@ -211,6 +213,9 @@ def create_ispypsa_inputs_template(
                 iasr_tables["renewable_energy_zones"],
                 regional_granularity,
             )
+        template["network_geography_hierarchy"] = _template_network_geography_hierarchy(
+            sub_regional_geography
+        )
         region_lookup = _build_geo_region_lookup(sub_regional_geography)
         flow_path_options = _filter_flow_path_augmentations_to_granularity(
             _extract_flow_path_options_from_iasr(iasr_tables),
