@@ -23,6 +23,7 @@ dependencies = [
     "plotly>=6.5.0",
     "numpy>=2.0.0",
     "shapely>=2.1.0",
+    "tsam>=4.1.1,<5",
 ]
 readme = "README.md"
 requires-python = ">=3.11,<3.15"

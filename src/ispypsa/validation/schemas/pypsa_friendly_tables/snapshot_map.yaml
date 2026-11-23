@@ -1,0 +1,51 @@
+table: snapshot_map
+required: false
+unique:
+  - [investment_periods, original_snapshots]
+description: >
+  Which segment each of the model's original snapshots was merged into: one row
+  per original snapshot. It is the companion of the pypsa-friendly snapshots
+  table, and has rows only when the capacity expansion phase sets
+  temporal.capacity_expansion.aggregation.tsam. Nothing in the model build reads
+  it: it is kept so that results reported per segment can be related back to
+  the intervals each segment covers.
+
+  Source tables:
+    - none: built from the model's snapshots and trace data.
+
+  Source notes:
+  Built by ispypsa.translator.temporal_aggregation, which merges consecutive
+  snapshots into segments of varying length.
+
+  If absent (or empty):
+  The snapshots were not merged into segments, and the pypsa-friendly snapshots
+  table lists every snapshot at the model's resolution.
+custom_validation:
+  - name: segments_are_in_the_snapshots_table
+    description: >
+      Every (investment_periods, snapshots) pair must be a row of the
+      pypsa-friendly snapshots table.
+  - name: segment_is_stamped_with_its_last_original_snapshot
+    description: >
+      Within a segment, snapshots must equal the latest original_snapshots. For
+      example, a segment made of 00:30, 01:00 and 01:30 must be stamped 01:30.
+columns:
+  investment_periods:
+    type: int
+    required: true
+    description: Investment period of the original snapshot and of its segment.
+  original_snapshots:
+    type: datetime
+    required: true
+    format: "%Y-%m-%d %H:%M:%S"
+    description: >
+      Timestamp of a snapshot at the model's resolution, before merging. Like
+      every snapshot, it is the time the interval ends.
+  snapshots:
+    type: datetime
+    required: true
+    format: "%Y-%m-%d %H:%M:%S"
+    description: >
+      Timestamp of the segment the original snapshot was merged into: the time
+      the segment ends. Matches the snapshots column of the pypsa-friendly
+      snapshots table.

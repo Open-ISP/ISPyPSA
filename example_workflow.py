@@ -104,7 +104,7 @@ write_csvs(ispypsa_tables, ispypsa_input_tables_directory)
 pypsa_friendly_input_tables = create_pypsa_friendly_inputs(config, ispypsa_tables)
 
 # Create timeseries inputs and snapshots
-pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inputs(
+snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
     config,
     "capacity_expansion",
     ispypsa_tables,
@@ -112,6 +112,10 @@ pypsa_friendly_input_tables["snapshots"] = create_pypsa_friendly_timeseries_inpu
     parsed_traces_directory,
     capacity_expansion_timeseries_location,
 )
+pypsa_friendly_input_tables["snapshots"] = snapshots
+# Which snapshots were merged into each segment, if the config sets tsam
+# aggregation. Otherwise this table has no rows.
+pypsa_friendly_input_tables["snapshot_map"] = snapshot_map
 
 write_csvs(pypsa_friendly_input_tables, pypsa_friendly_inputs_location)
 
@@ -149,7 +153,7 @@ generate_results_website(
 )
 
 # Operational modelling extension
-operational_snapshots = create_pypsa_friendly_timeseries_inputs(
+operational_snapshots, _ = create_pypsa_friendly_timeseries_inputs(
     config,
     "operational",
     ispypsa_tables,
