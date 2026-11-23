@@ -158,6 +158,12 @@ class ModelConfig(BaseModel):
     trace_data: TraceDataConfig = TraceDataConfig()
     filter_by_nem_regions: list[str] | None = None
     filter_by_isp_sub_regions: list[str] | None = None
+    # What to do with a carbon budget when the modelled years cover only part
+    # of its window: fail ("none"), or scale it to the modelled years (see
+    # ispypsa.translator.carbon_budgets).
+    carbon_budget_scaling: Literal["none", "prorata", "linear_trajectory_to_zero"] = (
+        "none"
+    )
     solver: Literal[
         "highs",
         "cbc",

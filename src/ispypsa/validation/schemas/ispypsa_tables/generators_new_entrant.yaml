@@ -19,6 +19,8 @@ description: >
     - `gpg_min_stable_level_new_entrants`
     - `locational_cost_factors`
     - `technology_specific_lcfs`
+    - `emissions_intensity_new_entrants`
+    - `auxiliary_load_new_entrants`
 
   If absent:
   Only existing (and planned) generation will be modelled.
@@ -156,3 +158,21 @@ columns:
 
       If absent:
       No minimum operating level modelled.
+  emissions_intensity:
+    type: float
+    required: false
+    units: t CO2-e/MWh
+    gte: 0.0
+    nan_fill: 0.0
+    description: >
+      Scope 1 emissions of the generating unit per unit of energy sent out.
+
+      These values are used to count the unit's output against the limits in
+      `carbon_budgets`. The IASR workbook publishes them in kg per MWh
+      generated. The templater converts them to t per MWh sent out, using the
+      unit's auxiliary load: the share of its generation the power station
+      uses itself. For example 0.88 t/MWh generated with a 12% auxiliary load
+      is 0.88 / (1 - 0.12) = 1.0 t/MWh sent out.
+
+      If absent:
+      The generating unit's output is not counted against any carbon budget.

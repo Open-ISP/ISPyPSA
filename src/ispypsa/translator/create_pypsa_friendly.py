@@ -54,6 +54,7 @@ from ispypsa.translator.storage import (
 )
 from ispypsa.translator.temporal_filters import _time_series_filter
 from ispypsa.translator.time_series_checker import _check_time_series
+from ispypsa.translator.timeslices import _add_interval_model_year_and_month_day
 
 _BASE_TRANSLATOR_OUTPUTS = [
     "snapshots",
@@ -368,9 +369,11 @@ def create_pypsa_friendly_timeseries_inputs(
 
     Returns:
         pd.DataFrame containing the snapshots used for the timeseries, with the
-        columns 'investment_periods' and 'snapshots' and the snapshot weightings
-        'objective', 'generators' and 'stores'. The 'stores' weighting is the
-        resolution of the given model phase in hours.
+        columns 'investment_periods' and 'snapshots', the snapshot weightings
+        'objective', 'generators' and 'stores', and 'model_year': the financial
+        or calendar year (per config.temporal.year_type) each snapshot falls in.
+        The 'stores' weighting is the resolution of the given model phase in
+        hours.
     """
 
     # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
@@ -379,9 +382,12 @@ def create_pypsa_friendly_timeseries_inputs(
     # that needs them (named_representative_weeks).
     if FEATURE_FLAGS["use_new_table_format"]:
         snapshots = create_pypsa_friendly_snapshots(config, model_phase)
-        return _add_snapshot_weightings(
+        snapshots = _add_snapshot_weightings(
             snapshots, config.temporal.capacity_expansion.resolution_min
         )
+        return _add_interval_model_year_and_month_day(
+            snapshots, config.temporal.year_type
+        ).drop(columns="month_day")
 
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
@@ -470,6 +476,13 @@ def create_pypsa_friendly_timeseries_inputs(
     )
 
     snapshots = _add_snapshot_weightings(snapshots, resolution_min)
+
+    # The model year each snapshot falls in, which can differ from its
+    # investment period: a 2030 investment period that runs to 2034 has
+    # snapshots in five model years.
+    snapshots = _add_interval_model_year_and_month_day(
+        snapshots, config.temporal.year_type
+    ).drop(columns="month_day")
 
     return snapshots
 

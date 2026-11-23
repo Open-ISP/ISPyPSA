@@ -7,7 +7,9 @@ from pandas.testing import assert_frame_equal
 from ispypsa.translator.snapshots import (
     _add_investment_periods,
     _create_complete_snapshots_index,
+    create_pypsa_friendly_snapshots,
 )
+from ispypsa.translator.timeslices import _add_interval_model_year_and_month_day
 
 
 @pytest.mark.parametrize(
@@ -275,3 +277,66 @@ def test_add_investment_periods_unmapped_timestamps_error():
     )
     assert "2005-01-15" in str(excinfo.value)
     assert "2010" in str(excinfo.value)
+
+
+# --- The model years of the snapshots ---
+#
+# The carbon budget translator scales a partly modelled budget on the basis
+# that every year from the config's start_year to its end_year is modelled.
+# These tests pin that the snapshots have exactly those model years, with and
+# without temporal aggregation.
+
+
+def test_snapshots_have_every_model_year_in_the_range(
+    csv_str_to_df, sample_model_config
+):
+    config = sample_model_config
+    config.temporal.range.start_year = 2027
+    config.temporal.range.end_year = 2028
+    config.temporal.capacity_expansion.investment_periods = [2027]
+    config.temporal.capacity_expansion.aggregation.representative_weeks = None
+
+    snapshots = create_pypsa_friendly_snapshots(config, "capacity_expansion")
+    snapshots = _add_interval_model_year_and_month_day(
+        snapshots, config.temporal.year_type
+    )
+    result = snapshots.groupby("model_year", as_index=False).size()
+
+    # Half-hourly snapshots: 365 x 48 = 17520 in financial year 2027, and
+    # 366 x 48 = 17568 in 2028, which has 29 February 2028 in it. The
+    # snapshots stamped midnight on 1 July 2027 and 2028 are the last of the
+    # year just ended, so there are no snapshots in 2026 or 2029.
+    expected = csv_str_to_df("""
+        model_year,  size
+        2027,        17520
+        2028,        17568
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
+
+
+def test_representative_weeks_have_every_model_year_in_the_range(
+    csv_str_to_df, sample_model_config
+):
+    config = sample_model_config
+    config.temporal.range.start_year = 2027
+    config.temporal.range.end_year = 2030
+    config.temporal.capacity_expansion.investment_periods = [2027, 2029]
+    config.temporal.capacity_expansion.aggregation.representative_weeks = [1, 51]
+
+    snapshots = create_pypsa_friendly_snapshots(config, "capacity_expansion")
+    snapshots = _add_interval_model_year_and_month_day(
+        snapshots, config.temporal.year_type
+    )
+    result = snapshots.groupby("model_year", as_index=False).size()
+
+    # Two weeks of half-hourly snapshots in every year: 2 x 7 x 48 = 672.
+    # 2028 and 2030 have snapshots although no investment period starts in
+    # them.
+    expected = csv_str_to_df("""
+        model_year,  size
+        2027,        672
+        2028,        672
+        2029,        672
+        2030,        672
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)

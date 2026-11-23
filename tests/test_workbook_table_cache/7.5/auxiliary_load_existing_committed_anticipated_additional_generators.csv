@@ -1,0 +1,643 @@
+IASR ID,Power Station,Technology,Auxiliary load (% of generation)
+BW01,Bayswater,Steam Sub Critical,5.48025285972305
+BW02,Bayswater,Steam Sub Critical,5.48025285972305
+BW03,Bayswater,Steam Sub Critical,5.48025285972305
+BW04,Bayswater,Steam Sub Critical,5.48025285972305
+CALL_B_1,Callide B,Steam Sub Critical,6.67097170971709
+CALL_B_2,Callide B,Steam Sub Critical,6.67097170971709
+CPP_3,Callide C,Steam Super Critical,6.67097170971709
+CPP_4,Callide C,Steam Super Critical,6.67097170971709
+ER01,Eraring,Steam Sub Critical,5.48025285972305
+ER02,Eraring,Steam Sub Critical,5.48025285972305
+ER03,Eraring,Steam Sub Critical,5.48025285972305
+ER04,Eraring,Steam Sub Critical,5.48025285972305
+GSTONE1,Gladstone,Steam Sub Critical,6.67097170971709
+GSTONE2,Gladstone,Steam Sub Critical,6.67097170971709
+GSTONE3,Gladstone,Steam Sub Critical,6.67097170971709
+GSTONE4,Gladstone,Steam Sub Critical,6.67097170971709
+GSTONE5,Gladstone,Steam Sub Critical,6.67097170971709
+GSTONE6,Gladstone,Steam Sub Critical,6.67097170971709
+KPP_1,Kogan Creek,Steam Super Critical,6.67097170971709
+MPP_1,Millmerran,Steam Super Critical,6.67097170971709
+MPP_2,Millmerran,Steam Super Critical,6.67097170971709
+MP1,Mt Piper,Steam Sub Critical,5.48025285972305
+MP2,Mt Piper,Steam Sub Critical,5.48025285972305
+STAN-1,Stanwell,Steam Sub Critical,6.67097170971709
+STAN-2,Stanwell,Steam Sub Critical,6.67097170971709
+STAN-3,Stanwell,Steam Sub Critical,6.67097170971709
+STAN-4,Stanwell,Steam Sub Critical,6.67097170971709
+TARONG#1,Tarong,Steam Sub Critical,6.67097170971709
+TARONG#2,Tarong,Steam Sub Critical,6.67097170971709
+TARONG#3,Tarong,Steam Sub Critical,6.67097170971709
+TARONG#4,Tarong,Steam Sub Critical,6.67097170971709
+TNPS1,Tarong North,Steam Super Critical,6.67097170971709
+VP5,Vales Point B,Steam Sub Critical,5.48025285972305
+VP6,Vales Point B,Steam Sub Critical,5.48025285972305
+LYA1,Loy Yang A Power Station,Steam Sub Critical,8.37253112033195
+LYA2,Loy Yang A Power Station,Steam Sub Critical,8.37253112033195
+LYA3,Loy Yang A Power Station,Steam Sub Critical,8.37253112033195
+LYA4,Loy Yang A Power Station,Steam Sub Critical,8.37253112033195
+LOYYB1,Loy Yang B,Steam Sub Critical,8.37253112033195
+LOYYB2,Loy Yang B,Steam Sub Critical,8.37253112033195
+YWPS1,Yallourn W,Steam Sub Critical,8.37253112033195
+YWPS2,Yallourn W,Steam Sub Critical,8.37253112033195
+YWPS3,Yallourn W,Steam Sub Critical,8.37253112033195
+YWPS4,Yallourn W,Steam Sub Critical,8.37253112033195
+ANGAS1,Angaston,Reciprocating engine,0.764299113233287
+ANGAS2,Angaston,Reciprocating engine,0.764299113233287
+BDL01,Bairnsdale,OCGT (small GT),0.734583937815513
+BDL02,Bairnsdale,OCGT (small GT),0.734583937815513
+BARCALDN,Barcaldine Power Station,OCGT (small GT),0.734583937815513
+BIPS1_01,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_02,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_03,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_04,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_05,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_06,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_07,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_08,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_09,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_10,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_11,Barker Inlet Power Station,Reciprocating engine,1.0
+BIPS1_12,Barker Inlet Power Station,Reciprocating engine,1.0
+BBTHREE1,Bell Bay Three,OCGT (large GT),0.734583937815513
+BBTHREE2,Bell Bay Three,OCGT (large GT),0.734583937815513
+BBTHREE3,Bell Bay Three,OCGT (large GT),0.734583937815513
+BOLIVPS1_1,Bolivar Power Station,OCGT (small GT),0.734583937815513
+BOLIVPS1_2,Bolivar Power Station,OCGT (small GT),0.734583937815513
+BOLIVPS1_3,Bolivar Power Station,OCGT (small GT),0.734583937815513
+BOLIVPS1_4,Bolivar Power Station,OCGT (small GT),0.734583937815513
+BRAEMAR1,Braemar,OCGT (large GT),0.734583937815513
+BRAEMAR2,Braemar,OCGT (large GT),0.734583937815513
+BRAEMAR3,Braemar,OCGT (large GT),0.734583937815513
+BRAEMAR5,Braemar 2 Power Station,OCGT (large GT),0.734583937815513
+BRAEMAR6,Braemar 2 Power Station,OCGT (large GT),0.734583937815513
+BRAEMAR7,Braemar 2 Power Station,OCGT (large GT),0.734583937815513
+CG1,Colongra,OCGT (small GT),0.734583937815513
+CG2,Colongra,OCGT (small GT),0.734583937815513
+CG3,Colongra,OCGT (small GT),0.734583937815513
+CG4,Colongra,OCGT (small GT),0.734583937815513
+CPSA_GT1,Condamine A,CCGT - Gas Turbine,1.79241946689092
+CPSA_GT2,Condamine A,CCGT - Gas Turbine,1.79241946689092
+CPSA_ST,Condamine A,CCGT - Steam Turbine,1.79241946689092
+DDPS1_GT1,Darling Downs,CCGT - Gas Turbine,1.79241946689092
+DDPS1_GT2,Darling Downs,CCGT - Gas Turbine,1.79241946689092
+DDPS1_GT3,Darling Downs,CCGT - Gas Turbine,1.79241946689092
+DDPS1_ST,Darling Downs,CCGT - Steam Turbine,1.79241946689092
+DRYCGT1,Dry Creek GT,OCGT (small GT),0.734583937815513
+DRYCGT2,Dry Creek GT,OCGT (small GT),0.734583937815513
+DRYCGT3,Dry Creek GT,OCGT (small GT),0.734583937815513
+AGLHAL01,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL02,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL03,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL04,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL05,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL06,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL07,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL08,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL09,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL10,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL11,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHAL12,Hallett GT,OCGT (small GT),0.734583937815513
+AGLHALRE,Hallett GT,OCGT (small GT),0.734583937815513
+HEZ1,Hunter Economic Zone,Reciprocating engine,0.764299113233287
+JLA01,Jeeralang A,OCGT (small GT),0.734583937815513
+JLA02,Jeeralang A,OCGT (small GT),0.734583937815513
+JLA03,Jeeralang A,OCGT (small GT),0.734583937815513
+JLA04,Jeeralang A,OCGT (small GT),0.734583937815513
+JLB01,Jeeralang B,OCGT (small GT),0.734583937815513
+JLB02,Jeeralang B,OCGT (small GT),0.734583937815513
+JLB03,Jeeralang B,OCGT (small GT),0.734583937815513
+LADBROK1,Ladbroke Grove,OCGT (small GT),0.734583937815513
+LADBROK2,Ladbroke Grove,OCGT (small GT),0.734583937815513
+LNGS1,Laverton North,OCGT (large GT),0.734583937815513
+LNGS2,Laverton North,OCGT (large GT),0.734583937815513
+LONSDALE,Lonsdale,Reciprocating engine,0.764299113233287
+MINTARO,Mintaro GT,OCGT (small GT),0.734583937815513
+MORTLK11,Mortlake,OCGT (large GT),0.734583937815513
+MORTLK12,Mortlake,OCGT (large GT),0.734583937815513
+MSTUART1,Mt Stuart,OCGT (small GT),0.764299113233287
+MSTUART2,Mt Stuart,OCGT (small GT),0.764299113233287
+MSTUART3,Mt Stuart,OCGT (small GT),0.764299113233287
+NPS,Newport,CCGT - Steam Turbine,5.0
+OAKEY1,Oakey Power Station,OCGT (large GT),0.734583937815513
+OAKEY2,Oakey Power Station,OCGT (large GT),0.734583937815513
+OsborneGT,Osborne,CCGT - Gas Turbine,1.79241946689092
+OsborneST,Osborne,CCGT - Steam Turbine,1.79241946689092
+PPCCGTGT1,Pelican Point,CCGT - Gas Turbine,1.79241946689092
+PPCCGTGT2,Pelican Point,CCGT - Gas Turbine,1.79241946689092
+PPCCGTST,Pelican Point,CCGT - Steam Turbine,1.79241946689092
+POR01-1,Port Lincoln GT,OCGT (small GT),0.764299113233287
+POR01-2,Port Lincoln GT,OCGT (small GT),0.764299113233287
+POR01-3,Port Lincoln GT,OCGT (small GT),0.764299113233287
+PTSTAN1_1,Port Stanvac 1,Reciprocating engine,0.764299113233287
+PTSTAN1_2,Port Stanvac 1,Reciprocating engine,0.764299113233287
+QPS1,Quarantine,OCGT (small GT),0.734583937815513
+QPS2,Quarantine,OCGT (small GT),0.734583937815513
+QPS3,Quarantine,OCGT (small GT),0.734583937815513
+QPS4,Quarantine,OCGT (small GT),0.734583937815513
+QPS5,Quarantine,OCGT (small GT),0.734583937815513
+ROMA_7,Roma,OCGT (small GT),0.734583937815513
+ROMA_8,Roma,OCGT (small GT),0.734583937815513
+SITHE01,Smithfield Energy Facility,OCGT (small GT),0.734583937815513
+SNAPPER1_1,Snapper Point Power Station,OCGT (small GT),0.734583937815513
+SNAPPER1_2,Snapper Point Power Station,OCGT (small GT),0.734583937815513
+SNAPPER1_3,Snapper Point Power Station,OCGT (small GT),0.734583937815513
+SNAPPER1_4,Snapper Point Power Station,OCGT (small GT),0.734583937815513
+SNAPPER1_5,Snapper Point Power Station,OCGT (small GT),0.734583937815513
+SNUG1,Snuggery,OCGT (small GT),0.764299113233287
+SNUG2,Snuggery,OCGT (small GT),0.764299113233287
+SNUG3,Snuggery,OCGT (small GT),0.764299113233287
+AGLSOM01,Somerton,OCGT (small GT),0.734583937815513
+AGLSOM02,Somerton,OCGT (small GT),0.734583937815513
+AGLSOM03,Somerton,OCGT (small GT),0.734583937815513
+AGLSOM04,Somerton,OCGT (small GT),0.734583937815513
+SWAN_E,Swanbank E GT,CCGT,1.79241946689092
+TALWA1,Tallawarra,CCGT,1.79241946689092
+Tallawarra B,Tallawarra B,OCGT (large GT),0.734583937815513
+TVCC201_GT,Tamar Valley Combined Cycle,CCGT - Gas Turbine,1.79241946689092
+TVCC201_ST,Tamar Valley Combined Cycle,CCGT - Steam Turbine,1.79241946689092
+TVPP104,Tamar Valley Peaking,OCGT (large GT),0.734583937815513
+TORRB1,Torrens Island B,CCGT - Steam Turbine,5.0
+TORRB2,Torrens Island B,CCGT - Steam Turbine,5.0
+TORRB3,Torrens Island B,CCGT - Steam Turbine,5.0
+TORRB4,Torrens Island B,CCGT - Steam Turbine,5.0
+YABULU,Townsville Power Station,CCGT - Gas Turbine,1.79241946689092
+YABULU2,Townsville Power Station,CCGT - Steam Turbine,1.79241946689092
+URANQ11,Uranquinty,OCGT (large GT),0.734583937815513
+URANQ12,Uranquinty,OCGT (large GT),0.734583937815513
+URANQ13,Uranquinty,OCGT (large GT),0.734583937815513
+URANQ14,Uranquinty,OCGT (large GT),0.734583937815513
+VPGS1,Valley Power,OCGT (small GT),0.734583937815513
+VPGS2,Valley Power,OCGT (small GT),0.734583937815513
+VPGS3,Valley Power,OCGT (small GT),0.734583937815513
+VPGS4,Valley Power,OCGT (small GT),0.734583937815513
+VPGS5,Valley Power,OCGT (small GT),0.734583937815513
+VPGS6,Valley Power,OCGT (small GT),0.734583937815513
+YARWUN_1,Yarwun Cogen,CCGT,1.79241946689092
+BARRON-1,Barron Gorge,Hydro,0.640453615913738
+BARRON-2,Barron Gorge,Hydro,0.640453615913738
+BASTYAN,Bastyan,Hydro,0.640453615913738
+BLOWERNG,Blowering,Hydro,0.640453615913738
+BOGONG1,Bogong / Mackay,Hydro,0.640453615913738
+BOGONG2,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY11,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY12,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY13,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY14,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY15,Bogong / Mackay,Hydro,0.640453615913738
+MCKAY16,Bogong / Mackay,Hydro,0.640453615913738
+LI111-1,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+LI112-2,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+LI113-3,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+CA111-1,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+CA112-2,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+WY111-1,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+WY111-2,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+WY111-3,Catagunya / Liapootah / Wayatinah,Hydro,0.640453615913738
+CETHANA,Cethana,Hydro,0.640453615913738
+DARTM1,Dartmouth,Hydro,0.640453615913738
+DEVILS_G,Devils Gate,Hydro,0.640453615913738
+EILDON1,Eildon,Hydro,0.640453615913738
+EILDON2,Eildon,Hydro,0.640453615913738
+FISHER,Fisher,Hydro,0.640453615913738
+GO181-1,Gordon,Hydro,0.640453615913738
+GO182-2,Gordon,Hydro,0.640453615913738
+GO183-3,Gordon,Hydro,0.640453615913738
+GUTHEGA1,Guthega,Hydro,0.640453615913738
+GUTHEGA2,Guthega,Hydro,0.640453615913738
+HUMENSW,Hume Dam NSW,Hydro,0.640453615913738
+HUMEV,Hume Dam VIC,Hydro,0.640453615913738
+JBUTTERS,John Butters,Hydro,0.640453615913738
+KAREEYA1,Kareeya,Hydro,0.640453615913738
+KAREEYA2,Kareeya,Hydro,0.640453615913738
+KAREEYA3,Kareeya,Hydro,0.640453615913738
+KAREEYA4,Kareeya,Hydro,0.640453615913738
+LK_ECHO,Lake Echo,Hydro,0.640453615913738
+LM111-1,Lemonthyme / Wilmot,Hydro,0.640453615913738
+WI111-1,Lemonthyme / Wilmot,Hydro,0.640453615913738
+MACKNTSH,Mackintosh,Hydro,0.640453615913738
+MEADOWBK,Meadowbank,Hydro,0.640453615913738
+MURRAY01,Murray 1,Hydro,0.640453615913738
+MURRAY02,Murray 1,Hydro,0.640453615913738
+MURRAY03,Murray 1,Hydro,0.640453615913738
+MURRAY04,Murray 1,Hydro,0.640453615913738
+MURRAY05,Murray 1,Hydro,0.640453615913738
+MURRAY06,Murray 1,Hydro,0.640453615913738
+MURRAY07,Murray 1,Hydro,0.640453615913738
+MURRAY08,Murray 1,Hydro,0.640453615913738
+MURRAY09,Murray 1,Hydro,0.640453615913738
+MURRAY10,Murray 1,Hydro,0.640453615913738
+MURRAY11,Murray 2,Hydro,0.640453615913738
+MURRAY12,Murray 2,Hydro,0.640453615913738
+MURRAY13,Murray 2,Hydro,0.640453615913738
+MURRAY14,Murray 2,Hydro,0.640453615913738
+PO161-1,Poatina,Hydro,0.640453615913738
+PO162-2,Poatina,Hydro,0.640453615913738
+PO163-3,Poatina,Hydro,0.640453615913738
+PO164-4,Poatina,Hydro,0.640453615913738
+PO165-5,Poatina,Hydro,0.640453615913738
+PO166-6,Poatina,Hydro,0.640453615913738
+REECE1,Reece,Hydro,0.640453615913738
+REECE2,Reece,Hydro,0.640453615913738
+SHGEN01,Shoalhaven,Hydro,0.640453615913738
+SHGEN02,Shoalhaven,Hydro,0.640453615913738
+SHGEN03,Shoalhaven,Hydro,0.640453615913738
+SHGEN04,Shoalhaven,Hydro,0.640453615913738
+TA111-1,Tarraleah,Hydro,0.640453615913738
+TA111-2,Tarraleah,Hydro,0.640453615913738
+TA111-3,Tarraleah,Hydro,0.640453615913738
+TA112-4,Tarraleah,Hydro,0.640453615913738
+TA112-5,Tarraleah,Hydro,0.640453615913738
+TA112-6,Tarraleah,Hydro,0.640453615913738
+TR111-1,Trevallyn,Hydro,0.640453615913738
+TR111-2,Trevallyn,Hydro,0.640453615913738
+TR112-3,Trevallyn,Hydro,0.640453615913738
+TR112-4,Trevallyn,Hydro,0.640453615913738
+TRIBUTE,Tribute,Hydro,0.640453615913738
+TUMUT3_01,Tumut 3,Hydro,0.640453615913738
+TUMUT3_02,Tumut 3,Hydro,0.640453615913738
+TUMUT3_03,Tumut 3,Hydro,0.640453615913738
+TUMUT3_04,Tumut 3,Hydro,0.640453615913738
+TUMUT3_05,Tumut 3,Hydro,0.640453615913738
+TUMUT3_06,Tumut 3,Hydro,0.640453615913738
+TU111-1,Tungatinah,Hydro,0.640453615913738
+TU112-2,Tungatinah,Hydro,0.640453615913738
+TU113-3,Tungatinah,Hydro,0.640453615913738
+TU114-4,Tungatinah,Hydro,0.640453615913738
+TU115-5,Tungatinah,Hydro,0.640453615913738
+TUMUT1_01,Upper Tumut,Hydro,0.640453615913738
+TUMUT1_02,Upper Tumut,Hydro,0.640453615913738
+TUMUT1_03,Upper Tumut,Hydro,0.640453615913738
+TUMUT1_04,Upper Tumut,Hydro,0.640453615913738
+TUMUT2_01,Upper Tumut,Hydro,0.640453615913738
+TUMUT2_02,Upper Tumut,Hydro,0.640453615913738
+TUMUT2_03,Upper Tumut,Hydro,0.640453615913738
+TUMUT2_04,Upper Tumut,Hydro,0.640453615913738
+WKIEWA1_1,West Kiewa,Hydro,0.640453615913738
+WKIEWA1_2,West Kiewa,Hydro,0.640453615913738
+WKIEWA2_1,West Kiewa,Hydro,0.640453615913738
+WKIEWA2_2,West Kiewa,Hydro,0.640453615913738
+W/HOE#1,Wivenhoe,Hydro,0.640453615913738
+W/HOE#2,Wivenhoe,Hydro,0.640453615913738
+BANN1,Bannerton Solar Park,Large scale Solar PV,0.0143108125391258
+BERYLSF1,Beryl Solar Farm,Large scale Solar PV,0.0143108125391258
+BOWWPV1,Bolivar Waste Water Treatment Solar Farm,Large scale Solar PV,0.0143108125391258
+BOMENSF1,Bomen Solar Farm,Large scale Solar PV,0.0143108125391258
+BROKENH1,Broken Hill Solar Farm,Large scale Solar PV,0.0143108125391258
+BNGSF1,Bungala One Solar Farm,Large scale Solar PV,0.0143108125391258
+BNGSF2,Bungala Two Solar Farm,Large scale Solar PV,0.0143108125391258
+CHILDSF1,Childers Solar Farm,Large scale Solar PV,0.0143108125391258
+CLARESF1,Clare Solar Farm,Large scale Solar PV,0.0143108125391258
+CLERMSF1,Clermont Solar Farm,Large scale Solar PV,0.0143108125391258
+COLEASF1,Coleambally Solar Farm,Large scale Solar PV,0.0143108125391258
+CSPVPS1,Collinsville Solar Farm,Large scale Solar PV,0.0143108125391258
+DDSF1,Darling Downs Solar Farm,Large scale Solar PV,0.0143108125391258
+DARLSF1,Darlington Point Solar Farm,Large scale Solar PV,0.0143108125391258
+DAYDSF1,Daydream Solar Farm,Large scale Solar PV,0.0143108125391258
+EMERASF1,Emerald Solar Farm,Large scale Solar PV,0.0143108125391258
+FINLYSF1,Finley Solar Farm,Large scale Solar PV,0.0143108125391258
+GANNSF1,Gannawarra Solar Farm,Large scale Solar PV,0.0143108125391258
+GLENSF1,Glenrowan Solar Farm,Large scale Solar PV,0.0143108125391258
+GLRWNSF1,Glenrowan West Solar Farm,Large scale Solar PV,0.0143108125391258
+GOONSF1,Goonumbla Solar Farm,Large scale Solar PV,0.0143108125391258
+GULLRSF1,Gullen Range Solar Farm,Large scale Solar PV,0.0143108125391258
+GNNDHSF1,Gunnedah Solar Farm,Large scale Solar PV,0.0143108125391258
+HAMISF1,Hamilton Solar Farm,Large scale Solar PV,0.0143108125391258
+HVWWPV1,Happy Valley Reservoir,Large scale Solar PV,0.0143108125391258
+HAUGHT11,Haughton Solar Farm,Large scale Solar PV,0.0143108125391258
+HAYMSF1,Hayman Solar Farm,Large scale Solar PV,0.0143108125391258
+HILLSTN1,Hillston Sun Farm,Large scale Solar PV,0.0143108125391258
+HUGSF1,Hughenden Solar Farm,Large scale Solar PV,0.0143108125391258
+JEMALNG1,Jemalong Solar,Large scale Solar PV,0.0143108125391258
+JUNEESF1,Junee Solar Farm,Large scale Solar PV,0.0143108125391258
+KARSF1,Karadoc Solar Farm,Large scale Solar PV,0.0143108125391258
+KIAMSF1,Kiamal Solar Farm stage 1,Large scale Solar PV,0.0143108125391258
+KSP1,Kidston Solar Farm,Large scale Solar PV,0.0143108125391258
+LILYSF1,Lilyvale Solar Farm,Large scale Solar PV,0.0143108125391258
+LIMOSF11,Limondale Solar Farm 1,Large scale Solar PV,0.0143108125391258
+LIMOSF21,Limondale Solar Farm 2,Large scale Solar PV,0.0143108125391258
+LRSF1,Longreach Solar Farm,Large scale Solar PV,0.0143108125391258
+MANSLR1,Manildra Solar Farm,Large scale Solar PV,0.0143108125391258
+MAPS2PV1,Mannum Adelaide Pumping Station No 2 - MAPL2 (Palmer),Large scale Solar PV,0.0143108125391258
+MAPS3PV1,Mannum Adelaide Pumping Station No 3 - MAPL3 (Tungkillo),Large scale Solar PV,0.0143108125391258
+MARYRSF1,Maryrorough Solar Farm,Large scale Solar PV,0.0143108125391258
+MIDDLSF1,Middlemount Solar Farm,Large scale Solar PV,0.0143108125391258
+MOLNGSF1,Molong Solar Farm,Large scale Solar PV,0.0143108125391258
+MOREESF1,Moree Solar Farm,Large scale Solar PV,0.0143108125391258
+MWPS1PV1,Morgan To Whyalla Pipeline No 1 PS And Water Filtration Plant,Large scale Solar PV,0.0143108125391258
+MWPS2PV1,Morgan To Whyalla Pipeline No 2 PS,Large scale Solar PV,0.0143108125391258
+MWPS3PV1,Morgan To Whyalla Pipeline No 3 PS,Large scale Solar PV,0.0143108125391258
+MWPS4PV1,Morgan To Whyalla Pipeline No 4 PS,Large scale Solar PV,0.0143108125391258
+MOUSF1,Moura Solar Farm,Large scale Solar PV,0.0143108125391258
+MBPS2PV1,Murray Bridge - Onkaparinga Pipeline Pump 2,Large scale Solar PV,0.0143108125391258
+NEVERSF1,Nevertire Solar Farm,Large scale Solar PV,0.0143108125391258
+NEWENSF1,New England Solar Farm,Large scale Solar PV,0.0143108125391258
+NEWENSF2,New England Solar Farm,Large scale Solar PV,0.0143108125391258
+NUMURSF1,Numurkah Solar Farm,Large scale Solar PV,0.0143108125391258
+NYNGAN1,Nyngan Solar Plant,Large scale Solar PV,0.0143108125391258
+OAKEY1SF,Oakey 1 Solar Farm,Large scale Solar PV,0.0143108125391258
+OAKEY2SF,Oakey 2 Solar Farm,Large scale Solar PV,0.0143108125391258
+PARSF1,Parkes Solar Farm,Large scale Solar PV,0.0143108125391258
+PAREPS1,Port Augusta Renewable Energy Park - Solar,Large scale Solar PV,0.0143108125391258
+RRSF1,Ross River Solar Farm,Large scale Solar PV,0.0143108125391258
+RUGBYR1,Rugby Run Solar Farm,Large scale Solar PV,0.0143108125391258
+SMCSF1,Sun Metals Corporation Solar Farm,Large scale Solar PV,0.0143108125391258
+SUNRSF1,Sunraysia Solar Farm,Large scale Solar PV,0.0143108125391258
+SUNTPSF1,Suntop Solar Farm,Large scale Solar PV,0.0143108125391258
+SRSF1,Susan River Solar Farm,Large scale Solar PV,0.0143108125391258
+TBSF1,Tailem Bend Solar Farm,Large scale Solar PV,0.0143108125391258
+WARWSF1,Warwick Solar Farm - stage 1,Large scale Solar PV,0.0143108125391258
+WARWSF2,Warwick Solar Farm - stage 2,Large scale Solar PV,0.0143108125391258
+WELLSF1,Wellington Solar Farm,Large scale Solar PV,0.0143108125391258
+WEMENSF1,Wemen Solar Farm,Large scale Solar PV,0.0143108125391258
+WSTWYSF1,West Wyalong Solar Farm,Large scale Solar PV,0.0143108125391258
+WDGPH1,Western Downs Green Power Hub,Large scale Solar PV,0.0143108125391258
+WRSF1,White Rock Solar Farm,Large scale Solar PV,0.0143108125391258
+WHITSF1,Whitsunday Solar Farm,Large scale Solar PV,0.0143108125391258
+WINTSF1,Winton Solar Farm,Large scale Solar PV,0.0143108125391258
+WOOLGSF1,Woolooga Solar Farm,Large scale Solar PV,0.0143108125391258
+YARANSF1,Yarranlea Solar Farm,Large scale Solar PV,0.0143108125391258
+YATSF1,Yatpool Solar Farm,Large scale Solar PV,0.0143108125391258
+ARWF1,Ararat Wind Farm,Wind,0.0730926702039033
+BALDHWF1,Bald Hills Wind Farm,Wind,0.0730926702039033
+BANGOWF1,Bango 973 Wind Farm,Wind,0.0730926702039033
+BANGOWF2,Bango 999 Wind Farm,Wind,0.0730926702039033
+BRYB1WF1,Berrybank Wind Farm,Wind,0.0730926702039033
+BRYB2WF2,Berrybank Wind Farm,Wind,0.0730926702039033
+BOCORWF1,Boco Rock Wind Farm,Wind,0.0730926702039033
+BODWF1,Bodangora Wind Farm,Wind,0.0730926702039033
+BULGANA1,Bulgana Green Power Hub - Wind Farm,Wind,0.0730926702039033
+CNUNDAWF,Canunda Wind Farm,Wind,0.0730926702039033
+CAPTL_WF,Capital Wind Farm,Wind,0.0730926702039033
+CATHROCK,Cathedral Rocks Wind Farm,Wind,0.0730926702039033
+CTHLWF1,Cattle Hill Wind Farm,Wind,0.0730926702039033
+CHALLHWF,Challicum Hills Wind Farm,Wind,0.0730926702039033
+CHYTWF1,Cherry Tree Wind Farm,Wind,0.0730926702039033
+CLEMGPWF,Clements Gap Wind Farm,Wind,0.0730926702039033
+COLWF01,Collector Wind Farm,Wind,0.0730926702039033
+COOPGWF1,Coopers Gap Wind Farm,Wind,0.0730926702039033
+CROOKWF2,Crookwell 2 Wind Farm,Wind,0.0730926702039033
+CROWLWF1,Crowlands Wind Farm,Wind,0.0730926702039033
+CRURWF1,Crudine Ridge Wind Farm,Wind,0.0730926702039033
+CULLRGWF,Cullerin Range Wind Farm,Wind,0.0730926702039033
+DULAWF1,Dulacca Wind Farm,Wind,0.0730926702039033
+DUNDWF1,Dundonnell Wind Farm,Wind,0.0730926702039033
+DUNDWF2,Dundonnell Wind Farm,Wind,0.0730926702039033
+DUNDWF3,Dundonnell Wind Farm,Wind,0.0730926702039033
+ELAINWF1,Elaine Wind Farm,Wind,0.0730926702039033
+GRANWF1,Granville Harbour Wind Farm,Wind,0.0730926702039033
+GULLRWF1,Gullen Range Wind Farm,Wind,0.0730926702039033
+GULLRWF2,Gullen Range Wind Farm 2,Wind,0.0730926702039033
+GUNNING1,Gunning Wind Farm,Wind,0.0730926702039033
+NBHWF1,Hallett 4 North Brown Hill Wind Farm,Wind,0.0730926702039033
+BLUFF1,Hallett 5 The Bluff Wind Farm,Wind,0.0730926702039033
+HALLWF1,Hallett Stage 1 Brown Hill Wind Farm,Wind,0.0730926702039033
+HALLWF2,Hallett Stage 2 Hallett Hill Wind Farm,Wind,0.0730926702039033
+HDWF1,Hornsdale Wind Farm Stage 1,Wind,0.0730926702039033
+HDWF2,Hornsdale Wind Farm Stage 2,Wind,0.0730926702039033
+HDWF3,Hornsdale Wind Farm Stage 3,Wind,0.0730926702039033
+KIATAWF1,Kiata Wind Farm,Wind,0.0730926702039033
+LKBONNY1,Lake Bonney 1 Wind Farm,Wind,0.0730926702039033
+LKBONNY2,Lake Bonney 2 Wind Farm,Wind,0.0730926702039033
+LKBONNY3,Lake Bonney 3 Wind Farm,Wind,0.0730926702039033
+LGAPWF1,Lincoln Gap Wind Farm - stage 1,Wind,0.0730926702039033
+LGAPWF2,Lincoln Gap Wind Farm - stage 2,Wind,0.0730926702039033
+MACARTH1,Macarthur Wind Farm,Wind,0.0730926702039033
+MOORAWF1,Moorabool Wind Farm,Wind,0.0730926702039033
+MRTLSWF1,Mortlake South Wind Farm,Wind,0.0730926702039033
+MLWF1,Mortons Lane Wind Farm,Wind,0.0730926702039033
+MEWF1,Mount Emerald Wind Farm,Wind,0.0730926702039033
+MTMILLAR,Mount Millar Wind Farm,Wind,0.0730926702039033
+MERCER01,Mt Mercer Wind Farm,Wind,0.0730926702039033
+MUWAWF1,Murra Warra Wind Farm - stage 1,Wind,0.0730926702039033
+MUWAWF2,Murra Warra Wind Farm - stage 2,Wind,0.0730926702039033
+MUSSELR1,Musselroe Wind Farm,Wind,0.0730926702039033
+OAKLAND1,Oaklands Hill Wind Farm,Wind,0.0730926702039033
+PAREPW1,Port Augusta Renewable Energy Park - Wind,Wind,0.0730926702039033
+PORTWF,Portland Wind Farm,Wind,0.0730926702039033
+SALTCRK1,Salt Creek Wind Farm,Wind,0.0730926702039033
+SAPHWF1,Sapphire Wind Farm,Wind,0.0730926702039033
+STWF1,Silverton Wind Farm,Wind,0.0730926702039033
+SNOWNTH1,Snowtown S2 Wind Farm,Wind,0.0730926702039033
+SNOWSTH1,Snowtown S2 Wind Farm,Wind,0.0730926702039033
+SNOWTWN1,Snowtown Wind Farm,Wind,0.0730926702039033
+STARHLWF,Starfish Hill Wind Farm,Wind,0.0730926702039033
+STOCKYD1,Stockyard Hill Wind Farm,Wind,0.0730926702039033
+TARALGA1,Taralga Wind Farm,Wind,0.0730926702039033
+WATERLWF,Waterloo Wind Farm,Wind,0.0730926702039033
+WPWF,Wattle Point Wind Farm,Wind,0.0730926702039033
+WAUBRAWF,Waubra Wind Farm,Wind,0.0730926702039033
+WRWF1,White Rock Wind Farm - Stage 1,Wind,0.0730926702039033
+WGWF1,Willogoleche Wind Farm,Wind,0.0730926702039033
+WOODLWN1,Woodlawn Wind Farm,Wind,0.0730926702039033
+WOOLNTH1,Woolnorth Wind Farm,Wind,0.0730926702039033
+YSWF1,Yaloak South Wind Farm,Wind,0.0730926702039033
+YAMBUKWF,Yambuk Wind Farm,Wind,0.0730926702039033
+YENDWF1,Yendon Wind Farm,Wind,0.0730926702039033
+Tully Sugar Mill Biomass,Tully Sugar Mill Biomass,Biomass,7.3
+HUNTER1,Hunter Power Station,OCGT (large GT),0.734583937815513
+HUNTER2,Hunter Power Station,OCGT (large GT),0.734583937815513
+Kidston Pumped Storage Hydro 1,Kidston,Pumped Hydro (10hrs storage),0.51871260199456
+Kidston Pumped Storage Hydro 2,Kidston,Pumped Hydro (10hrs storage),0.51871260199456
+SNO2PH01,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+SNO2PH02,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+SNO2PH03,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+SNO2PH04,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+SNO2PH05,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+SNO2PH06,Snowy 2.0,Pumped Hydro (1wk storage),0.51871260199456
+ADPPV1,Adelaide Desalination Plant Solar Farm,Large scale Solar PV,0.0143108125391258
+AVLSF1,Avonlie Solar Farm,Large scale Solar PV,0.0143108125391258
+BLUEGSF1,Bluegrass Solar Farm,Large scale Solar PV,0.0143108125391258
+Broadsound Solar Farm,Broadsound Solar Farm,Large scale Solar PV,0.0143108125391258
+Bundaberg Solar Farm,Bundaberg Solar Farm,Large scale Solar PV,0.0143108125391258
+COHUNSF1,Cohuna Solar Farm,Large scale Solar PV,0.0143108125391258
+COLUMSF1,Columboola Solar Farm,Large scale Solar PV,0.0143108125391258
+CRWASF1,Corowa Solar Farm,Large scale Solar PV,0.0143108125391258
+Culcairn Solar Farm,Culcairn Solar Farm,Large scale Solar PV,0.0143108125391258
+EDENVSF1,Edenvale Solar Park,Large scale Solar PV,0.0143108125391258
+GANGARR1,Gangarri Solar Farm,Large scale Solar PV,0.0143108125391258
+GIRGSF,Girgarre Solar Farm,Large scale Solar PV,0.0143108125391258
+Goorambat East Solar Farm,Goorambat East Solar Farm,Large scale Solar PV,0.0143108125391258
+KEPSF1,Kennedy Energy Park Solar Farm,Large scale Solar PV,0.0143108125391258
+KINGASF1,Kingaroy Solar Farm,Large scale Solar PV,0.0143108125391258
+Lockhart Hybrid Facility - Solar,Lockhart Hybrid Facility - Solar,Large scale Solar PV,0.0143108125391258
+MANSF2,Mannum Solar Farm 2,Large scale Solar PV,0.0143108125391258
+METZSF1,Metz Solar Farm,Large scale Solar PV,0.0143108125391258
+QPSF,Quorn Park Solar Farm,Large scale Solar PV,0.0143108125391258
+Riverina Solar Farm,Riverina Solar Farm,Large scale Solar PV,0.0143108125391258
+SEBSF1,Sebastopol Solar Farm,Large scale Solar PV,0.0143108125391258
+Stubbo Solar Farm,Stubbo Solar Farm,Large scale Solar PV,0.0143108125391258
+TB2SF1,Tailem Bend Solar Farm - stage 2,Large scale Solar PV,0.0143108125391258
+Tilbuster Solar Farm,Tilbuster Solar Farm,Large scale Solar PV,0.0143108125391258
+WAGGNSF1,Wagga North Solar Farm,Large scale Solar PV,0.0143108125391258
+WLWLSF1,Walla Walla Solar Farm,Large scale Solar PV,0.0143108125391258
+WLWLSF2,Walla Walla Solar Farm,Large scale Solar PV,0.0143108125391258
+WANDSF1,Wandoan South Solar Farm - stage 1,Large scale Solar PV,0.0143108125391258
+WELNSF1,Wellington North Solar Farm (Lightsource),Large scale Solar PV,0.0143108125391258
+WOLARSF1,Wollar Solar Farm,Large scale Solar PV,0.0143108125391258
+WUNUSF1,Wunghnu Solar Farm,Large scale Solar PV,0.0143108125391258
+WYASF1,Wyalong Solar Farm,Large scale Solar PV,0.0143108125391258
+CLRKCWF1,Clarke Creek Wind Farm,Wind,0.0730926702039033
+CLRKCWF2,Clarke Creek Wind Farm,Wind,0.0730926702039033
+CROOKWF3,Crookwell 3 Wind Farm,Wind,0.0730926702039033
+FLYCRKWF,Flyers Creek Wind Farm,Wind,0.0730926702039033
+GPWFEST1,Golden Plains Wind Farm East,Wind,0.0730926702039033
+GPWFEST2,Golden Plains Wind Farm East,Wind,0.0730926702039033
+GPWFEST3,Golden Plains Wind Farm East,Wind,0.0730926702039033
+GSWF1A,Goyder South Wind Farm 1A,Wind,0.0730926702039033
+GSWF1B,Goyder South Wind Farm 1B,Wind,0.0730926702039033
+HD1WF1,Hawkesdale Wind Farm,Wind,0.0730926702039033
+KABANWF1,Kaban Green Power Hub - Wind Farm,Wind,0.0730926702039033
+KEPWF1,Kennedy Energy Park Wind Farm,Wind,0.0730926702039033
+MacIntyre Wind Farm,MacIntyre Wind Farm,Wind,0.0730926702039033
+MTGELWF1,Mt Gellibrand Wind Farm,Wind,0.0730926702039033
+RYANCWF1,Ryan Corner Wind Farm,Wind,0.0730926702039033
+Rye Park Wind Farm,Rye Park Wind Farm,Wind,0.0730926702039033
+Wambo Wind Farm,Wambo Wind Farm,Wind,0.0730926702039033
+Aldoga Solar Farm,Aldoga Solar Farm,Large scale Solar PV,0.0143108125391258
+Aramara Solar Farm,Aramara Solar Farm,Large scale Solar PV,0.0143108125391258
+Banksia Solar Farm,Banksia Solar Farm,Large scale Solar PV,0.0143108125391258
+Derby Solar Farm,Derby Solar Farm,Large scale Solar PV,0.0143108125391258
+Frasers Solar Farm,Frasers Solar Farm,Large scale Solar PV,0.0143108125391258
+Goulburn River Solar Farm,Goulburn River Solar Farm,Large scale Solar PV,0.0143108125391258
+Horsham Solar Farm,Horsham Solar Farm,Large scale Solar PV,0.0143108125391258
+Maryvale Solar Farm,Maryvale Solar Farm,Large scale Solar PV,0.0143108125391258
+Mortlake Energy Hub Solar Farm,Mortlake Energy Hub Solar Farm,Large scale Solar PV,0.0143108125391258
+Munna Creek Solar Farm,Munna Creek Solar Farm,Large scale Solar PV,0.0143108125391258
+New England Solar Farm 2,New England Solar Farm - Stage 2,Large scale Solar PV,0.0143108125391258
+Punch's Creek Renewable Energy Solar Farm,Punch's Creek Renewable Energy Solar Farm,Large scale Solar PV,0.0143108125391258
+GBWF1,Gawara Baya Wind Farm,Wind,0.0730926702039033
+Uungula Wind Farm,Uungula Wind Farm,Wind,0.0730926702039033
+Woolsthorpe Wind Farm,Woolsthorpe Wind Farm,Wind,0.0730926702039033
+BALB1,Ballarat Energy Storage System,Battery storage (1hr storage),0.115637889181807
+BOWWBA1,Bolivar Waste Water Treatment BESS,Battery storage (2hrs storage),0.115637889181807
+BBATTERY,Bouldercombe Battery project,Battery storage (2hrs storage),0.115637889181807
+BULBES1,Bulgana Green Power Hub BESS,Battery storage (2hrs storage),0.115637889181807
+DALNTH1,Dalrymple BESS,Battery storage (1hr storage),0.115637889181807
+DPNTB1,Darlington Point Energy Storage System,Battery storage (2hrs storage),0.115637889181807
+GANNB1,Gannawarra Energy Storage System,Battery storage (2hrs storage),0.115637889181807
+HVWWBA1,Happy Valley Reservoir BESS,Battery storage (2hrs storage),0.115637889181807
+HPR1,Hornsdale Power Reserve Unit 1,Battery storage (1hr storage),0.115637889181807
+LBBG1,Lake Bonney BESS,Battery storage (2hrs storage),0.115637889181807
+PIBESS1,Philip Island BESS,Battery storage (2hrs storage),0.115637889181807
+QBYNB1,Queanbeyan BESS,Battery storage (2hrs storage),0.115637889181807
+RANGEB1,Rangebank BESS,Battery storage (2hrs storage),0.115637889181807
+RESS1G,Riverina Energy Storage System 1,Battery storage (2hrs storage),0.115637889181807
+RIVNB2,Riverina Energy Storage System 2,Battery storage (2hrs storage),0.115637889181807
+VBB1,Victorian Big Battery,Battery storage (2hrs storage),0.115637889181807
+WALGRV1,Wallgrove Grid Battery project,Battery storage (2hrs storage),0.115637889181807
+WANDB1,Wandoan South BESS,Battery storage (2hrs storage),0.115637889181807
+ADPBA1,Adelaide Desalination Plant BESS,Battery storage (2hrs storage),0.115637889181807
+BLYTHB1,Blyth BESS,Battery storage (2hrs storage),0.115637889181807
+BHBG1,Broken Hill BESS,Battery storage (1hr storage),0.115637889181807
+CAPBES1,Capital Battery,Battery storage (2hrs storage),0.115637889181807
+CHBESSG1,Chinchilla BESS,Battery storage (2hrs storage),0.115637889181807
+CBWWBA1,Christies Beach Wastewater Treatment Plant BESS,Battery storage (2hrs storage),0.115637889181807
+Clements Gap BESS,Clements Gap BESS,Battery storage (2hrs storage),0.115637889181807
+Eraring Big Battery,Eraring Big Battery,Battery storage (2hrs storage),0.115637889181807
+GREENB1,Greenbank BESS,Battery storage (2hrs storage),0.115637889181807
+HBESS1,Hazelwood BESS,Battery storage (1hr storage),0.115637889181807
+Koorangie Energy Storage System,Koorangie Energy Storage System,Battery storage (2hrs storage),0.115637889181807
+LaTrobe Valley BESS,LaTrobe Valley BESS,Battery storage (2hrs storage),0.115637889181807
+Liddell BESS,Liddell BESS,Battery storage (4hrs storage),0.115637889181807
+Lockhart Hybrid Facility - Battery,Lockhart Hybrid Facility - Battery,Battery storage (2hrs storage),0.115637889181807
+Melbourne Renewable Energy Hub - Side A,Melbourne Renewable Energy Hub - Side A,Battery storage (2hrs storage),0.115637889181807
+QPBESS,Quorn Park BESS,Battery storage (2hrs storage),0.115637889181807
+TB2BG1,Tailem Bend Battery Project,Battery storage (2hrs storage),0.115637889181807
+Tarong BESS,Tarong BESS,Battery storage (1hr storage),0.115637889181807
+Templers BESS,Templers BESS,Battery storage (2hrs storage),0.115637889181807
+TIB1,Torrens Island BESS,Battery storage (1hr storage),0.115637889181807
+ULBESS,Ulinda Park BESS,Battery storage (2hrs storage),0.115637889181807
+WTAHB1,Waratah Super Battery,Battery storage (2hrs storage),0.115637889181807
+WDBESS1,Western Downs Battery,Battery storage (1hr storage),0.115637889181807
+Aldoga BESS Stage 1,Aldoga BESS Stage 1,Battery storage (1hr storage),0.115637889181807
+Brendale BESS,Brendale BESS,Battery storage (2hrs storage),0.115637889181807
+Bungama Solar BESS,Bungama Solar BESS,Battery storage (2hrs storage),0.115637889181807
+Eraring Big Battery 2,Eraring Big Battery 2,Battery storage (2hrs storage),0.115637889181807
+GBBATT1,Gawara Baya Wind Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Gnarwarre BESS,Gnarwarre BESS,Battery storage (2hrs storage),0.115637889181807
+Limondale BESS,Limondale BESS,Battery storage (8hrs storage),0.115637889181807
+LGAPBS1,Lincoln Gap Wind Farm BESS,Battery storage (1hr storage),0.115637889181807
+Mannum BESS,Mannum BESS,Battery storage (2hrs storage),0.115637889181807
+Maryvale Solar Farm BESS,Maryvale Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Mortlake Battery,Mortlake Battery,Battery storage (2hrs storage),0.115637889181807
+Mortlake Energy Hub BESS,Mortlake Energy Hub BESS,Battery storage (2hrs storage),0.115637889181807
+Mt Fox BESS,Mt Fox BESS,Battery storage (2hrs storage),0.115637889181807
+New England Solar Farm BESS,New England Solar Farm BESS,Battery storage (1hr storage),0.115637889181807
+ORANA,Orana BESS,Battery storage (4hrs storage),0.115637889181807
+Richmond Valley BESS,Richmond Valley BESS,Battery storage (8hrs storage),0.115637889181807
+Silver City Energy Storage,Silver City Energy Storage,Battery storage (8hrs storage),0.0
+Smithfield BESS,Smithfield BESS,Battery storage (2hrs storage),0.115637889181807
+Stanwell BESS,Stanwell BESS,Battery storage (2hrs storage),0.115637889181807
+Swanbank BESS,Swanbank BESS,Battery storage (2hrs storage),0.115637889181807
+TRGBESS,Terang BESS,Battery storage (2hrs storage),0.115637889181807
+Wooreen Energy Storage System,Wooreen Energy Storage System,Battery storage (4hrs storage),0.115637889181807
+Kogan Gas,Brigalow GT,OCGT (large GT),0.73
+Fulham Solar Farm,Fulham Solar Farm,Large scale Solar PV,0.0143108125391258
+Solar River Solar Farm,Solar River Solar Farm,Large scale Solar PV,0.0143108125391258
+Coppabella Wind Farm,Coppabella Wind Farm,Wind,0.0730926702039033
+Derby Solar Project BESS,Derby Solar Project BESS,Battery storage (2hrs storage),0.115637889181807
+Fulham Solar Farm BESS,Fulham Solar Farm BESS,Battery storage (1hr storage),0.115637889181807
+Goulburn River BESS,Goulburn River BESS,Battery storage (8hrs storage),0.115637889181807
+Hallett BESS,Hallett BESS,Battery storage (4hrs storage),0.115637889181807
+Horsham Solar Farm BESS,Horsham Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Limestone Coast West BESS,Limestone Coast West BESS,Battery storage (2hrs storage),0.115637889181807
+Solar River Solar Farm BESS,Solar River Solar Farm BESS,Battery storage (4hrs storage),0.115637889181807
+Springvale Energy Hub BESS,Springvale Energy Hub BESS,Battery storage (2hrs storage),0.115637889181807
+Mornington BESS,Mornington BESS,Battery storage (2hrs storage),0.115637889181807
+Tamworth BESS,Tamworth BESS,Battery storage (2hrs storage),0.115637889181807
+Tamworth BESS 2,Tamworth BESS,Battery storage (2hrs storage),0.115637889181807
+QEJP - Borumba,QEJP - Borumba,Pumped Hydro (24hrs storage),0.51871260199456
+Broadsound BESS,Broadsound BESS,Battery storage (2hrs storage),0.115637889181807
+Calala BESS 1,Calala BESS 1,Battery storage (2hrs storage),0.115637889181807
+Calala BESS 2,Calala BESS 2,Battery storage (2hrs storage),0.115637889181807
+Glanmire Solar Farm BESS,Glanmire Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Ravenswood BESS,Ravenswood BESS,Battery storage (4hrs storage),0.115637889181807
+Bullyard Solar Farm,Bullyard Solar Farm,Large scale Solar PV,0.0143108125391258
+Glanmire Solar Farm,Glanmire Solar Farm,Large scale Solar PV,0.0143108125391258
+Ravenswood Solar Farm,Ravenswood Solar Farm,Large scale Solar PV,0.0143108125391258
+Lockyer Valley GT,Lockyer Valley GT,OCGT (small GT),0.734583937815513
+Boulder Creek Wind Farm,Boulder Creek Wind Farm,Wind,0.0730926702039033
+Inverleigh Wind Farm,Inverleigh Wind Farm,Wind,0.0730926702039033
+Port Latta Wind Farm,Port Latta Wind Farm,Wind,0.0730926702039033
+Valley of the Winds Wind Farm,Valley of the Winds,Wind,0.0730926702039033
+Woolooga BESS,Woolooga BESS,Battery storage (2hrs storage),0.115637889181807
+Supernode BESS 1,Supernode BESS 1,Battery storage (4hrs storage),0.115637889181807
+Supernode BESS 2,Supernode BESS 2,Battery storage (4hrs storage),0.115637889181807
+Golden Plains West Wind Farm,Golden Plains West Wind Farm,Wind,0.0730926702039033
+Lotus Creek Wind Farm,Lotus Creek Wind Farm,Wind,0.0730926702039033
+Barnawartha Solar Farm BESS,Barnawartha Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Barwon Solar Farm BESS,Barwon Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Bungama BESS,Bungama BESS,Battery storage (2hrs storage),0.115637889181807
+Elaine Solar Farm BESS,Elaine Solar Farm BESS,Battery storage (2hrs storage),0.115637889181807
+Ganymirra Solar Power Station BESS,Ganymirra Solar Power Station BESS,Battery storage (2hrs storage),0.115637889181807
+Junction Rivers Wind Farm BESS,Junction Rivers Wind Farm BESS,Battery storage (4hrs storage),0.115637889181807
+Majors Creek Solar Power Station BESS,Majors Creek Power Station BESS,Battery storage (4hrs storage),0.115637889181807
+West Mokoan Solar Farm BESS,West Mokoan Solar Farm BESS,Battery storage (4hrs storage),0.115637889181807
+Griffith BESS,Griffith BESS,Battery storage (8hrs storage),0.115637889181807
+Stoney Creek BESS,Stoney Creek BESS,Battery storage (8hrs storage),0.115637889181807
+Barnawartha Solar Farm,Barnawartha Solar Farm,Large scale Solar PV,0.0143108125391258
+Barwon Solar Farm,Barwon Solar Farm,Large scale Solar PV,0.0143108125391258
+Campbells Forest Solar Farm,Campbells Forest Solar Farm,Large scale Solar PV,0.0143108125391258
+Elaine Solar Farm,Elaine Solar Farm,Large scale Solar PV,0.0143108125391258
+Ganymirra Solar Power Station,Ganymirra Solar Power Station,Large scale Solar PV,0.0143108125391258
+Hopeland Solar Farm,Hopeland Solar Farm,Large scale Solar PV,0.0143108125391258
+Majors Creek Solar Power Station,Majors Creek Power Station,Large scale Solar PV,0.0143108125391258
+Sandy Creek Solar Farm,Sandy Creek Solar Farm,Large scale Solar PV,0.0143108125391258
+West Mokoan Solar Farm,West Mokoan Solar Farm,Large scale Solar PV,0.0143108125391258
+Phoenix Pumped Hydro Project,Phoenix Pumped Hydro Project,Pumped Hydro (10hrs storage),0.51871260199456
+Goyder North Wind Farm,Goyder North Wind Farm,Wind,0.0730926702039033
+Junction Rivers Wind Farm,Junction Rivers Wind Farm,Wind,0.0730926702039033
+Kentbruck Green Power Hub Wind Farm,Kentbruck Green Power Hub Wind Farm,Wind,0.0730926702039033
+Palmer Wind Farm,Palmer Wind Farm,Wind,0.0730926702039033
+Spicers Creek Wind Farm,Spicers Creek Wind Farm,Wind,0.0730926702039033
+Thunderbolt Wind Farm,Thunderbolt Wind Farm,Wind,0.0730926702039033
+Haughton Solar Farm Stage 2,Haughton Solar Farm Stage 2,Large scale Solar PV,0.0143108125391258
+Lancaster Solar Farm,Lancaster Solar Farm,Large scale Solar PV,0.0143108125391258
+Bennetts Creek BESS,Bennetts Creek BESS,Battery storage (2hrs storage),0.115637889181807
+Northern Midlands Solar Farm,Northern Midlands Solar Farm,Large scale Solar PV,0.0143108125391258
+Hay Sun Farm,Hay Sun Farm,Large scale Solar PV,0.0143108125391258
+MOKOSF1,Mokoan Solar Farm,Large scale Solar PV,0.0143108125391258
+Kiamal BESS,Kiamal BESS,Battery storage (4hrs storage),0.115637889181807
+Pine Lodge BESS,Pine Lodge BESS,Battery storage (2hrs storage),0.115637889181807

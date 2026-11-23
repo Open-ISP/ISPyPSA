@@ -78,6 +78,16 @@ def test_template_generators_new_entrant(csv_str_to_df):
             Q1,                 122.0
             NQ,                 115.0
         """),
+        "emissions_intensity_new_entrants": csv_str_to_df("""
+            Technology,       Scope 1 emissions intensity (kg/MWh as-gen)
+            Wind,             0.0
+            OCGT (small GT),  490.0
+        """),
+        "auxiliary_load_new_entrants": csv_str_to_df("""
+            Generator,        Auxiliary load (% of generation)
+            Wind,             0.07
+            OCGT (small GT),  2.0
+        """),
     }
 
     result = _template_generators_new_entrant(

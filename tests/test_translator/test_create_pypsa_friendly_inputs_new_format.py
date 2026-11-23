@@ -161,6 +161,7 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
         "objective",
         "generators",
         "stores",
+        "model_year",
     ]
     # Half-hourly snapshots for financial years 2026 to 2028: 1096 days
     # (2028 includes a leap day) of 48 snapshots.

@@ -492,10 +492,10 @@ def test_update_timeseries_applies_operational_snapshot_weightings(
     # Half-hourly, where capacity expansion is hourly. The first snapshot is also a
     # capacity expansion snapshot; the other two are not.
     operational_snapshots = csv_str_to_df("""
-        investment_periods,  snapshots,            objective,  generators,  stores
-        2025,                2025-01-01 01:00:00,  2920.0,     2920.0,      0.5
-        2025,                2025-01-08 00:30:00,  2920.0,     2920.0,      0.5
-        2025,                2025-01-08 01:00:00,  2920.0,     2920.0,      0.5
+        investment_periods,  snapshots,            objective,  generators,  stores,  model_year
+        2025,                2025-01-01 01:00:00,  2920.0,     2920.0,      0.5,     2025
+        2025,                2025-01-08 00:30:00,  2920.0,     2920.0,      0.5,     2025
+        2025,                2025-01-08 01:00:00,  2920.0,     2920.0,      0.5,     2025
     """)
 
     buses = csv_str_to_df("""
@@ -550,7 +550,9 @@ def test_update_timeseries_applies_operational_snapshot_weightings(
 
     # Without the operational weightings applied, 2025-01-01 01:00 would keep the
     # capacity expansion weightings (4380, 4380, 1.0) and the two 2025-01-08
-    # snapshots would get PyPSA's default of 1.0 in every column.
+    # snapshots would get PyPSA's default of 1.0 in every column. Only the three
+    # weighting columns are taken: model_year is a property of the snapshot, not a
+    # weighting.
     expected_weightings = csv_str_to_df("""
         period,  timestep,             objective,  generators,  stores
         2025,    2025-01-01 01:00:00,  2920.0,     2920.0,      0.5
