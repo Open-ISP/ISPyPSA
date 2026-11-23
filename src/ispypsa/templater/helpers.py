@@ -599,20 +599,18 @@ def _collapse_geo_id_and_average(
 
 
 def _assert_table_valid(
-    table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
+    table: pd.DataFrame, table_name: str, required_cols: set[str]
 ) -> None:
     """Asserts a source table has every required column and isn't empty.
 
-    Shared precondition check for tables merged in the new-format templater modules —
+    Shared precondition check for tables read by the new-format templater modules —
     guards against two silent-failure modes: a missing column producing a KeyError, and
-    an empty table merging to an all-NaN column with no warning.
+    an empty table producing all-NaN or empty output with no warning.
 
     Args:
         table: the source table to validate, e.g. ``iasr_tables["battery_properties"]``.
         table_name: ``table``'s IASR table name, used to name it in error messages.
-        required_cols: every column the downstream merge reads from ``table``.
-        merge_desc: short description of what would be merged, named in the
-            empty-table error, e.g. ``"properties '['fom']'"`` or ``"'lcf_build'"``.
+        required_cols: every column the downstream code reads from ``table``.
 
     Raises:
         ValueError: if any of ``required_cols`` is missing from ``table``, or if
@@ -625,7 +623,6 @@ def _assert_table_valid(
 
         table_name: "fixed_opex_new_entrants"
         required_cols: {"Technology", "Base value"}
-        merge_desc: "properties '['fom']'"
 
         # No ValueError raised: table has rows, both required columns present.
     """
@@ -635,7 +632,7 @@ def _assert_table_valid(
             f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
         )
     if table.empty:
-        raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
+        raise ValueError(f"'{table_name}' table is empty")
 
 
 def _group_properties_by_source(
@@ -769,7 +766,6 @@ def _merge_category_keyed_properties(
             table,
             table_name,
             _required_property_columns(props),
-            f"{sorted(props.keys())}",
         )
         matched_key_col = _fuzzy_map_to_allowed_values(
             df[df_key_col],

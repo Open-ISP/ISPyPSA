@@ -500,7 +500,6 @@ def _merge_lcf_om(
         locational_cost_factors,
         "locational_cost_factors",
         {zone_col, om_col},
-        "'lcf_om'",
     )
     om_by_geo_id = pd.to_numeric(
         locational_cost_factors.set_index(zone_col)[om_col], errors="raise"
@@ -539,7 +538,6 @@ def _reshape_technology_specific_lcfs(
         technology_specific_lcfs,
         "technology_specific_lcfs",
         {zone_col, description_col},
-        "'lcf_build'",
     )
     technology_cols = technology_specific_lcfs.columns.difference(
         [zone_col, description_col]

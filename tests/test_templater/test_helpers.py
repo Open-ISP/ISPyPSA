@@ -942,9 +942,7 @@ def test_assert_table_valid_passes(csv_str_to_df):
         Wind,        20.0
     """)
     # should not raise
-    _assert_table_valid(
-        table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
-    )
+    _assert_table_valid(table, "fixed_opex_new_entrants", {"Technology", "Base value"})
 
 
 def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
@@ -963,24 +961,21 @@ def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
             table,
             table_name="fixed_opex_new_entrants",
             required_cols={"Technology", "Storage hours"},
-            merge_desc="'fom'",
         )
 
 
 def test_assert_table_valid_raises_empty_table():
-    # Table has both required columns but no rows -> raise, naming what would
-    # have been merged.
+    # Table has both required columns but no rows -> raise, naming the table.
     table = pd.DataFrame(columns=["Technology", "Base value"])
 
     with pytest.raises(
         ValueError,
-        match=r"'fixed_opex_new_entrants' table is empty - cannot merge 'fom'",
+        match=r"'fixed_opex_new_entrants' table is empty",
     ):
         _assert_table_valid(
             table,
             table_name="fixed_opex_new_entrants",
             required_cols={"Technology", "Base value"},
-            merge_desc="'fom'",
         )
 
 

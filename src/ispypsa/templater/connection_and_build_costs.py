@@ -719,7 +719,7 @@ def _read_cost_table(
     """
     table = iasr_tables[table_name]
     renames = _COST_TABLE_COLUMN_RENAMES[table_name]
-    _assert_table_valid(table, table_name, set(renames), "new entrant cost data")
+    _assert_table_valid(table, table_name, set(renames))
     return table.rename(columns=renames)
 
 
