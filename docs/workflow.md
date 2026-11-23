@@ -286,7 +286,9 @@ you can also create the PyPSA friendly operational timeseries data at this stage
     ispypsa_tables = read_csvs(ispypsa_input_tables_directory)
 
     # Load PyPSA friendly input tables (for generators)
-    pypsa_friendly_input_tables = read_csvs(pypsa_friendly_inputs_location)
+    pypsa_friendly_input_tables = read_csvs(
+        pypsa_friendly_inputs_location, schemas="pypsa_friendly_tables"
+    )
 
     # Create timeseries inputs
     operational_snapshots = create_pypsa_friendly_timeseries_inputs(
@@ -367,7 +369,9 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     )
 
     # Load pypsa friendly inputs
-    pypsa_tables = read_csvs(pypsa_friendly_inputs_location)
+    pypsa_tables = read_csvs(
+        pypsa_friendly_inputs_location, schemas="pypsa_friendly_tables"
+    )
 
     # Build a PyPSA network object.
     network = build_pypsa_network(
@@ -440,7 +444,9 @@ computational complexity.
     )
 
     # Load pypsa friendly inputs
-    pypsa_tables = read_csvs(pypsa_friendly_inputs_location)
+    pypsa_tables = read_csvs(
+        pypsa_friendly_inputs_location, schemas="pypsa_friendly_tables"
+    )
 
     # Load the capacity expansion network
     network = pypsa.Network(capacity_expansion_pypsa_file)

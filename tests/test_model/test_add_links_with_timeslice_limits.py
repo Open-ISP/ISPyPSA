@@ -2,6 +2,7 @@ import pandas as pd
 import pypsa
 import pytest
 
+from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.pypsa_build.links import (
     _add_links_to_network,
     _expand_limits_to_snapshots,
@@ -98,15 +99,14 @@ def test_fallback_only_attribute_gets_the_fallback_at_every_snapshot(csv_str_to_
     pd.testing.assert_frame_equal(_link_pu_limits(network, "CQ-NQ_existing"), expected)
 
 
-@pytest.mark.xfail(
-    reason="Open-ISP/ISPyPSA#138: an all-blank timeslice column is read from CSV as "
-    "float64 and cannot be merged onto the object-typed (empty) timeslice_snapshots",
-    raises=ValueError,
-    strict=True,
-)
-def test_fallback_only_limits_with_no_timeslices_apply_at_every_snapshot(csv_str_to_df):
+def test_fallback_only_limits_with_no_timeslices_apply_at_every_snapshot(
+    csv_str_to_df, tmp_path
+):
     # The translator emits this shape for zero-capacity corridors and all-default
-    # paths in a run with no timeslices configured.
+    # paths in a run with no timeslices configured. The tables go through CSV,
+    # as they do in the CLI, and are read with their schema types: inferred,
+    # the all-blank timeslice column is float64 and can't be merged onto the
+    # header-only timeslice_snapshots (Open-ISP/ISPyPSA#138).
     network = _network()
     link_timeslice_limits = csv_str_to_df("""
         name,            attribute,  timeslice,  value
@@ -116,9 +116,20 @@ def test_fallback_only_limits_with_no_timeslices_apply_at_every_snapshot(csv_str
     timeslice_snapshots = csv_str_to_df("""
         timeslice,  investment_periods,  snapshots
     """)
+    write_csvs(
+        {
+            "link_timeslice_limits": link_timeslice_limits,
+            "timeslice_snapshots": timeslice_snapshots,
+        },
+        tmp_path,
+    )
+    tables = read_csvs(tmp_path, schemas="pypsa_friendly_tables")
 
     _add_links_to_network(
-        network, _links(csv_str_to_df), link_timeslice_limits, timeslice_snapshots
+        network,
+        _links(csv_str_to_df),
+        tables["link_timeslice_limits"],
+        tables["timeslice_snapshots"],
     )
 
     expected = csv_str_to_df("""
