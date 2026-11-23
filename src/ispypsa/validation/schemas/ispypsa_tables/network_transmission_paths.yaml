@@ -12,6 +12,7 @@ description: >
     - `flow_path_transfer_capability`
     - `renewable_energy_zones`
     - `flow_path_augmentation_options_<flow_path>`
+    - `inter_regional_loss_equations_existing`
 
   Source notes:
   Where augmentation options exist for a corridor with no existing path (a new
@@ -48,3 +49,19 @@ columns:
     required: true
     allowed_values: [AC, DC]
     description: Transmission technology.
+  loss_group:
+    type: string
+    required: false
+    allowed_values_from:
+      - network_transmission_losses: loss_group
+    description: >
+      Loss group the path belongs to: the set of paths whose combined flow one
+      loss curve in network_transmission_losses is applied to. In templated
+      tables a flow path is in the group named for it, or for its corridor
+      where the IASR gives one curve for parallel paths (CNSW-SNW_NTH and
+      CNSW-SNW_STH are both in CNSW-SNW). Paths in a group must share their
+      geo_from and geo_to.
+
+      If absent (or empty):
+      No losses are modelled on the path. Templated REZ connection paths have
+      no loss group.

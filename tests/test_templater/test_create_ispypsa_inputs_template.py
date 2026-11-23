@@ -285,6 +285,17 @@ def _stub_reference_year_sequence(csv_str_to_df) -> pd.DataFrame:
     """)
 
 
+def _stub_network_loss_equations(csv_str_to_df) -> pd.DataFrame:
+    """Loss equations for the flow paths the stub IASR tables use: CQ-NQ, the
+    CNSW-SNW corridor and NNSW-SQ."""
+    return csv_str_to_df("""
+        status,    loss_group,  option,  flow_basis,  loss_constant,  loss_linear,  loss_quadratic,  from_loss_proportion,  to_loss_proportion,  date_from
+        existing,  CQ-NQ,       ,        signed,      0.0,            0.03,         0.00006,         0.25,                  0.75,
+        existing,  CNSW-SNW,    ,        signed,      0.0,            -0.07,        0.00001,         0.53,                  0.47,
+        existing,  NNSW-SQ,     ,        signed,      0.0,            0.04,         0.00005,         0.72,                  0.28,
+    """)
+
+
 def test_list_templater_output_files_granularity_invariant():
     """The new-format templater declares the same output set at every granularity.
 
@@ -512,6 +523,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
+                "network_loss_equations": _stub_network_loss_equations(csv_str_to_df),
             },
             iasr_workbook_version="7.5",
         )
@@ -525,7 +537,32 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     assert len(geography) == 10
 
     paths = result["network_transmission_paths"]
-    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    assert set(paths.columns) == {
+        "path_id",
+        "geo_from",
+        "geo_to",
+        "carrier",
+        "loss_group",
+    }
+    # CQ-NQ is in its own loss group and the three CNSW-SNW paths share one;
+    # the REZ and non-REZ connections have none.
+    assert paths["loss_group"].notna().sum() == 4
+
+    # One forward and one reverse row for each of the stub's three loss
+    # equations. The content is covered by the per-module tests.
+    losses = result["network_transmission_losses"]
+    assert set(losses.columns) == {
+        "loss_group",
+        "direction",
+        "loss_constant",
+        "loss_linear",
+        "loss_quadratic",
+        "to_loss_proportion",
+        "expansion_loss_factor",
+        "date_from",
+    }
+    assert len(losses) == 6
+
     # CQ-NQ + 2 REZ connections (Q1-NQ, N3-CNSW) + CNSW-SNW_NTH + CNSW-SNW_STH
     # + CNSW-SNW (injected by _new_parallel_path_rows).
     # + N0-CNSW and V0-SEV (non-REZ geos)
@@ -834,6 +871,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
+                "network_loss_equations": _stub_network_loss_equations(csv_str_to_df),
             },
             iasr_workbook_version="7.5",
         )
@@ -847,7 +885,29 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     assert len(geography) == 8
 
     paths = result["network_transmission_paths"]
-    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    assert set(paths.columns) == {
+        "path_id",
+        "geo_from",
+        "geo_to",
+        "carrier",
+        "loss_group",
+    }
+
+    # Only NNSW-SQ's loss group survives, re-keyed to NSW-QLD: a forward and a
+    # reverse row. The content is covered by the per-module tests.
+    losses = result["network_transmission_losses"]
+    assert set(losses.columns) == {
+        "loss_group",
+        "direction",
+        "loss_constant",
+        "loss_linear",
+        "loss_quadratic",
+        "to_loss_proportion",
+        "expansion_loss_factor",
+        "date_from",
+    }
+    assert set(losses["loss_group"]) == {"NSW-QLD"}
+    assert len(losses) == 2
 
     # CQ-NQ (intra-QLD) dropped; NNSW-SQ (cross-region) kept;
     # 2 REZ and 2 non-REZ paths kept.
@@ -1045,6 +1105,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
                 "reference_year_sequence": _stub_reference_year_sequence(csv_str_to_df),
+                "network_loss_equations": _stub_network_loss_equations(csv_str_to_df),
             },
             iasr_workbook_version="7.5",
         )
@@ -1057,7 +1118,29 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     assert len(geography) == 5  # 1 NEM row + 2 REZs + 2 non-REZs
 
     paths = result["network_transmission_paths"]
-    assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
+    assert set(paths.columns) == {
+        "path_id",
+        "geo_from",
+        "geo_to",
+        "carrier",
+        "loss_group",
+    }
+
+    # No flow paths, so no loss groups. The content is covered by the
+    # per-module tests.
+    losses = result["network_transmission_losses"]
+    assert set(losses.columns) == {
+        "loss_group",
+        "direction",
+        "loss_constant",
+        "loss_linear",
+        "loss_quadratic",
+        "to_loss_proportion",
+        "expansion_loss_factor",
+        "date_from",
+    }
+    assert len(losses) == 0
+
     # CQ-NQ flow path dropped; only two REZ-to-NEM and two non-REZ-to-NEM paths remain.
     assert len(paths) == 4
 

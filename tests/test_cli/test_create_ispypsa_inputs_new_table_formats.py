@@ -297,6 +297,16 @@ _EXPECTED_EXPANSION_COST_ROWS_75 = {
     "single_region": 1209,
 }
 
+# A forward and a reverse row per loss curve. sub_regions has the 17 existing
+# flow path curves plus HumeLink's dated curve for SNSW-CNSW; nem_regions keeps
+# the 7 groups whose paths cross a NEM region boundary; single_region models no
+# flow paths at all.
+_EXPECTED_LOSS_ROWS_75 = {
+    "sub_regions": 36,
+    "nem_regions": 14,
+    "single_region": 0,
+}
+
 _EXPECTED_COSTS_CONNECTION_ROWS_75 = {
     "sub_regions": 15190,
     "nem_regions": 10540,
@@ -381,6 +391,7 @@ def test_create_ispypsa_inputs_new_format(
     geo = pd.read_csv(output_dir / "network_geography.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
+    losses = pd.read_csv(output_dir / "network_transmission_losses.csv")
     options = pd.read_csv(output_dir / "network_expansion_options.csv")
     costs = pd.read_csv(output_dir / "network_transmission_path_expansion_costs.csv")
     costs_connection = pd.read_csv(output_dir / "costs_connection.csv")
@@ -416,6 +427,12 @@ def test_create_ispypsa_inputs_new_format(
     assert len(limits) == expected_limits
     # Every path has at least one limit row; no orphan limits.
     assert set(limits["path_id"]) == set(paths["path_id"])
+
+    # network_transmission_losses — every loss group has paths, and every
+    # path's loss group has a curve. The content is covered by the per-module
+    # tests.
+    assert len(losses) == _EXPECTED_LOSS_ROWS_75[granularity]
+    assert set(losses["loss_group"]) == set(paths["loss_group"].dropna())
 
     # network_expansion_options — each surviving flow-path option emits paired
     # forward + reverse rows sharing one expansion_id; REZ constraint

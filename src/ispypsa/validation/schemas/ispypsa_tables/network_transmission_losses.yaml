@@ -1,0 +1,127 @@
+table: network_transmission_losses
+required: false
+unique:
+  - [loss_group, direction, date_from]
+description: >
+  Loss curves for transmission paths: the power lost, in MW, as a function of
+  the power flowing.
+
+  A loss group is the set of paths that share one curve; each path names its
+  group in network_transmission_paths.loss_group. The curve is applied to the
+  combined flow on the group's paths. Each row gives the curve for flow in one
+  direction:
+
+      loss = loss_constant + loss_linear * flow + loss_quadratic * flow^2
+
+  where flow is the MW flowing in the row's direction, zero or more. The loss
+  is shared between the two ends of the path by to_loss_proportion.
+
+  A curve can change over time: a row with a date_from takes over from the
+  group's earlier row for the same direction. For each investment period, the
+  row active at the period's start applies for the whole period.
+
+  Source tables:
+    - `inter_regional_loss_equations_existing`
+    - `inter_regional_loss_equations_committed_and_anticipated`
+    - `inter_regional_loss_equations_development_options`
+    - `flow_path_transfer_capability`
+
+  Source notes:
+  The three loss equation tables hold their equations as text, so they are
+  extracted by hand (`network_loss_equations.csv` in the `templater`'s manually
+  extracted tables). An AC path's equation is in signed flow, positive in the
+  forward direction, so its reverse row has the opposite sign on loss_linear.
+  A DC link's equation is in the size of the flow, so both rows are the same.
+  The committed projects' curves are dated with the dates AEMO's PLEXOS model
+  uses. The development options' equations are only used to derive
+  expansion_loss_factor. `flow_path_transfer_capability` is only used to carry
+  the loss groups onto the path ids of the regional granularity.
+
+  If absent:
+  No transmission losses are modelled.
+custom_validation:
+  - name: both_directions_are_defined
+    description: >
+      A loss group and date_from with a row for one direction must have a row
+      for the other. For example, a group with only a forward row fails.
+  - name: directions_share_a_loss_proportion
+    description: >
+      The forward and reverse rows of a loss group and date_from must have the
+      same to_loss_proportion: the split is between the two ends of the path,
+      whichever way the power flows.
+  - name: curves_are_convex
+    description: >
+      Taken together, a group's forward and reverse curves must be convex in
+      signed flow: loss_quadratic must not be negative, and the sum of the
+      forward and reverse loss_linear values must not be negative by more than
+      a rounding error. The model holds the loss above the curve, which only
+      gives the right loss when the curve is convex. A small dip near zero
+      flow, as on Basslink, is flattened by the `translator`.
+columns:
+  loss_group:
+    type: string
+    required: true
+    allowed_values_from:
+      - network_transmission_paths: loss_group
+    description: >
+      Identifier of the loss group the curve belongs to. In templated tables
+      this is the id of the sub-regional flow path the IASR gives the curve
+      for.
+  direction:
+    type: string
+    required: true
+    allowed_values: [forward, reverse]
+    description: >
+      Direction of flow the row's curve is for, relative to the geo_from and
+      geo_to of the group's paths.
+  loss_constant:
+    type: float
+    required: true
+    units: MW
+    description: Loss at any flow, including zero.
+  loss_linear:
+    type: float
+    required: true
+    units: MW/MW
+    description: >
+      Loss per MW of flow. Negative where flow in this direction reduces
+      losses elsewhere in the network.
+  loss_quadratic:
+    type: float
+    required: true
+    units: MW/MW^2
+    gte: 0.0
+    description: Loss per MW of flow squared.
+  to_loss_proportion:
+    type: float
+    required: true
+    gte: 0.0
+    lte: 1.0
+    description: >
+      Share of the loss that falls at the geo_to end of the group's paths. The
+      rest falls at the geo_from end.
+  expansion_loss_factor:
+    type: float
+    required: false
+    description: >
+      Fraction of the flow on the group's expansion that is lost, for a group
+      whose expansion is a separate asset in parallel with the existing one
+      (in templated tables, Marinus Link alongside Basslink on TAS-SEV).
+
+      If absent (or empty):
+      Expanding the group's paths upgrades the existing network: flow on the
+      expansion is added to the flow the group's curve is applied to.
+  date_from:
+    type: datetime
+    required: false
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date this row's curve takes effect. For each investment period, the row
+      active at the period's start applies for the whole period. A period
+      starts on 1 July of the preceding year when year_type is fy, and on
+      1 January otherwise. A dated row has no end date: it holds until a later
+      row for the same loss group and direction supersedes it.
+
+      If absent (or empty):
+      The curve applies from the start of the model horizon (until another
+      row's date_from supersedes it).

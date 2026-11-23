@@ -44,6 +44,10 @@ from ispypsa.templater.network_expansion import (
     _filter_flow_path_augmentations_to_granularity,
     _template_network_expansion,
 )
+from ispypsa.templater.network_losses import (
+    _add_loss_group_column,
+    _template_network_losses,
+)
 from ispypsa.templater.new_entrants import (
     _template_generators_new_entrant,
     _template_storage_new_entrant,
@@ -104,6 +108,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_geography",
     "network_transmission_paths",
     "network_transmission_path_limits",
+    "network_transmission_losses",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
     "timeslices",
@@ -230,8 +235,16 @@ def create_ispypsa_inputs_template(
             regional_granularity,
             flow_path_options,
         )
-        template["network_transmission_paths"] = paths
+        losses = _template_network_losses(
+            manually_extracted_tables["network_loss_equations"],
+            iasr_tables["flow_path_transfer_capability"],
+            iasr_tables["renewable_energy_zones"],
+            sub_regional_geography,
+            regional_granularity,
+        )
+        template["network_transmission_paths"] = _add_loss_group_column(paths, losses)
         template["network_transmission_path_limits"] = limits
+        template["network_transmission_losses"] = losses
         expansion_options, expansion_costs = _template_network_expansion(
             flow_path_options=flow_path_options,
             flow_path_costs=flow_path_costs,
