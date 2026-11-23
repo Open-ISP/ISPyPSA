@@ -26,10 +26,7 @@ either the ISPyPSA CLI or API:
     ```Python
     from ispypsa.data_fetch import fetch_workbook
 
-    fetch_workbook(
-        workbook_version="6.0",
-        save_path="path/to/save/iasr_workbook.xlsx"
-    )
+    fetch_workbook(workbook_version="6.0", save_path="path/to/save/iasr_workbook.xlsx")
     ```
 
 ### Trace data
@@ -53,9 +50,7 @@ or API:
     from ispypsa.data_fetch import fetch_trace_data
 
     fetch_trace_data(
-        dataset_type="example",
-        dataset_year=2024,
-        save_directory="path/to/save/directory"
+        dataset_type="example", dataset_year=2024, save_directory="path/to/save/directory"
     )
     ```
 
@@ -84,7 +79,7 @@ parsing can be run using either the ISPyPSA CLI or API:
     build_local_cache(
         cache_path="path/to/cache/location",
         workbook_path="path/to/iasr_workbook.xlsx",
-        iasr_workbook_version="6.0"
+        iasr_workbook_version="6.0",
     )
     ```
 
@@ -140,9 +135,7 @@ run using either ISPyPSA CLI or API.
 
     # Get raw IASR tables
     iasr_tables = read_csvs(parsed_workbook_cache)
-    manually_extracted_tables = load_manually_extracted_tables(
-        config.iasr_workbook_version
-    )
+    manually_extracted_tables = load_manually_extracted_tables(config.iasr_workbook_version)
 
     # Create ISPyPSA inputs from IASR tables.
     ispypsa_tables = create_ispypsa_inputs_template(
@@ -300,7 +293,9 @@ you can also create the PyPSA friendly operational timeseries data at this stage
         operational_timeseries_location,
     )
 
-    write_csvs({"operational_snapshots": operational_snapshots}, pypsa_friendly_inputs_location)
+    write_csvs(
+        {"operational_snapshots": operational_snapshots}, pypsa_friendly_inputs_location
+    )
     ```
 
 !!! note "New table format"
@@ -361,12 +356,8 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     pypsa_friendly_inputs_location = (
         run_directory / config.paths.ispypsa_run_name / "pypsa_friendly"
     )
-    timeseries_location = (
-        pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
-    )
-    pypsa_outputs_directory = (
-        run_directory / config.paths.ispypsa_run_name / "outputs"
-    )
+    timeseries_location = pypsa_friendly_inputs_location / "capacity_expansion_timeseries"
+    pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
 
     # Load pypsa friendly inputs
     pypsa_tables = read_csvs(
@@ -384,11 +375,7 @@ constraints are not preserved when the PyPSA network object is saved to disk.
     network.optimize.solve_model(solver_name=config.solver)
 
     # Save results.
-    save_pypsa_network(
-        network,
-        pypsa_outputs_directory,
-        "capacity_expansion"
-    )
+    save_pypsa_network(network, pypsa_outputs_directory, "capacity_expansion")
     ```
 
 ### Operational model
@@ -436,12 +423,8 @@ computational complexity.
     operational_timeseries_location = (
         pypsa_friendly_inputs_location / "operational_timeseries"
     )
-    pypsa_outputs_directory = (
-        run_directory / config.paths.ispypsa_run_name / "outputs"
-    )
-    capacity_expansion_pypsa_file = (
-        pypsa_outputs_directory / "capacity_expansion.nc"
-    )
+    pypsa_outputs_directory = run_directory / config.paths.ispypsa_run_name / "outputs"
+    capacity_expansion_pypsa_file = pypsa_outputs_directory / "capacity_expansion.nc"
 
     # Load pypsa friendly inputs
     pypsa_tables = read_csvs(
@@ -470,11 +453,7 @@ computational complexity.
         overlap=config.temporal.operational.overlap,
     )
 
-    save_pypsa_network(
-        network,
-        pypsa_outputs_directory,
-        "operational"
-    )
+    save_pypsa_network(network, pypsa_outputs_directory, "operational")
     ```
 
 !!! note "New table format"
