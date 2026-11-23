@@ -9,13 +9,19 @@ description: >
   ispypsa.pypsa_build.links (per-timeslice link limits) and
   ispypsa.pypsa_build.custom_constraints (named-timeslice custom constraints).
 
+  The capacity expansion and operational models have different snapshots, so
+  the table is created once for each: timeslice_snapshots covers the
+  capacity expansion snapshots (the snapshots table) and
+  operational_timeslice_snapshots, with the same columns and rules, covers
+  the operational snapshots (the operational_snapshots table).
+
   Source tables:
     - `timeslices`
 
   Source notes:
   The source table is an ISPyPSA table, translated by
   ispypsa.translator.timeslices, which re-sequences its window patterns onto
-  the snapshots in the pypsa-friendly snapshots table.
+  the snapshots of the model phase the table is for.
 
   If absent (or empty):
   No snapshot belongs to a named timeslice, so only the fallback rows (blank
@@ -24,7 +30,9 @@ custom_validation:
   - name: snapshots_are_in_the_snapshots_table
     description: >
       Every (investment_periods, snapshots) pair must be a row of the
-      pypsa-friendly snapshots table. For example, (2025, 2025-01-01 00:30)
+      pypsa-friendly snapshots table for the same model phase: snapshots for
+      timeslice_snapshots, operational_snapshots for
+      operational_timeslice_snapshots. For example, (2025, 2025-01-01 00:30)
       fails when the model's snapshots are hourly.
 columns:
   timeslice:
