@@ -13,6 +13,7 @@ from ispypsa.templater.connection_and_build_costs import (
     _map_to_canonical_technologies,
     _merge_region_costs_onto_new_entrant_pairs,
     _normalise_system_strength_cost_frame,
+    _read_connection_capacity,
     _set_non_ibr_system_strength_cost_to_zero,
     _set_solar_thermal_system_strength_costs_to_zero,
     _template_connection_costs,
@@ -105,7 +106,7 @@ def test_warn_nan_connection_costs_logs_warning_with_identifiers(csv_str_to_df, 
 
     msg = (
         "NaN connection cost after per-MW calculation for: ['geo_id=DN1, year=2025'] "
-        "— no additional connection cost will be applied here"
+        "— no additional connection cost will be applied here."
     )
     assert msg in caplog.text
     assert caplog.messages.count(msg) == 1
@@ -292,7 +293,7 @@ def test_add_system_strength_costs_year_not_in_system_strength_gives_nan(
     assert (
         "No system strength cost for years [2025] in "
         "'efficient_level_of_system_strength_cost' table; IBR technologies will "
-        "default to $0 in those years."
+        "be NaN in those years."
     ) in caplog.text
 
 
@@ -415,6 +416,29 @@ def test_template_vre_connection_costs(csv_str_to_df, caplog):
     # Columns correct; 3 (geo_id, tech) pairs × 2 years + 2 offshore NaN rows = 8
     assert list(result.columns) == _CONNECTION_ONLY_COST_COLS
     assert len(result) == 8  # detailed content covered by unit tests above
+
+
+# --- _read_connection_capacity ---
+
+
+def test_read_connection_capacity_raises_on_non_numeric_capacity(csv_str_to_df):
+    iasr_tables = {
+        "connection_costs_for_wind_and_solar": csv_str_to_df("""
+            REZ ID,  Connection capacity (MVA)
+            N1,      400
+            Q9,      TBC
+        """),
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Non-numeric values in 'connection_costs_for_wind_and_solar' table: ['TBC']"
+        ),
+    ):
+        _read_connection_capacity(
+            iasr_tables, "connection_costs_for_wind_and_solar", ["geo_id"]
+        )
 
 
 # --- _extract_new_entrant_pairs ---

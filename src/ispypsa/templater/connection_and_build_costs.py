@@ -11,6 +11,7 @@ from ispypsa.templater.helpers import (
     _best_fuzzy_match,
     _build_geo_region_lookup,
     _collapse_geo_id_and_average,
+    _convert_values_to_numeric,
     _filter_table_by_isp_scenario,
     _melt_financial_year_columns,
     _set_geo_id,
@@ -179,10 +180,9 @@ def _template_vre_connection_costs(
 ) -> pd.DataFrame:
     """Templates connection costs for VRE (wind and solar) new entrant technologies.
 
-    Reads the cost forecast (``connection_cost_forecast_wind_and_solar``) and filters it
-    to the given scenario, merges in connection capacity
-    (``connection_costs_for_wind_and_solar``), normalises to long format and $/MW
-    units, then expands to all VRE (geo_id, technology) pairs in
+    Reads the cost forecast (``connection_cost_forecast_wind_and_solar``), filters it
+    to the given scenario and melts it to long format, then merges in connection
+    capacity (``connection_costs_for_wind_and_solar``), converts to $/MW, and expands to all VRE (geo_id, technology) pairs in
     ``new_entrant_pairs``. REZs absent from the cost forecast (e.g. offshore wind) are
     included with NaN connection_cost — system strength costs are still applied to them
     downstream. NaN connection costs for REZs that ARE in the forecast are logged as a
@@ -228,11 +228,13 @@ def _template_vre_connection_costs(
     forecast_name = "connection_cost_forecast_wind_and_solar"
     forecast = _read_cost_table(iasr_tables, forecast_name)
     forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
-    capacity = _read_cost_table(iasr_tables, "connection_costs_for_wind_and_solar")
-    costs = forecast.merge(capacity, how="left", on=["geo_id"])
     costs = _melt_financial_year_columns(
-        costs, ["geo_id", "connection_capacity"], "connection_cost", forecast_name
+        forecast, ["geo_id"], "connection_cost", forecast_name
     )
+    capacity = _read_connection_capacity(
+        iasr_tables, "connection_costs_for_wind_and_solar", ["geo_id"]
+    )
+    costs = costs.merge(capacity, how="left", on=["geo_id"])
     costs_per_mw = _calculate_connection_cost_per_mw(costs)
     _warn_nan_connection_costs(costs_per_mw, id_cols=["geo_id"])
     return _build_vre_cost_rows(costs_per_mw, vre_technologies_by_geo_id)
@@ -333,9 +335,9 @@ def _template_non_vre_connection_costs(
     ``regional_granularity``.
 
     IASR publishes non-VRE connection costs per NEM region and technology. The cost
-    forecast (``connection_cost_forecast_other``) is filtered to ``scenario``,
-    connection capacity (``connection_capacity_non_vre``) is merged in, and the
-    table is melted to long format and converted to $/MW. Technologies in
+    forecast (``connection_cost_forecast_other``) is filtered to ``scenario`` and
+    melted to long format, then connection capacity (``connection_capacity_non_vre``)
+    is merged in and costs are converted to $/MW. Technologies in
     _EXCLUDED_TECHNOLOGIES are dropped, and the rest are respelt to match
     ``new_entrant_pairs`` (see _canonicalise_technologies).
 
@@ -385,14 +387,13 @@ def _template_non_vre_connection_costs(
     forecast_name = "connection_cost_forecast_other"
     forecast = _read_cost_table(iasr_tables, forecast_name)
     forecast = _filter_table_by_isp_scenario(forecast, scenario, forecast_name)
-    capacity = _read_cost_table(iasr_tables, "connection_capacity_non_vre")
-    costs = forecast.merge(capacity, how="left", on=["region_id", "technology"])
     costs = _melt_financial_year_columns(
-        costs,
-        ["region_id", "technology", "connection_capacity"],
-        "connection_cost",
-        forecast_name,
+        forecast, ["region_id", "technology"], "connection_cost", forecast_name
     )
+    capacity = _read_connection_capacity(
+        iasr_tables, "connection_capacity_non_vre", ["region_id", "technology"]
+    )
+    costs = costs.merge(capacity, how="left", on=["region_id", "technology"])
     costs = _canonicalise_technologies(
         costs,
         set(new_entrant_pairs["technology"]),
@@ -569,7 +570,7 @@ def _warn_years_without_system_strength_cost(connection_costs: pd.DataFrame) -> 
         logging.warning(
             f"No system strength cost for years {missing_years} in "
             "'efficient_level_of_system_strength_cost' table; IBR technologies will "
-            "default to $0 in those years."
+            "be NaN in those years."
         )
 
 
@@ -655,6 +656,34 @@ def _read_cost_table(
     return table.rename(columns=renames)
 
 
+def _read_connection_capacity(
+    iasr_tables: dict[str, pd.DataFrame], table_name: str, key_columns: list[str]
+) -> pd.DataFrame:
+    """Returns ``key_columns`` and a numeric connection_capacity column from the
+    connection capacity table ``table_name``.
+
+    Read with _read_cost_table. Raises a ValueError naming ``table_name`` if a
+    capacity isn't numeric (see _convert_values_to_numeric).
+
+    I/O Example (key_columns=["geo_id"]):
+        iasr_tables["connection_costs_for_wind_and_solar"]:
+            REZ ID  REZ names       Connection capacity (MVA)
+            N1      North West NSW  400
+            Q9      Banana          1800
+
+        returns:
+            geo_id  connection_capacity
+            N1      400.0
+            Q9      1800.0
+    """
+    capacity = _read_cost_table(iasr_tables, table_name)
+    capacity = capacity[[*key_columns, "connection_capacity"]].copy()
+    capacity["connection_capacity"] = _convert_values_to_numeric(
+        capacity["connection_capacity"], table_name
+    )
+    return capacity
+
+
 def _calculate_connection_cost_per_mw(
     cost_and_capacity_df: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -712,7 +741,7 @@ def _warn_nan_connection_costs(
 
     logging.warning(
         f"NaN connection cost after per-MW calculation for: {all_nan_costs} "
-        "— no additional connection cost will be applied here"
+        "— no additional connection cost will be applied here."
     )
 
 

@@ -935,7 +935,7 @@ def _rez_name_to_id_mapping(
 
 
 def _filter_table_by_isp_scenario(
-    table: pd.DataFrame, scenario: str, table_desc: str
+    table: pd.DataFrame, scenario: str, table_name: str
 ) -> pd.DataFrame:
     """Filters an IASR table to rows matching ``scenario`` and drops the scenario column.
 
@@ -959,7 +959,7 @@ def _filter_table_by_isp_scenario(
     table["scenario"] = _fuzzy_map_to_allowed_values(
         table["scenario"],
         _ISP_SCENARIOS_NEW,
-        task_desc=f"filtering {table_desc} table by ISP scenario",
+        task_desc=f"filtering {table_name} table by ISP scenario",
         threshold=80,
     )
     filtered = (
@@ -967,17 +967,17 @@ def _filter_table_by_isp_scenario(
         .drop(columns=["scenario"])
         .reset_index(drop=True)
     )
-    _raise_if_no_scenario_rows(filtered, scenario, table_desc)
+    _raise_if_no_scenario_rows(filtered, scenario, table_name)
     return filtered
 
 
 def _raise_if_no_scenario_rows(
-    filtered_table: pd.DataFrame, scenario: str, table_desc: str
+    filtered_table: pd.DataFrame, scenario: str, table_name: str
 ) -> None:
     """Raises if filtering a table by scenario produced no matching rows."""
     if filtered_table.empty:
         raise ValueError(
-            f"No rows matched scenario '{scenario}' in {table_desc} table."
+            f"No rows matched scenario '{scenario}' in {table_name} table."
         )
 
 
@@ -993,7 +993,8 @@ def _melt_financial_year_columns(
     (see _looks_like_financial_year) to rows, maps those string values to year-end ints,
     and names the resultant value column.
 
-    Any ``id_columns`` passed in are carried onto every melted row, so the melted
+    Any ``id_columns`` passed in are carried onto every melted row unchanged (only
+    the ``value_name`` column is converted to numeric), so the melted
     dataframe ends up with one row per (*id_columns, year) combination. An empty
     list just results in a long df with one row per year. Columns that are neither
     in ``id_columns`` nor a financial year are dropped.
