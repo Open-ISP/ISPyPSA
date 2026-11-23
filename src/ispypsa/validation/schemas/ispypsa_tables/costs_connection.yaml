@@ -9,14 +9,23 @@ description: >
   strength requirements for inverter-based resources.
 
   Source tables:
+    - `new_entrants_summary`
     - `connection_cost_forecast_wind_and_solar`
     - `connection_cost_forecast_other`
     - `connection_costs_for_wind_and_solar`
-    - `connection_costs_other`
+    - `connection_capacity_non_vre` (manually extracted)
     - `efficient_level_of_system_strength_cost`
 
   If absent:
   No additional connection or system security costs apply to new entrant build costs.
+custom_validation:
+  - name: costs_cover_every_new_entrant_option_and_year
+    description: >
+      When this table is present, coverage spans every new-entrant option (each
+      geo_id and technology pair in generators_new_entrant and storage_new_entrant)
+      and every model-config investment period: each must have a row. A row may leave connection_cost
+      blank, e.g. offshore wind, whose connection costs are included in its build
+      cost (see costs_new_entrant_build).
 columns:
   geo_id:
     type: string
@@ -27,8 +36,9 @@ columns:
       Network geography identifier where the connection cost applies.
 
       Source notes:
-      If costs are given by region in source data, separate rows for each geo_id in
-      the region are created by the `templater` with the same cost applied across each.
+      If costs are given by region in source data, the `templater` applies the
+      region's cost to each new entrant option in that region, then averages options
+      that share a geo_id at coarser regional granularities.
   technology:
     type: string
     required: true

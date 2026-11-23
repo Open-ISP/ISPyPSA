@@ -5,7 +5,6 @@ import pytest
 
 from ispypsa.templater.fuel_prices import (
     _combine_gas_price_tables,
-    _melt_fuel_prices_to_long,
     _merge_prices_onto_generators,
     _prepare_price_tables,
     _select_generator_keys,
@@ -578,22 +577,3 @@ def test_merge_prices_onto_generators_raises_on_duplicates(csv_str_to_df):
 
     with pytest.raises(pd.errors.MergeError, match="not a many-to-one merge"):
         _merge_prices_onto_generators(prices, generators, "test_validation")
-
-
-# --- _melt_fuel_prices_to_long ---
-
-
-def test_melt_fuel_prices_to_long(csv_str_to_df):
-    table = csv_str_to_df("""
-        power_station,  fuel_cost_mapping,  2024-25,  2025-26
-        Bayswater,      Bayswater,          4.12,     3.95
-    """)
-
-    result = _melt_fuel_prices_to_long(table, ["power_station"])
-
-    expected = csv_str_to_df("""
-        power_station,  year,  price
-        Bayswater,      2025,  4.12
-        Bayswater,      2026,  3.95
-    """)
-    pd.testing.assert_frame_equal(result, expected)

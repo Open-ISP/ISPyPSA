@@ -500,7 +500,6 @@ def _merge_lcf_om(
         locational_cost_factors,
         "locational_cost_factors",
         {zone_col, om_col},
-        "'lcf_om'",
     )
     om_by_geo_id = pd.to_numeric(
         locational_cost_factors.set_index(zone_col)[om_col], errors="raise"
@@ -539,7 +538,6 @@ def _reshape_technology_specific_lcfs(
         technology_specific_lcfs,
         "technology_specific_lcfs",
         {zone_col, description_col},
-        "'lcf_build'",
     )
     technology_cols = technology_specific_lcfs.columns.difference(
         [zone_col, description_col]
@@ -604,8 +602,13 @@ def _merge_phes_properties(
     return phes
 
 
-def _override_botn_technology(phes: pd.DataFrame) -> pd.Series:
-    """Returns PHES 'technology' with named project 'BOTN - Cethana' set to its own name.
+def _override_botn_technology(new_entrants: pd.DataFrame) -> pd.Series:
+    """Returns the 'technology' column of ``new_entrants`` with the named PHES project
+    'BOTN - Cethana' set to its own name.
+
+    ``new_entrants`` is any table of new entrant options with 'name' and 'technology'
+    columns: the PHES rows when templating storage, or the whole new_entrants_summary
+    when templating connection and build costs. Rows other than BOTN are unchanged.
 
     This is an **opinionated** manual override: the property tables key the named project
     'BOTN - Cethana' by its own name rather than a generic technology archetype, and the
@@ -614,8 +617,10 @@ def _override_botn_technology(phes: pd.DataFrame) -> pd.Series:
     incoming 'technology' is the expected archetype first (see
     ``_assert_botn_technology_expected``).
     """
-    _assert_botn_technology_expected(phes)
-    return phes["technology"].mask(_is_botn_row(phes), _BOTN_CETHANA_DETAILS["name"])
+    _assert_botn_technology_expected(new_entrants)
+    return new_entrants["technology"].mask(
+        _is_botn_row(new_entrants), _BOTN_CETHANA_DETAILS["name"]
+    )
 
 
 def _is_botn_row(df: pd.DataFrame) -> pd.Series:
@@ -624,7 +629,7 @@ def _is_botn_row(df: pd.DataFrame) -> pd.Series:
     return df["name"].str.contains(_BOTN_CETHANA_DETAILS["name"], regex=False)
 
 
-def _assert_botn_technology_expected(phes: pd.DataFrame) -> None:
+def _assert_botn_technology_expected(new_entrants: pd.DataFrame) -> None:
     """Checks BOTN - Cethana's incoming 'technology' is the expected archetype before override.
 
     Any BOTN row whose 'technology' isn't the expected
@@ -633,7 +638,8 @@ def _assert_botn_technology_expected(phes: pd.DataFrame) -> None:
     with no PHES) there is nothing to check and this passes.
     """
     expected = _BOTN_CETHANA_DETAILS["technology"]
-    unexpected = set(phes[_is_botn_row(phes)]["technology"].unique()) - {expected}
+    botn_rows = new_entrants[_is_botn_row(new_entrants)]
+    unexpected = set(botn_rows["technology"].unique()) - {expected}
     if unexpected:
         raise ValueError(
             f"'BOTN - Cethana' technology should be '{expected}': "

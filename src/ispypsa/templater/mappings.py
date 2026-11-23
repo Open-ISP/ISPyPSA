@@ -912,3 +912,37 @@ _PHES_EXISTING_PLANNED_STATION_PROPERTY_MAP = {
         value_col="Pumping efficiency (%)",
     ),
 }
+
+
+"""
+New entrant cost tables mapped to the raw IASR headers they need and the schema
+column names those headers become. Consumed by
+``ispypsa.templater.connection_and_build_costs`` via ``_read_cost_table``, which raises
+if a listed header is missing before renaming. The financial-year columns aren't listed
+here; they're melted to a ``year`` column later. A table with no headers to rename maps
+to ``{}``, so it is only checked for being empty; kept in this format for consistency
+with other new entrant cost table handling.
+"""
+
+_COST_TABLE_COLUMN_RENAMES = {
+    "connection_cost_forecast_other": {
+        "Generator Type": "technology",
+        "Region": "region_id",
+        "Scenario": "scenario",
+    },
+    "connection_capacity_non_vre": {
+        "Generator Type": "technology",
+        "Region": "region_id",
+        "Connection capacity (MVA)": "connection_capacity",
+    },
+    "connection_cost_forecast_wind_and_solar": {
+        "REZ ID": "geo_id",
+        "Scenario": "scenario",
+    },
+    "connection_costs_for_wind_and_solar": {
+        "REZ ID": "geo_id",
+        "Connection capacity (MVA)": "connection_capacity",
+    },
+    "build_costs": {"Technology": "technology", "IASR Scenario": "scenario"},
+    "efficient_level_of_system_strength_cost": {},
+}

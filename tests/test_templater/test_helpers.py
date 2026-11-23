@@ -1,4 +1,3 @@
-import logging
 import re
 
 import pandas as pd
@@ -7,6 +6,7 @@ import pytest
 from ispypsa.templater.helpers import (
     _assert_table_valid,
     _build_geo_region_lookup,
+    _collapse_geo_id_and_average,
     _derive_phes_symmetric_efficiency,
     _filter_table_by_isp_scenario,
     _get_property_value_map,
@@ -638,6 +638,65 @@ def test_is_subregion_geo_id(csv_str_to_df):
     pd.testing.assert_series_equal(result, expected)
 
 
+# --- _collapse_geo_id_and_average ---
+
+
+@pytest.mark.parametrize(
+    "regional_granularity, expected_csv",
+    [
+        (
+            "nem_regions",
+            # CNSW and SNW share NSW's row; NQ becomes QLD on its own
+            """
+            technology,  geo_id,  year,  cost
+            Battery,     N1,      2025,  50.0
+            CCGT,        NSW,     2025,  100.0
+            CCGT,        QLD,     2025,  130.0
+            """,
+        ),
+        (
+            "single_region",
+            # Each sub-region counts once: mean(100, 100, 130) = 110
+            """
+            technology,  geo_id,  year,  cost
+            Battery,     N1,      2025,  50.0
+            CCGT,        NEM,     2025,  110.0
+            """,
+        ),
+    ],
+)
+def test_collapse_geo_id_and_average(csv_str_to_df, regional_granularity, expected_csv):
+    # N1 is a REZ, so its geo_id isn't remapped at any granularity
+    table = csv_str_to_df("""
+        technology,  geo_id,  year,  cost
+        CCGT,        CNSW,    2025,  100.0
+        CCGT,        SNW,     2025,  100.0
+        CCGT,        NQ,      2025,  130.0
+        Battery,     N1,      2025,  50.0
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        NQ,      subregion,  QLD
+        N1,      rez,        NSW
+    """)
+
+    result = _collapse_geo_id_and_average(
+        table,
+        ["technology", "geo_id", "year"],
+        "cost",
+        regional_granularity,
+        sub_regional_geography,
+    )
+
+    expected = csv_str_to_df(expected_csv)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+        expected.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+    )
+
+
 # --- _group_properties_by_source ---
 
 
@@ -883,9 +942,7 @@ def test_assert_table_valid_passes(csv_str_to_df):
         Wind,        20.0
     """)
     # should not raise
-    _assert_table_valid(
-        table, "fixed_opex_new_entrants", {"Technology", "Base value"}, "'fom'"
-    )
+    _assert_table_valid(table, "fixed_opex_new_entrants", {"Technology", "Base value"})
 
 
 def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
@@ -904,24 +961,21 @@ def test_assert_table_valid_raises_missing_columns(csv_str_to_df):
             table,
             table_name="fixed_opex_new_entrants",
             required_cols={"Technology", "Storage hours"},
-            merge_desc="'fom'",
         )
 
 
 def test_assert_table_valid_raises_empty_table():
-    # Table has both required columns but no rows -> raise, naming what would
-    # have been merged.
+    # Table has both required columns but no rows -> raise, naming the table.
     table = pd.DataFrame(columns=["Technology", "Base value"])
 
     with pytest.raises(
         ValueError,
-        match=r"'fixed_opex_new_entrants' table is empty - cannot merge 'fom'",
+        match=r"'fixed_opex_new_entrants' table is empty",
     ):
         _assert_table_valid(
             table,
             table_name="fixed_opex_new_entrants",
             required_cols={"Technology", "Base value"},
-            merge_desc="'fom'",
         )
 
 
@@ -933,7 +987,7 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
     # NaN values in non-Scenario columns are preserved. Fuzzy matching
     # applied correctly so small typos are fixed before filtering.
     table = csv_str_to_df("""
-        Scenario,       REZ ID,    value
+        scenario,       REZ ID,    value
         Step Change,   N1,         100
         step change,   N2,         150
         Step Change,   N3,
@@ -941,7 +995,7 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
         Slower Growth, N1,         200
     """)
 
-    result = _filter_table_by_isp_scenario(table, "Step Change", "Scenario", "test")
+    result = _filter_table_by_isp_scenario(table, "Step Change", "test")
 
     expected = csv_str_to_df("""
         REZ ID,    value
@@ -956,33 +1010,17 @@ def test_filter_table_by_isp_scenario(csv_str_to_df):
     )
 
 
-def test_filter_table_by_isp_scenario_no_matching_rows(csv_str_to_df, caplog):
-    # No rows have matching "Scenario" values - return empty df with non-'scenario'
-    # columns.
+def test_filter_table_by_isp_scenario_no_matching_rows_raises(csv_str_to_df):
     table = csv_str_to_df("""
-        Scenario,       REZ ID,    value
+        scenario,       REZ ID,    value
         Step Change,    N1,         100
         Slower Growth,  N1,         200
     """)
 
-    with caplog.at_level("WARNING"):
-        result = _filter_table_by_isp_scenario(
-            table, "Accelerated Transition", "Scenario", "test"
-        )
-
-    expected = csv_str_to_df("""
-        REZ ID,    value
-    """)
-    pd.testing.assert_frame_equal(
-        result.reset_index(drop=True),
-        expected.reset_index(drop=True),
-        check_dtype=False,
-    )
-
-    assert (
-        "No rows matched scenario 'Accelerated Transition' in test table "
-        "— filtered table will be empty"
-    ) in caplog.text
+    with pytest.raises(
+        ValueError, match=r"No rows matched scenario 'Winter' in test_example table."
+    ):
+        _filter_table_by_isp_scenario(table, "Winter", "test_example")
 
 
 # --- _melt_financial_year_columns ---
@@ -997,7 +1035,7 @@ def test_melt_financial_year_columns(csv_str_to_df):
         CCGT,        CSIRO GenCost,  2499,     ,         2400
     """)
 
-    result = _melt_financial_year_columns(wide, ["technology"], "cost")
+    result = _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")
 
     expected = csv_str_to_df("""
         technology,  year,  cost
@@ -1015,7 +1053,9 @@ def test_melt_financial_year_columns_without_id_columns(csv_str_to_df):
         IBR,    163.24,   148.88
     """)
 
-    result = _melt_financial_year_columns(wide, [], "system_strength_cost")
+    result = _melt_financial_year_columns(
+        wide, [], "system_strength_cost", "efficient_level_of_system_strength_cost"
+    )
 
     expected = csv_str_to_df("""
         year,  system_strength_cost
@@ -1023,3 +1063,35 @@ def test_melt_financial_year_columns_without_id_columns(csv_str_to_df):
         2026,  148.88
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_melt_financial_year_columns_raises_when_no_year_columns(csv_str_to_df):
+    # '2024-2025' isn't a 'YYYY-YY' header, so the table has no year columns.
+    wide = csv_str_to_df("""
+        technology,  2024-2025
+        Wind,        3412
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "No financial-year columns (like '2024-25') in 'build_costs' table. "
+            "Columns found: ['technology', '2024-2025']"
+        ),
+    ):
+        _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")
+
+
+def test_melt_financial_year_columns_raises_on_non_numeric_values(csv_str_to_df):
+    # The blank CCGT 2025-26 cell is a real gap and stays NaN; only 'TBC' is reported.
+    wide = csv_str_to_df("""
+        technology,  2024-25,  2025-26
+        Wind,        3412,     TBC
+        CCGT,        2499,
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Non-numeric values in 'build_costs' table: ['TBC']"),
+    ):
+        _melt_financial_year_columns(wide, ["technology"], "cost", "build_costs")

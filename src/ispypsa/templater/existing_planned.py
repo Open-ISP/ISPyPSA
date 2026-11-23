@@ -401,7 +401,6 @@ def _merge_unit_keyed_properties(
             table,
             table_name,
             _required_property_columns(props),
-            f"{sorted(props.keys())}",
         )
         resolved_keys = _resolve_unit_keys(
             summary["name"], table[key_col], table_name, exclude_unit_keys
@@ -604,7 +603,6 @@ def _merge_minimum_load_property(
         property_spec["table"],
         _required_property_columns({"minimum_load": property_spec})
         | {"Technology Type"},
-        "'minimum_load'",
     )
     is_candidate = generators["technology"].isin(table["Technology Type"])
     resolved_keys = _resolve_unit_keys(

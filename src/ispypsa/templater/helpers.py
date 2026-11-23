@@ -534,21 +534,83 @@ def _is_subregion_geo_id(
     return geo_id.map(geo_type_by_geo_id) == "subregion"
 
 
+def _collapse_geo_id_and_average(
+    table: pd.DataFrame,
+    group_cols: list[str],
+    value_col: str,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+) -> pd.DataFrame:
+    """Collapses ``table``'s geo_id to ``regional_granularity``, then averages
+    ``value_col`` over the rows that now share every column in ``group_cols``.
+
+    ``table`` holds one value per new entrant option at sub-region or REZ level, e.g.
+    a CCGT connection cost in each of CNSW and SNW. At a coarser granularity those
+    options become one: CNSW and SNW both become NSW (at "nem_regions") or "NEM" (at
+    "single_region"), and the model needs a single value for the merged option.
+
+    ``group_cols`` names the key-columns that are used to group rows by, and must
+    include geo_id. Any column in ``table`` not in ``group_cols`` or ``value_col``
+    is dropped.
+
+    Each geo_id is mapped with _map_geo_id_to_granularity: sub-regions move to their
+    region or to "NEM", and REZs are left as they are. The table then gets grouped
+    by ``group_cols``, and the values in ``value_col`` are averaged across all rows
+    in each group.
+
+    I/O Example:
+        table:
+            technology  geo_id  year  cost
+            CCGT        CNSW    2025  100.0
+            CCGT        SNW     2025  100.0
+            CCGT        NQ      2025  130.0
+            Battery     N1      2025  50.0     # unique row: stays untouched
+
+        group_cols: ["technology", "geo_id", "year"]
+        value_col: "cost"
+
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+            NQ      subregion  QLD
+            N1      rez        NSW
+
+        returns:
+            regional_granularity = "nem_regions":
+                technology  geo_id  year  cost
+                Battery     N1      2025  50.0
+                CCGT        NSW     2025  100.0    # mean(100, 100)
+                CCGT        QLD     2025  130.0
+
+            regional_granularity = "single_region":
+                technology  geo_id  year  cost
+                Battery     N1      2025  50.0
+                CCGT        NEM     2025  110.0    # mean(100, 100, 130)
+
+    An unknown ``regional_granularity`` raises, via _map_geo_id_to_granularity.
+    """
+    table = table.assign(
+        geo_id=_map_geo_id_to_granularity(
+            table["geo_id"], regional_granularity, sub_regional_geography
+        )
+    )
+    return table.groupby(group_cols)[value_col].mean().reset_index()
+
+
 def _assert_table_valid(
-    table: pd.DataFrame, table_name: str, required_cols: set[str], merge_desc: str
+    table: pd.DataFrame, table_name: str, required_cols: set[str]
 ) -> None:
     """Asserts a source table has every required column and isn't empty.
 
-    Shared precondition check for tables merged in the new-format templater modules —
+    Shared precondition check for tables read by the new-format templater modules —
     guards against two silent-failure modes: a missing column producing a KeyError, and
-    an empty table merging to an all-NaN column with no warning.
+    an empty table producing all-NaN or empty output with no warning.
 
     Args:
         table: the source table to validate, e.g. ``iasr_tables["battery_properties"]``.
         table_name: ``table``'s IASR table name, used to name it in error messages.
-        required_cols: every column the downstream merge reads from ``table``.
-        merge_desc: short description of what would be merged, named in the
-            empty-table error, e.g. ``"properties '['fom']'"`` or ``"'lcf_build'"``.
+        required_cols: every column the downstream code reads from ``table``.
 
     Raises:
         ValueError: if any of ``required_cols`` is missing from ``table``, or if
@@ -561,7 +623,6 @@ def _assert_table_valid(
 
         table_name: "fixed_opex_new_entrants"
         required_cols: {"Technology", "Base value"}
-        merge_desc: "properties '['fom']'"
 
         # No ValueError raised: table has rows, both required columns present.
     """
@@ -571,7 +632,7 @@ def _assert_table_valid(
             f"'{table_name}' table missing required columns: {sorted(missing_cols)}"
         )
     if table.empty:
-        raise ValueError(f"'{table_name}' table is empty - cannot merge {merge_desc}")
+        raise ValueError(f"'{table_name}' table is empty")
 
 
 def _group_properties_by_source(
@@ -705,7 +766,6 @@ def _merge_category_keyed_properties(
             table,
             table_name,
             _required_property_columns(props),
-            f"{sorted(props.keys())}",
         )
         matched_key_col = _fuzzy_map_to_allowed_values(
             df[df_key_col],
@@ -871,53 +931,54 @@ def _rez_name_to_id_mapping(
 
 
 def _filter_table_by_isp_scenario(
-    table: pd.DataFrame, scenario: str, scenario_col_name: str, table_desc: str
+    table: pd.DataFrame, scenario: str, table_name: str
 ) -> pd.DataFrame:
     """Filters an IASR table to rows matching ``scenario`` and drops the scenario column.
 
     Fuzzy-matches scenario names to handle minor spelling variations in the raw data.
+    Assumes the input ``table`` column containing scenario strings has already been
+    normalised to "scenario" spelling; a KeyError will raise if missing.
 
     I/O Example:
         table:
-            Region      Scenario        2025-26     2026-27
+            Region      scenario        2025-26     2026-27
             NSW         Step Change     100         150
             NSW         Slower Growth   200         300
 
-        scenario = "Step Change", scenario_col_name = "Scenario"
+        scenario = "Step Change"
 
         returns:
             Region      2025-26     2026-27
             NSW         100         150
     """
     table = table.copy()
-    table[scenario_col_name] = _fuzzy_map_to_allowed_values(
-        table[scenario_col_name],
+    table["scenario"] = _fuzzy_map_to_allowed_values(
+        table["scenario"],
         _ISP_SCENARIOS_NEW,
-        task_desc=f"filtering {table_desc} table by ISP scenario",
+        task_desc=f"filtering {table_name} table by ISP scenario",
         threshold=80,
     )
     filtered = (
-        table.loc[table[scenario_col_name] == scenario]
-        .drop(columns=[scenario_col_name])
+        table.loc[table["scenario"] == scenario]
+        .drop(columns=["scenario"])
         .reset_index(drop=True)
     )
-    _warn_if_no_scenario_rows(filtered, scenario, table_desc)
+    _raise_if_no_scenario_rows(filtered, scenario, table_name)
     return filtered
 
 
-def _warn_if_no_scenario_rows(
-    filtered_table: pd.DataFrame, scenario: str, table_desc: str
+def _raise_if_no_scenario_rows(
+    filtered_table: pd.DataFrame, scenario: str, table_name: str
 ) -> None:
-    """Logs a WARNING if filtering a table by scenario produced no matching rows."""
+    """Raises if filtering a table by scenario produced no matching rows."""
     if filtered_table.empty:
-        logging.warning(
-            f"No rows matched scenario '{scenario}' in {table_desc} table "
-            "— filtered table will be empty"
+        raise ValueError(
+            f"No rows matched scenario '{scenario}' in {table_name} table."
         )
 
 
 def _melt_financial_year_columns(
-    wide: pd.DataFrame, id_columns: list[str], value_name: str
+    wide: pd.DataFrame, id_columns: list[str], value_name: str, table_name: str
 ) -> pd.DataFrame:
     """Melts the financial-year columns of ``wide`` into one row per ``id_columns``
     row and year, with the yearly values in a column named ``value_name``.
@@ -928,10 +989,18 @@ def _melt_financial_year_columns(
     (see _looks_like_financial_year) to rows, maps those string values to year-end ints,
     and names the resultant value column.
 
-    Any ``id_columns`` passed in are carried onto every melted row, so the melted
+    Any ``id_columns`` passed in are carried onto every melted row unchanged (only
+    the ``value_name`` column is converted to numeric), so the melted
     dataframe ends up with one row per (*id_columns, year) combination. An empty
     list just results in a long df with one row per year. Columns that are neither
     in ``id_columns`` nor a financial year are dropped.
+
+    ``table_name`` names the IASR table the year columns come from, for the errors
+    raised if ``wide`` has none (see _find_financial_year_columns) or if a yearly value
+    isn't numeric (see _convert_values_to_numeric). A header in another format, say
+    '2024-2025', is dropped like any other non-year column, so a table where only some
+    headers changed format still melts, without those years. Schema validation or
+    other context-specific checks are expected to catch such cases.
 
     I/O Example (id_columns=["technology"], value_name="cost"):
         wide:
@@ -946,7 +1015,7 @@ def _melt_financial_year_columns(
             Wind        2026  3266
             CCGT        2026  NaN
     """
-    year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
+    year_columns = _find_financial_year_columns(wide, table_name)
     long = wide.melt(
         id_vars=id_columns,
         value_vars=year_columns,
@@ -954,4 +1023,45 @@ def _melt_financial_year_columns(
         value_name=value_name,
     )
     long["year"] = long["year"].apply(_financial_year_string_to_end_year_int)
+    long[value_name] = _convert_values_to_numeric(long[value_name], table_name)
     return long
+
+
+def _find_financial_year_columns(wide: pd.DataFrame, table_name: str) -> list[str]:
+    """Returns the headers of ``wide`` that look like a financial year ('2024-25').
+
+    Raises a ValueError naming ``table_name`` and listing its headers if there are
+    none, since melting would otherwise return an empty table without any error.
+
+    I/O Example:
+        columns ["technology", "2024-25", "2025-26"] -> ["2024-25", "2025-26"]
+        columns ["technology", "2024-2025"]          -> raises ValueError
+    """
+    year_columns = [c for c in wide.columns if _looks_like_financial_year(c)]
+    if not year_columns:
+        raise ValueError(
+            f"No financial-year columns (like '2024-25') in '{table_name}' table. "
+            f"Columns found: {list(wide.columns)}"
+        )
+    return year_columns
+
+
+def _convert_values_to_numeric(values: pd.Series, table_name: str) -> pd.Series:
+    """Returns ``values`` as numbers, raising if any non-blank value isn't numeric.
+
+    Blank cells stay NaN. A value pd.to_numeric can't parse, e.g. 'TBC', raises a
+    ValueError naming ``table_name`` and listing the values, rather than being carried
+    on as text (where e.g. multiplication would quietly repeat the string).
+
+    I/O Example:
+        [4.12, NaN, "3.95"] -> [4.12, NaN, 3.95]
+        [4.12, "TBC"]       -> raises ValueError
+    """
+    numeric = pd.to_numeric(values, errors="coerce")
+    not_numeric = values[numeric.isna() & values.notna()]
+    if not not_numeric.empty:
+        raise ValueError(
+            f"Non-numeric values in '{table_name}' table: "
+            f"{sorted(not_numeric.astype(str).unique())}"
+        )
+    return numeric

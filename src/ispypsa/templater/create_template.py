@@ -267,18 +267,10 @@ def create_ispypsa_inputs_template(
             iasr_tables, regional_granularity, sub_regional_geography
         )
         template["costs_connection"] = _template_connection_costs(
-            iasr_tables,
-            scenario,
-            regional_granularity,
-            template["generators_new_entrant"],
-            template["storage_new_entrant"],
-            sub_regional_geography,
+            iasr_tables, scenario, regional_granularity, sub_regional_geography
         )
         template["costs_new_entrant_build"] = _template_costs_new_entrant_build(
-            iasr_tables,
-            scenario,
-            template["generators_new_entrant"],
-            template["storage_new_entrant"],
+            iasr_tables, scenario
         )
         template["generators_existing_planned"] = _template_generators_existing_planned(
             iasr_tables, regional_granularity, sub_regional_geography
