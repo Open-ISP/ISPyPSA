@@ -385,7 +385,7 @@ def create_pypsa_friendly_timeseries_inputs(
         snapshots = _add_snapshot_weightings(
             snapshots, config.temporal.capacity_expansion.resolution_min
         )
-        return_add_interval_model_year_and_month_day(
+        return _add_interval_model_year_and_month_day(
             snapshots, config.temporal.year_type
         ).drop(columns="month_day")
 
