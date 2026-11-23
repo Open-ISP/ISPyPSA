@@ -60,6 +60,8 @@ Python script.
 
 ::: ispypsa.pypsa_build.update_network_timeseries
 
+::: ispypsa.pypsa_build.optimize_with_rolling_horizon
+
 ::: ispypsa.pypsa_build.save_pypsa_network
 
 ## Tabular Results Extraction

@@ -414,7 +414,11 @@ computational complexity.
 
     from ispypsa.config import load_config
     from ispypsa.data_fetch import read_csvs
-    from ispypsa.pypas_build import update_network_timeseries, save_pypsa_network
+    from ispypsa.pypsa_build import (
+        optimize_with_rolling_horizon,
+        save_pypsa_network,
+        update_network_timeseries,
+    )
 
     # Load model config
     config_path = Path("ispypsa_config.yaml")
@@ -451,8 +455,11 @@ computational complexity.
 
     network.optimize.fix_optimal_capacities()
 
-    # Never use network.optimize() as this will remove custom constraints.
-    network.optimize.optimize_with_rolling_horizon(
+    # Never use network.optimize.optimize_with_rolling_horizon() directly, as PyPSA
+    # rebuilds the model for each window without the custom constraints.
+    optimize_with_rolling_horizon(
+        network,
+        pypsa_tables,
         horizon=config.temporal.operational.horizon,
         overlap=config.temporal.operational.overlap,
     )
