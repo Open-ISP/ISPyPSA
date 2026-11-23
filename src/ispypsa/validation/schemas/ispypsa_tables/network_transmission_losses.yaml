@@ -17,8 +17,10 @@ description: >
   is shared between the two ends of the path by to_loss_proportion.
 
   A curve can change over time: a row with a date_from takes over from the
-  group's earlier row for the same direction. For each investment period, the
-  row active at the period's start applies for the whole period.
+  group's earlier row for the same direction, from the start of the model year
+  its date falls in. This is the rule
+  network_transmission_path_capacity_changes uses, so a project's capacity and
+  its loss curve arrive together.
 
   Source tables:
     - `inter_regional_loss_equations_existing`
@@ -116,11 +118,11 @@ columns:
     required: false
     format: "%Y-%m-%dT%H:%M:%S"
     description: >
-      Date this row's curve takes effect. For each investment period, the row
-      active at the period's start applies for the whole period. A period
-      starts on 1 July of the preceding year when year_type is fy, and on
-      1 January otherwise. A dated row has no end date: it holds until a later
-      row for the same loss group and direction supersedes it.
+      Date this row's curve takes effect. The curve applies from the start of
+      the model year this date falls in. A model year starts on 1 July of the
+      preceding calendar year when year_type is fy, and on 1 January
+      otherwise. A dated row has no end date: it holds until a later row for
+      the same loss group and direction supersedes it.
 
       If absent (or empty):
       The curve applies from the start of the model horizon (until another
