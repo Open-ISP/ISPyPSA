@@ -52,6 +52,11 @@ from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
 )
+from ispypsa.templater.path_capacity_changes import (
+    _drop_expansion_costs_before_prerequisite_projects,
+    _template_path_capacity_changes,
+    load_plexos_line_limits,
+)
 from ispypsa.templater.renewable_energy_zones import (
     _template_rez_build_limits,
 )
@@ -104,6 +109,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "network_geography",
     "network_transmission_paths",
     "network_transmission_path_limits",
+    "network_transmission_path_capacity_changes",
     "network_expansion_options",
     "network_transmission_path_expansion_costs",
     "timeslices",
@@ -241,7 +247,18 @@ def create_ispypsa_inputs_template(
             rez_ids=set(iasr_tables["renewable_energy_zones"]["ID"]),
         )
         template["network_expansion_options"] = expansion_options
-        template["network_transmission_path_expansion_costs"] = expansion_costs
+        template["network_transmission_path_expansion_costs"] = (
+            _drop_expansion_costs_before_prerequisite_projects(expansion_costs)
+        )
+        template["network_transmission_path_capacity_changes"] = (
+            _template_path_capacity_changes(
+                load_plexos_line_limits(iasr_workbook_version),
+                iasr_tables["flow_path_transfer_capability"],
+                iasr_tables["renewable_energy_zones"],
+                sub_regional_geography,
+                regional_granularity,
+            )
+        )
         template["timeslices"] = _template_timeslices(
             load_timeslice_calendar(iasr_workbook_version),
             manually_extracted_tables["reference_year_sequence"],

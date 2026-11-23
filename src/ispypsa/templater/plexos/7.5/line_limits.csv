@@ -1,0 +1,289 @@
+object_class,object_name,property,value,date_from,date_to,tags
+Constraint,CNSW-SNW North,RHS,4490.0,,,NSW Hot Day
+Constraint,CNSW-SNW North,RHS,4490.0,,,NSW Typical Summer
+Constraint,CNSW-SNW North,RHS,4730.0,,,NSW Winter
+Constraint,CNSW-SNW North,RHS,5150.0,2027-08-01T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW North,RHS,5150.0,2027-08-01T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW North,RHS,5390.0,2027-08-01T00:00:00,,NSW Winter
+Constraint,CNSW-SNW North,RHS,10150.0,2029-11-30T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW North,RHS,10150.0,2029-11-30T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW North,RHS,10390.0,2029-11-30T00:00:00,,NSW Winter
+Constraint,CNSW-SNW North,RHS,9490.0,2030-07-01T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW North,RHS,9490.0,2030-07-01T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW North,RHS,9730.0,2030-07-01T00:00:00,,NSW Winter
+Constraint,CNSW-SNW South,RHS,2540.0,,,NSW Hot Day
+Constraint,CNSW-SNW South,RHS,2540.0,,,NSW Typical Summer
+Constraint,CNSW-SNW South,RHS,2720.0,,,NSW Winter
+Constraint,CNSW-SNW South,RHS,2790.0,2027-08-01T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW South,RHS,2790.0,2027-08-01T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW South,RHS,2970.0,2027-08-01T00:00:00,,NSW Winter
+Constraint,CNSW-SNW South,RHS,2790.0,2030-07-01T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW South,RHS,2790.0,2030-07-01T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW South,RHS,2970.0,2030-07-01T00:00:00,,NSW Winter
+Constraint,CNSW-SNW South,RHS,6570.0,2037-07-01T00:00:00,,NSW Hot Day
+Constraint,CNSW-SNW South,RHS,6570.0,2037-07-01T00:00:00,,NSW Typical Summer
+Constraint,CNSW-SNW South,RHS,6320.0,2037-07-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Max Flow,910.0,,,NSW Hot Day
+Line,CNSW-NNSW,Max Flow,910.0,,,NSW Typical Summer
+Line,CNSW-NNSW,Max Flow,910.0,,,NSW Winter
+Line,CNSW-NNSW,Max Flow,910.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Max Flow,910.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Max Flow,910.0,2027-08-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Max Flow,910.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Max Flow,910.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Max Flow,910.0,2030-07-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Max Flow,3310.0,2032-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Max Flow,3310.0,2032-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Max Flow,3310.0,2032-07-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Min Flow,-930.0,,,NSW Hot Day
+Line,CNSW-NNSW,Min Flow,-930.0,,,NSW Typical Summer
+Line,CNSW-NNSW,Min Flow,-1025.0,,,NSW Winter
+Line,CNSW-NNSW,Min Flow,-1230.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Min Flow,-1230.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Min Flow,-1325.0,2027-08-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Min Flow,-930.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Min Flow,-930.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Min Flow,-1025.0,2030-07-01T00:00:00,,NSW Winter
+Line,CNSW-NNSW,Min Flow,-3330.0,2032-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-NNSW,Min Flow,-3330.0,2032-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-NNSW,Min Flow,-3425.0,2032-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Max Flow,7030.0,,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,7030.0,,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,7450.0,,,NSW Winter
+Line,CNSW-SNW,Max Flow,7280.0,2025-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,7280.0,2025-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,7700.0,2025-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Max Flow,7940.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,7940.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,8360.0,2027-08-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Max Flow,12940.0,2029-11-30T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,12940.0,2029-11-30T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,13360.0,2029-11-30T00:00:00,,NSW Winter
+Line,CNSW-SNW,Max Flow,12280.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,12280.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,12700.0,2030-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Max Flow,15880.0,2037-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Max Flow,15880.0,2037-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Max Flow,16300.0,2037-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,2025-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,2025-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,2025-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,2027-08-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,2029-11-30T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,2029-11-30T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,2029-11-30T00:00:00,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,2030-07-01T00:00:00,,NSW Winter
+Line,CNSW-SNW,Min Flow,-7030.0,2037-07-01T00:00:00,,NSW Hot Day
+Line,CNSW-SNW,Min Flow,-7030.0,2037-07-01T00:00:00,,NSW Typical Summer
+Line,CNSW-SNW,Min Flow,-7450.0,2037-07-01T00:00:00,,NSW Winter
+Line,CQ-GG,Max Flow,700.0,,,QLD Hot Day
+Line,CQ-GG,Max Flow,700.0,,,QLD Typical Summer
+Line,CQ-GG,Max Flow,1050.0,,,QLD Winter
+Line,CQ-GG,Max Flow,3300.0,2029-03-01T00:00:00,,QLD Hot Day
+Line,CQ-GG,Max Flow,3300.0,2029-03-01T00:00:00,,QLD Typical Summer
+Line,CQ-GG,Max Flow,3650.0,2029-03-01T00:00:00,,QLD Winter
+Line,CQ-GG,Min Flow,-750.0,,,QLD Hot Day
+Line,CQ-GG,Min Flow,-750.0,,,QLD Typical Summer
+Line,CQ-GG,Min Flow,-1100.0,,,QLD Winter
+Line,CQ-GG,Min Flow,-1250.0,2029-03-01T00:00:00,,QLD Hot Day
+Line,CQ-GG,Min Flow,-1250.0,2029-03-01T00:00:00,,QLD Typical Summer
+Line,CQ-GG,Min Flow,-1600.0,2029-03-01T00:00:00,,QLD Winter
+Line,CQ-NQ,Max Flow,1200.0,,,QLD Hot Day
+Line,CQ-NQ,Max Flow,1200.0,,,QLD Typical Summer
+Line,CQ-NQ,Max Flow,1400.0,,,QLD Winter
+Line,CQ-NQ,Min Flow,-1440.0,,,QLD Hot Day
+Line,CQ-NQ,Min Flow,-1440.0,,,QLD Typical Summer
+Line,CQ-NQ,Min Flow,-1910.0,,,QLD Winter
+Line,CSA-NSA,Max Flow,1070.0,,,SA Hot Day
+Line,CSA-NSA,Max Flow,1070.0,,,SA Typical Summer
+Line,CSA-NSA,Max Flow,1230.0,,,SA Winter
+Line,CSA-NSA,Min Flow,-1150.0,,,SA Hot Day
+Line,CSA-NSA,Min Flow,-1150.0,,,SA Typical Summer
+Line,CSA-NSA,Min Flow,-1200.0,,,SA Winter
+Line,EnergyConnect,Max Flow,150.0,,,SA Hot Day
+Line,EnergyConnect,Max Flow,150.0,,,SA Typical Summer
+Line,EnergyConnect,Max Flow,150.0,,,SA Winter
+Line,EnergyConnect,Max Flow,800.0,2027-11-30T00:00:00,,SA Hot Day
+Line,EnergyConnect,Max Flow,800.0,2027-11-30T00:00:00,,SA Typical Summer
+Line,EnergyConnect,Max Flow,800.0,2027-11-30T00:00:00,,SA Winter
+Line,EnergyConnect,Min Flow,-150.0,,,NSW Hot Day
+Line,EnergyConnect,Min Flow,-150.0,,,NSW Typical Summer
+Line,EnergyConnect,Min Flow,-150.0,,,NSW Winter
+Line,EnergyConnect,Min Flow,-800.0,2027-11-30T00:00:00,,NSW Hot Day
+Line,EnergyConnect,Min Flow,-800.0,2027-11-30T00:00:00,,NSW Typical Summer
+Line,EnergyConnect,Min Flow,-800.0,2027-11-30T00:00:00,,NSW Winter
+Line,MEL-WNV,Max Flow,3000.0,,,VIC Hot Day
+Line,MEL-WNV,Max Flow,3000.0,,,VIC Typical Summer
+Line,MEL-WNV,Max Flow,3000.0,,,VIC Winter
+Line,MEL-WNV,Max Flow,3000.0,2029-06-01T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Max Flow,3000.0,2029-06-01T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Max Flow,3000.0,2029-06-01T00:00:00,,VIC Winter
+Line,MEL-WNV,Max Flow,3695.0,2029-11-30T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Max Flow,3695.0,2029-11-30T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Max Flow,3695.0,2029-11-30T00:00:00,,VIC Winter
+Line,MEL-WNV,Max Flow,3695.0,2035-07-01T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Max Flow,3695.0,2035-07-01T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Max Flow,3695.0,2035-07-01T00:00:00,,VIC Winter
+Line,MEL-WNV,Min Flow,-2300.0,,,VIC Hot Day
+Line,MEL-WNV,Min Flow,-2550.0,,,VIC Typical Summer
+Line,MEL-WNV,Min Flow,-4880.0,,,VIC Winter
+Line,MEL-WNV,Min Flow,-3100.0,2029-06-01T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Min Flow,-3350.0,2029-06-01T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Min Flow,-5680.0,2029-06-01T00:00:00,,VIC Winter
+Line,MEL-WNV,Min Flow,-3795.0,2029-11-30T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Min Flow,-4045.0,2029-11-30T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Min Flow,-6375.0,2029-11-30T00:00:00,,VIC Winter
+Line,MEL-WNV,Min Flow,-5795.0,2035-07-01T00:00:00,,VIC Hot Day
+Line,MEL-WNV,Min Flow,-6045.0,2035-07-01T00:00:00,,VIC Typical Summer
+Line,MEL-WNV,Min Flow,-8375.0,2035-07-01T00:00:00,,VIC Winter
+Line,Marinus,Max Flow,0.0,,,VIC Hot Day
+Line,Marinus,Max Flow,0.0,,,VIC Typical Summer
+Line,Marinus,Max Flow,0.0,,,VIC Winter
+Line,Marinus,Max Flow,750.0,2030-12-01T00:00:00,,VIC Hot Day
+Line,Marinus,Max Flow,750.0,2030-12-01T00:00:00,,VIC Typical Summer
+Line,Marinus,Max Flow,750.0,2030-12-01T00:00:00,,VIC Winter
+Line,Marinus,Max Flow,1500.0,2034-12-01T00:00:00,,VIC Hot Day
+Line,Marinus,Max Flow,1500.0,2034-12-01T00:00:00,,VIC Typical Summer
+Line,Marinus,Max Flow,1500.0,2034-12-01T00:00:00,,VIC Winter
+Line,Marinus,Min Flow,0.0,,,TAS Hot Day
+Line,Marinus,Min Flow,0.0,,,TAS Typical Summer
+Line,Marinus,Min Flow,0.0,,,TAS Winter
+Line,Marinus,Min Flow,-750.0,2030-12-01T00:00:00,,TAS Hot Day
+Line,Marinus,Min Flow,-750.0,2030-12-01T00:00:00,,TAS Typical Summer
+Line,Marinus,Min Flow,-750.0,2030-12-01T00:00:00,,TAS Winter
+Line,Marinus,Min Flow,-1500.0,2034-12-01T00:00:00,,TAS Hot Day
+Line,Marinus,Min Flow,-1500.0,2034-12-01T00:00:00,,TAS Typical Summer
+Line,Marinus,Min Flow,-1500.0,2034-12-01T00:00:00,,TAS Winter
+Line,N-Q-MNSP1,Max Flow,0.0,,,QLD Hot Day
+Line,N-Q-MNSP1,Max Flow,50.0,,,QLD Typical Summer
+Line,N-Q-MNSP1,Max Flow,50.0,,,QLD Winter
+Line,N-Q-MNSP1,Min Flow,-130.0,,,NSW Hot Day
+Line,N-Q-MNSP1,Min Flow,-150.0,,,NSW Typical Summer
+Line,N-Q-MNSP1,Min Flow,-200.0,,,NSW Winter
+Line,NSW1-QLD1,Max Flow,950.0,,,QLD Hot Day
+Line,NSW1-QLD1,Max Flow,950.0,,,QLD Typical Summer
+Line,NSW1-QLD1,Max Flow,950.0,,,QLD Winter
+Line,NSW1-QLD1,Max Flow,2210.0,2034-03-01T00:00:00,,QLD Hot Day
+Line,NSW1-QLD1,Max Flow,2210.0,2034-03-01T00:00:00,,QLD Typical Summer
+Line,NSW1-QLD1,Max Flow,2210.0,2034-03-01T00:00:00,,QLD Winter
+Line,NSW1-QLD1,Min Flow,-1450.0,,,NSW Hot Day
+Line,NSW1-QLD1,Min Flow,-1450.0,,,NSW Typical Summer
+Line,NSW1-QLD1,Min Flow,-1450.0,,,NSW Winter
+Line,NSW1-QLD1,Min Flow,-3150.0,2034-03-01T00:00:00,,NSW Hot Day
+Line,NSW1-QLD1,Min Flow,-3150.0,2034-03-01T00:00:00,,NSW Typical Summer
+Line,NSW1-QLD1,Min Flow,-3150.0,2034-03-01T00:00:00,,NSW Winter
+Line,SESA-CSA,Max Flow,750.0,,,SA Hot Day
+Line,SESA-CSA,Max Flow,750.0,,,SA Typical Summer
+Line,SESA-CSA,Max Flow,800.0,,,SA Winter
+Line,SESA-CSA,Min Flow,-790.0,,,SA Hot Day
+Line,SESA-CSA,Min Flow,-790.0,,,SA Typical Summer
+Line,SESA-CSA,Min Flow,-820.0,,,SA Winter
+Line,SEV-MEL,Max Flow,7100.0,,,VIC Hot Day
+Line,SEV-MEL,Max Flow,7430.0,,,VIC Typical Summer
+Line,SEV-MEL,Max Flow,8170.0,,,VIC Winter
+Line,SEV-MEL,Max Flow,5325.0,2028-07-01T00:00:00,,VIC Hot Day
+Line,SEV-MEL,Max Flow,5655.0,2028-07-01T00:00:00,,VIC Typical Summer
+Line,SEV-MEL,Max Flow,6395.0,2028-07-01T00:00:00,,VIC Winter
+Line,SEV-MEL,Max Flow,8025.0,2033-07-01T00:00:00,,VIC Hot Day
+Line,SEV-MEL,Max Flow,8355.0,2033-07-01T00:00:00,,VIC Typical Summer
+Line,SEV-MEL,Max Flow,9095.0,2033-07-01T00:00:00,,VIC Winter
+Line,SEV-MEL,Min Flow,-7100.0,,,VIC Hot Day
+Line,SEV-MEL,Min Flow,-7430.0,,,VIC Typical Summer
+Line,SEV-MEL,Min Flow,-8170.0,,,VIC Winter
+Line,SEV-MEL,Min Flow,-7100.0,2028-07-01T00:00:00,,VIC Hot Day
+Line,SEV-MEL,Min Flow,-7430.0,2028-07-01T00:00:00,,VIC Typical Summer
+Line,SEV-MEL,Min Flow,-8170.0,2028-07-01T00:00:00,,VIC Winter
+Line,SEV-MEL,Min Flow,-7100.0,2033-07-01T00:00:00,,VIC Hot Day
+Line,SEV-MEL,Min Flow,-7430.0,2033-07-01T00:00:00,,VIC Typical Summer
+Line,SEV-MEL,Min Flow,-8170.0,2033-07-01T00:00:00,,VIC Winter
+Line,SNSW-CNSW,Max Flow,2700.0,,,NSW Hot Day
+Line,SNSW-CNSW,Max Flow,2700.0,,,NSW Typical Summer
+Line,SNSW-CNSW,Max Flow,2950.0,,,NSW Winter
+Line,SNSW-CNSW,Max Flow,2950.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Max Flow,2950.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Max Flow,3200.0,2027-08-01T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Max Flow,5150.0,2027-12-02T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Max Flow,5150.0,2027-12-02T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Max Flow,5400.0,2027-12-02T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Max Flow,5600.0,2029-07-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Max Flow,5600.0,2029-07-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Max Flow,5850.0,2029-07-01T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Max Flow,5350.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Max Flow,5350.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Max Flow,5600.0,2030-07-01T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Min Flow,-2320.0,,,NSW Hot Day
+Line,SNSW-CNSW,Min Flow,-2320.0,,,NSW Typical Summer
+Line,SNSW-CNSW,Min Flow,-2590.0,,,NSW Winter
+Line,SNSW-CNSW,Min Flow,-2320.0,2027-08-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Min Flow,-2320.0,2027-08-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Min Flow,-2590.0,2027-08-01T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Min Flow,-4520.0,2027-12-02T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Min Flow,-4520.0,2027-12-02T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Min Flow,-4790.0,2027-12-02T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Min Flow,-4970.0,2029-07-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Min Flow,-4970.0,2029-07-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Min Flow,-5240.0,2029-07-01T00:00:00,,NSW Winter
+Line,SNSW-CNSW,Min Flow,-4970.0,2030-07-01T00:00:00,,NSW Hot Day
+Line,SNSW-CNSW,Min Flow,-4970.0,2030-07-01T00:00:00,,NSW Typical Summer
+Line,SNSW-CNSW,Min Flow,-5240.0,2030-07-01T00:00:00,,NSW Winter
+Line,SQ-CQ,Max Flow,1100.0,,,QLD Hot Day
+Line,SQ-CQ,Max Flow,1100.0,,,QLD Typical Summer
+Line,SQ-CQ,Max Flow,1100.0,,,QLD Winter
+Line,SQ-CQ,Max Flow,1100.0,2033-12-01T00:00:00,,QLD Hot Day
+Line,SQ-CQ,Max Flow,1100.0,2033-12-01T00:00:00,,QLD Typical Summer
+Line,SQ-CQ,Max Flow,1100.0,2033-12-01T00:00:00,,QLD Winter
+Line,SQ-CQ,Max Flow,4250.0,2035-12-01T00:00:00,,QLD Hot Day
+Line,SQ-CQ,Max Flow,4250.0,2035-12-01T00:00:00,,QLD Typical Summer
+Line,SQ-CQ,Max Flow,4250.0,2035-12-01T00:00:00,,QLD Winter
+Line,SQ-CQ,Min Flow,-2100.0,,,QLD Hot Day
+Line,SQ-CQ,Min Flow,-2100.0,,,QLD Typical Summer
+Line,SQ-CQ,Min Flow,-2100.0,,,QLD Winter
+Line,SQ-CQ,Min Flow,-2400.0,2033-12-01T00:00:00,,QLD Hot Day
+Line,SQ-CQ,Min Flow,-2400.0,2033-12-01T00:00:00,,QLD Typical Summer
+Line,SQ-CQ,Min Flow,-2400.0,2033-12-01T00:00:00,,QLD Winter
+Line,SQ-CQ,Min Flow,-4300.0,2035-12-01T00:00:00,,QLD Hot Day
+Line,SQ-CQ,Min Flow,-4300.0,2035-12-01T00:00:00,,QLD Typical Summer
+Line,SQ-CQ,Min Flow,-4300.0,2035-12-01T00:00:00,,QLD Winter
+Line,T-V-MNSP1,Max Flow,594.0,,,VIC Hot Day
+Line,T-V-MNSP1,Max Flow,594.0,,,VIC Typical Summer
+Line,T-V-MNSP1,Max Flow,594.0,,,VIC Winter
+Line,T-V-MNSP1,Min Flow,-478.0,,,TAS Hot Day
+Line,T-V-MNSP1,Min Flow,-478.0,,,TAS Typical Summer
+Line,T-V-MNSP1,Min Flow,-478.0,,,TAS Winter
+Line,V-S-MNSP1,Max Flow,165.0,,,SA Hot Day
+Line,V-S-MNSP1,Max Flow,220.0,,,SA Typical Summer
+Line,V-S-MNSP1,Max Flow,220.0,,,SA Winter
+Line,V-S-MNSP1,Min Flow,-100.0,,,VIC Hot Day
+Line,V-S-MNSP1,Min Flow,-200.0,,,VIC Typical Summer
+Line,V-S-MNSP1,Min Flow,-200.0,,,VIC Winter
+Line,V-SA,Max Flow,650.0,,,SA Hot Day
+Line,V-SA,Max Flow,650.0,,,SA Typical Summer
+Line,V-SA,Max Flow,650.0,,,SA Winter
+Line,V-SA,Max Flow,750.0,2027-11-30T00:00:00,,SA Hot Day
+Line,V-SA,Max Flow,750.0,2027-11-30T00:00:00,,SA Typical Summer
+Line,V-SA,Max Flow,750.0,2027-11-30T00:00:00,,SA Winter
+Line,V-SA,Min Flow,-650.0,,,VIC Hot Day
+Line,V-SA,Min Flow,-650.0,,,VIC Typical Summer
+Line,V-SA,Min Flow,-650.0,,,VIC Winter
+Line,V-SA,Min Flow,-750.0,2027-11-30T00:00:00,,VIC Hot Day
+Line,V-SA,Min Flow,-750.0,2027-11-30T00:00:00,,VIC Typical Summer
+Line,V-SA,Min Flow,-750.0,2027-11-30T00:00:00,,VIC Winter
+Line,VIC1-NSW1,Max Flow,870.0,,,NSW Hot Day
+Line,VIC1-NSW1,Max Flow,1000.0,,,NSW Typical Summer
+Line,VIC1-NSW1,Max Flow,1000.0,,,NSW Winter
+Line,VIC1-NSW1,Max Flow,2760.0,2031-11-30T00:00:00,,NSW Hot Day
+Line,VIC1-NSW1,Max Flow,2890.0,2031-11-30T00:00:00,,NSW Typical Summer
+Line,VIC1-NSW1,Max Flow,2890.0,2031-11-30T00:00:00,,NSW Winter
+Line,VIC1-NSW1,Min Flow,-400.0,,,VIC Hot Day
+Line,VIC1-NSW1,Min Flow,-400.0,,,VIC Typical Summer
+Line,VIC1-NSW1,Min Flow,-400.0,,,VIC Winter
+Line,VIC1-NSW1,Min Flow,-2070.0,2031-11-30T00:00:00,,VIC Hot Day
+Line,VIC1-NSW1,Min Flow,-2070.0,2031-11-30T00:00:00,,VIC Typical Summer
+Line,VIC1-NSW1,Min Flow,-2070.0,2031-11-30T00:00:00,,VIC Winter

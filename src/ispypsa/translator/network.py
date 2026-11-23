@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 
 from ispypsa.config import ModelConfig
+from ispypsa.model_years import _model_year_of_dates
 from ispypsa.translator.helpers import (
     _annuitised_investment_costs,
     _resolve_wildcards,
@@ -93,7 +94,10 @@ def _translate_network_to_links(
 
     Existing links carry the larger of their forward and reverse capacities as
     p_nom; limits for each demand condition are returned per unit of p_nom in
-    the link_timeslice_limits table. Expansion links are built per investment
+    the link_timeslice_limits table. Each committed capacity change becomes a
+    further non-extendable link on its path, in service for the years the
+    change applies (see _build_committed_change_links). Expansion links are
+    built per investment
     period from the unified expansion options/costs tables (their total
     capacity is capped by the expansion-limit custom constraints built in
     ispypsa.translator.constraints).
@@ -116,13 +120,28 @@ def _translate_network_to_links(
         paths,
         config.network.transmission_default_limit,
     )
+    changes = ispypsa_tables["network_transmission_path_capacity_changes"]
+    changes = changes[changes["path_id"].isin(paths["path_id"])]
+    # A table with no rows reads from CSV as text columns; the arithmetic on
+    # capacity_change needs a numeric column either way.
+    changes = changes.astype({"capacity_change": "float64"})
+    limits = _remove_capacity_that_retires(limits, changes)
     existing_links = _build_existing_links(
         paths,
         limits,
         rez_ids,
         config.temporal.range.start_year,
     )
-    link_timeslice_limits = _translate_timeslice_limits_to_pu(limits, existing_links)
+    existing_limits = _translate_timeslice_limits_to_pu(limits, existing_links)
+
+    # Committed changes
+    committed_links = _build_committed_change_links(
+        changes,
+        existing_links,
+        config.temporal.year_type,
+        config.temporal.range.start_year,
+    )
+    committed_limits = _static_limits_as_fallback_rows(committed_links)
 
     # Expansion
     enabled_ids = _enabled_expansion_element_ids(
@@ -142,7 +161,12 @@ def _translate_network_to_links(
         config.network.annuitisation_lifetime,
     )
     expansion_links = _build_expansion_links(existing_links, options, costs)
-    links = pd.concat([existing_links, expansion_links], ignore_index=True)
+    links = pd.concat(
+        [existing_links, committed_links, expansion_links], ignore_index=True
+    )
+    link_timeslice_limits = pd.concat(
+        [existing_limits, committed_limits], ignore_index=True
+    )
     return links.loc[:, _LINK_COLUMNS], link_timeslice_limits
 
 
@@ -390,6 +414,202 @@ def _translate_timeslice_limits_to_pu(
         rows["p_nom"] > 0, sign * rows["capacity"] / rows["p_nom"], 0.0
     )
     return rows.loc[:, _LINK_TIMESLICE_LIMIT_COLUMNS].reset_index(drop=True)
+
+
+def _remove_capacity_that_retires(
+    limits: pd.DataFrame, changes: pd.DataFrame
+) -> pd.DataFrame:
+    """Takes the capacity a committed reduction removes off the path's limits.
+
+    The limits table holds a path's capacity as it stands today. Where a
+    committed change reduces it, the existing link is left with the capacity
+    that stays for the whole horizon, and the part that goes becomes a link of
+    its own that retires on the change's date (see
+    _build_committed_change_links). The reduction applies in every timeslice
+    of its direction.
+
+    I/O Example:
+        limits:
+            path_id  direction  timeslice        capacity
+            SEV-MEL  forward    vic_peak_demand  7100
+            SEV-MEL  forward    ,                8170
+            SEV-MEL  reverse    ,                8170
+
+        changes:
+            path_id  direction  capacity_change  date_from
+            SEV-MEL  forward    -1775            2028-07-01T00:00:00
+            CQ-NQ    forward    500              2030-07-01T00:00:00   # an addition: ignored
+
+        returns:
+            path_id  direction  timeslice        capacity
+            SEV-MEL  forward    vic_peak_demand  5325
+            SEV-MEL  forward    ,                6395
+            SEV-MEL  reverse    ,                8170
+    """
+    reductions = changes[changes["capacity_change"] < 0.0]
+    reduction = reductions.groupby(["path_id", "direction"], as_index=False)[
+        "capacity_change"
+    ].sum()
+    limits = limits.merge(reduction, on=["path_id", "direction"], how="left")
+    limits["capacity"] = limits["capacity"] + limits["capacity_change"].fillna(0.0)
+    return limits.drop(columns="capacity_change")
+
+
+def _build_committed_change_links(
+    changes: pd.DataFrame,
+    existing_links: pd.DataFrame,
+    year_type: str,
+    start_year: int,
+) -> pd.DataFrame:
+    """Builds one non-extendable PyPSA link per committed capacity change.
+
+    A committed change is a known, dated change to a path's capacity, such as
+    HumeLink adding 2,200 MW to SNSW-CNSW. PyPSA has a link in service for the
+    investment periods from its build_year until build_year + lifetime, so
+    each change becomes a link that is in service for the years its capacity
+    is there:
+
+    - An addition is in service from the model year of its date_from, and
+      until the model year of its date_to if it has one.
+    - A reduction is the capacity that goes: its link is in service from
+      before the model starts until the model year of its date_from. The
+      existing link has already had that capacity taken off (see
+      _remove_capacity_that_retires).
+
+    A change's forward and reverse rows share a link. p_nom is the larger of
+    the two, and p_max_pu and p_min_pu give each direction per unit of it, the
+    same in every timeslice.
+
+    I/O Example:
+        changes:
+            path_id    direction  capacity_change  date_from            date_to
+            SNSW-CNSW  forward    2200             2027-12-02T00:00:00
+            SNSW-CNSW  reverse    2200             2027-12-02T00:00:00
+            SNSW-CNSW  forward    250              2027-08-01T00:00:00  2030-07-01T00:00:00
+            SEV-MEL    forward    -1775            2028-07-01T00:00:00
+
+        existing_links (abridged):
+            isp_name   bus0  bus1  carrier  isp_type
+            SNSW-CNSW  SNSW  CNSW  AC       flow_path
+            SEV-MEL    SEV   MEL   AC       flow_path
+
+        year_type = "fy", start_year = 2026
+
+        returns (abridged):
+            isp_name   name                            p_nom  p_max_pu  p_min_pu  build_year  lifetime
+            SNSW-CNSW  SNSW-CNSW_committed_2027-12-02  2200   1.0       -1.0      2028        inf
+            SNSW-CNSW  SNSW-CNSW_committed_2027-08-01  250    1.0       0.0       2028        3     # until FY2031
+            SEV-MEL    SEV-MEL_retiring_2028-07-01     1775   1.0       0.0       2025        4     # until FY2029
+    """
+    links = _pair_forward_and_reverse_changes(changes)
+    links = _add_years_in_service(links, year_type, start_year)
+    links = links.merge(
+        existing_links.loc[:, ["isp_name", "bus0", "bus1", "carrier", "isp_type"]],
+        left_on="path_id",
+        right_on="isp_name",
+    )
+    date = pd.to_datetime(links["date_from"]).dt.strftime("%Y-%m-%d")
+    kind = np.where(links["is_reduction"], "_retiring_", "_committed_")
+    links["name"] = links["path_id"] + kind + date
+    capacity = links[["forward_change", "reverse_change"]].abs().max(axis=1)
+    links["p_nom"] = capacity
+    links["p_max_pu"] = links["forward_change"].abs() / capacity
+    links["p_min_pu"] = -1.0 * links["reverse_change"].abs() / capacity
+    links["capital_cost"] = np.nan
+    links["p_nom_extendable"] = False
+    return links
+
+
+def _pair_forward_and_reverse_changes(changes: pd.DataFrame) -> pd.DataFrame:
+    """Pairs each change's forward and reverse rows into one row.
+
+    A change with a row for only one direction leaves the other at zero.
+
+    I/O Example:
+        changes:
+            path_id    direction  capacity_change  date_from            date_to
+            SNSW-CNSW  forward    2200             2027-12-02T00:00:00
+            SNSW-CNSW  reverse    2200             2027-12-02T00:00:00
+            SEV-MEL    forward    -1775            2028-07-01T00:00:00
+
+        returns:
+            path_id    date_from            date_to  forward_change  reverse_change
+            SNSW-CNSW  2027-12-02T00:00:00           2200            2200
+            SEV-MEL    2028-07-01T00:00:00           -1775           0
+    """
+    keys = ["path_id", "date_from", "date_to"]
+    is_forward = changes["direction"] == "forward"
+    forward = changes.loc[is_forward, keys + ["capacity_change"]]
+    reverse = changes.loc[~is_forward, keys + ["capacity_change"]]
+    forward = forward.rename(columns={"capacity_change": "forward_change"})
+    reverse = reverse.rename(columns={"capacity_change": "reverse_change"})
+    paired = forward.merge(reverse, on=keys, how="outer")
+    return paired.fillna({"forward_change": 0.0, "reverse_change": 0.0})
+
+
+def _add_years_in_service(
+    changes: pd.DataFrame, year_type: str, start_year: int
+) -> pd.DataFrame:
+    """Adds the build_year and lifetime that put each change's link in service
+    for the right years, and is_reduction.
+
+    An addition is built in the model year of its date_from and lasts until
+    the model year of its date_to, or forever when date_to is blank. The
+    capacity a reduction removes is built the year before the model starts,
+    like an existing link, and lasts until the model year of its date_from.
+
+    I/O Example (year_type = "fy", start_year = 2026):
+        changes:
+            path_id    date_from            date_to              forward_change  reverse_change
+            SNSW-CNSW  2027-12-02T00:00:00                       2200            2200
+            SNSW-CNSW  2027-08-01T00:00:00  2030-07-01T00:00:00  250             0
+            SEV-MEL    2028-07-01T00:00:00                       -1775           0
+
+        returns (the input columns, plus):
+            path_id    is_reduction  build_year  lifetime
+            SNSW-CNSW  False         2028        inf
+            SNSW-CNSW  False         2028        3         # FY2031 - FY2028
+            SEV-MEL    True          2025        4         # FY2029 - 2025
+    """
+    changes = changes.copy()
+    date_from = pd.to_datetime(changes["date_from"])
+    date_to = pd.to_datetime(changes["date_to"])
+    year_from = _model_year_of_dates(year_type, date_from)
+    year_to = pd.Series(np.inf, index=changes.index)
+    is_temporary = date_to.notna()
+    year_to[is_temporary] = _model_year_of_dates(year_type, date_to[is_temporary])
+    is_reduction = (changes["forward_change"] < 0.0) | (changes["reverse_change"] < 0.0)
+    year_before_model = start_year - 1
+    changes["is_reduction"] = is_reduction
+    changes["build_year"] = year_from.where(~is_reduction, year_before_model)
+    changes["lifetime"] = (year_to - year_from).where(
+        ~is_reduction, year_from - year_before_model
+    )
+    return changes
+
+
+def _static_limits_as_fallback_rows(links: pd.DataFrame) -> pd.DataFrame:
+    """Writes each link's p_max_pu and p_min_pu as blank-timeslice rows of the
+    link_timeslice_limits table, so they apply at every snapshot.
+
+    I/O Example:
+        links (abridged):
+            name                            p_max_pu  p_min_pu
+            SNSW-CNSW_committed_2027-12-02  1.0       -1.0
+
+        returns:
+            name                            attribute  timeslice  value
+            SNSW-CNSW_committed_2027-12-02  p_max_pu   ,          1.0
+            SNSW-CNSW_committed_2027-12-02  p_min_pu   ,          -1.0
+    """
+    limits = links.melt(
+        id_vars="name",
+        value_vars=["p_max_pu", "p_min_pu"],
+        var_name="attribute",
+        value_name="value",
+    )
+    limits["timeslice"] = np.nan
+    return limits.loc[:, _LINK_TIMESLICE_LIMIT_COLUMNS]
 
 
 def _enabled_expansion_element_ids(

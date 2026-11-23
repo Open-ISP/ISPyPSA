@@ -23,12 +23,12 @@ def test_extract_transmission_expansion_results(csv_str_to_df):
     # - Link-CD: Base capacity (Year 0), expanded in 2030
     # - Link-EF: No base capacity, built in 2025, expanded in 2030
     links_csv = """
-    bus0, bus1, build_year, p_nom_opt, p_min_pu, isp_name, isp_type
-    A,    B,    0,          100,       -1,       Link-AB,  interconnector
-    C,    D,    0,          200,       -1,       Link-CD,  interconnector
-    C,    D,    2030,       50,        -1,       Link-CD,  interconnector
-    E,    F,    2025,       300,       -1,       Link-EF,  interconnector
-    E,    F,    2030,       100,       -1,       Link-EF,  interconnector
+    bus0, bus1, build_year, lifetime, p_nom_opt, p_min_pu, isp_name, isp_type
+    A,    B,    0,          inf,      100,       -1,       Link-AB,  interconnector
+    C,    D,    0,          inf,      200,       -1,       Link-CD,  interconnector
+    C,    D,    2030,       inf,      50,        -1,       Link-CD,  interconnector
+    E,    F,    2025,       inf,      300,       -1,       Link-EF,  interconnector
+    E,    F,    2030,       inf,      100,       -1,       Link-EF,  interconnector
     """
     links_df = csv_str_to_df(links_csv)
 
@@ -67,6 +67,31 @@ def test_extract_transmission_expansion_results(csv_str_to_df):
     # We rely on pandas flexibility but ensure column order/presence
 
     pd.testing.assert_frame_equal(result, expected_df, check_like=True)
+
+
+def test_extract_transmission_expansion_results_retiring_links(csv_str_to_df):
+    links = csv_str_to_df("""
+        bus0,  bus1,  build_year,  lifetime,  p_nom_opt,  p_min_pu,  isp_name,  isp_type
+        A,     B,     2025,        inf,       1000,       -1,        A-B,       flow_path
+        A,     B,     2025,        3,         400,        0,         A-B,       flow_path
+        A,     B,     2028,        inf,       250,        -1,        A-B,       flow_path
+        A,     B,     2028,        2,         100,        0,         A-B,       flow_path
+    """)
+    network = MagicMock(spec=pypsa.Network)
+    network.links = links
+
+    result = extract_transmission_expansion_results(network)
+
+    # Two links are in service from 2025 (1000 + 400 forward). In 2028 the 400 MW
+    # link retires (2025 + 3) and two more are built (250 + 100), and in 2030 the
+    # 100 MW link retires (2028 + 2). The retiring links have no reverse capacity.
+    expected = csv_str_to_df("""
+        isp_name,  investment_period,  node_from,  node_to,  isp_type,   forward_capacity_mw,  reverse_capacity_mw
+        A-B,       2025,               A,          B,        flow_path,  1400.0,               -1000.0
+        A-B,       2028,               A,          B,        flow_path,  1350.0,               -1250.0
+        A-B,       2030,               A,          B,        flow_path,  1250.0,               -1250.0
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_like=True)
 
 
 def test_extract_raw_link_flows(csv_str_to_df):

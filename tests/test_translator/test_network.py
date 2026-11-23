@@ -82,6 +82,9 @@ def _network_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         Q1-NQ,    reverse,    qld_winter_reference,  750
         N1-CNSW,  ,           ,
     """)
+    tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,  date_to,  project
+    """)
     tables["network_expansion_options"] = csv_str_to_df("""
         expansion_id,  expansion_type,         allowed_expansion,  expansion_option
         CQ-NQ,         forward,                1000,               CQ-NQ Option 1
@@ -645,6 +648,168 @@ def test_translate_network_to_links_options_empty_costs_populated(
         isp_name,  name,  carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
     """)
     pd.testing.assert_frame_equal(expansion, expected_expansion, check_dtype=False)
+
+
+def _one_path_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """New-format tables with a single flow path (CQ-NQ, 1400 MW forward and
+    1910 MW reverse in every timeslice) and no expansion. sample_model_config
+    uses financial years, starts in 2026 and has investment periods 2026 and
+    2028."""
+    tables = {}
+    tables["network_geography"] = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        NQ,      subregion,  QLD
+        CQ,      subregion,  QLD
+    """)
+    tables["network_transmission_paths"] = csv_str_to_df("""
+        path_id,  geo_from,  geo_to,  carrier
+        CQ-NQ,    CQ,        NQ,      AC
+    """)
+    tables["network_transmission_path_limits"] = csv_str_to_df("""
+        path_id,  direction,  timeslice,  capacity
+        CQ-NQ,    forward,    ,           1400
+        CQ-NQ,    reverse,    ,           1910
+    """)
+    tables["network_expansion_options"] = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+    """)
+    tables["network_transmission_path_expansion_costs"] = csv_str_to_df("""
+        expansion_id,  year,  cost
+    """)
+    return tables
+
+
+def test_translate_network_to_links_committed_addition(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _one_path_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,            date_to,  project
+        CQ-NQ,    forward,    500,              2027-12-02T00:00:00,  ,         Upgrade
+        CQ-NQ,    reverse,    300,              2027-12-02T00:00:00,  ,         Upgrade
+    """)
+
+    links, link_timeslice_limits = _translate_network_to_links(
+        ispypsa_tables, sample_model_config
+    )
+
+    # 2 December 2027 falls in FY2028, so the committed link is built in 2028.
+    # Its p_nom is the larger direction (500) and its reverse limit is 300/500.
+    expected_links = csv_str_to_df("""
+        isp_name,  name,                        carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
+        CQ-NQ,     CQ-NQ_existing,              AC,       CQ,    NQ,    1910,   0.0,       1.0,       2025,        inf,       ,              False,             flow_path
+        CQ-NQ,     CQ-NQ_committed_2027-12-02,  AC,       CQ,    NQ,    500,    -0.6,      1.0,       2028,        inf,       ,              False,             flow_path
+    """)
+    pd.testing.assert_frame_equal(links, expected_links, check_dtype=False)
+
+    expected_limits = csv_str_to_df("""
+        name,                        attribute,  timeslice,  value
+        CQ-NQ_existing,              p_max_pu,   ,           0.732984
+        CQ-NQ_existing,              p_min_pu,   ,           -1.0
+        CQ-NQ_committed_2027-12-02,  p_max_pu,   ,           1.0
+        CQ-NQ_committed_2027-12-02,  p_min_pu,   ,           -0.6
+    """)
+    pd.testing.assert_frame_equal(
+        link_timeslice_limits, expected_limits, check_dtype=False, rtol=1e-5
+    )
+
+
+def test_translate_network_to_links_temporary_one_directional_addition(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _one_path_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,            date_to,              project
+        CQ-NQ,    forward,    250,              2027-08-01T00:00:00,  2030-07-01T00:00:00,  Control scheme
+    """)
+
+    links, link_timeslice_limits = _translate_network_to_links(
+        ispypsa_tables, sample_model_config
+    )
+
+    # In service from FY2028 (1 August 2027) until FY2031 (1 July 2030), so the
+    # lifetime is 3 years. There is no reverse row, so the link can't flow
+    # in reverse.
+    committed = links[links["name"] == "CQ-NQ_committed_2027-08-01"]
+    expected_committed = csv_str_to_df("""
+        isp_name,  name,                        carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
+        CQ-NQ,     CQ-NQ_committed_2027-08-01,  AC,       CQ,    NQ,    250,    0.0,       1.0,       2028,        3,         ,              False,             flow_path
+    """)
+    pd.testing.assert_frame_equal(
+        committed.reset_index(drop=True), expected_committed, check_dtype=False
+    )
+
+    committed_limits = link_timeslice_limits[
+        link_timeslice_limits["name"] == "CQ-NQ_committed_2027-08-01"
+    ]
+    expected_limits = csv_str_to_df("""
+        name,                        attribute,  timeslice,  value
+        CQ-NQ_committed_2027-08-01,  p_max_pu,   ,           1.0
+        CQ-NQ_committed_2027-08-01,  p_min_pu,   ,           0.0
+    """)
+    pd.testing.assert_frame_equal(
+        committed_limits.reset_index(drop=True), expected_limits, check_dtype=False
+    )
+
+
+def test_translate_network_to_links_committed_reduction(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _one_path_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,            date_to,  project
+        CQ-NQ,    forward,    -400,             2027-07-01T00:00:00,  ,         Reconfiguration
+    """)
+
+    links, link_timeslice_limits = _translate_network_to_links(
+        ispypsa_tables, sample_model_config
+    )
+
+    # The 400 MW that goes is a link of its own, in service from the year before
+    # the model starts (2025) until FY2028 (1 July 2027): a lifetime of 3 years.
+    expected_links = csv_str_to_df("""
+        isp_name,  name,                       carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
+        CQ-NQ,     CQ-NQ_existing,             AC,       CQ,    NQ,    1910,   0.0,       1.0,       2025,        inf,       ,              False,             flow_path
+        CQ-NQ,     CQ-NQ_retiring_2027-07-01,  AC,       CQ,    NQ,    400,    0.0,       1.0,       2025,        3,         ,              False,             flow_path
+    """)
+    pd.testing.assert_frame_equal(links, expected_links, check_dtype=False)
+
+    # The existing link keeps the 1000 MW of forward capacity that stays
+    # (1400 - 400), per unit of its p_nom of 1910.
+    expected_limits = csv_str_to_df("""
+        name,                       attribute,  timeslice,  value
+        CQ-NQ_existing,             p_max_pu,   ,           0.523560
+        CQ-NQ_existing,             p_min_pu,   ,           -1.0
+        CQ-NQ_retiring_2027-07-01,  p_max_pu,   ,           1.0
+        CQ-NQ_retiring_2027-07-01,  p_min_pu,   ,           0.0
+    """)
+    pd.testing.assert_frame_equal(
+        link_timeslice_limits, expected_limits, check_dtype=False, rtol=1e-5
+    )
+
+
+def test_translate_network_to_links_drops_changes_for_unmodelled_paths(
+    csv_str_to_df, sample_model_config
+):
+    """A change on a REZ path is dropped with the path when REZs are attached to
+    their parent nodes."""
+    ispypsa_tables = _network_tables(csv_str_to_df)
+    ispypsa_tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,            date_to,  project
+        Q1-NQ,    forward,    100,              2027-12-02T00:00:00,  ,         REZ upgrade
+    """)
+    config = sample_model_config.model_copy(deep=True)
+    config.network.nodes.rezs = "attached_to_parent_node"
+
+    links, _ = _translate_network_to_links(ispypsa_tables, config)
+
+    committed = links[links["name"].str.contains("_committed_")]
+    expected_committed = csv_str_to_df("""
+        isp_name,  name,  carrier,  bus0,  bus1,  p_nom,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  p_nom_extendable,  isp_type
+    """)
+    pd.testing.assert_frame_equal(
+        committed.reset_index(drop=True), expected_committed, check_dtype=False
+    )
 
 
 def test_translate_network_to_links_empty_paths(csv_str_to_df, sample_model_config):

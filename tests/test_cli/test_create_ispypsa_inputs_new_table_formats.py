@@ -291,10 +291,22 @@ _PATHS_PER_GRANULARITY_75 = {
 }
 
 # Drift-detection only — per-option year coverage varies.
+# sub_regions is three rows short of every option having every year: SNSW-CNSW
+# can't be expanded before HumeLink is in service, so its 2025-2027 rows are
+# dropped (see _drop_expansion_costs_before_prerequisite_projects).
 _EXPECTED_EXPANSION_COST_ROWS_75 = {
-    "sub_regions": 1581,
+    "sub_regions": 1578,
     "nem_regions": 1302,
     "single_region": 1209,
+}
+
+# One row per committed project, path and direction it changes. Nine of the 13
+# sub-regional rows are on paths inside a NEM region, which nem_regions drops;
+# single_region models no flow paths at all.
+_EXPECTED_CAPACITY_CHANGE_ROWS_75 = {
+    "sub_regions": 13,
+    "nem_regions": 4,
+    "single_region": 0,
 }
 
 _EXPECTED_COSTS_CONNECTION_ROWS_75 = {
@@ -381,6 +393,9 @@ def test_create_ispypsa_inputs_new_format(
     geo = pd.read_csv(output_dir / "network_geography.csv")
     paths = pd.read_csv(output_dir / "network_transmission_paths.csv")
     limits = pd.read_csv(output_dir / "network_transmission_path_limits.csv")
+    capacity_changes = pd.read_csv(
+        output_dir / "network_transmission_path_capacity_changes.csv"
+    )
     options = pd.read_csv(output_dir / "network_expansion_options.csv")
     costs = pd.read_csv(output_dir / "network_transmission_path_expansion_costs.csv")
     costs_connection = pd.read_csv(output_dir / "costs_connection.csv")
@@ -416,6 +431,11 @@ def test_create_ispypsa_inputs_new_format(
     assert len(limits) == expected_limits
     # Every path has at least one limit row; no orphan limits.
     assert set(limits["path_id"]) == set(paths["path_id"])
+
+    # network_transmission_path_capacity_changes — every change is on a path
+    # the granularity models. The content is covered by the per-module tests.
+    assert len(capacity_changes) == _EXPECTED_CAPACITY_CHANGE_ROWS_75[granularity]
+    assert set(capacity_changes["path_id"]) <= set(paths["path_id"])
 
     # network_expansion_options — each surviving flow-path option emits paired
     # forward + reverse rows sharing one expansion_id; REZ constraint

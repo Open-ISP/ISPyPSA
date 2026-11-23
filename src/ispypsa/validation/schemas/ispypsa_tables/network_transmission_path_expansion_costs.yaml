@@ -25,7 +25,10 @@ description: >
   Source notes:
   Costs are taken from the cost trajectory of the least-cost augmentation
   option selected by the `templater`; the options tables provide the capacity
-  increase used to express costs per MW.
+  increase used to express costs per MW. Where a path's augmentation options
+  assume a committed project is already built (SNSW-CNSW's options assume
+  HumeLink), the `templater` leaves out the years before that project is in
+  service, so the path can't be expanded in them.
 
   If absent:
   No network elements are expandable; a populated options table requires matching
@@ -42,7 +45,11 @@ custom_validation:
       Coverage spans every expandable element (an expansion_id present in
       network_expansion_options once its own wildcards resolve) and every
       model-config investment period; a single row with both keys empty covers it
-      all.
+      all. An element may start late: one whose rows all name a year needs
+      coverage only from its earliest year onward, and can't be expanded in the
+      investment periods before it. For example, an element with rows for 2028
+      and 2030 passes with investment periods 2026, 2028 and 2030, but fails if
+      2029 is also an investment period.
 columns:
   expansion_id:
     type: string

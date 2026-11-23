@@ -52,6 +52,9 @@ def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         Q1-NQ,    forward,    qld_winter_reference,  750
         Q1-NQ,    reverse,    qld_winter_reference,  750
     """)
+    tables["network_transmission_path_capacity_changes"] = csv_str_to_df("""
+        path_id,  direction,  capacity_change,  date_from,  date_to,  project
+    """)
     tables["network_expansion_options"] = csv_str_to_df("""
         expansion_id,  expansion_type,         allowed_expansion,  expansion_option
         CQ-NQ,         forward,                1000,               CQ-NQ Option 1

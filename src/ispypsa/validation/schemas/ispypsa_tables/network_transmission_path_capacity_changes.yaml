@@ -1,0 +1,100 @@
+table: network_transmission_path_capacity_changes
+required: false
+unique:
+  - [path_id, direction, date_from]
+description: >
+  Known, dated changes to the capacity of transmission paths: the committed and
+  anticipated network projects that are going ahead whatever the model decides.
+
+  network_transmission_path_limits holds each path's capacity as it stands
+  today. Each row here adds to (or takes away from) that capacity in one
+  direction, from date_from onwards. The change is the same in every timeslice.
+
+  Each change is modelled as a transmission link of its own on the path, in
+  service for the model years the capacity is there. A change takes effect in
+  the model year its date_from falls in, and applies for the whole of that
+  year. A reduction takes its capacity off the existing link and puts it on a
+  link that retires in the model year of date_from.
+
+  Source tables:
+    - PLEXOS model extract (`line_limits.csv`), via
+      `scripts/extract_plexos_line_limits.py`.
+    - `flow_path_transfer_capability`
+
+  Source notes:
+  The PLEXOS model holds each line's limit as a series of dated values; the
+  `templater` takes the difference between consecutive values. The PLEXOS
+  limits also step for the builds AEMO's own modelling selected, and the model
+  doesn't mark which steps are committed projects, so the committed steps are
+  listed by hand in the `templater`
+  (`ispypsa.templater.path_capacity_changes._COMMITTED_LIMIT_STEPS`). All
+  other steps are left to the expansion options. `flow_path_transfer_capability`
+  is only used to carry changes onto the path ids of the regional granularity.
+
+  If absent:
+  Every path keeps the capacity in network_transmission_path_limits for the
+  whole model horizon, apart from any expansion the model builds.
+custom_validation:
+  - name: changes_on_the_same_date_share_a_sign
+    description: >
+      The forward and reverse rows of a path that share a date_from must both
+      be additions or both be reductions, because the two directions are
+      modelled as one link. For example, a path with +500 forward and -200
+      reverse on the same date fails.
+  - name: only_additions_are_temporary
+    description: >
+      A row with a date_to must have a positive capacity_change. A temporary
+      reduction would need the capacity to leave and come back, which one link
+      can't represent. For example, a row with capacity_change -400 and a
+      date_to fails.
+  - name: reductions_leave_capacity_non_negative
+    description: >
+      The reductions on a path and direction must not add up to more than the
+      smallest limit network_transmission_path_limits gives that path and
+      direction. For example, reductions totalling 800 MW on a path whose
+      forward limit is 700 MW in some timeslice fail.
+columns:
+  path_id:
+    type: string
+    required: true
+    allowed_values_from:
+      - network_transmission_paths: path_id
+    description: Transmission path whose capacity changes.
+  direction:
+    type: string
+    required: true
+    allowed_values: [forward, reverse]
+    description: >
+      Power flow direction the change applies to, relative to the path's
+      geo_from and geo_to. A change in both directions has a row for each.
+  capacity_change:
+    type: float
+    required: true
+    units: MW
+    description: >
+      Capacity added to the path's limit in this direction. Negative for a
+      reduction.
+  date_from:
+    type: datetime
+    required: true
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date the change takes effect. The change applies from the start of the
+      model year this date falls in. A model year starts on 1 July of the
+      preceding calendar year when year_type is fy, and on 1 January otherwise.
+  date_to:
+    type: datetime
+    required: false
+    format: "%Y-%m-%dT%H:%M:%S"
+    description: >
+      Date a temporary addition stops applying. The capacity is gone from the
+      start of the model year this date falls in.
+
+      If absent (or empty):
+      The change is permanent.
+  project:
+    type: string
+    required: false
+    description: >
+      Name of the network project behind the change. For reference only; the
+      model doesn't use it.

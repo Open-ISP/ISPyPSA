@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pypsa
 
@@ -7,7 +8,9 @@ from ispypsa.results.helpers import _build_node_to_geography_mapping
 def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFrame:
     """Extract transmission expansion results from PyPSA network and rename columns according to ISP conventions.
 
-    Existing capacity is reported with a build year of 0.
+    Existing capacity is reported with a build year of 0. A link with a finite
+    lifetime stops counting from the year it retires (build_year + lifetime),
+    and that year is reported as an investment period of its own.
 
     Examples:
 
@@ -39,19 +42,18 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
     results["forward_capacity_mw"] = results["p_nom_opt"]
     results["reverse_capacity_mw"] = results["p_nom_opt"] * results["p_min_pu"]
 
-    cols_to_keep = [
-        "isp_name",
-        "isp_type",
-        "node_from",
-        "node_to",
-        "investment_period",
-        "forward_capacity_mw",
-        "reverse_capacity_mw",
-    ]
-
-    results = results.loc[:, cols_to_keep].reset_index(drop=True)
-
     cumsum_cols = ["forward_capacity_mw", "reverse_capacity_mw"]
+    results = pd.concat(
+        [results, _capacity_leaving_at_retirement(results)], ignore_index=True
+    )
+
+    # One row per transmission element and year: several links of an element
+    # can share a build year, or retire in a year another is built.
+    results = results.groupby(
+        ["isp_name", "isp_type", "node_from", "node_to", "investment_period"],
+        as_index=False,
+    )[cumsum_cols].sum()
+
     results = results.sort_values("investment_period")
     results[cumsum_cols] = results.groupby("isp_name")[cumsum_cols].cumsum()
 
@@ -77,6 +79,29 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
     results = results.reset_index()
 
     return results
+
+
+def _capacity_leaving_at_retirement(links: pd.DataFrame) -> pd.DataFrame:
+    """The capacity each retiring link takes away, as negative capacity in its
+    retirement year (build_year + lifetime, the first year PyPSA has it out of
+    service). Links with an infinite lifetime never retire and have no row.
+
+    I/O Example:
+        links (abridged):
+            isp_name  investment_period  lifetime  forward_capacity_mw  reverse_capacity_mw
+            A-B       2025               inf       100                  -100
+            A-B       2028               3         250                  0
+
+        returns:
+            isp_name  investment_period  lifetime  forward_capacity_mw  reverse_capacity_mw
+            A-B       2031               3         -250                 0
+    """
+    retiring = links[np.isfinite(links["lifetime"])].copy()
+    retirement_year = retiring["investment_period"] + retiring["lifetime"]
+    retiring["investment_period"] = retirement_year.astype("int64")
+    retiring["forward_capacity_mw"] = -1.0 * retiring["forward_capacity_mw"]
+    retiring["reverse_capacity_mw"] = -1.0 * retiring["reverse_capacity_mw"]
+    return retiring
 
 
 def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:
