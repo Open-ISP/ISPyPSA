@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from ispypsa.templater.connection_and_build_costs import (
+    _add_known_missing_system_strength_cost_years,
     _add_system_strength_costs,
     _build_vre_cost_rows,
     _calculate_connection_cost_per_mw,
@@ -155,6 +156,52 @@ def test_normalise_system_strength_cost_frame(csv_str_to_df):
         rtol=1e-5,
         check_dtype=False,
     )
+
+
+# --- _add_known_missing_system_strength_cost_years ---
+
+
+def test_add_known_missing_system_strength_cost_years(csv_str_to_df):
+    system_strength_costs = csv_str_to_df("""
+        year,  system_strength_cost
+        2026,  163240.0
+        2027,  148880.0
+        2054,  60450.0
+    """)
+
+    result = _add_known_missing_system_strength_cost_years(system_strength_costs)
+
+    # 2025 takes 2026's cost and 2055 takes 2054's cost
+    expected = csv_str_to_df("""
+        year,  system_strength_cost
+        2025,  163240.0
+        2026,  163240.0
+        2027,  148880.0
+        2054,  60450.0
+        2055,  60450.0
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_add_known_missing_system_strength_cost_years_raises_when_year_present(
+    csv_str_to_df,
+):
+    system_strength_costs = csv_str_to_df("""
+        year,  system_strength_cost
+        2025,  170000.0
+        2026,  163240.0
+        2054,  60450.0
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "System strength costs for years [2025] are now in the "
+            "'efficient_level_of_system_strength_cost' table; remove them from "
+            "_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS."
+        ),
+    ):
+        _add_known_missing_system_strength_cost_years(system_strength_costs)
 
 
 # --- _set_non_ibr_system_strength_cost_to_zero ---
@@ -640,8 +687,8 @@ def test_template_connection_costs(csv_str_to_df):
             NSW,     Battery Storage (4h),   400
         """),
         "efficient_level_of_system_strength_cost": csv_str_to_df("""
-            label,  2024-25
-            IBR,    10
+            label,  2025-26,  2053-54
+            IBR,    10,       10
         """),
     }
     sub_regional_geography = csv_str_to_df("""

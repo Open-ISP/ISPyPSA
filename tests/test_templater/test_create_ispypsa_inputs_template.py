@@ -458,8 +458,8 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
-        label,  2024-25
-        IBR,    10
+        label,  2025-26,  2053-54
+        IBR,    10,       10
     """)
     build_costs = csv_str_to_df("""
         Technology,                     IASR Scenario,      2024-25,    2025-26
@@ -795,8 +795,8 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
-        label,  2024-25
-        IBR,    10
+        label,  2025-26,  2053-54
+        IBR,    10,       10
     """)
     build_costs = csv_str_to_df("""
         Technology,                     IASR Scenario,      2024-25,    2025-26
@@ -1019,8 +1019,8 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
         QLD,     OCGT (small GT),   400
     """)
     efficient_level_of_system_strength_cost = csv_str_to_df("""
-        label,  2024-25
-        IBR,    10
+        label,  2025-26,  2053-54
+        IBR,    10,       10
     """)
     build_costs = csv_str_to_df("""
         Technology,                     IASR Scenario,      2024-25,    2025-26

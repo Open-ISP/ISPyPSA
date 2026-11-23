@@ -31,6 +31,10 @@ from ispypsa.templater.new_entrants import _override_botn_technology
 _VRE_TECHNOLOGY_STRINGS = ["solar", "wind"]
 _IBR_TECHNOLOGY_STRINGS = _VRE_TECHNOLOGY_STRINGS + ["battery", "batteries"]
 _EXCLUDED_TECHNOLOGIES = {"Alkaline Electrolyser"}
+# The v7.5 system strength cost table covers 2026-2054, one year short at each end
+# of the connection cost forecasts (2025-2055). Maps each missing year to the
+# nearest covered year, whose cost it takes.
+_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS = {2025: 2026, 2055: 2054}
 
 
 def _template_connection_costs(
@@ -75,8 +79,10 @@ def _template_connection_costs(
     Returns:
         One row per (geo_id, technology, year). connection_cost and
         system_strength_cost are in $/MW; system_strength_cost is 0.0 for
-        non-IBR technologies and solar thermal. For IBR technologies it is NaN in
-        years the system strength table doesn't cover (2025 and 2055 at v7.5).
+        non-IBR technologies and solar thermal. The years the system strength table
+        is known not to cover take the nearest covered year's cost (see
+        _add_known_missing_system_strength_cost_years); for IBR technologies it is
+        NaN in any other year the table doesn't cover.
 
     I/O Example:
         Inputs (abbreviated; regional_granularity="nem_regions"):
@@ -105,14 +111,14 @@ def _template_connection_costs(
                 NSW     CCGT            400
 
             efficient_level_of_system_strength_cost:
-                Unnamed: 1                  2025-26   2026-27
-                IBR remediation cost $/kW   163.24    148.88
+                Unnamed: 1                  2025-26   ...  2053-54
+                IBR remediation cost $/kW   163.24    ...  60.45
 
         Returns:
             geo_id  technology              year  connection_cost  system_strength_cost
-            N1      Wind                    2025  182500.0         NaN       # no 2024-25 value
+            N1      Wind                    2025  182500.0         163240.0  # 2025 takes 2026's cost
             N1      Wind                    2026  185000.0         163240.0  # VRE IBR
-            N1      Large scale Solar PV    2025  182500.0         NaN
+            N1      Large scale Solar PV    2025  182500.0         163240.0
             N1      Large scale Solar PV    2026  185000.0         163240.0
             NSW     CCGT                    2025  100000.0         0.0       # CNSW, SNW -> NSW
             NSW     CCGT                    2026  105000.0         0.0       # non-VRE, non-IBR
@@ -121,6 +127,9 @@ def _template_connection_costs(
     new_entrant_pairs = _extract_new_entrant_pairs(iasr_tables["new_entrants_summary"])
     system_strength_costs = _normalise_system_strength_cost_frame(
         _read_cost_table(iasr_tables, "efficient_level_of_system_strength_cost")
+    )
+    system_strength_costs = _add_known_missing_system_strength_cost_years(
+        system_strength_costs
     )
     vre_connection_costs = _template_vre_connection_costs(
         iasr_tables, scenario, new_entrant_pairs
@@ -475,8 +484,10 @@ def _add_system_strength_costs(
     not incur a system strength cost, so it is zeroed separately.
 
     Years missing from ``system_strength_costs`` get NaN for IBR technologies, and
-    are logged (see _warn_years_without_system_strength_cost). At v7.5 that's 2025
-    and 2055, since the system strength table covers 2026-2054.
+    are logged (see _warn_years_without_system_strength_cost). The years known to be
+    missing are filled before this runs (see
+    _add_known_missing_system_strength_cost_years), so a year logged here is an
+    unexpected gap.
 
     I/O Example:
         connection_costs:
@@ -529,6 +540,62 @@ def _normalise_system_strength_cost_frame(
     )
     long["system_strength_cost"] *= 1000  # convert to $/MW
     return long
+
+
+def _add_known_missing_system_strength_cost_years(
+    system_strength_costs: pd.DataFrame,
+) -> pd.DataFrame:
+    """Adds a row for each year in _KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS, copying
+    the system_strength_cost of its nearest covered year.
+
+    Raises a ValueError if a known missing year is already in
+    ``system_strength_costs``, since the known list is then out of date. Any other
+    year the table doesn't cover stays missing, and is reported after the merge (see
+    _warn_years_without_system_strength_cost).
+
+    I/O Example:
+        system_strength_costs:
+            year  system_strength_cost
+            2026  163240.0
+            2027  148880.0
+            2054  60450.0
+
+        returns:
+            year  system_strength_cost
+            2025  163240.0    # copied from 2026
+            2026  163240.0
+            2027  148880.0
+            2054  60450.0
+            2055  60450.0     # copied from 2054
+    """
+    _raise_if_known_missing_years_present(system_strength_costs)
+    cost_by_year = system_strength_costs.set_index("year")["system_strength_cost"]
+    missing_years = list(_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS)
+    nearest_years = list(_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS.values())
+    filled_years = pd.DataFrame(
+        {
+            "year": missing_years,
+            "system_strength_cost": cost_by_year.loc[nearest_years].to_numpy(),
+        }
+    )
+    all_years = pd.concat([system_strength_costs, filled_years], ignore_index=True)
+    return all_years.sort_values("year").reset_index(drop=True)
+
+
+def _raise_if_known_missing_years_present(system_strength_costs: pd.DataFrame) -> None:
+    """Raises if a year in _KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS is already in
+    ``system_strength_costs``.
+    """
+    present = sorted(
+        set(_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS)
+        & set(system_strength_costs["year"])
+    )
+    if present:
+        raise ValueError(
+            f"System strength costs for years {present} are now in the "
+            "'efficient_level_of_system_strength_cost' table; remove them from "
+            "_KNOWN_MISSING_SYSTEM_STRENGTH_COST_YEARS."
+        )
 
 
 def _set_non_ibr_system_strength_cost_to_zero(
