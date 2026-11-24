@@ -499,7 +499,7 @@ def _extract_wind_land_use(limits: pd.DataFrame, column: str) -> pd.DataFrame:
 
     Wind land use caps all onshore wind together (wind_high and wind_medium), so
     the rows key on technology "Wind", which doesn't include offshore wind (which
-    has it's own explicit technology options).
+    has its own explicit technology options).
 
     I/O Example (column="Land use limits in MW_Wind"):
         limits (relevant columns):
@@ -642,7 +642,7 @@ def _drop_limits_matching_no_new_entrant(
     """
     new_entrants = _stack_new_entrant_keys(generators_new_entrant, storage_new_entrant)
     matched = limits.apply(_matches_any_unit, axis=1, units=new_entrants)
-    # NaN > 0 is False, so blank limits are also caught here under 'non-zero'
+    # NaN > 0 is False, so blank limits are treated like zeros here
     non_zero_unmatched = limits[~matched & (limits["limit"] > 0)]
     _assert_unmatched_non_zero_limits_are_known(non_zero_unmatched)
     if not non_zero_unmatched.empty:

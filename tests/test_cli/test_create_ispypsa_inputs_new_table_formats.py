@@ -516,7 +516,7 @@ def test_create_ispypsa_inputs_new_format(
     carbon_budgets = pd.read_csv(output_dir / "carbon_budgets.csv")
     assert len(carbon_budgets) == _EXPECTED_CARBON_BUDGET_ROWS_75
 
-    # granularity invariant
+    # resouce, build, and land use limits - only build limits vary by granularity
     assert len(resource_limits) == _EXPECTED_RESOURCE_LIMIT_ROWS_75[granularity]
 
     # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
