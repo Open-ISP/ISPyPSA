@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import pytest
 
@@ -310,11 +312,6 @@ def test_template_build_limits(csv_str_to_df):
     dr_limits = pd.DataFrame(
         {
             "Sub-region": ["SNW", "SNW", "CNSW"],
-            "Distribution Network Service Provider(s)": [
-                "Ausgrid",
-                "Endeavour Energy",
-                "Essential Energy",
-            ],
             "Solar PV (MW)": [369.0, 521.0, 1872.0],
             "Battery storage (MW)": [2432.0, 3292.0, 13675.0],
         }
@@ -487,7 +484,7 @@ def test_drop_limits_matching_no_new_entrant_raises_on_unexpected_non_zero(
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology
-        NQ,      Battery Storage (2hrs storage)
+        NQ,      Battery storage (2hrs storage)
     """)
 
     with pytest.raises(
@@ -495,6 +492,40 @@ def test_drop_limits_matching_no_new_entrant_raises_on_unexpected_non_zero(
         match=(
             r"match no new entrant: "
             r"\['NQ Pumped Hydro \(10hrs storage\) build', 'Q8b wind_high resource'\]"
+        ),
+    ):
+        _drop_limits_matching_no_new_entrant(
+            limits, generators_new_entrant, storage_new_entrant
+        )
+
+
+def test_drop_limits_matching_no_new_entrant_raises_on_stale_known_exception(
+    csv_str_to_df,
+):
+    # DN1 wind_medium is still a non-zero limit with no option, as expected. DN2
+    # now has a wind_medium option, and DN3's limit is blank, so both known
+    # exceptions are stale.
+    limits = csv_str_to_df("""
+        geo_id,  resource_zone,  technology,  resource_type,  limit_type,  limit
+        DN1,     DN1,            ,            wind_medium,    resource,    792.0
+        DN2,     DN2,            ,            wind_medium,    resource,    619.0
+        DN3,     DN3,            ,            wind_medium,    resource,
+    """)
+    generators_new_entrant = csv_str_to_df("""
+        geo_id,  resource_zone,  technology,  resource_type
+        DN2,     DN2,            Wind,        wind_medium
+    """)
+    storage_new_entrant = csv_str_to_df("""
+        geo_id,  technology
+        NNSW,    Pumped Hydro (10hrs storage)
+    """)
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Known unmatched limits ['DN2 wind_medium resource', "
+            "'DN3 wind_medium resource'] now match a new entrant or are blank or 0; "
+            "remove them from _KNOWN_UNMATCHED_NON_ZERO_LIMITS."
         ),
     ):
         _drop_limits_matching_no_new_entrant(

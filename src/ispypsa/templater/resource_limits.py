@@ -77,7 +77,8 @@ Pipeline:
    would have no effect in the model. Most of these are blank or zero in IASR
    (e.g. the offshore columns for an onshore REZ, or PHES in GG) and are dropped
    quietly. Known non-zero drops are logged, and any non-zero drop outside the
-   known exceptions below raises an error.
+   known exceptions below raises an error, as does a known exception that no
+   longer applies.
 9. Set the remaining blank limits to 0. A blank limit that survives step 8 still
    applies to at least one new entrant. With no penalty, none of that resource can
    be built. With a penalty, it can only be built by paying that penalty on every
@@ -608,7 +609,8 @@ def _drop_limits_matching_no_new_entrant(
 
     Raises:
         ValueError: if a non-zero limit outside ``_KNOWN_UNMATCHED_NON_ZERO_LIMITS``
-            matches no new entrant.
+            matches no new entrant, or if a known exception in ``limits`` now
+            matches a new entrant or is blank or 0.
 
     I/O Example:
         limits:
@@ -645,6 +647,7 @@ def _drop_limits_matching_no_new_entrant(
     # NaN > 0 is False, so blank limits are treated like zeros here
     non_zero_unmatched = limits[~matched & (limits["limit"] > 0)]
     _assert_unmatched_non_zero_limits_are_known(non_zero_unmatched)
+    _raise_if_known_unmatched_limits_are_stale(limits, non_zero_unmatched)
     if not non_zero_unmatched.empty:
         logging.info(
             "Non-zero resource limits matching no new entrant, dropped: "
@@ -718,6 +721,39 @@ def _assert_unmatched_non_zero_limits_are_known(
             "Non-zero limits in 'initial_resource_limits', 'build_limits_phes' or "
             "'other_distributed_resources_build_limits' match no new entrant: "
             f"{sorted(unexpected)}"
+        )
+
+
+def _raise_if_known_unmatched_limits_are_stale(
+    limits: pd.DataFrame, non_zero_unmatched: pd.DataFrame
+) -> None:
+    """Raises if a row in ``_KNOWN_UNMATCHED_NON_ZERO_LIMITS`` is still in
+    ``limits`` but isn't in ``non_zero_unmatched``: a new entrant now matches it,
+    or its limit is now blank or 0. A known row missing from ``limits`` doesn't
+    raise.
+
+    I/O Example:
+        limits (DN rows only):
+            geo_id  resource_zone  resource_type  limit_type  limit
+            DN1     DN1            wind_medium    resource    792
+            DN2     DN2            wind_medium    resource    619   # now matched
+            DN3     DN3            wind_medium    resource          # now blank
+
+        non_zero_unmatched:
+            geo_id  resource_zone  resource_type  limit_type  limit
+            DN1     DN1            wind_medium    resource    792
+
+        raises:
+            ValueError: Known unmatched limits ['DN2 wind_medium resource',
+            'DN3 wind_medium resource'] now match a new entrant or are blank
+            or 0; remove them from _KNOWN_UNMATCHED_NON_ZERO_LIMITS.
+    """
+    still_present = _KNOWN_UNMATCHED_NON_ZERO_LIMITS & set(_describe_limits(limits))
+    stale = still_present - set(_describe_limits(non_zero_unmatched))
+    if stale:
+        raise ValueError(
+            f"Known unmatched limits {sorted(stale)} now match a new entrant or are "
+            "blank or 0; remove them from _KNOWN_UNMATCHED_NON_ZERO_LIMITS."
         )
 
 
