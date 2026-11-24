@@ -296,7 +296,12 @@ def create_ispypsa_inputs_template(
             iasr_tables, scenario
         )
         template["resource_limits"] = _template_resource_limits(
-            iasr_tables, scenario, template["generators_new_entrant"]
+            iasr_tables,
+            scenario,
+            regional_granularity,
+            sub_regional_geography,
+            template["generators_new_entrant"],
+            template["storage_new_entrant"],
         )
 
         if regional_granularity == "sub_regions":

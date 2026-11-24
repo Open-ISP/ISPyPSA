@@ -5,7 +5,8 @@ unique:
 description: >
   Caps on how much new entrant capacity can be built against a resource or a
   land area, such as the high-quality wind resource in a REZ or the land available
-  for solar there.
+  for solar there, or of a technology in a geography, such as pumped hydro in a
+  sub-region.
 
   The four 'key' columns (geo_id, resource_zone, technology and resource_type)
   pick out the group of new entrant generators and storage units a row here applies
@@ -28,6 +29,8 @@ description: >
 
   Source tables:
     - `initial_resource_limits`
+    - `build_limits_phes`
+    - `other_distributed_resources_build_limits`
 
   If absent:
   The model is constructed without resource limits.
@@ -91,7 +94,7 @@ columns:
   limit_type:
     type: string
     required: true
-    allowed_values: [resource, land_use]
+    allowed_values: [resource, land_use, build]
     description: >
       Describes the type of limit that this row represents:
 
@@ -101,6 +104,9 @@ columns:
           wind_high and wind_medium together for onshore wind, and every
           solar resource_type asset (e.g. solar PV and solar thermal) together
           for solar.
+        - build: the capacity of a technology that can be built in a
+          geography, such as pumped hydro or distributed resources in a
+          sub-region or region.
 
       limit_type doesn't decide which assets a row matches, or whether the
       limit is hard or soft (see relaxation_penalty). It is part of `unique`
@@ -136,6 +142,8 @@ columns:
         - land_use: IASR's penalty applies to resource limits only. Keeping
           land use hard makes it the ceiling that the soft resource limits can
           be relaxed up to.
+        - build: IASR gives the PHES and distributed resources limits no
+          penalty.
 
       0.0 means the limit can be exceeded at no cost, so it has no effect.
 

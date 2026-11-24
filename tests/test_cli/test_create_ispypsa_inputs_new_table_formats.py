@@ -340,13 +340,22 @@ _EXPECTED_CARBON_BUDGET_ROWS_75 = 3
 # Emissions reduction table is granularity invariant: one fuel type, 2026-2055
 _EXPECTED_EMISSIONS_REDUCTION_ROWS_75 = 30
 
-# Resource limits are also granularity invariant, but a bit more complex to count:
+# Resource limits: the REZ rows are the same at every granularity, but the build
+# rows (PHES and DR, given per sub-region) are summed to the model's geography.
 # limit_type -> resource = 46 (resource zones) * 3 (resource types)
 #                           - 3 (DREZ wind_medium, known empty limit)
 #                           + 5 (offshore zones) * 2 (resource types) = 145
 # limit_type -> land_use = 46 (resource_zones) * 2 ('solar' | 'Wind') = 92
-# resource + land_use limits = 237
-_EXPECTED_RESOURCE_LIMIT_ROWS_75 = 237
+# limit_type -> build = geos with PHES options * 3 (10h/24h/48h) + 1 (BOTN, TAS)
+#                       + geos * 2 (DR solar | DR batteries):
+#   sub_regions:   11 * 3 + 1 + 15 * 2 = 64 (GG, SESA, MEL and SEV have no PHES)
+#   nem_regions:    5 * 3 + 1 +  5 * 2 = 26
+#   single_region:  1 * 3 + 1 +  1 * 2 = 6
+_EXPECTED_RESOURCE_LIMIT_ROWS_75 = {
+    "sub_regions": 145 + 92 + 64,
+    "nem_regions": 145 + 92 + 26,
+    "single_region": 145 + 92 + 6,
+}
 
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
@@ -508,7 +517,7 @@ def test_create_ispypsa_inputs_new_format(
     assert len(carbon_budgets) == _EXPECTED_CARBON_BUDGET_ROWS_75
 
     # granularity invariant
-    assert len(resource_limits) == _EXPECTED_RESOURCE_LIMIT_ROWS_75
+    assert len(resource_limits) == _EXPECTED_RESOURCE_LIMIT_ROWS_75[granularity]
 
     # costs_fuel_prices - detailed content covered by test_fuel_prices.py. geo_ids
     # should match granularity, but NaNs are allowed (wildcard) so dropped before

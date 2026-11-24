@@ -16,7 +16,12 @@
 - table: pumped_hydro_new_entrant_properties
   column: Power Station / Technology
   replace: {BOTN - Cethana - 20h: BOTN - Cethana}
-  reason: Only this table adds the '- 20h' suffix; every other table uses 'BOTN - Cethana'.
+  reason: Adds a '- 20h' suffix to the name; most other tables use 'BOTN - Cethana'.
+
+- table: build_limits_phes
+  rename_columns:
+    Pumped Hydro Energy Storage (PHES) limits (MW)_BOTN - Cethana - 20h: Pumped Hydro Energy Storage (PHES) limits (MW)_BOTN - Cethana
+  reason: Adds a '- 20h' suffix to the name in the header; most other tables use 'BOTN - Cethana'.
 
 - table: flow_path_transfer_capability
   rename_columns:
