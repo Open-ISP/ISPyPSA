@@ -9,6 +9,7 @@ from ispypsa.templater.fuel_prices import (
     _prepare_price_tables,
     _select_generator_keys,
     _template_biomethane_prices,
+    _template_emissions_reduction,
     _template_fuel_prices,
     _template_new_entrant_gas_prices,
     _template_secondary_liquid_fuel_prices,
@@ -577,3 +578,25 @@ def test_merge_prices_onto_generators_raises_on_duplicates(csv_str_to_df):
 
     with pytest.raises(pd.errors.MergeError, match="not a many-to-one merge"):
         _merge_prices_onto_generators(prices, generators, "test_validation")
+
+
+def test_template_emissions_reduction(csv_str_to_df):
+    # Orchestrator pretty much only calls helpers already tested in detail in test_helpers.py,
+    # with the only non-helper specific additions the fuel_type=Gas column and
+    # other column renaming/return order.
+    iasr_tables = {
+        "gpg_emissions_reduction_biomethane": csv_str_to_df("""
+            Unnamed: 1,     2025-26,    2026-27,    2027-28
+            Slower Growth,  100.0,      99.9,       99.8
+            Step Change,    100.0,      98.5,       95.6
+        """)
+    }
+    result = _template_emissions_reduction(iasr_tables, "Step Change")
+
+    expected = csv_str_to_df("""
+        fuel_type,  year,   gpg_emissions_factor
+        Gas,        2026,   100.0
+        Gas,        2027,   98.5
+        Gas,        2028,   95.6
+    """)
+    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)

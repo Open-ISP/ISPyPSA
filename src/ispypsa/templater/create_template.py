@@ -30,7 +30,10 @@ from ispypsa.templater.flow_paths import (
     _template_sub_regional_flow_path_costs,
     _template_sub_regional_flow_paths,
 )
-from ispypsa.templater.fuel_prices import _template_fuel_prices
+from ispypsa.templater.fuel_prices import (
+    _template_emissions_reduction,
+    _template_fuel_prices,
+)
 from ispypsa.templater.geography import (
     _add_non_rez_geographies_to_rez_table,
     _template_network_geography,
@@ -121,6 +124,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "carbon_budgets",
+    "emissions_reduction",
 ]
 
 
@@ -280,14 +284,15 @@ def create_ispypsa_inputs_template(
         template["storage_existing_planned"] = _template_storage_existing_planned(
             iasr_tables, regional_granularity, sub_regional_geography
         )
-
         template["costs_fuel_prices"] = _template_fuel_prices(
             iasr_tables,
             scenario,
             regional_granularity,
             sub_regional_geography,
         )
-
+        template["emissions_reduction"] = _template_emissions_reduction(
+            iasr_tables, scenario
+        )
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(
