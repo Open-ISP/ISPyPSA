@@ -66,6 +66,13 @@ _BIOMETHANE_PRICE_TYPE = "Biomethane (Waste)"
 _ZERO_COST_FUEL_TYPES = ["Solar", "Wind", "Water"]
 
 
+# Emissions reduction factor (due to biomethane blending) table has a column containing
+# the scenario label, but unnamed; all other columns are FY columns.
+_EMISSIONS_REDUCTION_COLUMN_RENAMES = {"Unnamed: 1": "scenario"}
+# And expected output columns in schema order:
+_EMISSIONS_REDUCTION_COLUMNS = ["fuel_type", "year", "gpg_emissions_factor"]
+
+
 def _template_fuel_prices(
     iasr_tables: dict[str, pd.DataFrame],
     scenario: str,
@@ -660,3 +667,47 @@ def _raise_on_unpriced_generators(merged: pd.DataFrame, message: str) -> None:
     )
     if unmatched:
         raise ValueError(f"{message}: {unmatched}")
+
+
+# --- Emissions reduction template ---
+
+
+def _template_emissions_reduction(
+    iasr_tables: dict[str, pd.DataFrame], scenario: str
+) -> pd.DataFrame:
+    """Templates the emissions_reduction table from the IASR workbook's biomethane
+    blending factors for one scenario.
+
+    The IASR table gives, for each scenario and financial year, the percentage of
+    gas-powered generation's emissions that remains once a fuel blend with
+    biomethane is accounted for. In 7.5 this blending is only defined for a Gas
+    fuel_type base blended with biomethane. Each factor is relative to using gas
+    alone, so 100% means no biomethane in the blend.
+
+    I/O Example:
+        iasr_tables (abbr):
+            gpg_emissions_reduction_biomethane:
+                Unnamed: 1      2025-26     2026-27     2027-28
+                Slower Growth   100.0       99.9        99.8
+                Step Change     100.0       98.5        95.6
+
+        scenario = "Step Change"
+
+        returns:
+            fuel_type   year    gpg_emissions_factor
+            Gas         2026    100.0
+            Gas         2027    98.5
+            Gas         2028    95.6
+    """
+    logging.info("Creating a template for emissions reduction factors.")
+    table_name = "gpg_emissions_reduction_biomethane"
+    emissions_reduction = iasr_tables[table_name]
+    emissions_reduction = _filter_table_by_isp_scenario(
+        emissions_reduction.rename(columns=_EMISSIONS_REDUCTION_COLUMN_RENAMES),
+        scenario,
+        table_name,
+    )
+    long = _melt_financial_year_columns(
+        emissions_reduction, [], "gpg_emissions_factor", table_name
+    )
+    return long.assign(fuel_type="Gas")[_EMISSIONS_REDUCTION_COLUMNS]

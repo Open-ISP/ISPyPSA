@@ -245,9 +245,9 @@ def _existing_planned_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
 
 
 def _carbon_budget_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
-    """The IASR NEM carbon budgets, wiring-only fixture.
+    """The IASR GPG emissions reduction factors, wiring-only fixture.
 
-    Detailed behaviour is covered in test_carbon_budgets.py.
+    Detailed behaviour is covered in test_fuel_prices.py.
     """
     return {
         "nem_carbon_budget": csv_str_to_df("""
@@ -299,6 +299,19 @@ def _fuel_price_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
             Biomethane price,   Biomethane price scenario,  2024-25,    2025-26
             Biomethane (Waste), Step Change,                26.0,       25.0
         """),
+    }
+
+
+def _emissions_reduction_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The IASR NEM carbon budgets, wiring-only fixture.
+
+    Detailed behaviour is covered in test_carbon_budgets.py."""
+    return {
+        "gpg_emissions_reduction_biomethane": csv_str_to_df("""
+            Unnamed: 1,     2024-25,    2025-26
+            Step Change,    100.0,      99.7
+            Slower Growth,  100.0,      99.9
+        """)
     }
 
 
@@ -549,6 +562,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
                 **_carbon_budget_tables(csv_str_to_df),
+                **_emissions_reduction_tables(csv_str_to_df),
             },
             # connection_capacity_non_vre is popped out of manually_extracted_tables
             # into iasr_tables by create_template; supplied so the
@@ -778,6 +792,15 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     }
     assert len(carbon_budgets) == 2
 
+    # At all granularities: 2x years, one fuel_type, one scenario
+    emissions_reduction = result["emissions_reduction"]
+    assert set(emissions_reduction.columns) == {
+        "fuel_type",
+        "year",
+        "gpg_emissions_factor",
+    }
+    assert len(emissions_reduction) == 2
+
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     sub_regional_reference_nodes = csv_str_to_df("""
@@ -899,6 +922,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
                 **_carbon_budget_tables(csv_str_to_df),
+                **_emissions_reduction_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -1015,6 +1039,9 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # At all granularities: the long-term budget and the 2035 target.
     assert len(result["carbon_budgets"]) == 2
 
+    # At all granularities: 2x years, one fuel_type, one scenario
+    assert len(result["emissions_reduction"]) == 2
+
 
 def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # CQ is included so the CQ-NQ flow path's region prefix resolves at the
@@ -1126,6 +1153,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
                 **_existing_planned_tables(csv_str_to_df),
                 **_fuel_price_tables(csv_str_to_df),
                 **_carbon_budget_tables(csv_str_to_df),
+                **_emissions_reduction_tables(csv_str_to_df),
             },
             manually_extracted_tables={
                 "connection_capacity_non_vre": connection_capacity_non_vre,
@@ -1236,3 +1264,6 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
 
     # At all granularities: the long-term budget and the 2035 target.
     assert len(result["carbon_budgets"]) == 2
+
+    # At all granularities: 2x years, one fuel_type, one scenario
+    assert len(result["emissions_reduction"]) == 2

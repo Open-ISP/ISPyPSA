@@ -337,6 +337,9 @@ _EXPECTED_BUILD_COST_ROWS_75 = 600
 # 2030 budget and the 2035 target.
 _EXPECTED_CARBON_BUDGET_ROWS_75 = 3
 
+# Emissions reduction table is granularity invariant: one fuel type, 2026-2055
+_EXPECTED_EMISSIONS_REDUCTION_ROWS_75 = 30
+
 # Per-reference-year window patterns decoded from the shipped RefYear5000
 # calendar and reference_year_sequence (drift-detection;
 # granularity-invariant). 14 distinct ids, not 15: TAS Hot Day never
@@ -395,6 +398,7 @@ def test_create_ispypsa_inputs_new_format(
     storage_existing_planned = pd.read_csv(output_dir / "storage_existing_planned.csv")
     costs_fuel_prices = pd.read_csv(output_dir / "costs_fuel_prices.csv")
     costs_new_entrant_build = pd.read_csv(output_dir / "costs_new_entrant_build.csv")
+    emissions_reduction = pd.read_csv(output_dir / "emissions_reduction.csv")
 
     # network_geography — one row per (sub-)region or REZ; geo_ids are unique.
     assert (
@@ -499,6 +503,9 @@ def test_create_ispypsa_inputs_new_format(
     # comparing. Otherwise drift-detection only.
     assert len(costs_fuel_prices) == _EXPECTED_COSTS_FUEL_PRICES_ROWS_75[granularity]
     assert set(costs_fuel_prices["geo_id"].dropna()) <= set(geo["geo_id"])
+
+    # emissions reduction table - granularity invariant.
+    assert len(emissions_reduction) == _EXPECTED_EMISSIONS_REDUCTION_ROWS_75
 
     # timeslices — per-reference-year patterns decoded from the shipped
     # RefYear5000 calendar, identical at every granularity.
