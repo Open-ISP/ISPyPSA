@@ -2,6 +2,7 @@ import pandas as pd
 import pypsa
 
 from ispypsa.results.helpers import _build_node_to_geography_mapping
+from ispypsa.translator.network_losses import TRANSMISSION_LOSS_CARRIER
 
 
 def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFrame:
@@ -77,6 +78,40 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
     results = results.reset_index()
 
     return results
+
+
+def extract_transmission_losses(network: pypsa.Network) -> pd.DataFrame:
+    """Extract the transmission losses at each node from the PyPSA network.
+
+    Each end of a transmission path with a loss curve has a loss generator
+    that takes the path's losses off the node. This reports what each one
+    took at each timestep. A negative loss means the flow on the path reduced
+    losses elsewhere in the network.
+
+    Examples:
+
+    >>> extract_transmission_losses(network)
+              generator node  investment_period            timestep  loss_mw
+    0  CQ-NQ_loss_at_NQ   NQ               2026 2026-01-01 00:00:00     12.5
+    1  CQ-NQ_loss_at_CQ   CQ               2026 2026-01-01 00:00:00      4.2
+
+    Args:
+        network: PyPSA network with solved optimization results
+
+    Returns:
+        pd.DataFrame: Transmission losses. Columns: generator, node,
+            investment_period, timestep and loss_mw. Empty when the model has
+            no transmission losses.
+    """
+    is_loss = network.generators["carrier"] == TRANSMISSION_LOSS_CARRIER
+    nodes = network.generators.loc[is_loss, ["bus"]].rename(columns={"bus": "node"})
+    losses = network.generators_t.p.loc[:, nodes.index].stack().reset_index()
+    losses.columns = ["investment_period", "timestep", "generator", "loss_mw"]
+    losses = losses.merge(nodes, left_on="generator", right_index=True)
+    losses = losses.loc[
+        :, ["generator", "node", "investment_period", "timestep", "loss_mw"]
+    ]
+    return losses.reset_index(drop=True)
 
 
 def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:

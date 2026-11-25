@@ -1,0 +1,94 @@
+table: transmission_loss_generators
+required: false
+unique:
+  - [name]
+description: >
+  The generators that take transmission losses off the network: one at each end
+  of each loss group (a set of transmission paths that share a loss curve).
+  Added to the network by ispypsa.pypsa_build.build.build_pypsa_network. Each
+  has a sign of -1, so its output p is the power lost at its bus, and rows of
+  custom_constraints_lhs and custom_constraints_rhs hold that output at or
+  above the loss the group's curve gives for the flow on its links.
+
+  Source tables:
+    - `network_transmission_losses`
+    - `network_transmission_paths`
+    - `network_expansion_options`
+
+  Source notes:
+  The source tables are ISPyPSA tables, translated by
+  ispypsa.translator.network_losses. A generator's bounds are its share of the
+  smallest and largest loss the group's curve gives over the flows its links
+  can carry; network_expansion_options supplies how far those links may be
+  expanded. The table is empty when the model configuration's
+  network.transmission_losses is false.
+
+  If absent (or empty):
+  No transmission losses are modelled.
+columns:
+  name:
+    type: string
+    required: true
+    description: >
+      Name of the loss generator: the loss group, then "_loss_at_", then the
+      bus, e.g. CQ-NQ_loss_at_NQ.
+  isp_name:
+    type: string
+    required: true
+    description: Loss group the generator takes the losses of.
+  bus:
+    type: string
+    required: true
+    description: Bus the generator takes the loss off.
+  carrier:
+    type: string
+    required: true
+    allowed_values: [Transmission losses]
+    description: >
+      Marks the generator as a transmission loss, so the results report it as
+      a loss and not as generation.
+  sign:
+    type: float
+    required: true
+    allowed_values: [-1.0]
+    description: >
+      -1, so the generator's output is power taken off the bus.
+  p_nom:
+    type: float
+    required: true
+    units: MW
+    gte: 0.0
+    description: >
+      The size of the largest loss, or gain, the generator can take: p_min_pu
+      and p_max_pu are per unit of it.
+  p_nom_extendable:
+    type: boolean
+    required: true
+    allowed_values: [false]
+    description: Always false; the bounds are fixed.
+  p_min_pu:
+    type: float
+    required: true
+    description: >
+      Smallest loss, per unit of p_nom. Negative where flow on the group's
+      paths can reduce losses elsewhere in the network.
+  p_max_pu:
+    type: float
+    required: true
+    description: Largest loss, per unit of p_nom.
+  build_year:
+    type: int
+    required: true
+    description: The year before the model starts, so the generator is always in service.
+  lifetime:
+    type: float
+    required: true
+    description: Always infinite.
+  capital_cost:
+    type: float
+    required: true
+    description: Always zero.
+  marginal_cost:
+    type: float
+    required: true
+    description: Always zero; a loss costs the energy it takes, not money.

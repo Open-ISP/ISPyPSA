@@ -131,6 +131,54 @@ def test_build_applies_timeslice_link_limits_and_custom_constraints(
     )
 
 
+def test_build_takes_transmission_losses_off_the_receiving_bus(
+    csv_str_to_df, tmp_path, new_table_format
+):
+    """A loss generator held above 10% of the link's flow takes that much power
+    off its bus, so the expensive generator at B has to make up the loss."""
+    tables = _pypsa_friendly_tables(csv_str_to_df)
+    tables["transmission_loss_generators"] = csv_str_to_df("""
+        name,           isp_name,  bus,  carrier,              sign,  p_nom,  p_nom_extendable,  p_min_pu,  p_max_pu,  build_year,  lifetime,  capital_cost,  marginal_cost
+        A-B_loss_at_B,  A-B,       B,    Transmission losses,  -1.0,  10.0,   False,             0.0,       1.0,       2024,        inf,       0.0,           0.0
+    """)
+    tables["custom_constraints_rhs"] = csv_str_to_df("""
+        constraint_name,   investment_period,  timeslice,  rhs,  constraint_type
+        CHEAP_CAP,         2025,               shoulder,   30,   <=
+        A-B_loss_at_B_0,   2025,               ,           0,    >=
+    """)
+    tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_name,   investment_period,  variable_name,  component,  attribute,  coefficient
+        CHEAP_CAP,         2025,               cheap,          Generator,  p,          1.0
+        A-B_loss_at_B_0,   2025,               A-B_loss_at_B,  Generator,  p,          1.0
+        A-B_loss_at_B_0,   2025,               A-B_existing,   Link,       p,          -0.1
+    """)
+    tables["snapshots"] = _snapshots(
+        ["2025-01-01 00:00", "2025-01-01 01:00", "2025-01-01 02:00"]
+    )
+    tables["timeslice_snapshots"] = csv_str_to_df("""
+        timeslice,  investment_periods,  snapshots
+        peak,       2025,                2025-01-01 01:00:00
+        shoulder,   2025,                2025-01-01 02:00:00
+    """)
+    _save_demand_trace(tables["snapshots"], tmp_path)
+
+    network = build_pypsa_network(tables, tmp_path)
+    network.optimize.solve_model(solver_name="highs")
+
+    # The link carries 100, 50 and 30 MW (see _pypsa_friendly_tables), losing
+    # 10% of each at B. B's 200 MW of demand is met by the link's flow less the
+    # loss, plus the expensive generator: 200 - 100 + 10 = 110 and so on.
+    dispatch = network.generators_t.p.reset_index(drop=True)
+    dispatch.columns.name = None
+    expected = csv_str_to_df("""
+        cheap,  expensive,  A-B_loss_at_B
+        100.0,  110.0,      10.0
+        50.0,   155.0,      5.0
+        30.0,   173.0,      3.0
+    """)
+    pd.testing.assert_frame_equal(dispatch, expected, check_exact=False)
+
+
 def test_update_rebuilds_link_limits_and_custom_constraints_for_new_snapshots(
     csv_str_to_df, tmp_path, new_table_format
 ):

@@ -93,6 +93,11 @@ def build_pypsa_network(
     if "batteries" in pypsa_friendly_tables.keys():
         _add_batteries_to_network(network, pypsa_friendly_tables["batteries"])
 
+    if "transmission_loss_generators" in pypsa_friendly_tables.keys():
+        _add_custom_constraint_generators_to_network(
+            network, pypsa_friendly_tables["transmission_loss_generators"]
+        )
+
     if "custom_constraints_generators" in pypsa_friendly_tables.keys():
         _add_bus_for_custom_constraints(network)
 

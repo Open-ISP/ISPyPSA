@@ -86,6 +86,10 @@ network:
   # Default transmission capacity limit (MW) for a path with no explicit limit in
   # the inputs (e.g. REZ connections whose limit is modelled via custom constraints).
   transmission_default_limit: 1e5
+  # Whether to model the power lost on transmission paths, using the loss curves
+  # in the network_transmission_losses input table. Adds a set of constraints at
+  # every snapshot for each path with a loss curve.
+  transmission_losses: false
 
 
 # ===== Temporal =======================================================================

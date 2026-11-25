@@ -3,6 +3,8 @@
 import pandas as pd
 import pypsa
 
+from ispypsa.translator.network_losses import TRANSMISSION_LOSS_CARRIER
+
 
 def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
     """Extract generator and storage dispatch data from PyPSA network.
@@ -27,6 +29,8 @@ def extract_generator_dispatch(network: pypsa.Network) -> pd.DataFrame:
     # Get generator static data
     generators = network.generators[["bus", "carrier", "isp_technology_type"]].copy()
     generators = generators[generators["bus"] != "bus_for_custom_constraint_gens"]
+    # Transmission losses are reported by extract_transmission_losses.
+    generators = generators[generators["carrier"] != TRANSMISSION_LOSS_CARRIER]
 
     # Get dispatch time series
     dispatch_t = network.generators_t.p.copy()
@@ -152,6 +156,11 @@ def extract_generation_expansion_results(network: pypsa.Network) -> pd.DataFrame
     # Filter out constraint dummy generators
     generator_results = generator_results[
         generator_results["bus"] != "bus_for_custom_constraint_gens"
+    ]
+
+    # Filter out transmission loss generators
+    generator_results = generator_results[
+        generator_results["carrier"] != TRANSMISSION_LOSS_CARRIER
     ]
 
     # Calculate closure_year

@@ -228,6 +228,21 @@ Examples:
 
 ```transmission_default_limit: 1e5```
 
+### network.transmission_losses
+
+Whether to model the power lost on transmission paths (true or false). Optional,
+defaults to false.
+
+When true, each path with a loss curve in the `network_transmission_losses` input
+table loses power as a function of its flow, and the loss is taken off the nodes
+at the two ends of the path. Each curve adds a set of constraints at every
+snapshot, so the model takes longer to solve. When false, no power is lost in
+transmission.
+
+Examples:
+
+```transmission_losses: true```
+
 ## Temporal
 
 ### temporal.year_type

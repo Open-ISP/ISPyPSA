@@ -40,6 +40,7 @@ from ispypsa.translator.network import (
     _translate_network_geography_to_buses,
     _translate_network_to_links,
 )
+from ispypsa.translator.network_losses import _translate_network_losses
 from ispypsa.translator.renewable_energy_zones import (
     _translate_renewable_energy_zone_build_limits_to_links,
 )
@@ -83,6 +84,7 @@ _NEW_FORMAT_TRANSLATOR_OUTPUTS = [
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "custom_constraints_generators",
+    "transmission_loss_generators",
 ]
 
 # The columns of the header-only generators table the new-format path emits
@@ -102,6 +104,29 @@ _UNTRANSLATED_GENERATOR_COLUMNS = [
     "capital_cost",
     "marginal_cost",
 ]
+
+
+def _loss_tables_if_enabled(
+    ispypsa_tables: dict[str, pd.DataFrame], transmission_losses: bool
+) -> dict[str, pd.DataFrame]:
+    """Returns the ISPyPSA tables with the loss curves emptied when the config
+    turns transmission losses off, so that no losses are translated.
+
+    I/O Example:
+        ispypsa_tables["network_transmission_losses"]:
+            loss_group  direction  loss_linear
+            CQ-NQ       forward    0.03
+
+        transmission_losses = False returns the same tables, except:
+            ispypsa_tables["network_transmission_losses"]:
+                loss_group  direction  loss_linear
+
+        transmission_losses = True returns ispypsa_tables unchanged.
+    """
+    if transmission_losses:
+        return ispypsa_tables
+    no_losses = ispypsa_tables["network_transmission_losses"].iloc[0:0]
+    return ispypsa_tables | {"network_transmission_losses": no_losses}
 
 
 def create_pypsa_friendly_inputs(
@@ -173,6 +198,29 @@ def create_pypsa_friendly_inputs(
             _translate_custom_constraints_from_new_format_tables(
                 constraint_tables, links, generators, storage, demand_nodes, config
             )
+        )
+
+        loss_tables = _translate_network_losses(
+            _loss_tables_if_enabled(ispypsa_tables, config.network.transmission_losses),
+            links,
+            config,
+        )
+        pypsa_inputs["transmission_loss_generators"] = loss_tables[
+            "transmission_loss_generators"
+        ]
+        pypsa_inputs["custom_constraints_lhs"] = pd.concat(
+            [
+                pypsa_inputs["custom_constraints_lhs"],
+                loss_tables["custom_constraints_lhs"],
+            ],
+            ignore_index=True,
+        )
+        pypsa_inputs["custom_constraints_rhs"] = pd.concat(
+            [
+                pypsa_inputs["custom_constraints_rhs"],
+                loss_tables["custom_constraints_rhs"],
+            ],
+            ignore_index=True,
         )
         return pypsa_inputs
 

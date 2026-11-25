@@ -15,6 +15,7 @@ from ispypsa.results.transmission import (
     extract_rez_transmission_flows,
     extract_transmission_expansion_results,
     extract_transmission_flows,
+    extract_transmission_losses,
 )
 
 
@@ -67,6 +68,7 @@ RESULTS_FILES = {
     "rez_transmission_flows": extract_rez_transmission_flows,
     "isp_sub_region_transmission_flows": extract_isp_sub_region_transmission_flows,
     "nem_region_transmission_flows": extract_nem_region_transmission_flows,
+    "transmission_losses": extract_transmission_losses,
     "generation_expansion": extract_generation_expansion_results,
     "generator_dispatch": extract_generator_dispatch,
     "demand": extract_demand,

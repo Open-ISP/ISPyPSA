@@ -39,9 +39,14 @@ def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         Q1,      rez,        QLD
     """)
     tables["network_transmission_paths"] = csv_str_to_df("""
-        path_id,  geo_from,  geo_to,  carrier
-        CQ-NQ,    CQ,        NQ,      AC
-        Q1-NQ,    Q1,        NQ,      AC
+        path_id,  geo_from,  geo_to,  carrier,  loss_group
+        CQ-NQ,    CQ,        NQ,      AC,       CQ-NQ
+        Q1-NQ,    Q1,        NQ,      AC,
+    """)
+    tables["network_transmission_losses"] = csv_str_to_df("""
+        loss_group,  direction,  loss_constant,  loss_linear,  loss_quadratic,  to_loss_proportion,  expansion_loss_factor,  date_from
+        CQ-NQ,       forward,    0,              0.03,         0.00005,         0.75,                ,
+        CQ-NQ,       reverse,    0,              -0.03,        0.00005,         0.75,                ,
     """)
     tables["network_transmission_path_limits"] = csv_str_to_df("""
         path_id,  direction,  timeslice,             capacity
@@ -138,6 +143,49 @@ def test_create_pypsa_friendly_inputs_new_format(
 
     # No constraint is relaxable, so there are no relaxation generators.
     assert len(result["custom_constraints_generators"]) == 0
+
+    # Transmission losses are off in sample_model_config.
+    assert len(result["transmission_loss_generators"]) == 0
+
+
+def test_create_pypsa_friendly_inputs_new_format_with_transmission_losses(
+    csv_str_to_df, sample_model_config, new_table_format
+):
+    # Wiring only: the content of the loss tables is covered by
+    # test_network_losses.py.
+    tables = _ispypsa_tables(csv_str_to_df)
+    config = sample_model_config.model_copy(deep=True)
+    config.network.transmission_losses = True
+
+    result = create_pypsa_friendly_inputs(config, tables)
+
+    # One loss generator at each end of CQ-NQ, the only path with a loss group.
+    assert list(result["transmission_loss_generators"].columns) == [
+        "name",
+        "isp_name",
+        "bus",
+        "carrier",
+        "sign",
+        "p_nom",
+        "p_nom_extendable",
+        "p_min_pu",
+        "p_max_pu",
+        "build_year",
+        "lifetime",
+        "capital_cost",
+        "marginal_cost",
+    ]
+    assert len(result["transmission_loss_generators"]) == 2
+
+    # The CQ-NQ expansion limit, plus the loss constraints: 8 lines at each of
+    # the 2 ends in each of the 2 investment periods.
+    assert len(result["custom_constraints_rhs"]) == 1 + 8 * 2 * 2
+
+    # The expansion limit's 2 terms, plus each loss constraint's generator term
+    # and a term for each CQ-NQ link in service: the existing link and one
+    # expansion link in 2026 (16 constraints of 3 terms), and a second
+    # expansion link in 2028 (16 constraints of 4 terms).
+    assert len(result["custom_constraints_lhs"]) == 2 + 16 * 3 + 16 * 4
 
 
 def test_create_pypsa_friendly_timeseries_inputs_new_format(

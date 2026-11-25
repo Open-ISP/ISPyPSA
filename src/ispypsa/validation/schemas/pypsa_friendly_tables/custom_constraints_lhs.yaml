@@ -23,7 +23,9 @@ description: >
   two more kinds of term: p_nom terms for each relaxable constraint's
   relaxation generators, signed by the constraint's direction in
   custom_constraints so that building them loosens it, and the p_nom terms of
-  the expansion-limit constraints.
+  the expansion-limit constraints. ispypsa.translator.network_losses adds the
+  terms of the transmission loss constraints (see
+  transmission_loss_generators).
 
   If absent:
   No custom constraints are added to the model.
@@ -44,8 +46,9 @@ custom_validation:
   - name: variables_name_components_in_the_input_tables
     description: >
       variable_name must name a component in the pypsa-friendly table for its
-      component type: a Link in links.name; a Generator in generators.name or
-      custom_constraints_generators.name (the relaxation generators); a
+      component type: a Link in links.name; a Generator in generators.name,
+      custom_constraints_generators.name (the relaxation generators) or
+      transmission_loss_generators.name; a
       Storage unit in batteries.name; and a Load as "load_<bus>", where <bus>
       is in buses.name and has a demand trace (demand_traces/<bus>.parquet).
       A p_nom term must also name a row with p_nom_extendable true, since a

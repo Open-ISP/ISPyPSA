@@ -11,6 +11,7 @@ from ispypsa.results.transmission import (
     extract_rez_transmission_flows,
     extract_transmission_expansion_results,
     extract_transmission_flows,
+    extract_transmission_losses,
 )
 
 
@@ -67,6 +68,54 @@ def test_extract_transmission_expansion_results(csv_str_to_df):
     # We rely on pandas flexibility but ensure column order/presence
 
     pd.testing.assert_frame_equal(result, expected_df, check_like=True)
+
+
+def _network_with_generators(csv_str_to_df) -> MagicMock:
+    """A solved network with one ordinary generator and the two loss generators
+    of the CQ-NQ loss group, over two timesteps."""
+    network = MagicMock(spec=pypsa.Network)
+    network.generators = csv_str_to_df("""
+        name,              bus,  carrier
+        gas,               NQ,   Gas
+        CQ-NQ_loss_at_NQ,  NQ,   Transmission losses
+        CQ-NQ_loss_at_CQ,  CQ,   Transmission losses
+    """).set_index("name")
+    dispatch = csv_str_to_df("""
+        period,  timestep,             gas,    CQ-NQ_loss_at_NQ,  CQ-NQ_loss_at_CQ
+        2026,    2026-01-01 00:00:00,  100.0,  12.0,              4.0
+        2026,    2026-01-01 01:00:00,  80.0,   -1.5,              -0.5
+    """)
+    dispatch.columns.name = "name"
+    network.generators_t.p = dispatch.set_index(["period", "timestep"])
+    return network
+
+
+def test_extract_transmission_losses(csv_str_to_df):
+    network = _network_with_generators(csv_str_to_df)
+
+    result = extract_transmission_losses(network)
+
+    # Only the loss generators are reported, not the gas generator.
+    expected = csv_str_to_df("""
+        generator,         node,  investment_period,  timestep,             loss_mw
+        CQ-NQ_loss_at_NQ,  NQ,    2026,               2026-01-01 00:00:00,  12.0
+        CQ-NQ_loss_at_CQ,  CQ,    2026,               2026-01-01 00:00:00,  4.0
+        CQ-NQ_loss_at_NQ,  NQ,    2026,               2026-01-01 01:00:00,  -1.5
+        CQ-NQ_loss_at_CQ,  CQ,    2026,               2026-01-01 01:00:00,  -0.5
+    """)
+    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
+
+
+def test_extract_transmission_losses_no_loss_generators(csv_str_to_df):
+    network = _network_with_generators(csv_str_to_df)
+    network.generators = network.generators.loc[["gas"]]
+
+    result = extract_transmission_losses(network)
+
+    expected = csv_str_to_df("""
+        generator,  node,  investment_period,  timestep,  loss_mw
+    """)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 def test_extract_raw_link_flows(csv_str_to_df):

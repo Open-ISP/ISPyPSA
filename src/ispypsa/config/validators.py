@@ -45,6 +45,7 @@ class NetworkConfig(BaseModel):
     transmission_expansion: bool
     rez_transmission_expansion: bool
     transmission_default_limit: float
+    transmission_losses: bool = False
 
 
 class TemporalAggregationConfig(BaseModel):
