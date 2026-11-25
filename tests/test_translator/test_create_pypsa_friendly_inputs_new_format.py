@@ -146,7 +146,7 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
     # Wiring only: the snapshots themselves are covered by the snapshot tests.
     timeseries_location = tmp_path / "capacity_expansion_timeseries"
 
-    result = create_pypsa_friendly_timeseries_inputs(
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         sample_model_config,
         "capacity_expansion",
         {},
@@ -155,7 +155,7 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
         timeseries_location,
     )
 
-    assert list(result.columns) == [
+    assert list(snapshots.columns) == [
         "investment_periods",
         "snapshots",
         "objective",
@@ -165,7 +165,15 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
     ]
     # Half-hourly snapshots for financial years 2026 to 2028: 1096 days
     # (2028 includes a leap day) of 48 snapshots.
-    assert len(result) == 52608
+    assert len(snapshots) == 52608
+
+    # No snapshots are merged into segments, so the snapshot map has no rows.
+    assert list(snapshot_map.columns) == [
+        "investment_periods",
+        "original_snapshots",
+        "snapshots",
+    ]
+    assert len(snapshot_map) == 0
 
     # Generators and demand aren't translated from the new tables yet, so no
     # timeseries files are saved or listed.

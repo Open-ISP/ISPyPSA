@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ispypsa.config import ModelConfig
+from ispypsa.config.validators import TsamConfig, TsamSegmentsConfig
 from ispypsa.translator import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_snapshots,
@@ -39,7 +40,9 @@ class DummyConfigOne:
                         "investment_periods": [2025, 2026],  # Two investment periods
                         "reference_year_cycle": [2018],
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1]}
+                            "obj",
+                            (object,),
+                            {"representative_weeks": [1], "tsam": None},
                         ),
                     },
                 ),
@@ -52,7 +55,9 @@ class DummyConfigOne:
                         "horizon": 336,
                         "overlap": 48,
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1, 2]}
+                            "obj",
+                            (object,),
+                            {"representative_weeks": [1, 2], "tsam": None},
                         ),
                     },
                 ),
@@ -146,8 +151,12 @@ def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
         sample_model_config, sample_ispypsa_tables
     )
 
-    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
-    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    # Check all tables except snapshots and snapshot_map (which are created by
+    # create_pypsa_friendly_timeseries_inputs)
+    timeseries_tables = ["snapshots", "snapshot_map"]
+    expected_tables = [
+        t for t in list_translator_output_files() if t not in timeseries_tables
+    ]
     for table in expected_tables:
         assert table in pypsa_tables.keys()
 
@@ -165,8 +174,12 @@ def test_create_pypsa_inputs_template_single_regions(
         sample_model_config, sample_ispypsa_tables
     )
 
-    # Check all tables except snapshots (which is now created by create_pypsa_friendly_timeseries_inputs)
-    expected_tables = [t for t in list_translator_output_files() if t != "snapshots"]
+    # Check all tables except snapshots and snapshot_map (which are created by
+    # create_pypsa_friendly_timeseries_inputs)
+    timeseries_tables = ["snapshots", "snapshot_map"]
+    expected_tables = [
+        t for t in list_translator_output_files() if t not in timeseries_tables
+    ]
     for table in expected_tables:
         assert table in pypsa_tables.keys()
 
@@ -196,7 +209,9 @@ class DummyConfigTwo:
                         "investment_periods": [2025],
                         "reference_year_cycle": [2011],
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1]}
+                            "obj",
+                            (object,),
+                            {"representative_weeks": [1], "tsam": None},
                         ),
                     },
                 ),
@@ -209,7 +224,9 @@ class DummyConfigTwo:
                         "horizon": 336,
                         "overlap": 48,
                         "aggregation": type(
-                            "obj", (object,), {"representative_weeks": [1, 2]}
+                            "obj",
+                            (object,),
+                            {"representative_weeks": [1, 2], "tsam": None},
                         ),
                     },
                 ),
@@ -288,7 +305,7 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     output_dir = tmp_path / "timeseries_output"
 
     # Call the function - it now returns snapshots instead of taking them as input
-    snapshots = create_pypsa_friendly_timeseries_inputs(
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         config,
         "capacity_expansion",
         sample_ispypsa_tables,
@@ -306,6 +323,14 @@ def test_create_pypsa_friendly_timeseries_inputs_capacity_expansion(
     pd.testing.assert_frame_equal(
         snapshots[["objective", "generators", "stores"]].drop_duplicates(),
         expected_weightings,
+    )
+
+    # No tsam aggregation is configured, so no snapshots were merged.
+    expected_snapshot_map = csv_str_to_df("""
+        investment_periods,  original_snapshots,  snapshots
+    """)
+    pd.testing.assert_frame_equal(
+        snapshot_map, expected_snapshot_map, check_dtype=False
     )
 
     # Verify outputs
@@ -423,7 +448,7 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     output_dir = tmp_path / "timeseries_output"
 
     # Call the function
-    snapshots = create_pypsa_friendly_timeseries_inputs(
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
         config,
         "operational",
         sample_ispypsa_tables,
@@ -442,6 +467,14 @@ def test_create_pypsa_friendly_timeseries_inputs_operational(
     pd.testing.assert_frame_equal(
         snapshots[["objective", "generators", "stores"]].drop_duplicates(),
         expected_weightings,
+    )
+
+    # No tsam aggregation is configured, so no snapshots were merged.
+    expected_snapshot_map = csv_str_to_df("""
+        investment_periods,  original_snapshots,  snapshots
+    """)
+    pd.testing.assert_frame_equal(
+        snapshot_map, expected_snapshot_map, check_dtype=False
     )
 
     # Verify outputs
@@ -511,3 +544,79 @@ def test_flatten_generator_traces_none_input():
     """Test _flatten_generator_traces returns None when input is None."""
     result = _flatten_generator_traces(None)
     assert result is None
+
+
+def test_create_pypsa_friendly_timeseries_inputs_with_tsam_segments(
+    tmp_path,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
+    """Wiring only: the snapshots, the saved traces and the snapshot map all
+    come out per segment. How the segments are chosen and weighted is covered in
+    test_temporal_aggregation.py."""
+    config = DummyConfigTwo()
+    config.temporal.capacity_expansion.aggregation.tsam = TsamConfig(
+        features="demand", segments=TsamSegmentsConfig(n_segments_per_day=4)
+    )
+    parsed_trace_path = Path(__file__).parent.parent / Path("trace_data/isp_2024")
+
+    ecaa_generators = sample_ispypsa_tables["ecaa_generators"]
+    has_test_traces = ecaa_generators["generator"].isin(
+        ["Moree Solar Farm", "Bodangora Wind Farm", "Bayswater", "Eraring"]
+    )
+    sample_ispypsa_tables["ecaa_generators"] = ecaa_generators[has_test_traces].copy()
+    generators = pd.concat(
+        [
+            _translate_ecaa_generators(
+                sample_ispypsa_tables,
+                config.temporal.capacity_expansion.investment_periods,
+                config.network.nodes.regional_granularity,
+                config.temporal.year_type,
+            ),
+            _translate_new_entrant_generators(
+                sample_ispypsa_tables,
+                config.temporal.capacity_expansion.investment_periods,
+                config.discount_rate,
+                config.network.nodes.regional_granularity,
+            ),
+        ],
+        ignore_index=True,
+    )
+    output_dir = tmp_path / "timeseries_output"
+
+    snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
+        config,
+        "capacity_expansion",
+        sample_ispypsa_tables,
+        generators,
+        parsed_trace_path,
+        output_dir,
+    )
+
+    # One representative week at 60 min resolution is 7 days of 24 snapshots. At
+    # 4 segments a day that is 28 segments standing in for 168 snapshots.
+    assert list(snapshots.columns) == [
+        "investment_periods",
+        "snapshots",
+        "objective",
+        "generators",
+        "stores",
+        "model_year",
+    ]
+    assert len(snapshots) == 28
+    assert snapshots["stores"].sum() == 168
+    assert round(snapshots["objective"].sum(), 6) == 8760
+
+    assert list(snapshot_map.columns) == [
+        "investment_periods",
+        "original_snapshots",
+        "snapshots",
+    ]
+    assert len(snapshot_map) == 168
+
+    for trace_file in [
+        output_dir / "demand_traces" / "NNSW.parquet",
+        output_dir / "solar_traces" / "Moree Solar Farm.parquet",
+        output_dir / "wind_traces" / "Bodangora Wind Farm.parquet",
+        output_dir / "marginal_cost_timeseries" / "bayswater.parquet",
+    ]:
+        assert len(pd.read_parquet(trace_file)) == 28
