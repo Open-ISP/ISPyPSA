@@ -17,6 +17,7 @@ from ispypsa.translator.build_years_and_costs import (
     _drop_units_built_after_last_investment_period,
     _drop_units_closed_before_first_investment_period,
     _lifetimes_from_closure_years,
+    _resolve_build_costs,
 )
 from ispypsa.translator.helpers import _add_investment_periods_as_build_years
 
@@ -97,8 +98,10 @@ def _build_new_entrant_generators(
 ) -> pd.DataFrame:
     """Translates generators_new_entrant into extendable generators, one per
     option and investment period, with annuitised capital costs."""
+    investment_periods = config.temporal.capacity_expansion.investment_periods
+    build_costs = _resolve_build_costs(build_costs, investment_periods)
     generators = _add_investment_periods_as_build_years(
-        generators.copy(), config.temporal.capacity_expansion.investment_periods
+        generators.copy(), investment_periods
     )
     generators = _add_new_entrant_capital_costs(
         generators, build_costs, connection_costs, config.wacc
@@ -149,5 +152,32 @@ def _map_new_entrant_generator_columns(generators: pd.DataFrame) -> pd.DataFrame
     <isp_name>_<build_year>, carrier from fuel_type, lifetime from
     lifetime_technical, isp_technology_type from technology, p_nom 0,
     p_nom_extendable True and marginal_cost from isp_name (so all the build
-    years of one option share its marginal cost timeseries file)."""
-    raise NotImplementedError
+    years of one option share its marginal cost timeseries file).
+
+    I/O Example (columns abridged):
+        generators:
+            name       fuel_type  build_year  lifetime_technical
+            CNSW OCGT  Gas        2026        25.0
+            CNSW OCGT  Gas        2030        25.0
+
+        returns:
+            isp_name   name            carrier  build_year  lifetime  p_nom  p_nom_extendable  marginal_cost
+            CNSW OCGT  CNSW OCGT_2026  Gas      2026        25.0      0.0    True              CNSW OCGT
+            CNSW OCGT  CNSW OCGT_2030  Gas      2030        25.0      0.0    True              CNSW OCGT
+    """
+    generators = generators.rename(
+        columns={
+            "fuel_type": "carrier",
+            "lifetime_technical": "lifetime",
+            "technology": "isp_technology_type",
+        }
+    )
+    generators["isp_name"] = generators["name"]
+    generators["name"] = (
+        generators["isp_name"] + "_" + generators["build_year"].astype(str)
+    )
+    # New entrants start with no capacity, and are 'extendable' by the PyPSA model (CEM)
+    generators["p_nom"] = 0.0
+    generators["p_nom_extendable"] = True
+    generators["marginal_cost"] = generators["isp_name"]
+    return generators
