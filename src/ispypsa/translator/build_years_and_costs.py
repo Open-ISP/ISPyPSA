@@ -6,9 +6,19 @@ capital costs of new entrants.
 # TODO: expand this docstring to the CLAUDE.md module layout once the stubs
 # are filled in.
 
+import logging
+
 import pandas as pd
 
 from ispypsa.model_years import _model_year_of_dates, _model_year_start
+
+# The network_geography column that holds each REZ's parent node, for each
+# regional_granularity. Only the sub_regions geography has a subregion_id column.
+_PARENT_NODE_COLUMNS = {
+    "sub_regions": "subregion_id",
+    "nem_regions": "region_id",
+    "single_region": "region_id",
+}
 
 
 def _build_years_from_commissioning_dates(
@@ -42,8 +52,8 @@ def _lifetimes_from_closure_years(
 ) -> pd.Series:
     """The PyPSA lifetime of each existing unit: closure_year + 1 - build_year,
     so the unit runs through the model year labelled with its closure year. A
-    blank closure_year gives an infinite lifetime, because the unit isn't
-    retired during the modelling horizon.
+    blank closure_year gives a NaN lifetime, which PyPSA reads as infinite: the
+    unit isn't retired during the modelling horizon.
 
     OPINIONATED: the IASR gives closure_year as the calendar year in which the
     unit expects to stop supplying electricity, with no month. Running the unit
@@ -51,27 +61,110 @@ def _lifetimes_from_closure_years(
     financial years (within six months of the real date), and up to 12 months
     late under calendar years.
     """
-    raise NotImplementedError
+    return closure_years - build_years + 1
 
 
 def _drop_units_closed_before_first_investment_period(
-    units: pd.DataFrame, first_investment_period: int
+    units: pd.DataFrame, first_investment_period: int, table_name: str
 ) -> pd.DataFrame:
-    """Drops the existing units that are never active in the model, that is,
-    those with a closure_year earlier than the first investment period, and
-    logs their names once at INFO as a sorted list."""
-    raise NotImplementedError
+    """Drops the existing units that have a closure_year earlier than the first
+    investment period, because PyPSA would never make them active. Their names
+    are logged once at INFO as a sorted list, along with table_name, the table
+    the units came from. A unit with a blank closure_year doesn't close, so it
+    is kept.
+
+    I/O Example (first_investment_period=2026):
+        units:
+            name     closure_year
+            TORRB1   2026          # runs through 2026: kept
+            LIDDELL1 2023          # closed before 2026: dropped
+            NEWGEN1                # blank: kept
+
+        returns:
+            name     closure_year
+            TORRB1   2026
+            NEWGEN1
+    """
+    closed = units["closure_year"] < first_investment_period
+    if closed.any():
+        logging.info(
+            f"Units in {table_name} dropped because they close before the first "
+            f"investment period ({first_investment_period}): "
+            f"{sorted(units.loc[closed, 'name'])}"
+        )
+    return units[~closed].reset_index(drop=True)
+
+
+def _drop_units_built_after_last_investment_period(
+    units: pd.DataFrame, last_investment_period: int, table_name: str
+) -> pd.DataFrame:
+    """Drops the existing units that have a build_year later than the last
+    investment period. PyPSA only makes a unit active in an investment period
+    that starts in or after its build year, so these units would never be
+    active, even when the modelling horizon runs past the last investment
+    period. Their names are logged once at INFO as a sorted list, along with
+    table_name, the table the units came from.
+
+    I/O Example (last_investment_period=2030):
+        units:
+            name      build_year
+            PLANNED1  2030        # built in the last investment period: kept
+            PLANNED2  2031        # built after 2030: dropped
+
+        returns:
+            name      build_year
+            PLANNED1  2030
+    """
+    built_late = units["build_year"] > last_investment_period
+    if built_late.any():
+        logging.info(
+            f"Units in {table_name} dropped because they are built after the last "
+            f"investment period ({last_investment_period}): "
+            f"{sorted(units.loc[built_late, 'name'])}"
+        )
+    return units[~built_late].reset_index(drop=True)
 
 
 def _buses_for_geo_ids(
-    geo_ids: pd.Series, network_geography: pd.DataFrame, rezs: str
+    geo_ids: pd.Series,
+    network_geography: pd.DataFrame,
+    rezs: str,
+    regional_granularity: str,
 ) -> pd.Series:
     """The bus each unit connects to: its geo_id, except that under
     rezs="attached_to_parent_node" a REZ geo_id is replaced by its parent node
-    from network_geography."""
-    # TODO: check whether the parent node depends on regional_granularity
-    # (subregion_id or region_id), which would need another parameter.
-    raise NotImplementedError
+    from network_geography.
+
+    The templater has already mapped each sub-region geo_id to the node at the
+    configured granularity (for example NSW under nem_regions), so only REZ
+    geo_ids change here. The parent node's column depends on the granularity
+    (see _PARENT_NODE_COLUMNS).
+
+    I/O Example (regional_granularity="sub_regions"):
+        geo_ids:
+            CNSW
+            N3
+
+        network_geography:
+            geo_id  geo_type   region_id  subregion_id
+            CNSW    subregion  NSW        CNSW
+            N3      rez        NSW        CNSW
+
+        rezs="discrete_nodes" returns:
+            CNSW
+            N3
+
+        rezs="attached_to_parent_node" returns:
+            CNSW
+            CNSW     # N3's parent sub-region
+    """
+    if rezs == "discrete_nodes":
+        return geo_ids
+    rez_rows = network_geography[network_geography["geo_type"] == "rez"]
+    parent_column = _PARENT_NODE_COLUMNS[regional_granularity]
+    parent_nodes = rez_rows.set_index("geo_id")[parent_column]
+    # replace (rather than map) leaves the geo_ids that aren't REZs as they are.
+    return geo_ids.replace(parent_nodes.to_dict())
 
 
 def _add_new_entrant_capital_costs(

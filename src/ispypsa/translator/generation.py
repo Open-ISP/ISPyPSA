@@ -7,9 +7,6 @@ each new-entrant option becomes one extendable generator per investment
 period.
 """
 
-# TODO: expand this docstring to the CLAUDE.md module layout once the stubs
-# are filled in.
-
 import pandas as pd
 
 from ispypsa.config import ModelConfig
@@ -17,6 +14,7 @@ from ispypsa.translator.build_years_and_costs import (
     _add_new_entrant_capital_costs,
     _build_years_from_commissioning_dates,
     _buses_for_geo_ids,
+    _drop_units_built_after_last_investment_period,
     _drop_units_closed_before_first_investment_period,
     _lifetimes_from_closure_years,
 )
@@ -65,7 +63,6 @@ def _build_existing_generators(
     """Translates generators_existing_planned into fixed-capacity generators,
     with build years and lifetimes from their commissioning dates and closure
     years."""
-    # A copy, so the new columns don't change the caller's ispypsa_tables.
     generators = generators.copy()
     generators["build_year"] = _build_years_from_commissioning_dates(
         generators["commissioning_date"],
@@ -75,13 +72,19 @@ def _build_existing_generators(
     generators["lifetime"] = _lifetimes_from_closure_years(
         generators["closure_year"], generators["build_year"]
     )
+    investment_periods = config.temporal.capacity_expansion.investment_periods
     generators = _drop_units_closed_before_first_investment_period(
-        generators, config.temporal.capacity_expansion.investment_periods[0]
+        generators, investment_periods[0], "generators_existing_planned"
+    )
+    generators = _drop_units_built_after_last_investment_period(
+        generators, investment_periods[-1], "generators_existing_planned"
     )
     generators["bus"] = _buses_for_geo_ids(
-        generators["geo_id"], network_geography, config.network.nodes.rezs
+        generators["geo_id"],
+        network_geography,
+        config.network.nodes.rezs,
+        config.network.nodes.regional_granularity,
     )
-    generators["marginal_cost"] = _marginal_cost_keys(generators["name"])
     return _map_existing_generator_columns(generators)
 
 
@@ -94,8 +97,6 @@ def _build_new_entrant_generators(
 ) -> pd.DataFrame:
     """Translates generators_new_entrant into extendable generators, one per
     option and investment period, with annuitised capital costs."""
-    # _add_investment_periods_as_build_years adds its column to the table it's
-    # given, so it gets a copy to leave the caller's ispypsa_tables alone.
     generators = _add_investment_periods_as_build_years(
         generators.copy(), config.temporal.capacity_expansion.investment_periods
     )
@@ -103,28 +104,50 @@ def _build_new_entrant_generators(
         generators, build_costs, connection_costs, config.wacc
     )
     generators["bus"] = _buses_for_geo_ids(
-        generators["geo_id"], network_geography, config.network.nodes.rezs
+        generators["geo_id"],
+        network_geography,
+        config.network.nodes.rezs,
+        config.network.nodes.regional_granularity,
     )
-    generators["marginal_cost"] = _marginal_cost_keys(generators["name"])
     return _map_new_entrant_generator_columns(generators)
-
-
-def _marginal_cost_keys(names: pd.Series) -> pd.Series:
-    """The key that each generator's marginal cost timeseries file is saved
-    under: its name, made safe as a file name (some names contain "/")."""
-    raise NotImplementedError
 
 
 def _map_existing_generator_columns(generators: pd.DataFrame) -> pd.DataFrame:
     """Sets the PyPSA columns for existing units: isp_name and name from name,
     carrier from fuel_type, p_nom from capacity, isp_technology_type from
-    technology, p_nom_extendable False and capital_cost 0."""
-    raise NotImplementedError
+    technology, p_nom_extendable False, capital_cost 0 and marginal_cost from
+    isp_name.
+
+    I/O Example (columns abridged):
+        generators:
+            name  fuel_type   capacity
+            BW01  Black Coal  660.0
+
+        returns:
+            isp_name  name  carrier     p_nom  p_nom_extendable  capital_cost  marginal_cost
+            BW01      BW01  Black Coal  660.0  False             0.0           BW01
+    """
+    generators = generators.rename(
+        columns={
+            "fuel_type": "carrier",
+            "capacity": "p_nom",
+            "technology": "isp_technology_type",
+        }
+    )
+    generators["isp_name"] = generators["name"]
+    generators["p_nom_extendable"] = False
+    # Existing units are already built, so there's no capital cost to recover.
+    generators["capital_cost"] = 0.0
+    # A text marginal_cost is the name of the unit's marginal cost timeseries
+    # file, which pypsa_build reads in place of a fixed cost.
+    generators["marginal_cost"] = generators["isp_name"]
+    return generators
 
 
 def _map_new_entrant_generator_columns(generators: pd.DataFrame) -> pd.DataFrame:
     """Sets the PyPSA columns for new entrants: isp_name from name, name as
     <isp_name>_<build_year>, carrier from fuel_type, lifetime from
-    lifetime_technical, isp_technology_type from technology, p_nom 0 and
-    p_nom_extendable True."""
+    lifetime_technical, isp_technology_type from technology, p_nom 0,
+    p_nom_extendable True and marginal_cost from isp_name (so all the build
+    years of one option share its marginal cost timeseries file)."""
     raise NotImplementedError
