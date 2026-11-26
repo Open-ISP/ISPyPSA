@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
+from ..feature_flags import FEATURE_FLAGS
 from ..templater.lists import _ISP_SCENARIOS
 
 
@@ -249,3 +250,16 @@ class ModelConfig(BaseModel):
                 "Cannot specify both filter_by_nem_regions and filter_by_isp_sub_regions"
             )
         return self
+
+    @field_validator("iasr_workbook_version")
+    @classmethod
+    def validate_iasr_workbook_version(cls, iasr_workbook_version: str):
+        # The new table format's version-keyed inputs exist for 7.5 only.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: make the check
+        # unconditional.
+        if FEATURE_FLAGS["use_new_table_format"] and iasr_workbook_version != "7.5":
+            raise ValueError(
+                "config iasr_workbook_version must be '7.5' for the new table "
+                f"format, got '{iasr_workbook_version}'"
+            )
+        return iasr_workbook_version

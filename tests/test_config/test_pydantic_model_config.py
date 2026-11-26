@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from pydantic import ValidationError
 
@@ -466,3 +468,44 @@ def test_base_paths_only():
     assert not hasattr(model.paths, "capacity_expansion_timeseries_location")
     assert not hasattr(model.paths, "operational_timeseries_location")
     assert not hasattr(model.paths, "pypsa_outputs_directory")
+
+
+def test_new_table_format_accepts_iasr_workbook_version_7_5():
+    config = get_valid_config()
+    config["iasr_workbook_version"] = "7.5"
+
+    with patch.dict(
+        "ispypsa.feature_flags.FEATURE_FLAGS", {"use_new_table_format": True}
+    ):
+        result = ModelConfig(**config)
+
+    assert result.iasr_workbook_version == "7.5"
+
+
+def test_new_table_format_rejects_other_iasr_workbook_versions():
+    config = get_valid_config()
+    config["iasr_workbook_version"] = "6.0"
+
+    with patch.dict(
+        "ispypsa.feature_flags.FEATURE_FLAGS", {"use_new_table_format": True}
+    ):
+        with pytest.raises(
+            ValidationError,
+            match=(
+                "config iasr_workbook_version must be '7.5' for the new table "
+                "format, got '6.0'"
+            ),
+        ):
+            ModelConfig(**config)
+
+
+def test_old_table_format_accepts_any_iasr_workbook_version():
+    config = get_valid_config()
+    config["iasr_workbook_version"] = "6.0"
+
+    with patch.dict(
+        "ispypsa.feature_flags.FEATURE_FLAGS", {"use_new_table_format": False}
+    ):
+        result = ModelConfig(**config)
+
+    assert result.iasr_workbook_version == "6.0"
