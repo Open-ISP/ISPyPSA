@@ -3,9 +3,6 @@ and lifetimes of existing units, the bus each unit connects to, and the
 capital costs of new entrants.
 """
 
-# TODO: expand this docstring to the CLAUDE.md module layout once the stubs
-# are filled in.
-
 import logging
 
 import pandas as pd
@@ -185,14 +182,14 @@ def _resolve_build_costs(
     one, so _raise_on_missing_build_costs names it after the merge.
 
     I/O Example (investment_periods=[2026, 2030]):
-        build_costs:
+        build_costs ($/MW):
             technology  year  cost
             OCGT        2026  1400000
             OCGT              1300000    # blank year: fills OCGT 2030 only
             OCGT        2027  1350000    # not an investment period: filtered out
             CCGT              2500000    # blank year: fills both
 
-        returns:
+        returns ($/MW):
             technology  year  cost
             OCGT        2026  1400000
             OCGT        2030  1300000
@@ -214,8 +211,35 @@ def _add_new_entrant_capital_costs(
     connection_costs: pd.DataFrame,
     wacc: float,
 ) -> pd.DataFrame:
-    """Adds an annuitised capital_cost to each new-entrant unit and build year,
-    from its build, connection and system strength costs and its fixed O&M."""
+    """Adds capital_cost to each new-entrant unit: the cost per MW per year of
+    building the unit in its build year. The generators and storage
+    translators both use this.
+
+    The build cost comes from costs_new_entrant_build, matched on technology
+    and build year. The connection and system strength costs come from
+    costs_connection, matched on geo_id, technology and build year. A unit with
+    no matching row in either table stops the run, with an error that names
+    what's missing. The upfront costs are then annuitised over the unit's
+    economic lifetime, and its fixed O&M is added (see
+    _annuitised_capital_costs for the formula).
+
+    I/O Example (wacc=0.07, columns abridged):
+        units (lcf_build and lcf_om in %, fom in $/MW/year, lifetime_economic in years):
+            name       geo_id  technology  build_year  lcf_build  fom    lcf_om  lifetime_economic
+            CNSW OCGT  CNSW    OCGT        2026        110        20000  105     25
+
+        build_costs ($/MW):
+            technology  year  cost
+            OCGT        2026  1000000
+
+        connection_costs ($/MW):
+            geo_id  technology  year  connection_cost  system_strength_cost
+            CNSW    OCGT        2026  100000           50000
+
+        returns (build_cost, connection_cost and system_strength_cost in $/MW; capital_cost in $/MW/year):
+            name       build_cost  connection_cost  system_strength_cost  capital_cost
+            CNSW OCGT  1000000     100000           50000                 129121.25
+    """
     units = _merge_build_costs(units, build_costs)
     _raise_on_missing_build_costs(units)
     units = _merge_connection_costs(units, connection_costs)
@@ -236,13 +260,13 @@ def _merge_build_costs(units: pd.DataFrame, build_costs: pd.DataFrame) -> pd.Dat
             CNSW OCGT  OCGT        2030
             NQ CCGT    CCGT        2026        # no CCGT row for 2026
 
-        build_costs:
+        build_costs ($/MW):
             technology  year  cost
             OCGT        2026  1400000
             OCGT        2030  1300000
             CCGT        2030  2500000
 
-        returns:
+        returns (build_cost in $/MW):
             name       technology  build_year  build_cost
             CNSW OCGT  OCGT        2026        1400000
             CNSW OCGT  OCGT        2030        1300000
@@ -274,12 +298,12 @@ def _merge_connection_costs(
             N10 WOF     N10     Wind offshore   2026        # blank connection_cost
             CNSW OCGT   CNSW    OCGT            2026        # no costs_connection row
 
-        connection_costs:
+        connection_costs ($/MW):
             geo_id  technology     year  connection_cost  system_strength_cost
             N1      Wind           2026  150000           60000
             N10     Wind offshore  2026                   160000
 
-        returns:
+        returns (connection_cost and system_strength_cost in $/MW):
             name        geo_id  technology     build_year  connection_cost  system_strength_cost
             N1 Wind     N1      Wind           2026        150000           60000
             N10 WOF     N10     Wind offshore  2026        0                160000
@@ -355,12 +379,13 @@ def _annuitised_capital_costs(units: pd.DataFrame, wacc: float) -> pd.Series:
     lifetime_economic falls back to lifetime_technical.
 
     I/O Example (wacc=0.07):
-        units:
+        units (build_cost, connection_cost and system_strength_cost in $/MW; fom in $/MW/year;
+               lcf_build and lcf_om in %; lifetimes in years):
             build_cost  connection_cost  system_strength_cost  lcf_build  fom    lcf_om  lifetime_economic  lifetime_technical
             1000000     100000           50000                 110        20000  105     25                 30
             1000000     0                0                                20000          NaN                30
 
-        returns:
+        returns ($/MW/year):
             129121.25    # annuity of 1260000 over 25 years (108121.25) + 21000
             100586.40    # annuity of 1000000 over 30 years (80586.40) + 20000
     """
