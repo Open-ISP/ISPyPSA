@@ -7,10 +7,16 @@ description: >
 
   A REZ sits in an ISP sub-region, a sub-region in a NEM region, and every NEM
   region in the NEM. Each row names one geography and, in a column per level,
-  the sub-region, NEM region and NEM it is or sits inside. The table always
-  holds the full hierarchy, whatever regional granularity the model is built
-  at: `network_geography` says which of these geographies the model is built
-  from.
+  the sub-region, NEM region and NEM it is or sits inside. The table holds
+  the hierarchy down to sub-regions and REZs whatever regional granularity the
+  model is built at: `network_geography` says which of these geographies the
+  model is built from.
+
+  When the template is filtered to some regions (the config's
+  filter_by_nem_regions or filter_by_isp_sub_regions), the table holds only
+  the selected sub-regions, the REZs inside them, and the NEM regions and NEM
+  that contain them. Every sub-region in the table has its demand placed in
+  the model, so a sub-region outside the selection must not have a row.
 
   The table has no column for the type of geography, because the level columns
   already say it: a sub-region is a row whose geo_id equals its subregion_id, a
