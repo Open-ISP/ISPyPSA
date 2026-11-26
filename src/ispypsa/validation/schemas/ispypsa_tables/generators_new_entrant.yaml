@@ -40,19 +40,6 @@ columns:
       Values in this column are used as 'canon' technology types across the model -
       i.e. used to correct typos or map different spellings to a single canonical value.
       Any technology present in this table must also have a build cost defined.
-  resource_type:
-    type: string
-    required: false
-    allowed_values_from:
-      - resource_limits: resource_type
-    description: >
-      Standard string value specifying the ISP-defined resource type of variable
-      renewable energy (VRE) generating units only.
-
-      Used to apply VRE build limit constraints by resource type.
-
-      If absent (or empty):
-      No VRE build limit constraint is applied to the corresponding generating unit.
   geo_id:
     type: string
     required: true
@@ -71,6 +58,21 @@ columns:
 
       This column is used to define the `carrier` for the generating unit in the
       PyPSA model, and to map to fuel prices.
+  resource_type:
+    type: string
+    required: false
+    allowed_values: [solar, wind_high, wind_medium, wind_offshore_fixed, wind_offshore_floating]
+    description: >
+      The ISP-defined resource type of a variable renewable energy (VRE)
+      generating unit.
+
+      resource_limits rows that have a resource_type will match on this column (see
+      the resource_limits table description for the matching rule).
+
+      If absent (or empty):
+      The unit never matches a resource_limits row that has a resource_type, but
+      can still match rows that leave it empty (e.g. a row selecting on geo_id or
+      technology only). Non-VRE units have no resource_type.
   fom:
     type: float
     required: true

@@ -690,6 +690,10 @@ _NON_REZ_GEOGRAPHIES = pd.DataFrame(
 # but IDs used for resource-quality based build limits inside the Q8 REZ.
 _SUB_REZ_AREA_TO_REZ_ID = {"Q8a": "Q8", "Q8b": "Q8", "Q8c": "Q8"}
 
+# Resource types whose limits stay hard, even though IASR gives their REZ a
+# penalty: AEMO only relaxes wind_medium and solar.
+_HARD_LIMIT_RESOURCE_TYPES = {"wind_high"}
+
 # IASR `*_summary` table column names → schema column names.
 # Shared by the existing/planned, new entrant and fuel price templaters, which all read
 # the raw summary tables.

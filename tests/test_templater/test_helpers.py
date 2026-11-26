@@ -8,6 +8,7 @@ from ispypsa.templater.helpers import (
     _assert_table_valid,
     _build_geo_region_lookup,
     _collapse_geo_id_and_average,
+    _collapse_geo_id_and_sum,
     _derive_phes_symmetric_efficiency,
     _filter_table_by_isp_scenario,
     _get_property_value_map,
@@ -745,6 +746,77 @@ def test_collapse_geo_id_and_average(csv_str_to_df, regional_granularity, expect
         table,
         ["technology", "geo_id", "year"],
         "cost",
+        regional_granularity,
+        sub_regional_geography,
+    )
+
+    expected = csv_str_to_df(expected_csv)
+    pd.testing.assert_frame_equal(
+        result.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+        expected.sort_values(["technology", "geo_id"]).reset_index(drop=True),
+    )
+
+
+# --- _collapse_geo_id_and_sum ---
+
+
+@pytest.mark.parametrize(
+    "regional_granularity, expected_csv",
+    [
+        (
+            "sub_regions",
+            # No geo_id changes, but SNW's two rows still sum: 300 + 200
+            """
+            technology,  geo_id,  limit
+            Battery,     N1,      0.0
+            PHES 10h,    CNSW,    1000.0
+            PHES 10h,    NQ,      1000.0
+            PHES 10h,    SNW,     500.0
+            """,
+        ),
+        (
+            "nem_regions",
+            # CNSW and SNW share NSW's row: 1000 + 300 + 200
+            """
+            technology,  geo_id,  limit
+            Battery,     N1,      0.0
+            PHES 10h,    NSW,     1500.0
+            PHES 10h,    QLD,     1000.0
+            """,
+        ),
+        (
+            "single_region",
+            """
+            technology,  geo_id,  limit
+            Battery,     N1,      0.0
+            PHES 10h,    NEM,     2500.0
+            """,
+        ),
+    ],
+)
+def test_collapse_geo_id_and_sum(csv_str_to_df, regional_granularity, expected_csv):
+    # N1 is a REZ, so its geo_id isn't remapped at any granularity. Its blank
+    # limit sums to 0.
+    table = csv_str_to_df("""
+        technology,  geo_id,  limit
+        PHES 10h,    CNSW,    1000.0
+        PHES 10h,    SNW,     300.0
+        PHES 10h,    SNW,     200.0
+        PHES 10h,    NQ,      1000.0
+        Battery,     N1,
+    """)
+    sub_regional_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id
+        CNSW,    subregion,  NSW
+        SNW,     subregion,  NSW
+        NQ,      subregion,  QLD
+        N1,      rez,        NSW
+    """)
+
+    result = _collapse_geo_id_and_sum(
+        table,
+        ["technology", "geo_id"],
+        "limit",
         regional_granularity,
         sub_regional_geography,
     )

@@ -60,6 +60,7 @@ from ispypsa.templater.nodes import (
 from ispypsa.templater.renewable_energy_zones import (
     _template_rez_build_limits,
 )
+from ispypsa.templater.resource_limits import _template_resource_limits
 from ispypsa.templater.static_ecaa_generator_properties import (
     _template_ecaa_generators_static_properties,
 )
@@ -125,6 +126,7 @@ _NEW_FORMAT_TEMPLATE_OUTPUTS = [
     "custom_constraints_rhs",
     "carbon_budgets",
     "emissions_reduction",
+    "resource_limits",
 ]
 
 
@@ -293,6 +295,15 @@ def create_ispypsa_inputs_template(
         template["emissions_reduction"] = _template_emissions_reduction(
             iasr_tables, scenario
         )
+        template["resource_limits"] = _template_resource_limits(
+            iasr_tables,
+            scenario,
+            regional_granularity,
+            sub_regional_geography,
+            template["generators_new_entrant"],
+            template["storage_new_entrant"],
+        )
+
         if regional_granularity == "sub_regions":
             template.update(
                 template_custom_constraints_from_plexos(

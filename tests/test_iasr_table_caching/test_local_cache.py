@@ -76,6 +76,9 @@ def test_build_required_tables_new_format():
     assert "auxiliary_load_new_entrants" in result
     assert "nem_carbon_budget" in result
     assert "gpg_emissions_reduction_biomethane" in result
+    assert "initial_resource_limits" in result
+    assert "build_limits_phes" in result
+    assert "other_distributed_resources_build_limits" in result
 
 
 def test_build_required_tables_old_format():

@@ -598,6 +598,72 @@ def _collapse_geo_id_and_average(
     return table.groupby(group_cols)[value_col].mean().reset_index()
 
 
+def _collapse_geo_id_and_sum(
+    table: pd.DataFrame,
+    group_cols: list[str],
+    value_col: str,
+    regional_granularity: str,
+    sub_regional_geography: pd.DataFrame,
+) -> pd.DataFrame:
+    """Collapses ``table``'s geo_id to ``regional_granularity``, then sums
+    ``value_col`` over the rows that now share every column in ``group_cols``.
+
+    ``table`` holds quantities given per sub-region or REZ, e.g. the pumped hydro
+    capacity that can be built in each of CNSW and SNW. Unlike a property such as a
+    cost, a quantity adds up: when CNSW and SNW become NSW (at "nem_regions") or
+    "NEM" (at "single_region"), the merged geography can hold the total of both.
+    This is the summing twin of _collapse_geo_id_and_average.
+
+    ``group_cols`` names the key-columns that are used to group rows by, and must
+    include geo_id. Any column in ``table`` not in ``group_cols`` or ``value_col``
+    is dropped. Rows that already share every ``group_cols`` value before the
+    collapse (e.g. two rows for one sub-region) are summed too, at any granularity.
+
+    Each geo_id is mapped with _map_geo_id_to_granularity: sub-regions move to their
+    region or to "NEM", and REZs are left as they are. The table then gets grouped
+    by ``group_cols``, and the values in ``value_col`` are summed across all rows
+    in each group. A blank value counts as 0, so a group whose values are all blank
+    sums to 0.
+
+    I/O Example:
+        table:
+            technology  geo_id  limit
+            PHES 10h    CNSW    1000.0
+            PHES 10h    SNW     300.0
+            PHES 10h    SNW     200.0    # second row for SNW: summed at any granularity
+            PHES 10h    NQ      1000.0
+
+        group_cols: ["technology", "geo_id"]
+        value_col: "limit"
+
+        sub_regional_geography:
+            geo_id  geo_type   region_id
+            CNSW    subregion  NSW
+            SNW     subregion  NSW
+            NQ      subregion  QLD
+
+        returns:
+            regional_granularity = "sub_regions":
+                technology  geo_id  limit
+                PHES 10h    CNSW    1000.0
+                PHES 10h    NQ      1000.0
+                PHES 10h    SNW     500.0     # 300 + 200
+
+            regional_granularity = "nem_regions":
+                technology  geo_id  limit
+                PHES 10h    NSW     1500.0    # 1000 + 300 + 200
+                PHES 10h    QLD     1000.0
+
+    An unknown ``regional_granularity`` raises, via _map_geo_id_to_granularity.
+    """
+    table = table.assign(
+        geo_id=_map_geo_id_to_granularity(
+            table["geo_id"], regional_granularity, sub_regional_geography
+        )
+    )
+    return table.groupby(group_cols)[value_col].sum().reset_index()
+
+
 def _assert_table_valid(
     table: pd.DataFrame, table_name: str, required_cols: set[str]
 ) -> None:

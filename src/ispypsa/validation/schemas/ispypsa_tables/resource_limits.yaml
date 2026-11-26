@@ -1,51 +1,142 @@
 table: resource_limits
 required: false
 unique:
-  - [geo_id, resource_type, limit_type]
+  - [geo_id, technology, resource_type, limit_type]
 description: >
-  Resource and land use limits for geographies in the network model.
+  Caps on how much new entrant capacity can be built against a resource or a
+  land area, such as the high-quality wind resource in a REZ or the land available
+  for solar there, or of a technology in a geography, such as pumped hydro in a
+  sub-region.
 
-  Each row represents a limit on a specific resource type within a geography.
-  Geographies with no rows in this table have no resource limits applied.
+  The three 'key' columns (geo_id, technology and resource_type)
+  pick out the group of new entrant generators and storage units a row here applies
+  to, and the row defines limit(s) on the combined capacity of that group. A row
+  matches an asset when all the row's non-empty 'key' values match the asset's
+  corresponding values. Keys that the row leaves empty are not checked.
+
+  Empty keys match in the same way as the wildcards in lookup tables such as
+  costs_fuel_prices, but this table doesn't follow the same 'most specific wins' rule;
+  here, every row that matches an asset applies to it. For example, a Q1/wind_high
+  generator gets counted by both the Q1/Wind land use limit and the Q1/wind_high
+  resource limit.
+
+  The coverage rules differ too: not every asset needs to have a row that matches
+  it in this table. In those cases (e.g. a gas generator), the unit just has
+  no resource limit.
+
+  For now only new entrants count against these limits. Existing and planned
+  units do not.
 
   Source tables:
-    - `initial_build_limits`
+    - `initial_resource_limits`
+    - `build_limits_phes`
+    - `other_distributed_resources_build_limits`
 
   If absent:
   The model is constructed without resource limits.
+custom_validation:
+  - name: limits_match_at_least_one_asset
+    description: >
+      Every row must match at least one new entrant in generators_new_entrant or
+      storage_new_entrant, under the matching rule in the table description. A
+      row that matches nothing would silently have no effect.
 columns:
   geo_id:
     type: string
-    required: true
+    required: false
     allowed_values_from:
       - network_geography: geo_id
-    description: Geography identifier.
+    description: >
+      The geography the limit applies to. A row only matches assets with exactly
+      this geo_id, so a sub-region does not include the REZs inside it.
+
+      IASR splits the Darling Downs REZ (Q8) into three sub-areas (Q8a, Q8b and
+      Q8c), each with its own resource and land use limits. These are added up
+      into one set of Q8 limits, because the model has no geography level below
+      the REZ (see Open-ISP/ISPyPSA#150).
+
+      If absent (or empty):
+      The row ignores geo_id, so it matches assets in any geography, as long as
+      they match the row's other keys.
+  technology:
+    type: string
+    required: false
+    allowed_values_from:
+      - generators_new_entrant: technology
+      - storage_new_entrant: technology
+    description: >
+      The technology the limit applies to. Wind land use rows use technology
+      Wind, which doesn't include offshore wind (a separate technology).
+
+      If absent (or empty):
+      The row ignores technology, so it matches assets of any technology, as
+      long as they match the row's other keys.
   resource_type:
     type: string
-    required: true
-    allowed_values: [wind_high, wind_medium, wind_offshore_fixed, wind_offshore_floating, solar, wind]
-    description: Resource type the limit applies to.
+    required: false
+    allowed_values_from:
+      - generators_new_entrant: resource_type
+    description: >
+      The resource type the limit applies to.
+
+      If absent (or empty):
+      The row ignores resource_type, so it matches assets with any resource_type
+      or none, as long as they match the row's other keys.
   limit_type:
     type: string
     required: true
-    allowed_values: [generation, land_use]
+    allowed_values: [resource, land_use, build]
     description: >
-      Necessary to disambiguate resource_type values that appear in both
-      generation and land_use contexts (e.g. solar).
+      Describes the type of limit that this row represents:
+
+        - resource: the resource available in a zone, for a given resource
+          type (wind_high, wind_medium, solar or offshore wind).
+        - land_use: the land available in a zone for a technology, which caps
+          wind_high and wind_medium together for onshore wind, and every
+          solar resource_type asset (e.g. solar PV and solar thermal) together
+          for solar.
+        - build: the capacity of a technology that can be built in a
+          geography, such as pumped hydro or distributed resources in a
+          sub-region or region.
+
+      limit_type doesn't decide which assets a row matches, or whether the
+      limit is hard or soft (see relaxation_penalty). It is part of `unique`
+      because the solar resource and solar land use limits in a REZ have the
+      same key values.
   limit:
     type: float
     required: true
     units: MW
     gte: 0.0
-    description: Limit value.
-  resource_limit_penalty:
+    description: >
+      Maximum allowed combined capacity of the matching assets.
+
+      A limit of 0 with a relaxation_penalty means every MW built pays the
+      penalty. Without a penalty, a limit of 0 means no build.
+  relaxation_penalty:
     type: float
     required: false
     units: $/MW
     gte: 0.0
     description: >
-      Annualised penalty applied if a limit is exceeded. 0.0 means there is
-      effectively no limit — generation can exceed the limit at zero cost.
+      Up-front cost per MW of capacity built above the limit. The translator
+      annuitises it. A row of any limit_type can have a penalty.
+
+      With the IASR inputs as given, the templater fills in a penalty on
+      wind_medium and solar resource rows only, so all other rows are hard
+      limits:
+
+        - wind_high: IASR gives one penalty per REZ, which would cover
+          wind_high too. The templater leaves it out to match AEMO's PLEXOS
+          model, so this departs from IASR as given.
+        - offshore: IASR gives offshore REZs no penalty.
+        - land_use: IASR's penalty applies to resource limits only. Keeping
+          land use hard makes it the ceiling that the soft resource limits can
+          be relaxed up to.
+        - build: IASR gives the PHES and distributed resources limits no
+          penalty.
+
+      0.0 means the limit can be exceeded at no cost, so it has no effect.
 
       If absent (or empty):
-      The limit is treated as a hard cap; no violation is allowed.
+      The limit is a hard cap, and cannot be exceeded.

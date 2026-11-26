@@ -84,6 +84,9 @@ def _build_required_tables(iasr_workbook_version: str) -> list[str]:
             "auxiliary_load_new_entrants",
             "nem_carbon_budget",
             "gpg_emissions_reduction_biomethane",
+            "initial_resource_limits",
+            "build_limits_phes",
+            "other_distributed_resources_build_limits",
         ] + augmentation
 
     else:
