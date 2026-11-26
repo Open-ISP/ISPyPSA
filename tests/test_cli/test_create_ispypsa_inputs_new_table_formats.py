@@ -342,19 +342,20 @@ _EXPECTED_EMISSIONS_REDUCTION_ROWS_75 = 30
 
 # Resource limits: the REZ rows are the same at every granularity, but the build
 # rows (PHES and DR, given per sub-region) are summed to the model's geography.
-# limit_type -> resource = 46 (resource zones) * 3 (resource types)
+# Q8a, Q8b and Q8c are added up into Q8, so they count as one onshore REZ here.
+# limit_type -> resource = 44 (onshore REZs) * 3 (resource types)
 #                           - 3 (DREZ wind_medium, known empty limit)
-#                           + 5 (offshore zones) * 2 (resource types) = 145
-# limit_type -> land_use = 46 (resource_zones) * 2 ('solar' | 'Wind') = 92
+#                           + 5 (offshore zones) * 2 (resource types) = 139
+# limit_type -> land_use = 44 (onshore REZs) * 2 ('solar' | 'Wind') = 88
 # limit_type -> build = geos with PHES options * 3 (10h/24h/48h) + 1 (BOTN, TAS)
 #                       + geos * 2 (DR solar | DR batteries):
 #   sub_regions:   11 * 3 + 1 + 15 * 2 = 64 (GG, SESA, MEL and SEV have no PHES)
 #   nem_regions:    5 * 3 + 1 +  5 * 2 = 26
 #   single_region:  1 * 3 + 1 +  1 * 2 = 6
 _EXPECTED_RESOURCE_LIMIT_ROWS_75 = {
-    "sub_regions": 145 + 92 + 64,
-    "nem_regions": 145 + 92 + 26,
-    "single_region": 145 + 92 + 6,
+    "sub_regions": 139 + 88 + 64,
+    "nem_regions": 139 + 88 + 26,
+    "single_region": 139 + 88 + 6,
 }
 
 # Per-reference-year window patterns decoded from the shipped RefYear5000

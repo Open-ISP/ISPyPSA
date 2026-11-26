@@ -690,7 +690,6 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
         "name",
         "technology",
         "resource_type",
-        "resource_zone",
         "geo_id",
         "fuel_type",
         "fom",
@@ -838,7 +837,6 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
     resource_limits = result["resource_limits"]
     assert set(resource_limits.columns) == {
         "geo_id",
-        "resource_zone",
         "technology",
         "resource_type",
         "limit_type",

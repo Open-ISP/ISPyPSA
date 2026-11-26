@@ -73,22 +73,6 @@ columns:
       The unit never matches a resource_limits row that has a resource_type, but
       can still match rows that leave it empty (e.g. a row selecting on geo_id or
       technology only). Non-VRE units have no resource_type.
-  resource_zone:
-    type: string
-    required: false
-    description: >
-      The resource zone the generating unit sits in: either its REZ ID, which is
-      the same as geo_id, or a REZ sub-area such as Q8a, whose geo_id is the
-      parent REZ (Q8).
-
-      resource_limits rows that have a resource_zone will match on this column, which
-      lets limits apply per sub-area as the IASR workbook gives them (see the
-      resource_limits table description for the matching rule).
-
-      If absent (or empty):
-      The unit never matches a resource_limits row that has a resource_zone, but
-      can still match rows that leave it empty (e.g. a row selecting on geo_id or
-      technology only). Units connected at a sub-region have no resource_zone.
   fom:
     type: float
     required: true

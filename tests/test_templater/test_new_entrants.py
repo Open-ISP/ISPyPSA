@@ -7,7 +7,6 @@ from ispypsa.templater.new_entrants import (
     _STORAGE_IDENTITY_COLUMNS,
     _STORAGE_PROPERTY_COLUMNS,
     _add_resource_type,
-    _add_resource_zone,
     _assert_botn_technology_expected,
     _assert_build_cost_zone_matches_geo_id,
     _collapse_geo_id_to_granularity,
@@ -474,36 +473,6 @@ def test_add_resource_type_empty_input():
     result = _add_resource_type(empty_input)
 
     expected = pd.DataFrame(columns=["name", "technology", "resource_type"])
-    pd.testing.assert_frame_equal(result, expected)
-
-
-# --- _add_resource_zone (generator-specific) ---
-
-
-def test_add_resource_zone(csv_str_to_df):
-    # Q8b's name prefix is a known sub-area, so it replaces the REZ ID (Q8). Q8
-    # alone keeps Q8 (its REZ ID), doesn't get split up/mapped to sub-areas.
-    # DREZ is not a known sub-area, so the DN2 row keeps its REZ ID.
-    # The OCGT row is sub-region-located (NaN).
-    gens = csv_str_to_df("""
-        name,                   REZ ID
-        Q1_WH_Far North QLD,    Q1
-        Q8b_WM_Southern Downs,  Q8
-        Q8_Test,                Q8
-        DREZ_SAT_Yass,          DN2
-        CNSW OCGT Small,        Not Applicable
-    """)
-
-    result = _add_resource_zone(gens)
-
-    expected = csv_str_to_df("""
-        name,                   REZ ID,          resource_zone
-        Q1_WH_Far North QLD,    Q1,              Q1
-        Q8b_WM_Southern Downs,  Q8,              Q8b
-        Q8_Test,                Q8,              Q8
-        DREZ_SAT_Yass,          DN2,             DN2
-        CNSW OCGT Small,        Not Applicable,
-    """)
     pd.testing.assert_frame_equal(result, expected)
 
 

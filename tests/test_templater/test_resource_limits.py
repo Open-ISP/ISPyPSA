@@ -8,6 +8,7 @@ from ispypsa.templater.resource_limits import (
     _drop_limits_matching_no_new_entrant,
     _melt_resource_limits,
     _remove_penalty_for_hard_limited_resources,
+    _sum_sub_area_limits,
     _template_build_limits,
     _template_resource_limits,
     _template_rez_limits,
@@ -29,25 +30,38 @@ def test_template_resource_limits(
 ):
     limits = pd.DataFrame(
         {
-            "REZ ID": ["Q8a", "Q3", "V8"],
-            "Wind generation total limits (MW)_High": [560.0, None, None],
-            "Wind generation total limits (MW)_Medium": [1680.0, None, None],
-            "Wind generation total limits (MW)_Offshore -fixed": [None, None, 54996.0],
+            "REZ ID": ["Q8a", "Q8b", "Q3", "V8"],
+            "Wind generation total limits (MW)_High": [560.0, 420.0, None, None],
+            "Wind generation total limits (MW)_Medium": [1680.0, 1260.0, None, None],
+            "Wind generation total limits (MW)_Offshore -fixed": [
+                None,
+                None,
+                None,
+                54996.0,
+            ],
             "Wind generation total limits (MW)_Offshore -floating": [
+                None,
                 None,
                 None,
                 5000.0,
             ],
-            "Solar PV plus Solar thermal Limits (MW)_Solar": [None, 1100.0, None],
-            "REZ resource limit violation penalty factor ($M/MW)": [0.3, 0.3, None],
-            "Land use limits in MW_Wind": [3200.0, None, 0.0],
-            "Land use limits in MW_Solar": [None, 7700.0, None],
+            "Solar PV plus Solar thermal Limits (MW)_Solar": [None, None, 1100.0, None],
+            "REZ resource limit violation penalty factor ($M/MW)": [
+                0.3,
+                0.3,
+                0.3,
+                None,
+            ],
+            "Land use limits in MW_Wind": [3200.0, 3200.0, None, 0.0],
+            "Land use limits in MW_Solar": [None, None, 7700.0, None],
             "Land use limits in MW Accelerated Transition scenario_Wind": [
+                16000.0,
                 16000.0,
                 None,
                 0.0,
             ],
             "Land use limits in MW Accelerated Transition scenario_Solar": [
+                None,
                 None,
                 38500.0,
                 None,
@@ -94,15 +108,15 @@ def test_template_resource_limits(
         GG,      subregion,  QLD
     """)
     generators_new_entrant = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,                   resource_type
-        Q8,      Q8a,            Wind,                         wind_high
-        Q8,      Q8a,            Wind,                         wind_medium
-        Q3,      Q3,             Wind,                         wind_high
-        Q3,      Q3,             Large scale Solar PV,         solar
-        V8,      V8,             Wind - offshore (fixed),      wind_offshore_fixed
-        V8,      V8,             Wind - offshore (floating),   wind_offshore_floating
-        SNW,     ,               Distributed Resources Solar,
-        CNSW,    ,               OCGT (small GT),
+        geo_id,  technology,                   resource_type
+        Q8,      Wind,                         wind_high
+        Q8,      Wind,                         wind_medium
+        Q3,      Wind,                         wind_high
+        Q3,      Large scale Solar PV,         solar
+        V8,      Wind - offshore (fixed),      wind_offshore_fixed
+        V8,      Wind - offshore (floating),   wind_offshore_floating
+        SNW,     Distributed Resources Solar,
+        CNSW,    OCGT (small GT),
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology
@@ -121,37 +135,33 @@ def test_template_resource_limits(
         storage_new_entrant,
     )
 
-    # Q8a wind_high is hard (no penalty), and its geo_id is Q8. Q3's wind_high and
-    # wind land use limits are blank in IASR but match a wind_high new entrant, so
-    # they become 0. V8's 0 wind land use is dropped, since offshore technologies
-    # aren't "Wind". Every other blank limit matches no generator and is dropped.
-    # TAS 24h PHES is 0 but has a storage option, so it's kept (no build); TAS 48h
-    # and every GG PHES limit are 0 with no option, so they're dropped. The two SNW
-    # DR rows (one per DNSP) sum: 369 + 521 and 2432 + 3292.
+    # Q8a and Q8b add up into Q8: 560 + 420 wind_high, 1680 + 1260 wind_medium, and
+    # twice the wind land use that each sub-area has. Q8 wind_high is hard (no
+    # penalty). Q3's wind_high and wind land use limits are blank in IASR but match
+    # a wind_high new entrant, so they become 0. V8's 0 wind land use is dropped,
+    # since offshore technologies aren't "Wind". Every other blank limit matches no
+    # generator and is dropped. TAS 24h PHES is 0 but has a storage option, so it's
+    # kept (no build); TAS 48h and every GG PHES limit are 0 with no option, so
+    # they're dropped. The two SNW DR rows (one per DNSP) sum: 369 + 521 and
+    # 2432 + 3292.
     expected = csv_str_to_df(f"""
-        geo_id,  resource_zone,  technology,                       resource_type,           limit_type,  limit,             relaxation_penalty
-        Q8,      Q8a,            ,                                 wind_high,               resource,    560.0,
-        Q8,      Q8a,            ,                                 wind_medium,             resource,    1680.0,            300000.0
-        Q3,      Q3,             ,                                 wind_high,               resource,    0.0,
-        Q3,      Q3,             ,                                 solar,                   resource,    1100.0,            300000.0
-        V8,      V8,             ,                                 wind_offshore_fixed,     resource,    54996.0,
-        V8,      V8,             ,                                 wind_offshore_floating,  resource,    5000.0,
-        Q8,      Q8a,            Wind,                             ,                        land_use,    {wind_land_use},
-        Q3,      Q3,             Wind,                             ,                        land_use,    0.0,
-        Q3,      Q3,             ,                                 solar,                   land_use,    {solar_land_use},
-        TAS,     ,               Pumped Hydro (10hrs storage),     ,                        build,       1100.0,
-        TAS,     ,               Pumped Hydro (24hrs storage),     ,                        build,       0.0,
-        TAS,     ,               BOTN - Cethana,                   ,                        build,       750.0,
-        SNW,     ,               Distributed Resources Solar,      ,                        build,       890.0,
-        SNW,     ,               Distributed Resources Batteries,  ,                        build,       5724.0,
+        geo_id,  technology,                       resource_type,           limit_type,  limit,                relaxation_penalty
+        Q8,      ,                                 wind_high,               resource,    980.0,
+        Q8,      ,                                 wind_medium,             resource,    2940.0,               300000.0
+        Q3,      ,                                 wind_high,               resource,    0.0,
+        Q3,      ,                                 solar,                   resource,    1100.0,               300000.0
+        V8,      ,                                 wind_offshore_fixed,     resource,    54996.0,
+        V8,      ,                                 wind_offshore_floating,  resource,    5000.0,
+        Q8,      Wind,                             ,                        land_use,    {2 * wind_land_use},
+        Q3,      Wind,                             ,                        land_use,    0.0,
+        Q3,      ,                                 solar,                   land_use,    {solar_land_use},
+        TAS,     Pumped Hydro (10hrs storage),     ,                        build,       1100.0,
+        TAS,     Pumped Hydro (24hrs storage),     ,                        build,       0.0,
+        TAS,     BOTN - Cethana,                   ,                        build,       750.0,
+        SNW,     Distributed Resources Solar,      ,                        build,       890.0,
+        SNW,     Distributed Resources Batteries,  ,                        build,       5724.0,
     """)
-    sort_columns = [
-        "limit_type",
-        "geo_id",
-        "resource_zone",
-        "technology",
-        "resource_type",
-    ]
+    sort_columns = ["limit_type", "geo_id", "technology", "resource_type"]
     pd.testing.assert_frame_equal(
         result.sort_values(sort_columns).reset_index(drop=True),
         expected.sort_values(sort_columns).reset_index(drop=True),
@@ -210,21 +220,21 @@ def test_melt_resource_limits(csv_str_to_df):
     result = _melt_resource_limits(limits)
 
     expected = csv_str_to_df("""
-        resource_zone,  resource_type,           limit,  limit_type
-        Q1,             wind_high,               570,    resource
-        Q1,             wind_medium,             1710,   resource
-        Q1,             wind_offshore_fixed,     ,       resource
-        Q1,             wind_offshore_floating,  ,       resource
-        Q1,             solar,                   1100,   resource
-        V8,             wind_high,               ,       resource
-        V8,             wind_medium,             ,       resource
-        V8,             wind_offshore_fixed,     54996,  resource
-        V8,             wind_offshore_floating,  5000,   resource
-        V8,             solar,                   ,       resource
+        geo_id,  resource_type,           limit,  limit_type
+        Q1,      wind_high,               570,    resource
+        Q1,      wind_medium,             1710,   resource
+        Q1,      wind_offshore_fixed,     ,       resource
+        Q1,      wind_offshore_floating,  ,       resource
+        Q1,      solar,                   1100,   resource
+        V8,      wind_high,               ,       resource
+        V8,      wind_medium,             ,       resource
+        V8,      wind_offshore_fixed,     54996,  resource
+        V8,      wind_offshore_floating,  5000,   resource
+        V8,      solar,                   ,       resource
     """)
     pd.testing.assert_frame_equal(
-        result.sort_values(["resource_zone", "resource_type"]).reset_index(drop=True),
-        expected.sort_values(["resource_zone", "resource_type"]).reset_index(drop=True),
+        result.sort_values(["geo_id", "resource_type"]).reset_index(drop=True),
+        expected.sort_values(["geo_id", "resource_type"]).reset_index(drop=True),
     )
 
 
@@ -237,23 +247,23 @@ def test_add_relaxation_penalty(csv_str_to_df):
         }
     )
     resource_limits = csv_str_to_df("""
-        resource_zone,  resource_type,        limit,  limit_type
-        Q1,             wind_medium,          1710,   resource
-        Q1,             solar,                1100,   resource
-        V8,             wind_offshore_fixed,  54996,  resource
+        geo_id,  resource_type,        limit,  limit_type
+        Q1,      wind_medium,          1710,   resource
+        Q1,      solar,                1100,   resource
+        V8,      wind_offshore_fixed,  54996,  resource
     """)
 
     result = _add_relaxation_penalty(resource_limits, limits)
 
     expected = csv_str_to_df("""
-        resource_zone,  resource_type,        limit,  limit_type,  relaxation_penalty
-        Q1,             wind_medium,          1710,   resource,    300000.0
-        Q1,             solar,                1100,   resource,    300000.0
-        V8,             wind_offshore_fixed,  54996,  resource,
+        geo_id,  resource_type,        limit,  limit_type,  relaxation_penalty
+        Q1,      wind_medium,          1710,   resource,    300000.0
+        Q1,      solar,                1100,   resource,    300000.0
+        V8,      wind_offshore_fixed,  54996,  resource,
     """)
     pd.testing.assert_frame_equal(
-        result.sort_values(["resource_zone", "resource_type"]).reset_index(drop=True),
-        expected.sort_values(["resource_zone", "resource_type"]).reset_index(drop=True),
+        result.sort_values(["geo_id", "resource_type"]).reset_index(drop=True),
+        expected.sort_values(["geo_id", "resource_type"]).reset_index(drop=True),
     )
 
 
@@ -262,23 +272,64 @@ def test_remove_penalty_for_hard_limited_resources(csv_str_to_df):
     # every limit is left as it was, including already blank penalties (e.g.
     # V8 offshore wind).
     limits = csv_str_to_df("""
-        resource_zone,  resource_type,        limit,  limit_type,  relaxation_penalty
-        Q1,             wind_high,            570,    resource,    300000.0
-        Q1,             wind_medium,          1710,   resource,    300000.0
-        Q1,             solar,                1100,   resource,    300000.0
-        V8,             wind_offshore_fixed,  54996,  resource,
+        geo_id,  resource_type,        limit,  limit_type,  relaxation_penalty
+        Q1,      wind_high,            570,    resource,    300000.0
+        Q1,      wind_medium,          1710,   resource,    300000.0
+        Q1,      solar,                1100,   resource,    300000.0
+        V8,      wind_offshore_fixed,  54996,  resource,
     """)
 
     result = _remove_penalty_for_hard_limited_resources(limits)
 
     expected = csv_str_to_df("""
-        resource_zone,  resource_type,        limit,  limit_type,  relaxation_penalty
-        Q1,             wind_high,            570,    resource,
-        Q1,             wind_medium,          1710,   resource,    300000.0
-        Q1,             solar,                1100,   resource,    300000.0
-        V8,             wind_offshore_fixed,  54996,  resource,
+        geo_id,  resource_type,        limit,  limit_type,  relaxation_penalty
+        Q1,      wind_high,            570,    resource,
+        Q1,      wind_medium,          1710,   resource,    300000.0
+        Q1,      solar,                1100,   resource,    300000.0
+        V8,      wind_offshore_fixed,  54996,  resource,
     """)
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_sum_sub_area_limits(csv_str_to_df):
+    # Q8a and Q8b add up into Q8, and the solar resource and solar land use rows
+    # stay separate (different limit_type). Q8b's blank wind_medium counts as 0, and
+    # offshore is blank in both sub-areas, so it stays blank. Q1 has no sub-areas,
+    # so its row is unchanged.
+    rez_limits = csv_str_to_df("""
+        geo_id,  technology,  resource_type,        limit_type,  limit,   relaxation_penalty
+        Q8a,     ,            wind_high,            resource,    560.0,
+        Q8b,     ,            wind_high,            resource,    420.0,
+        Q8a,     ,            wind_medium,          resource,    1680.0,  300000.0
+        Q8b,     ,            wind_medium,          resource,    ,        300000.0
+        Q8a,     ,            wind_offshore_fixed,  resource,    ,
+        Q8b,     ,            wind_offshore_fixed,  resource,    ,
+        Q8a,     ,            solar,                resource,    2797.0,  300000.0
+        Q8b,     ,            solar,                resource,    2098.0,  300000.0
+        Q8a,     ,            solar,                land_use,    7695.0,
+        Q8b,     ,            solar,                land_use,    7695.0,
+        Q8a,     Wind,        ,                     land_use,    3206.0,
+        Q8b,     Wind,        ,                     land_use,    3206.0,
+        Q1,      ,            wind_high,            resource,    570.0,
+    """)
+
+    result = _sum_sub_area_limits(rez_limits)
+
+    expected = csv_str_to_df("""
+        geo_id,  technology,  resource_type,        limit_type,  relaxation_penalty,  limit
+        Q1,      ,            wind_high,            resource,    ,                    570.0
+        Q8,      Wind,        ,                     land_use,    ,                    6412.0
+        Q8,      ,            solar,                land_use,    ,                    15390.0
+        Q8,      ,            solar,                resource,    300000.0,            4895.0
+        Q8,      ,            wind_high,            resource,    ,                    980.0
+        Q8,      ,            wind_medium,          resource,    300000.0,            1680.0
+        Q8,      ,            wind_offshore_fixed,  resource,    ,
+    """)
+    sort_columns = ["geo_id", "technology", "resource_type", "limit_type"]
+    pd.testing.assert_frame_equal(
+        result.sort_values(sort_columns).reset_index(drop=True),
+        expected.sort_values(sort_columns).reset_index(drop=True),
+    )
 
 
 # --- build limits (PHES and distributed resources) ---
@@ -392,30 +443,27 @@ def test_template_build_limits_raises_on_non_numeric_limit(csv_str_to_df):
 
 def test_drop_limits_matching_no_new_entrant(csv_str_to_df, caplog):
     # Q1 wind land use leaves resource_type blank, so it matches Q1's wind_high
-    # generator. Q8a matches on resource_zone, though the generator's geo_id is Q8.
-    # Q3 wind_high is blank in IASR but has a generator, so it's kept (still blank).
+    # generator. Q3 wind_high is blank in IASR but has a generator, so it's kept (still blank).
     # V8 solar (blank) and N10 solar (0) match no generator: dropped, not logged.
     # DN1 wind_medium is non-zero but a known exception, having no new entrant
     # options: dropped and logged. NNSW PHES matches a storage new entrant, so it's
     # kept; GG PHES (0) has no option and is dropped without a log.
     limits = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,                    resource_type,  limit_type,  limit
-        Q1,      Q1,             Wind,                          ,               land_use,    6764.0
-        Q8,      Q8a,            ,                              wind_high,      resource,    560.0
-        Q3,      Q3,             ,                              wind_high,      resource,
-        V8,      V8,             ,                              solar,          resource,
-        N10,     N10,            ,                              solar,          resource,    0.0
-        DN1,     DN1,            ,                              wind_medium,    resource,    792.0
-        NNSW,    ,               Pumped Hydro (10hrs storage),  ,               build,       2500.0
-        GG,      ,               Pumped Hydro (10hrs storage),  ,               build,       0.0
+        geo_id,  technology,                    resource_type,  limit_type,  limit
+        Q1,      Wind,                          ,               land_use,    6764.0
+        Q3,      ,                              wind_high,      resource,
+        V8,      ,                              solar,          resource,
+        N10,     ,                              solar,          resource,    0.0
+        DN1,     ,                              wind_medium,    resource,    792.0
+        NNSW,    Pumped Hydro (10hrs storage),  ,               build,       2500.0
+        GG,      Pumped Hydro (10hrs storage),  ,               build,       0.0
     """)
     generators_new_entrant = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,       resource_type
-        Q1,      Q1,             Wind,             wind_high
-        Q8,      Q8a,            Wind,             wind_high
-        Q3,      Q3,             Wind,             wind_high
-        DN1,     DN1,            Wind,             wind_high
-        CNSW,    ,               OCGT (small GT),
+        geo_id,  technology,       resource_type
+        Q1,      Wind,             wind_high
+        Q3,      Wind,             wind_high
+        DN1,     Wind,             wind_high
+        CNSW,    OCGT (small GT),
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology
@@ -428,11 +476,10 @@ def test_drop_limits_matching_no_new_entrant(csv_str_to_df, caplog):
         )
 
     expected = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,                    resource_type,  limit_type,  limit
-        Q1,      Q1,             Wind,                          ,               land_use,    6764.0
-        Q8,      Q8a,            ,                              wind_high,      resource,    560.0
-        Q3,      Q3,             ,                              wind_high,      resource,
-        NNSW,    ,               Pumped Hydro (10hrs storage),  ,               build,       2500.0
+        geo_id,  technology,                    resource_type,  limit_type,  limit
+        Q1,      Wind,                          ,               land_use,    6764.0
+        Q3,      ,                              wind_high,      resource,
+        NNSW,    Pumped Hydro (10hrs storage),  ,               build,       2500.0
     """)
     pd.testing.assert_frame_equal(result, expected)
     assert (
@@ -445,13 +492,13 @@ def test_drop_limits_matching_no_new_entrant_does_not_log_blank_or_zero_drops(
     csv_str_to_df, caplog
 ):
     limits = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,  resource_type,  limit_type,  limit
-        V8,      V8,             ,            solar,          resource,
-        N10,     N10,            ,            solar,          resource,    0.0
+        geo_id,  technology,  resource_type,  limit_type,  limit
+        V8,      ,            solar,          resource,
+        N10,     ,            solar,          resource,    0.0
     """)
     generators_new_entrant = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,  resource_type
-        Q1,      Q1,             Wind,        wind_high
+        geo_id,  technology,  resource_type
+        Q1,      Wind,        wind_high
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology
@@ -469,18 +516,17 @@ def test_drop_limits_matching_no_new_entrant_does_not_log_blank_or_zero_drops(
 def test_drop_limits_matching_no_new_entrant_raises_on_unexpected_non_zero(
     csv_str_to_df,
 ):
-    # The Q8b generator has lost its sub-area (resource_zone Q8, as if the name
-    # stopped carrying it), so the non-zero Q8b limit matches nothing. NQ has a
-    # PHES limit but no PHES storage option (only a battery) - also checking the
-    # label structure for a row with no resource_zone, and label sorting.
+    # Q1 has a non-zero wind_high limit, but its only new entrant is wind_medium.
+    # NQ has a PHES limit but no PHES storage option (only a battery) - also
+    # checking the label structure for a technology row, and label sorting.
     limits = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,                    resource_type,  limit_type,  limit
-        Q8,      Q8b,            ,                              wind_high,      resource,    420.0
-        NQ,      ,               Pumped Hydro (10hrs storage),  ,               build,       1000.0
+        geo_id,  technology,                    resource_type,  limit_type,  limit
+        Q1,      ,                              wind_high,      resource,    570.0
+        NQ,      Pumped Hydro (10hrs storage),  ,               build,       1000.0
     """)
     generators_new_entrant = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,  resource_type
-        Q8,      Q8,             Wind,        wind_high
+        geo_id,  technology,  resource_type
+        Q1,      Wind,        wind_medium
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology
@@ -491,7 +537,7 @@ def test_drop_limits_matching_no_new_entrant_raises_on_unexpected_non_zero(
         ValueError,
         match=(
             r"match no new entrant: "
-            r"\['NQ Pumped Hydro \(10hrs storage\) build', 'Q8b wind_high resource'\]"
+            r"\['NQ Pumped Hydro \(10hrs storage\) build', 'Q1 wind_high resource'\]"
         ),
     ):
         _drop_limits_matching_no_new_entrant(
@@ -506,14 +552,14 @@ def test_drop_limits_matching_no_new_entrant_raises_on_stale_known_exception(
     # now has a wind_medium option, and DN3's limit is blank, so both known
     # exceptions are stale.
     limits = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,  resource_type,  limit_type,  limit
-        DN1,     DN1,            ,            wind_medium,    resource,    792.0
-        DN2,     DN2,            ,            wind_medium,    resource,    619.0
-        DN3,     DN3,            ,            wind_medium,    resource,
+        geo_id,  technology,  resource_type,  limit_type,  limit
+        DN1,     ,            wind_medium,    resource,    792.0
+        DN2,     ,            wind_medium,    resource,    619.0
+        DN3,     ,            wind_medium,    resource,
     """)
     generators_new_entrant = csv_str_to_df("""
-        geo_id,  resource_zone,  technology,  resource_type
-        DN2,     DN2,            Wind,        wind_medium
+        geo_id,  technology,  resource_type
+        DN2,     Wind,        wind_medium
     """)
     storage_new_entrant = csv_str_to_df("""
         geo_id,  technology

@@ -8,12 +8,14 @@ to. For now, only new entrants are included in these limits.
 
 Inputs (headers abbreviated here; the full names are in the constants below):
 
-initial_resource_limits, one row per REZ. The offshore floating and Accelerated
-Transition land use columns are left out here.
+initial_resource_limits, one row per REZ, except for the Darling Downs REZ (Q8),
+which IASR splits into three sub-areas (Q8a, Q8b and Q8c). The offshore floating
+and Accelerated Transition land use columns are left out here.
 
     REZ ID  Wind_High  Wind_Medium  Offshore -fixed  Solar   Penalty ($M/MW)  Land use_Wind  Land use_Solar
     Q1      570        1710                          1100    0.3              6764.2         16234.0
     Q8a     560        1680                          2796.8  0.3              3206.3         7695.2
+    Q8b     420        1260                          2097.6  0.3              3206.3         7695.2
     V8                              54996
 
 build_limits_phes, one row per sub-region (24h, 48h and BOTN columns left out):
@@ -31,18 +33,18 @@ network service provider (DNSP), so some sub-regions have several rows:
 
 Output: resource_limits, one row per limit (shown at "sub_regions" granularity):
 
-    geo_id  resource_zone  technology                       resource_type        limit_type  limit    relaxation_penalty
-    Q1      Q1                                              wind_high            resource    570
-    Q1      Q1                                              wind_medium          resource    1710     300000
-    Q1      Q1                                              solar                resource    1100     300000
-    Q8      Q8a                                             wind_high            resource    560
-    V8      V8                                              wind_offshore_fixed  resource    54996
-    Q1      Q1             Wind                                                  land_use    6764.2
-    Q1      Q1                                              solar                land_use    16234.0
-    NNSW                   Pumped Hydro (10hrs storage)                          build       2500
-    SNW                    Distributed Resources Solar                           build       890
+    geo_id  technology                       resource_type        limit_type  limit    relaxation_penalty
+    Q1                                       wind_high            resource    570
+    Q1                                       wind_medium          resource    1710     300000
+    Q1                                       solar                resource    1100     300000
+    Q8                                       wind_high            resource    980                 # 560 + 420
+    V8                                       wind_offshore_fixed  resource    54996
+    Q1      Wind                                                  land_use    6764.2
+    Q1                                       solar                land_use    16234.0
+    NNSW    Pumped Hydro (10hrs storage)                          build       2500
+    SNW     Distributed Resources Solar                           build       890
 
-The geo_id, resource_zone, technology and resource_type columns are the row's
+The geo_id, technology and resource_type columns are the row's
 keys. They say which new entrants the limit applies to, and a blank key matches
 any value. For example, the Q1 wind land use row has technology "Wind" and a blank
 resource_type, so it caps wind_high and wind_medium builds in Q1 together.
@@ -52,7 +54,7 @@ penalty makes the limit a hard one.
 Pipeline:
 
 1. Melt the REZ resource limit columns into one row per REZ and resource_type,
-   with limit_type "resource".
+   with limit_type "resource". The REZ ID becomes the geo_id.
 2. Attach each REZ's relaxation penalty to its resource rows, converting $M/MW to
    $/MW. IASR gives the offshore REZs no penalty, so their limits are hard.
 3. Remove the penalty from wind_high rows, making them hard limits too. IASR gives
@@ -61,8 +63,12 @@ Pipeline:
    "land_use" and no penalty. Wind land use is keyed on technology "Wind", so it
    covers both wind resource types. Solar land use is keyed on resource_type
    "solar", so it covers both SAT and CST technologies.
-5. Set geo_id from resource_zone. The two are the same except for Q8's sub-areas
-   (Q8a, Q8b and Q8c), which share geo_id Q8 but keep their own limits.
+5. Add up the limits of Q8's sub-areas (Q8a, Q8b and Q8c) into one set of Q8
+   limits, since the model has no geography below the REZ. The land use limits
+   are added up too. IASR works out each REZ's land use from its land area, and
+   it gives each Q8 sub-area an equal third of the REZ's land (15,390 of
+   46,171 km²), so the three identical land use figures are shares of one total.
+   The sub-areas share one penalty, which carries over to the Q8 rows.
 6. Melt the PHES and DR limit columns into one row per sub-region and technology,
    with limit_type "build" and no penalty (IASR gives these none). These rows are
    keyed on geo_id and technology only.
@@ -152,12 +158,11 @@ _DR_LIMIT_COLUMNS = {
 
 # The resource_limits columns that pick out which assets a row applies to. A blank
 # key matches any value (see the resource_limits schema description).
-_LIMIT_KEY_COLUMNS = ["geo_id", "resource_zone", "technology", "resource_type"]
+_LIMIT_KEY_COLUMNS = ["geo_id", "technology", "resource_type"]
 
 # Expected column order per schema definition:
 _EXPECTED_COLUMN_ORDER = [
     "geo_id",
-    "resource_zone",
     "technology",
     "resource_type",
     "limit_type",
@@ -226,12 +231,12 @@ def _template_resource_limits(
         regional_granularity: "sub_regions"
 
         generators_new_entrant (key columns):
-            geo_id  resource_zone  technology                   resource_type
-            Q8      Q8a            Wind                         wind_high
-            Q8      Q8a            Wind                         wind_medium
-            Q3      Q3             Wind                         wind_high
-            Q3      Q3             Large scale Solar PV         solar
-            SNW                    Distributed Resources Solar
+            geo_id  technology                   resource_type
+            Q8      Wind                         wind_high
+            Q8      Wind                         wind_medium
+            Q3      Wind                         wind_high
+            Q3      Large scale Solar PV         solar
+            SNW     Distributed Resources Solar
 
         storage_new_entrant (key columns):
             geo_id  technology
@@ -241,21 +246,21 @@ def _template_resource_limits(
             SNW     Distributed Resources Batteries
 
         returns:
-            geo_id  resource_zone  technology                       resource_type  limit_type  limit  relaxation_penalty
-            Q8      Q8a                                             wind_high      resource    560
-            Q8      Q8a                                             wind_medium    resource    1680   300000
-            Q3      Q3                                              wind_high      resource    0             # blank, matched
-            Q3      Q3                                              solar          resource    1100   300000
-            Q8      Q8a            Wind                                            land_use    3200
-            Q3      Q3             Wind                                            land_use    0             # blank, matched
-            Q3      Q3                                              solar          land_use    7700
-            TAS                    Pumped Hydro (10hrs storage)                    build       1100
-            TAS                    Pumped Hydro (24hrs storage)                    build       0             # 0, matched: no build
-            TAS                    BOTN - Cethana                                  build       750
-            SNW                    Distributed Resources Solar                     build       890           # 369 + 521
-            SNW                    Distributed Resources Batteries                 build       5724          # 2432 + 3292
+            geo_id  technology                       resource_type  limit_type  limit  relaxation_penalty
+            Q8                                       wind_high      resource    560                  # Q8a's limit, now Q8
+            Q8                                       wind_medium    resource    1680   300000
+            Q3                                       wind_high      resource    0                    # blank, matched
+            Q3                                       solar          resource    1100   300000
+            Q8      Wind                                            land_use    3200
+            Q3      Wind                                            land_use    0                    # blank, matched
+            Q3                                       solar          land_use    7700
+            TAS     Pumped Hydro (10hrs storage)                    build       1100
+            TAS     Pumped Hydro (24hrs storage)                    build       0                    # 0, matched: no build
+            TAS     BOTN - Cethana                                  build       750
+            SNW     Distributed Resources Solar                     build       890                  # 369 + 521
+            SNW     Distributed Resources Batteries                 build       5724                 # 2432 + 3292
 
-        Dropped, as they match no new entrant and are blank or 0: Q8a solar
+        Dropped, as they match no new entrant and are blank or 0: Q8 solar
         (resource and land use), Q3 wind_medium, and every GG PHES limit.
     """
     logging.info("Creating a template for resource, land-use and build limits")
@@ -284,7 +289,9 @@ def _template_rez_limits(
     one row per REZ and resource_type, attaches each REZ's relaxation penalty to
     those rows (except the hard-limited resource types, see
     ``_HARD_LIMIT_RESOURCE_TYPES``), and adds the wind and solar land use limits
-    for ``scenario``. Land use rows never get a penalty. Blank limits stay blank.
+    for ``scenario``. Land use rows never get a penalty. The limits of Q8's
+    sub-areas are then added up into Q8 (see ``_sum_sub_area_limits``). Blank
+    limits stay blank.
 
     Raises a ValueError naming the table if ``initial_resource_limits`` is empty,
     is missing a column this run reads (including ``scenario``'s land use
@@ -294,16 +301,17 @@ def _template_rez_limits(
         initial_resource_limits:
             REZ ID  Wind_High  Wind_Medium  Solar  Penalty ($M/MW)  Land use_Wind  Land use_Solar
             Q8a     560        1680         2797   0.3              3206           7695
+            Q8b     420        1260         2098   0.3              3206           7695
 
         scenario: "Step Change"
 
         returns (offshore resource rows left out, all blank):
-            geo_id  resource_zone  technology  resource_type  limit_type  limit  relaxation_penalty
-            Q8      Q8a                        wind_high      resource    560
-            Q8      Q8a                        wind_medium    resource    1680   300000
-            Q8      Q8a                        solar          resource    2797   300000
-            Q8      Q8a            Wind                       land_use    3206
-            Q8      Q8a                        solar          land_use    7695
+            geo_id  technology  resource_type  limit_type  limit  relaxation_penalty
+            Q8                  wind_high      resource    980                       # 560 + 420
+            Q8                  wind_medium    resource    2940   300000
+            Q8                  solar          resource    4895   300000
+            Q8      Wind                       land_use    6412
+            Q8                  solar          land_use    15390
     """
     land_use_columns = _LAND_USE_COLUMNS_BY_SCENARIO[scenario]
     required_cols = {
@@ -329,9 +337,7 @@ def _template_rez_limits(
     rez_limits = pd.concat(
         [resource_limits, wind_land_use, solar_land_use], axis=0, ignore_index=True
     )
-    # add geo_id column
-    rez_limits["geo_id"] = rez_limits["resource_zone"].replace(_SUB_REZ_AREA_TO_REZ_ID)
-    return rez_limits
+    return _sum_sub_area_limits(rez_limits)
 
 
 def _template_build_limits(
@@ -413,17 +419,17 @@ def _melt_resource_limits(limits: pd.DataFrame) -> pd.DataFrame:
             Q1      570       1710                                                     1100
 
         returns:
-            resource_zone  resource_type           limit  limit_type
-            Q1             wind_high               570    resource
-            Q1             wind_medium             1710   resource
-            Q1             wind_offshore_fixed     NaN    resource  # blank in IASR
-            Q1             wind_offshore_floating  NaN    resource
-            Q1             solar                   1100   resource
+            geo_id  resource_type           limit  limit_type
+            Q1      wind_high               570    resource
+            Q1      wind_medium             1710   resource
+            Q1      wind_offshore_fixed     NaN    resource  # blank in IASR
+            Q1      wind_offshore_floating  NaN    resource
+            Q1      solar                   1100   resource
     """
-    renames = {_REZ_ID_COLUMN: "resource_zone"} | _RESOURCE_LIMIT_COLUMNS
+    renames = {_REZ_ID_COLUMN: "geo_id"} | _RESOURCE_LIMIT_COLUMNS
     resource_limits = limits[list(renames)].rename(columns=renames)
     melted = resource_limits.melt(
-        id_vars="resource_zone", var_name="resource_type", value_name="limit"
+        id_vars="geo_id", var_name="resource_type", value_name="limit"
     )
     melted["limit"] = _convert_values_to_numeric(
         melted["limit"], "initial_resource_limits"
@@ -448,19 +454,19 @@ def _add_relaxation_penalty(
             V8                       # offshore REZ, no penalty
 
         resource_limits:
-            resource_zone  resource_type        limit  limit_type
-            Q1             wind_medium          1710   resource
-            Q1             solar                1100   resource
-            V8             wind_offshore_fixed  54996  resource
+            geo_id  resource_type        limit  limit_type
+            Q1      wind_medium          1710   resource
+            Q1      solar                1100   resource
+            V8      wind_offshore_fixed  54996  resource
 
         returns:
-            resource_zone  resource_type        limit  limit_type  relaxation_penalty
-            Q1             wind_medium          1710   resource    300000.0  # 0.3 $M/MW
-            Q1             solar                1100   resource    300000.0
-            V8             wind_offshore_fixed  54996  resource    NaN
+            geo_id  resource_type        limit  limit_type  relaxation_penalty
+            Q1      wind_medium          1710   resource    300000.0  # 0.3 $M/MW
+            Q1      solar                1100   resource    300000.0
+            V8      wind_offshore_fixed  54996  resource    NaN
     """
     penalty_cols = {
-        _REZ_ID_COLUMN: "resource_zone",
+        _REZ_ID_COLUMN: "geo_id",
         _PENALTY_COLUMN: "relaxation_penalty",
     }
     penalty = limits[list(penalty_cols)].rename(columns=penalty_cols)
@@ -468,7 +474,7 @@ def _add_relaxation_penalty(
         penalty["relaxation_penalty"], "initial_resource_limits"
     )
     penalty["relaxation_penalty"] *= 1e6  # convert $M/MW -> $/MW
-    return resource_limits.merge(penalty, how="left", on="resource_zone")
+    return resource_limits.merge(penalty, how="left", on="geo_id")
 
 
 def _remove_penalty_for_hard_limited_resources(limits: pd.DataFrame) -> pd.DataFrame:
@@ -480,14 +486,14 @@ def _remove_penalty_for_hard_limited_resources(limits: pd.DataFrame) -> pd.DataF
 
     I/O Example:
         limits:
-            resource_zone  resource_type  limit  relaxation_penalty
-            Q1             wind_high      570    300000.0
-            Q1             wind_medium    1710   300000.0
+            geo_id  resource_type  limit  relaxation_penalty
+            Q1      wind_high      570    300000.0
+            Q1      wind_medium    1710   300000.0
 
         returns:
-            resource_zone  resource_type  limit  relaxation_penalty
-            Q1             wind_high      570    NaN       # hard limit
-            Q1             wind_medium    1710   300000.0
+            geo_id  resource_type  limit  relaxation_penalty
+            Q1      wind_high      570    NaN       # hard limit
+            Q1      wind_medium    1710   300000.0
     """
     limits = limits.copy()
     gets_hard_limit = limits["resource_type"].isin(_HARD_LIMIT_RESOURCE_TYPES)
@@ -508,11 +514,11 @@ def _extract_wind_land_use(limits: pd.DataFrame, column: str) -> pd.DataFrame:
             Q1      6764.2
 
         returns:
-            resource_zone  limit   technology  limit_type
-            Q1             6764.2  Wind        land_use
+            geo_id  limit   technology  limit_type
+            Q1      6764.2  Wind        land_use
     """
     land_use = limits[[_REZ_ID_COLUMN, column]].rename(
-        columns={_REZ_ID_COLUMN: "resource_zone", column: "limit"}
+        columns={_REZ_ID_COLUMN: "geo_id", column: "limit"}
     )
     land_use["limit"] = _convert_values_to_numeric(
         land_use["limit"], "initial_resource_limits"
@@ -532,16 +538,55 @@ def _extract_solar_land_use(limits: pd.DataFrame, column: str) -> pd.DataFrame:
             Q1      16234.0
 
         returns:
-            resource_zone  limit    resource_type  limit_type
-            Q1             16234.0  solar          land_use
+            geo_id  limit    resource_type  limit_type
+            Q1      16234.0  solar          land_use
     """
     land_use = limits[[_REZ_ID_COLUMN, column]].rename(
-        columns={_REZ_ID_COLUMN: "resource_zone", column: "limit"}
+        columns={_REZ_ID_COLUMN: "geo_id", column: "limit"}
     )
     land_use["limit"] = _convert_values_to_numeric(
         land_use["limit"], "initial_resource_limits"
     )
     return land_use.assign(resource_type="solar", limit_type="land_use")
+
+
+def _sum_sub_area_limits(rez_limits: pd.DataFrame) -> pd.DataFrame:
+    """Adds up the limits of each REZ's sub-areas into one set of limits for the
+    parent REZ, e.g. Q8a, Q8b and Q8c into Q8 (see ``_SUB_REZ_AREA_TO_REZ_ID``).
+
+    IASR gives each Q8 sub-area its own resource and land use limits, but the model
+    has no geography below the REZ, and the Q8 new entrants all have geo_id Q8.
+    Rows are added up when they have the same geo_id, technology, resource_type,
+    limit_type and relaxation_penalty, so the solar resource and solar land use
+    limits stay separate. Blank limits count as 0 when added to a number, and a
+    group whose limits are all blank stays blank. Rows for other REZs come out
+    unchanged.
+
+    I/O Example:
+        rez_limits:
+            geo_id  technology  resource_type        limit_type  limit  relaxation_penalty
+            Q8a                 wind_high            resource    560
+            Q8b                 wind_high            resource    420
+            Q8a     Wind                             land_use    3206
+            Q8b     Wind                             land_use    3206
+            Q1                  wind_medium          resource    1710   300000
+            Q1                  wind_offshore_fixed  resource                       # blank, stays blank
+
+        returns:
+            geo_id  technology  resource_type        limit_type  limit  relaxation_penalty
+            Q1                  wind_medium          resource    1710   300000
+            Q1                  wind_offshore_fixed  resource
+            Q8      Wind                             land_use    6412                # 3206 + 3206
+            Q8                  wind_high            resource    980                 # 560 + 420
+    """
+    rez_limits = rez_limits.assign(
+        geo_id=rez_limits["geo_id"].replace(_SUB_REZ_AREA_TO_REZ_ID)
+    )
+    group_cols = [*_LIMIT_KEY_COLUMNS, "limit_type", "relaxation_penalty"]
+    # dropna=False keeps rows with a blank key (e.g. technology on resource rows),
+    # and min_count=1 keeps an all-blank group blank instead of turning it into 0
+    grouped = rez_limits.groupby(group_cols, dropna=False)["limit"]
+    return grouped.sum(min_count=1).reset_index()
 
 
 def _melt_build_limits(
@@ -614,29 +659,29 @@ def _drop_limits_matching_no_new_entrant(
 
     I/O Example:
         limits:
-            geo_id  resource_zone  technology                    resource_type  limit_type  limit
-            Q1      Q1             Wind                                         land_use    6764
-            Q3      Q3                                           wind_high      resource          # blank, but matched
-            V8      V8                                           solar          resource          # no V8 solar
-            DN1     DN1                                          wind_medium    resource    792   # known
-            NNSW                   Pumped Hydro (10hrs storage)                 build       2500  # matches storage
-            GG                     Pumped Hydro (10hrs storage)                 build       0     # no GG PHES
+            geo_id  technology                    resource_type  limit_type  limit
+            Q1      Wind                                         land_use    6764
+            Q3                                    wind_high      resource          # blank, but matched
+            V8                                    solar          resource          # no V8 solar
+            DN1                                   wind_medium    resource    792   # known
+            NNSW    Pumped Hydro (10hrs storage)                 build       2500  # matches storage
+            GG      Pumped Hydro (10hrs storage)                 build       0     # no GG PHES
 
         generators_new_entrant (key columns):
-            geo_id  resource_zone  technology  resource_type
-            Q1      Q1             Wind        wind_high
-            Q3      Q3             Wind        wind_high
-            DN1     DN1            Wind        wind_high
+            geo_id  technology  resource_type
+            Q1      Wind        wind_high
+            Q3      Wind        wind_high
+            DN1     Wind        wind_high
 
         storage_new_entrant (key columns):
             geo_id  technology
             NNSW    Pumped Hydro (10hrs storage)
 
         returns:
-            geo_id  resource_zone  technology                    resource_type  limit_type  limit
-            Q1      Q1             Wind                                         land_use    6764
-            Q3      Q3                                           wind_high      resource          # kept blank
-            NNSW                   Pumped Hydro (10hrs storage)                 build       2500
+            geo_id  technology                    resource_type  limit_type  limit
+            Q1      Wind                                         land_use    6764
+            Q3                                    wind_high      resource          # kept blank
+            NNSW    Pumped Hydro (10hrs storage)                 build       2500
 
         logs (INFO):
             Non-zero resource limits matching no new entrant, dropped:
@@ -661,22 +706,22 @@ def _stack_new_entrant_keys(
 ) -> pd.DataFrame:
     """Stacks the limit key columns of the new entrant generators and storage.
 
-    Storage has no resource_zone or resource_type column, so those are blank on
-    the storage rows, and a limit row that fills either in never matches storage.
+    Storage has no resource_type column, so it is blank on the storage rows, and
+    a limit row that fills it in never matches storage.
 
     I/O Example:
         generators_new_entrant (key columns):
-            geo_id  resource_zone  technology  resource_type
-            Q1      Q1             Wind        wind_high
+            geo_id  technology  resource_type
+            Q1      Wind        wind_high
 
         storage_new_entrant (relevant columns):
             geo_id  technology
             NNSW    Pumped Hydro (10hrs storage)
 
         returns:
-            geo_id  resource_zone  technology                    resource_type
-            Q1      Q1             Wind                          wind_high
-            NNSW                   Pumped Hydro (10hrs storage)
+            geo_id  technology                    resource_type
+            Q1      Wind                          wind_high
+            NNSW    Pumped Hydro (10hrs storage)
     """
     generator_keys = generators_new_entrant[_LIMIT_KEY_COLUMNS]
     storage_keys = storage_new_entrant[["geo_id", "technology"]]
@@ -693,14 +738,14 @@ def _matches_any_unit(limit_row: pd.Series, units: pd.DataFrame) -> bool:
 
     I/O Example:
         limit_row:
-            geo_id  resource_zone  technology  resource_type
-            Q1      Q1             Wind                        # resource_type blank
+            geo_id  technology  resource_type
+            Q1      Wind                        # resource_type blank
 
         units:
-            geo_id  resource_zone  technology            resource_type
-            Q1      Q1             Wind                  wind_high   # matches
-            Q1      Q1             Large scale Solar PV  solar
-            CNSW                   OCGT (small GT)
+            geo_id  technology            resource_type
+            Q1      Wind                  wind_high   # matches
+            Q1      Large scale Solar PV  solar
+            CNSW    OCGT (small GT)
 
         returns:
             True
@@ -734,14 +779,14 @@ def _raise_if_known_unmatched_limits_are_stale(
 
     I/O Example:
         limits (DN rows only):
-            geo_id  resource_zone  resource_type  limit_type  limit
-            DN1     DN1            wind_medium    resource    792
-            DN2     DN2            wind_medium    resource    619   # now matched
-            DN3     DN3            wind_medium    resource          # now blank
+            geo_id  resource_type  limit_type  limit
+            DN1     wind_medium    resource    792
+            DN2     wind_medium    resource    619   # now matched
+            DN3     wind_medium    resource          # now blank
 
         non_zero_unmatched:
-            geo_id  resource_zone  resource_type  limit_type  limit
-            DN1     DN1            wind_medium    resource    792
+            geo_id  resource_type  limit_type  limit
+            DN1     wind_medium    resource    792
 
         raises:
             ValueError: Known unmatched limits ['DN2 wind_medium resource',
@@ -758,20 +803,19 @@ def _raise_if_known_unmatched_limits_are_stale(
 
 
 def _describe_limits(limits: pd.DataFrame) -> pd.Series:
-    """Labels each limit row by its zone, what it limits, and its limit_type.
+    """Labels each limit row by its geo_id, what it limits, and its limit_type.
 
     I/O Example:
         limits:
-            geo_id  resource_zone  technology                    resource_type  limit_type
-            DN1     DN1                                          wind_medium    resource
-            Q1      Q1             Wind                                         land_use
-            NQ                     Pumped Hydro (10hrs storage)                 build
+            geo_id  technology                    resource_type  limit_type
+            DN1                                   wind_medium    resource
+            Q1      Wind                                         land_use
+            NQ      Pumped Hydro (10hrs storage)                 build
 
         returns:
             "DN1 wind_medium resource"
             "Q1 Wind land_use"
             "NQ Pumped Hydro (10hrs storage) build"
     """
-    location = limits["resource_zone"].fillna(limits["geo_id"])
     limited = limits["resource_type"].fillna(limits["technology"])
-    return location + " " + limited + " " + limits["limit_type"]
+    return limits["geo_id"] + " " + limited + " " + limits["limit_type"]

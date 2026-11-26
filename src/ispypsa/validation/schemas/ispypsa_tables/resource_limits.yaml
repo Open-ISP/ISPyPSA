@@ -1,14 +1,14 @@
 table: resource_limits
 required: false
 unique:
-  - [geo_id, resource_zone, technology, resource_type, limit_type]
+  - [geo_id, technology, resource_type, limit_type]
 description: >
   Caps on how much new entrant capacity can be built against a resource or a
   land area, such as the high-quality wind resource in a REZ or the land available
   for solar there, or of a technology in a geography, such as pumped hydro in a
   sub-region.
 
-  The four 'key' columns (geo_id, resource_zone, technology and resource_type)
+  The three 'key' columns (geo_id, technology and resource_type)
   pick out the group of new entrant generators and storage units a row here applies
   to, and the row defines limit(s) on the combined capacity of that group. A row
   matches an asset when all the row's non-empty 'key' values match the asset's
@@ -16,8 +16,8 @@ description: >
 
   Empty keys match in the same way as the wildcards in lookup tables such as
   costs_fuel_prices, but this table doesn't follow the same 'most specific wins' rule;
-  here, every row that matches an asset applies to it. For example, a Q8b/wind_high
-  generator gets counted by both the Q8b/wind land use limit and the Q8b/wind_high
+  here, every row that matches an asset applies to it. For example, a Q1/wind_high
+  generator gets counted by both the Q1/Wind land use limit and the Q1/wind_high
   resource limit.
 
   The coverage rules differ too: not every asset needs to have a row that matches
@@ -50,23 +50,14 @@ columns:
       The geography the limit applies to. A row only matches assets with exactly
       this geo_id, so a sub-region does not include the REZs inside it.
 
+      IASR splits the Darling Downs REZ (Q8) into three sub-areas (Q8a, Q8b and
+      Q8c), each with its own resource and land use limits. These are added up
+      into one set of Q8 limits, because the model has no geography level below
+      the REZ (see Open-ISP/ISPyPSA#150).
+
       If absent (or empty):
       The row ignores geo_id, so it matches assets in any geography, as long as
       they match the row's other keys.
-  resource_zone:
-    type: string
-    required: false
-    allowed_values_from:
-      - generators_new_entrant: resource_zone
-    description: >
-      The resource zone the limit applies to, at the resolution IASR gives it:
-      a REZ ID, or a REZ sub-area such as Q8a.
-
-      If absent (or empty):
-      The row ignores resource_zone, so it matches assets with any resource_zone
-      or none, as long as they match the row's other keys. A row with geo_id Q8
-      and an empty resource_zone therefore limits the Q8a, Q8b and Q8c sub-areas
-      together.
   technology:
     type: string
     required: false
