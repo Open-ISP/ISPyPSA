@@ -4,7 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
-from ..templater.lists import _ISP_SCENARIOS
+from ..feature_flags import FEATURE_FLAGS
+from ..templater.lists import _ISP_SCENARIOS, _ISP_SCENARIOS_NEW
 
 
 class PathsConfig(BaseModel):
@@ -208,7 +209,7 @@ class TraceDataConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     paths: PathsConfig
-    scenario: Literal[tuple(_ISP_SCENARIOS)]
+    scenario: str
     wacc: float
     discount_rate: float
     network: NetworkConfig
@@ -238,6 +239,24 @@ class ModelConfig(BaseModel):
         "pips",
     ]
     create_plots: bool = False
+
+    @field_validator("scenario")
+    @classmethod
+    def validate_scenario(cls, scenario: str):
+        # The scenario names depend on the IASR workbook: the new table format
+        # supports only workbook 7.5, the old format only workbook 6.0.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch only
+        # (or make the field a Literal of the scenarios again).
+        if FEATURE_FLAGS["use_new_table_format"]:
+            allowed_scenarios = _ISP_SCENARIOS_NEW
+        else:
+            allowed_scenarios = _ISP_SCENARIOS
+        if scenario not in allowed_scenarios:
+            raise ValueError(
+                f"config scenario '{scenario}' is not one of the ISP scenarios "
+                f"{allowed_scenarios}"
+            )
+        return scenario
 
     @model_validator(mode="after")
     def validate_region_filters(self):

@@ -26,10 +26,12 @@ _CONDENSED_GENERATOR_TYPES = [
 ]
 
 
+# The scenarios of the 2024 ISP (IASR workbook 6.0), used by the old table format.
 _ISP_SCENARIOS = ["Progressive Change", "Step Change", "Green Energy Exports"]
 
-# TODO FEATURE_FLAG["use_new_table_format"] cleanup - replace _ISP_SCENARIOS everywhere
-# with _ISP_SCENARIOS_NEW
+# The scenarios of IASR workbook 7.5, used by the new table format.
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: remove _ISP_SCENARIOS and rename
+# this list to _ISP_SCENARIOS.
 _ISP_SCENARIOS_NEW = ["Slower Growth", "Step Change", "Accelerated Transition"]
 
 _MINIMUM_REQUIRED_GENERATOR_COLUMNS = [
