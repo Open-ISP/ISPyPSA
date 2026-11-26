@@ -1,10 +1,10 @@
 """End-to-end CLI tests for the new-format translator and model build
 (use_new_table_format=true), run against the frozen 7.5 cache.
 
-Only the network is translated from the new tables so far, so these tests
-check that the tables flow through every task and the networks build. The
-models are not solved: with no generators or demand there is nothing to
-dispatch, and the results extraction needs generator tables.
+Only the network and demand are translated from the new tables so far, so
+these tests check that the tables flow through every task and the networks
+build. The models are not solved: the results extraction needs generator
+tables.
 
 FEATURE_FLAG_CLEANUP[use_new_table_format]: merge into
 test_create_pypsa_friendly_inputs.py, test_create_and_run_capacity_expansion_model.py
@@ -83,12 +83,22 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     existing_links = set(links.loc[~links["p_nom_extendable"], "name"])
     assert set(limits["name"]) == existing_links
 
-    # Header-only until generators are translated from the new tables.
+    # Generators aren't translated from the new tables yet, so the only ones
+    # are the unserved energy generators: one at each sub-region.
+    sub_regions = network_geography.loc[
+        network_geography["geo_type"] == "subregion", "geo_id"
+    ]
     generators = pd.read_csv(output_dir / "generators.csv")
-    assert len(generators) == 0
+    assert set(generators["carrier"]) == {"Unserved Energy"}
+    assert set(generators["bus"]) == set(sub_regions)
+
+    # A demand trace is saved for each sub-region, with a row per snapshot.
+    demand_traces_dir = output_dir / "capacity_expansion_timeseries" / "demand_traces"
+    demand_trace_files = {file.name for file in demand_traces_dir.glob("*")}
+    assert demand_trace_files == set(sub_regions + ".parquet")
 
     # The templated custom constraints aren't translated yet (their terms
-    # need generators, storage and loads), so only the expansion limits are
+    # need generators and storage), so only the expansion limits are
     # built: one for each path with expansion links.
     lhs = pd.read_csv(output_dir / "custom_constraints_lhs.csv")
     rhs = pd.read_csv(output_dir / "custom_constraints_rhs.csv")
@@ -102,6 +112,10 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     timeslice_snapshots = pd.read_csv(output_dir / "timeslice_snapshots.csv")
     assert len(timeslice_snapshots) == 5 * len(snapshots)
     assert set(timeslice_snapshots["snapshots"]) == set(snapshots["snapshots"])
+
+    demand_trace = pd.read_parquet(demand_traces_dir / "CNSW.parquet")
+    assert list(demand_trace.columns) == ["investment_periods", "snapshots", "p_set"]
+    assert len(demand_trace) == len(snapshots)
 
     first_run_timestamps = get_file_timestamps(output_dir)
     time.sleep(0.1)
@@ -122,7 +136,8 @@ def test_build_capacity_expansion_and_operational_models_new_format(
     monkeypatch,
 ):
     """Both model tasks build their network from the new-format tables, with
-    the per-timeslice link limits applied at each phase's snapshots."""
+    the per-timeslice link limits and the demand applied at each phase's
+    snapshots."""
     monkeypatch.setenv("ISPYPSA_USE_NEW_TABLE_FORMAT", "true")
     monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
     run_dir = tmp_path / "run_dir" / "test_run"
@@ -144,6 +159,18 @@ def test_build_capacity_expansion_and_operational_models_new_format(
     links = pd.read_csv(run_dir / "pypsa_friendly" / "links.csv")
     network = pypsa.Network(run_dir / "outputs" / "capacity_expansion.nc")
     assert set(network.links.index) == set(links["name"])
+
+    # A load at each sub-region, with demand at every snapshot, and an
+    # unserved energy generator beside it.
+    network_geography = pd.read_csv(
+        run_dir / "ispypsa_inputs" / "network_geography.csv"
+    )
+    sub_regions = network_geography.loc[
+        network_geography["geo_type"] == "subregion", "geo_id"
+    ]
+    assert set(network.loads.index) == set("load_" + sub_regions)
+    assert set(network.loads_t.p_set.columns) == set(network.loads.index)
+    assert set(network.generators.index) == set("unserved_energy_" + sub_regions)
 
     # Every existing link is given a limit at every snapshot, but a saved
     # network only keeps a series that differs from the attribute's default
@@ -174,3 +201,14 @@ def test_build_capacity_expansion_and_operational_models_new_format(
         run_dir / "pypsa_friendly" / "operational_timeslice_snapshots.csv"
     )
     assert len(operational_timeslice_snapshots) == 5 * len(operational_snapshots)
+
+    # It also gets its own demand traces, with a row per operational snapshot.
+    # The operational network is only saved once solved, so the update of its
+    # loads is covered by test_demand_new_table_format.py.
+    demand_traces_dir = (
+        run_dir / "pypsa_friendly" / "operational_timeseries" / "demand_traces"
+    )
+    demand_trace_files = {file.name for file in demand_traces_dir.glob("*")}
+    assert demand_trace_files == set(sub_regions + ".parquet")
+    demand_trace = pd.read_parquet(demand_traces_dir / "CNSW.parquet")
+    assert len(demand_trace) == len(operational_snapshots)

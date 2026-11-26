@@ -116,13 +116,14 @@ def build_mock_config(
     granularity="sub_regions",
     scenario="Step Change",
     filter_by_isp_sub_regions=None,
+    parsed_traces_directory="tests/trace_data",
     filename="test_config.yaml",
 ):
     """Write an ISPyPSA YAML config tuned for CLI tests.
 
     Single source of truth for config-shape across all CLI tests. Callers
     override only the dimensions they care about (workbook version, network
-    granularity, scenario, sub-region filter).
+    granularity, scenario, sub-region filter, trace data).
 
     Args:
         tmp_path: pytest temporary directory
@@ -132,6 +133,8 @@ def build_mock_config(
         scenario: ISP scenario name
         filter_by_isp_sub_regions: optional sub-region whitelist; omitted from
             the config when None
+        parsed_traces_directory: directory holding the parsed trace data, in
+            an isp_<dataset year> subdirectory
         filename: yaml filename to write inside tmp_path
     """
     config_path = tmp_path / filename
@@ -170,7 +173,7 @@ def build_mock_config(
         "iasr_workbook_version": version,
         "paths": {
             "ispypsa_run_name": "test_run",
-            "parsed_traces_directory": "tests/trace_data",
+            "parsed_traces_directory": str(parsed_traces_directory),
             "parsed_workbook_cache": str(tmp_path / "cache"),
             "workbook_path": str(mock_workbook_file),
             "run_directory": str(tmp_path / "run_dir"),
