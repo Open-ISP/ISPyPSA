@@ -163,12 +163,13 @@ def _translate_custom_constraints(
             NSW-QLD   NSW-QLD_existing  False             2025        inf
             NSW-QLD   NSW-QLD_exp_2026  True              2026        inf
 
-        generators (isp_name = name for existing units; a new entrant's ID
-        maps to each of its per-build-year components):
-            isp_name  name           build_year  lifetime
-            KINGASF1  KINGASF1       2025        inf       # inf: never retires
-            N2 Solar  N2 Solar_2026  2026        30
-            N2 Solar  N2 Solar_2028  2028        30
+        generators (isp_name is an existing unit's power station, or a new
+        entrant's option name; a term can name either a whole group or a single
+        component):
+            isp_name             name           build_year  lifetime
+            Kingaroy Solar Farm  KINGASF1       2025        inf       # inf: never retires
+            N2 Solar             N2 Solar_2026  2026        30
+            N2 Solar             N2 Solar_2028  2028        30
 
         storage:
             isp_name         name             build_year  lifetime
@@ -278,7 +279,9 @@ def _translate_constraint_tables(
         built from the links, generators, storage and demand_nodes tables): a
         link_flow term covers its path's existing link and each expansion link,
         a term on a new entrant generator or storage unit covers each of its
-        per-build-year components, and a load term maps to the "load_<bus>" Load
+        per-build-year components, a term on an existing unit covers just that
+        unit (a term on its whole power station would cover each of the
+        station's units), and a load term maps to the "load_<bus>" Load
         component at its demand node — a data term whose p_set attribute
         pypsa_build resolves from the demand trace, not an optimisation variable.
         - each term is then dropped in the investment periods outside its
@@ -312,10 +315,10 @@ def _translate_constraint_tables(
             NSW-QLD   NSW-QLD_exp_2026  True              2026        inf
 
         generators:
-            isp_name  name           build_year  lifetime
-            KINGASF1  KINGASF1       2025        3         # retires 2028: out of service from the 2028 period
-            N2 Solar  N2 Solar_2026  2026        30
-            N2 Solar  N2 Solar_2028  2028        30
+            isp_name             name           build_year  lifetime
+            Kingaroy Solar Farm  KINGASF1       2025        3         # retires 2028: out of service from the 2028 period
+            N2 Solar             N2 Solar_2026  2026        30
+            N2 Solar             N2 Solar_2028  2028        30
 
         storage:
             isp_name         name             build_year  lifetime
@@ -490,15 +493,18 @@ def _map_constraint_variables_to_pypsa_names(
     model elements by (constraint_variable_name) to the names of the PyPSA
     components built for them (pypsa_model_name), one row per component.
 
-    The links, generators and storage frames already carry both sides as their
-    isp_name (the element's un-suffixed ISP-level ID) and name columns; this
-    function relabels them into the constraints module's vocabulary. A
-    constraint variable name identifies a whole element, so one name can map
-    to several components: a path's name (e.g. NSW-QLD, with no _existing or
-    _exp_<year> suffix) covers the path's existing link and each of its
-    expansion links, and a new entrant generator or storage unit's ID covers
-    each of its per-build-year components. An existing unit's name maps to
-    itself. Each row also carries its component's in-service window as
+    In the links, generators and storage frames, name is each PyPSA
+    component's unique name, and isp_name is the group the component belongs
+    to: a path (NSW-QLD, whose components are NSW-QLD_existing and
+    NSW-QLD_exp_<year>), a new entrant option (N2 Solar, with one component
+    per build year), or an existing unit's power station (Kingaroy Solar Farm,
+    with one component per unit). A constraint term can name either a whole
+    group or a single component, so each component is listed under both its
+    isp_name and its own name (see _component_mapping_rows). A term naming a
+    group covers every component in it, and a term naming a single
+    component, such as the existing unit KINGASF1, covers just that one.
+
+    Each row also carries its component's in-service window as
     build_year and retirement_year — the latter computed as build_year +
     lifetime, the year PyPSA deactivates the component, so a component with
     an infinite lifetime never retires. _drop_terms_before_build_year and
@@ -520,10 +526,10 @@ def _map_constraint_variables_to_pypsa_names(
             NSW-QLD   NSW-QLD_exp_2030  2030        inf
 
         generators:
-            isp_name  name           build_year  lifetime
-            KINGASF1  KINGASF1       2029        11        # closes 2040
-            N2 Solar  N2 Solar_2030  2030        30
-            N2 Solar  N2 Solar_2040  2040        30
+            isp_name             name           build_year  lifetime
+            Kingaroy Solar Farm  KINGASF1       2029        11        # closes 2040
+            N2 Solar             N2 Solar_2030  2030        30
+            N2 Solar             N2 Solar_2040  2040        30
 
         storage:
             isp_name         name             build_year  lifetime
@@ -535,14 +541,17 @@ def _map_constraint_variables_to_pypsa_names(
             name
             SQ
 
-        returns:
+        returns (abridged: the rows that list a link, a new entrant or SQ
+        BESS's component under its own name, such as N2 Solar_2030 ->
+        N2 Solar_2030, are left out):
             constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
             NSW-QLD                   NSW-QLD_existing  Link       2029        inf
             NSW-QLD                   NSW-QLD_exp_2030  Link       2030        inf
+            Kingaroy Solar Farm       KINGASF1          Generator  2029        2040
             KINGASF1                  KINGASF1          Generator  2029        2040
             N2 Solar                  N2 Solar_2030     Generator  2030        2060
             N2 Solar                  N2 Solar_2040     Generator  2040        2070
-            Q8 Battery - 2h           Q8 Battery - 2h   Storage    2029        inf
+            Q8 Battery - 2h           Q8 Battery - 2h   Storage    2029        inf     # name and isp_name are the same: listed once
             SQ BESS                   SQ BESS_2030      Storage    2030        2050
             SQ BESS                   SQ BESS_2040      Storage    2040        2060
             SQ                        load_SQ           Load                                  # data term: never built, always present
@@ -576,27 +585,107 @@ def _map_constraint_variables_to_pypsa_names(
 def _component_mapping_rows(
     components: pd.DataFrame, component_type: str
 ) -> pd.DataFrame:
-    """One mapping row per component, carrying its in-service window as
-    build_year and retirement_year — build_year + lifetime, the year PyPSA
-    deactivates the component, so an infinite lifetime never retires.
+    """Lists each component under both names that a constraint term can use for
+    it - its group's isp_name and its own name - with its in-service window as
+    build_year and retirement_year. The retirement_year is build_year +
+    lifetime, the year PyPSA deactivates the component, so an infinite
+    lifetime never retires.
+
+    The result is a lookup, not a list of constraint terms:
+    _expand_terms_to_model_components matches each term only to the rows
+    whose constraint_variable_name is the term's own variable_name.
+
+    A component whose name and isp_name are the same, such as the only unit
+    of a single-unit power station, is listed once, so that a term naming it
+    isn't counted twice.
 
     I/O Example (component_type="Generator"):
         components:
-            isp_name  name      build_year  lifetime
-            KINGASF1  KINGASF1  2029        11
-            LOYYB     LOYYB     2029        inf
+            isp_name            name                build_year  lifetime
+            Bayswater           BW01                2025        9
+            Bayswater           BW02                2025        9
+            Aramara Solar Farm  Aramara Solar Farm  2025        inf
 
         returns:
-            constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
-            KINGASF1                  KINGASF1          Generator  2029        2040
-            LOYYB                     LOYYB             Generator  2029        inf
+            constraint_variable_name  pypsa_model_name    component  build_year  retirement_year
+            Bayswater                 BW01                Generator  2025        2034     # a term naming Bayswater
+            Bayswater                 BW02                Generator  2025        2034     # covers both units (BW01 and BW02)
+            Aramara Solar Farm        Aramara Solar Farm  Generator  2025        inf      # isp_name = name: listed once
+            BW01                      BW01                Generator  2025        2034     # a term naming BW01 covers only that unit
+            BW02                      BW02                Generator  2025        2034
     """
-    rows = components.loc[:, ["isp_name", "name", "build_year"]].rename(
-        columns={"isp_name": "constraint_variable_name", "name": "pypsa_model_name"}
-    )
+    rows = _list_components_under_both_names(components)
+    _raise_on_names_in_more_than_one_group(rows, component_type)
+    rows = rows.drop_duplicates(subset=["constraint_variable_name", "name"])
+    rows = rows.rename(columns={"name": "pypsa_model_name"})
     rows["component"] = component_type
-    rows["retirement_year"] = components["build_year"] + components["lifetime"]
-    return rows
+    rows["retirement_year"] = rows["build_year"] + rows["lifetime"]
+    return rows.loc[
+        :,
+        [
+            "constraint_variable_name",
+            "pypsa_model_name",
+            "component",
+            "build_year",
+            "retirement_year",
+        ],
+    ]
+
+
+def _list_components_under_both_names(components: pd.DataFrame) -> pd.DataFrame:
+    """Stacks two copies of components with a constraint_variable_name
+    column: one copy takes it from isp_name and the other from name.
+
+    I/O Example:
+        components:
+            isp_name   name  build_year  lifetime
+            Bayswater  BW01  2025        9
+
+        returns:
+            isp_name   name  build_year  lifetime  constraint_variable_name
+            Bayswater  BW01  2025        9         Bayswater
+            Bayswater  BW01  2025        9         BW01
+    """
+    columns = ["isp_name", "name", "build_year", "lifetime"]
+    under_isp_name = components.loc[:, columns].assign(
+        constraint_variable_name=components["isp_name"]
+    )
+    under_own_name = components.loc[:, columns].assign(
+        constraint_variable_name=components["name"]
+    )
+    return _concat_non_empty(
+        [under_isp_name, under_own_name], columns + ["constraint_variable_name"]
+    )
+
+
+def _raise_on_names_in_more_than_one_group(
+    rows: pd.DataFrame, component_type: str
+) -> None:
+    """Raises when one constraint_variable_name lists components from more
+    than one isp_name group. For example, an existing unit called "N2 Solar"
+    at a power station called "Solar Farm A" would clash with the new entrant
+    option "N2 Solar". A term naming "N2 Solar" would then quietly cover
+    both, so the run halts instead.
+
+    I/O Example:
+        rows (component_type="Generator"):
+            constraint_variable_name  isp_name      name
+            N2 Solar                  N2 Solar      N2 Solar_2026
+            Solar Farm A              Solar Farm A  N2 Solar
+            N2 Solar_2026             N2 Solar      N2 Solar_2026
+            N2 Solar                  Solar Farm A  N2 Solar        # the unit, under its own name
+
+        raises:
+            "Generator names used both as a component's own name and as the
+            isp_name of a different group: ['N2 Solar']"
+    """
+    groups_per_name = rows.groupby("constraint_variable_name")["isp_name"].nunique()
+    shared = sorted(groups_per_name[groups_per_name > 1].index)
+    if shared:
+        raise ValueError(
+            f"{component_type} names used both as a component's own name and "
+            f"as the isp_name of a different group: {shared}"
+        )
 
 
 def _raise_on_terms_not_in_model(
@@ -644,8 +733,16 @@ def _expand_terms_to_model_components(
 ) -> pd.DataFrame:
     """Replaces each term's constraint variable name (in the variable_name column) with
     the PyPSA model component names it covers, one term per component: a link_flow term
-    covers its path's existing and expansion links, and a term on a new entrant
-    generator or storage unit covers each of its per-build-year components.
+    covers its path's existing and expansion links, a term on a new entrant generator
+    or storage unit covers each of its per-build-year components, and a term on a power
+    station covers each of its units. Each term matches only the mapping rows whose
+    constraint_variable_name is its own variable_name.
+
+    A term on a group and a term on one of its components can overlap. A constraint
+    with one term on Bayswater (coefficient 0.5) and another on its unit BW01
+    (coefficient 0.2) has BW01 in its LHS twice, once from each term. pypsa_build keeps
+    both, so the coefficients add: 0.5 x (BW01 + BW02) + 0.2 x BW01 = 0.7 x BW01 +
+    0.5 x BW02, which is what the two terms say together.
 
     I/O Example:
         lhs:
@@ -658,6 +755,7 @@ def _expand_terms_to_model_components(
             constraint_variable_name  pypsa_model_name  component  build_year  retirement_year
             NSW-QLD                   NSW-QLD_existing  Link       2029        inf
             NSW-QLD                   NSW-QLD_exp_2030  Link       2030        inf
+            Kingaroy Solar Farm       KINGASF1          Generator  2029        2040  # no term names the station, so this row matches nothing
             KINGASF1                  KINGASF1          Generator  2029        2040
             N2 Solar                  N2 Solar_2030     Generator  2030        2060
             N2 Solar                  N2 Solar_2040     Generator  2040        2070
@@ -666,7 +764,7 @@ def _expand_terms_to_model_components(
             constraint_id  variable_name     component  coefficient  build_year  retirement_year
             SWQLD1         NSW-QLD_existing  Link       0.84         2029        inf
             SWQLD1         NSW-QLD_exp_2030  Link       0.84         2030        inf
-            SWQLD1         KINGASF1          Generator  0.14         2029        2040  # existing unit: unchanged
+            SWQLD1         KINGASF1          Generator  0.14         2029        2040  # existing unit: matched by its own name
             SWQLD1         N2 Solar_2030     Generator  0.5          2030        2060  # new entrant: one term
             SWQLD1         N2 Solar_2040     Generator  0.5          2040        2070  # per build year
     """
