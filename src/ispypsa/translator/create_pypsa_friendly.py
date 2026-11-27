@@ -466,9 +466,7 @@ def create_pypsa_friendly_timeseries_inputs(
             pypsa_friendly_timeseries_inputs_location,
             "demand_traces",
         )
-        snapshots = _add_snapshot_weightings(
-            snapshots, config.temporal.capacity_expansion.resolution_min
-        )
+        snapshots = _add_snapshot_weightings(snapshots, resolution_min)
         snapshots = _add_interval_model_year_and_month_day(
             snapshots, config.temporal.year_type
         ).drop(columns="month_day")
