@@ -1,14 +1,21 @@
-"""Helpers that the generators and storage translators share: the build years
-and lifetimes of existing units, the bus each unit connects to, and the
-capital costs of new entrants.
+"""The steps that the generators and storage translators share.
+
+_build_existing_units turns an existing/planned table into fixed-capacity
+units with build years, lifetimes and buses. _build_new_entrant_units turns a
+new-entrant table into extendable units, one per option and investment period,
+each with a capital cost. Each translator then renames the columns (see
+_EXISTING_UNIT_COLUMN_RENAMES and _NEW_ENTRANT_COLUMN_RENAMES) and adds the
+columns that only its own component has.
 """
 
 import logging
 
 import pandas as pd
 
+from ispypsa.config import ModelConfig
 from ispypsa.model_years import _model_year_of_dates, _model_year_start
 from ispypsa.translator.helpers import (
+    _add_investment_periods_as_build_years,
     _annuitised_investment_costs,
     _resolve_wildcards,
 )
@@ -20,6 +27,182 @@ _PARENT_NODE_COLUMNS = {
     "nem_regions": "region_id",
     "single_region": "region_id",
 }
+
+# The renames from templated column names to PyPSA (or isp_) names that the
+# generators and storage translators share. They're applied after
+# _build_existing_units and _build_new_entrant_units, because those steps still
+# use the templated names: the cost merges match on technology, and the annuity
+# uses lifetime_technical. Callers pass errors="raise", so that a missing
+# column stops the run, until schema validation checks the input tables.
+_EXISTING_UNIT_COLUMN_RENAMES = {
+    "power_station": "isp_name",
+    "fuel_type": "carrier",
+    "capacity": "p_nom",
+    "technology": "isp_technology_type",
+}
+_NEW_ENTRANT_COLUMN_RENAMES = {
+    "fuel_type": "carrier",
+    "lifetime_technical": "lifetime",
+    "technology": "isp_technology_type",
+}
+
+
+def _build_existing_units(
+    units: pd.DataFrame,
+    network_geography: pd.DataFrame,
+    config: ModelConfig,
+    table_name: str,
+) -> pd.DataFrame:
+    """Turns the rows of an existing/planned table (generators_existing_planned
+    or storage_existing_planned, named by table_name) into units with a fixed
+    capacity, which PyPSA keeps in the model from their build year until they
+    close.
+
+    The build year is the model year of the unit's commissioning date. A unit
+    with a blank commissioning date, or one before the model starts, is already
+    built, so its build year is start_year - 1.
+
+    The lifetime is closure_year + 1 - build_year, so the unit runs through the
+    model year labelled with its closure year. This is an opinionated rule (see
+    _lifetimes_from_closure_years). A blank closure_year gives a NaN lifetime,
+    which PyPSA reads as a unit that never closes.
+
+    Units that are built after the final investment period or close before the
+    first are dropped, and logged at INFO with table_name.
+
+    The input columns keep their templated names (see
+    _EXISTING_UNIT_COLUMN_RENAMES).
+
+    I/O Example:
+        Inputs:
+            units (capacity in MW):
+                name      power_station  capacity  geo_id  commissioning_date  closure_year
+                BW01      Bayswater      660.0     CNSW                        2033          # already built
+                LIDDELL1  Liddell        500.0     CNSW                        2023          # closed before 2026: dropped
+                PLANNED1  Wind Farm A    100.0     N3      01/08/2027                        # built in FY2028, no closure
+                PLANNED2  Wind Farm B    200.0     N3      01/08/2030                        # built in FY2031: dropped
+
+            network_geography:
+                geo_id  geo_type   region_id  subregion_id
+                CNSW    subregion  NSW        CNSW
+                N3      rez        NSW        CNSW
+
+            config.temporal.year_type: "fy"
+            config.temporal.range.start_year: 2026
+            config.temporal.capacity_expansion.investment_periods: [2026, 2030]
+            config.network.nodes.rezs: "attached_to_parent_node"
+            config.network.nodes.regional_granularity: "sub_regions"
+            table_name: "generators_existing_planned"
+
+        returns (lifetime in years, capital_cost in $/MW/year; commissioning_date and closure_year aren't shown):
+            name      power_station  capacity  geo_id  build_year  lifetime  bus   p_nom_extendable  capital_cost
+            BW01      Bayswater      660.0     CNSW    2025        9.0       CNSW  False             0.0
+            PLANNED1  Wind Farm A    100.0     N3      2028        NaN       CNSW  False             0.0           # N3's parent node
+    """
+    units = units.copy()
+    units["build_year"] = _build_years_from_commissioning_dates(
+        units["commissioning_date"],
+        config.temporal.year_type,
+        config.temporal.range.start_year,
+    )
+    units["lifetime"] = _lifetimes_from_closure_years(
+        units["closure_year"], units["build_year"]
+    )
+    investment_periods = config.temporal.capacity_expansion.investment_periods
+    units = _drop_units_closed_before_first_investment_period(
+        units, investment_periods[0], table_name
+    )
+    units = _drop_units_built_after_last_investment_period(
+        units, investment_periods[-1], table_name
+    )
+    units["bus"] = _buses_for_geo_ids(
+        units["geo_id"],
+        network_geography,
+        config.network.nodes.rezs,
+        config.network.nodes.regional_granularity,
+    )
+    return _set_existing_unit_defaults(units)
+
+
+def _build_new_entrant_units(
+    units: pd.DataFrame,
+    build_costs: pd.DataFrame,
+    connection_costs: pd.DataFrame,
+    network_geography: pd.DataFrame,
+    config: ModelConfig,
+) -> pd.DataFrame:
+    """Turns the rows of a new-entrant table (generators_new_entrant or
+    storage_new_entrant) into extendable units: one per option and investment
+    period, each with an annuitised capital cost.
+
+    Blank years in costs_new_entrant_build are resolved first, so that each
+    technology has a build cost for every investment period (see
+    _resolve_build_costs).
+
+    PyPSA only builds capacity for a unit in its build_year, so each option is
+    repeated once per investment period, with that investment period as its
+    build year. This lets PyPSA build the option in any investment period. Each
+    copy gets the capital cost for its own build year (see
+    _add_new_entrant_capital_costs). It is named <name>_<build_year>, and the
+    option's name becomes its isp_name. It starts with no capacity, and PyPSA
+    chooses how much to build (see _set_new_entrant_defaults).
+
+    The other input columns keep their templated names (see
+    _NEW_ENTRANT_COLUMN_RENAMES, which makes lifetime_technical the PyPSA
+    lifetime; the economic lifetime is only used in the annuity).
+
+    I/O Example:
+        Inputs:
+            units (fom in $/MW/year, lcf_build and lcf_om in %, lifetimes in years):
+                name       technology  geo_id  fom    lcf_build  lcf_om  lifetime_technical  lifetime_economic
+                CNSW OCGT  OCGT        CNSW    20000  110        105     30                  25
+                N3 Wind    Wind        N3      30000  100        100     30                  30
+
+            build_costs ($/MW):
+                technology  year  cost
+                OCGT        2026  1000000
+                OCGT              900000     # blank year: OCGT's cost for 2030
+                Wind        2026  3000000
+                Wind        2030  2800000
+
+            connection_costs ($/MW):
+                geo_id  technology  year  connection_cost  system_strength_cost
+                CNSW    OCGT        2026  100000           50000
+                CNSW    OCGT        2030  100000           50000
+                N3      Wind        2026  150000           60000
+                N3      Wind        2030  140000           55000
+
+            network_geography:
+                geo_id  geo_type   region_id  subregion_id
+                CNSW    subregion  NSW        CNSW
+                N3      rez        NSW        CNSW
+
+            config.temporal.capacity_expansion.investment_periods: [2026, 2030]
+            config.wacc: 0.07    # 7%
+            config.network.nodes.rezs: "attached_to_parent_node"
+            config.network.nodes.regional_granularity: "sub_regions"
+
+        returns (p_nom in MW, capital_cost in $/MW/year; the input and cost columns that pass through aren't shown):
+            isp_name   name            technology  bus   p_nom  p_nom_extendable  build_year  capital_cost
+            CNSW OCGT  CNSW OCGT_2026  OCGT        CNSW  0.0    True              2026        129121.25
+            CNSW OCGT  CNSW OCGT_2030  OCGT        CNSW  0.0    True              2030        119682.09    # the blank-year build cost
+            N3 Wind    N3 Wind_2026    Wind        CNSW  0.0    True              2026        288682.36    # N3's costs, at N3's parent node
+            N3 Wind    N3 Wind_2030    Wind        CNSW  0.0    True              2030        271356.28
+    """
+    investment_periods = config.temporal.capacity_expansion.investment_periods
+    build_costs = _resolve_build_costs(build_costs, investment_periods)
+    # _add_investment_periods_as_build_years changes its input, so it gets a copy.
+    units = _add_investment_periods_as_build_years(units.copy(), investment_periods)
+    units = _add_new_entrant_capital_costs(
+        units, build_costs, connection_costs, config.wacc
+    )
+    units["bus"] = _buses_for_geo_ids(
+        units["geo_id"],
+        network_geography,
+        config.network.nodes.rezs,
+        config.network.nodes.regional_granularity,
+    )
+    return _set_new_entrant_defaults(units)
 
 
 def _build_years_from_commissioning_dates(
@@ -57,10 +240,12 @@ def _lifetimes_from_closure_years(
     unit isn't retired during the modelling horizon.
 
     OPINIONATED: the IASR gives closure_year as the calendar year in which the
-    unit expects to stop supplying electricity, with no month. Running the unit
-    through that model year puts its closure on 1 July of the closure year under
-    financial years (within six months of the real date), and up to 12 months
-    late under calendar years.
+    unit expects to stop supplying electricity, without saying when in that
+    year. Running the unit through the model year labelled with its closure
+    year matches the ISP under financial years: in the Draft 2026 ISP PLEXOS
+    model, most units stop on 1 July of their closure year, which is the start
+    of the next financial year. Under calendar years, the unit runs six months
+    longer than in the ISP.
     """
     return closure_years - build_years + 1
 
@@ -166,6 +351,26 @@ def _buses_for_geo_ids(
     parent_nodes = rez_rows.set_index("geo_id")[parent_column]
     # replace (rather than map) leaves the geo_ids that aren't REZs as they are.
     return geo_ids.replace(parent_nodes.to_dict())
+
+
+def _set_existing_unit_defaults(units: pd.DataFrame) -> pd.DataFrame:
+    """Sets the PyPSA columns that every existing/planned unit has:
+    p_nom_extendable False, because the model can't change its capacity, and
+    capital_cost 0, because the model doesn't decide whether to build it.
+
+    I/O Example:
+        units:
+            name  capacity
+            BW01  660.0
+
+        returns (capital_cost in $/MW/year):
+            name  capacity  p_nom_extendable  capital_cost
+            BW01  660.0     False             0.0
+    """
+    units = units.copy()
+    units["p_nom_extendable"] = False
+    units["capital_cost"] = 0.0
+    return units
 
 
 def _resolve_build_costs(
@@ -397,3 +602,28 @@ def _annuitised_capital_costs(units: pd.DataFrame, wacc: float) -> pd.Series:
     ) * lcf_build / 100 + units["system_strength_cost"]
     annuities = _annuitised_investment_costs(upfront_costs, wacc, economic_lifetimes)
     return annuities + units["fom"] * lcf_om / 100
+
+
+def _set_new_entrant_defaults(units: pd.DataFrame) -> pd.DataFrame:
+    """Sets the PyPSA columns that every new-entrant unit has: isp_name from
+    the option's name; name as <isp_name>_<build_year>, so that each build year
+    is its own PyPSA component; and p_nom 0 with p_nom_extendable True, so that
+    the model starts with none of the option and chooses how much to build.
+
+    I/O Example:
+        units:
+            name       build_year
+            CNSW OCGT  2026
+            CNSW OCGT  2030
+
+        returns (p_nom in MW):
+            name            build_year  isp_name   p_nom  p_nom_extendable
+            CNSW OCGT_2026  2026        CNSW OCGT  0.0    True
+            CNSW OCGT_2030  2030        CNSW OCGT  0.0    True
+    """
+    units = units.copy()
+    units["isp_name"] = units["name"]
+    units["name"] = units["isp_name"] + "_" + units["build_year"].astype(str)
+    units["p_nom"] = 0.0
+    units["p_nom_extendable"] = True
+    return units

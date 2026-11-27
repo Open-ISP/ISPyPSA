@@ -21,27 +21,28 @@ def test_map_existing_generator_columns(csv_str_to_df):
     # BW01 and BW02 share their station's marginal_cost. The "/" in
     # Bogong / Mackay becomes "-" in marginal_cost only.
     expected = csv_str_to_df("""
-        name,     isp_name,         isp_technology_type,  carrier,     p_nom,  p_nom_extendable,  capital_cost,  marginal_cost
-        BW01,     Bayswater,        Steam Sub Critical,   Black Coal,  660.0,  False,             0.0,           Bayswater
-        BW02,     Bayswater,        Steam Sub Critical,   Black Coal,  685.0,  False,             0.0,           Bayswater
-        BOGONG1,  Bogong / Mackay,  Hydro,                Water,       70.0,   False,             0.0,           Bogong - Mackay
+        name,     isp_name,         isp_technology_type,  carrier,     p_nom,  marginal_cost
+        BW01,     Bayswater,        Steam Sub Critical,   Black Coal,  660.0,  Bayswater
+        BW02,     Bayswater,        Steam Sub Critical,   Black Coal,  685.0,  Bayswater
+        BOGONG1,  Bogong / Mackay,  Hydro,                Water,       70.0,   Bogong - Mackay
     """)
     pd.testing.assert_frame_equal(result, expected)
 
 
 def test_map_new_entrant_generator_columns(csv_str_to_df):
     generators = csv_str_to_df("""
-        name,        technology,  fuel_type,  build_year,  lifetime_technical
-        CNSW__OCGT,  OCGT,        Gas,        2026,        25.0
-        CNSW__OCGT,  OCGT,        Gas,        2030,        25.0
+        isp_name,    name,             technology,  fuel_type,  lifetime_technical
+        CNSW__OCGT,  CNSW__OCGT_2026,  OCGT,        Gas,        25.0
+        CNSW__OCGT,  CNSW__OCGT_2030,  OCGT,        Gas,        25.0
     """)
 
     result = _map_new_entrant_generator_columns(generators)
 
+    # Both build years share the option's marginal_cost.
     expected = csv_str_to_df("""
-        name,             isp_technology_type,  carrier,  build_year,  lifetime,  isp_name,    p_nom,  p_nom_extendable,  marginal_cost
-        CNSW__OCGT_2026,  OCGT,                 Gas,      2026,        25.0,      CNSW__OCGT,  0.0,    True,              CNSW__OCGT
-        CNSW__OCGT_2030,  OCGT,                 Gas,      2030,        25.0,      CNSW__OCGT,  0.0,    True,              CNSW__OCGT
+        isp_name,    name,             isp_technology_type,  carrier,  lifetime,  marginal_cost
+        CNSW__OCGT,  CNSW__OCGT_2026,  OCGT,                 Gas,      25.0,      CNSW__OCGT
+        CNSW__OCGT,  CNSW__OCGT_2030,  OCGT,                 Gas,      25.0,      CNSW__OCGT
     """)
     pd.testing.assert_frame_equal(result, expected)
 

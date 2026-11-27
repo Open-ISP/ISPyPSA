@@ -5,6 +5,8 @@ import pytest
 
 from ispypsa.translator.build_years_and_costs import (
     _annuitised_capital_costs,
+    _build_existing_units,
+    _build_new_entrant_units,
     _build_years_from_commissioning_dates,
     _buses_for_geo_ids,
     _drop_units_built_after_last_investment_period,
@@ -16,6 +18,72 @@ from ispypsa.translator.build_years_and_costs import (
     _raise_on_missing_connection_costs,
     _resolve_build_costs,
 )
+
+
+def test_build_existing_units(csv_str_to_df, sample_model_config):
+    units = csv_str_to_df("""
+        name,      power_station,  capacity,  geo_id,  commissioning_date,  closure_year
+        BW01,      Bayswater,      660.0,     CNSW,    ,                    2033
+        LIDDELL1,  Liddell,        500.0,     CNSW,    ,                    2023
+        PLANNED1,  Wind Farm A,    100.0,     N3,      01/08/2026,
+        PLANNED2,  Wind Farm B,    200.0,     N3,      01/08/2028,
+    """)
+    network_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        CNSW,    subregion,  NSW,        CNSW
+        N3,      rez,        NSW,        CNSW
+    """)
+
+    result = _build_existing_units(
+        units, network_geography, sample_model_config, "generators_existing_planned"
+    )
+
+    # The sample config starts in FY2026, with investment periods 2026 and 2028.
+    # LIDDELL1 closes before 2026, and PLANNED2 is built in FY2029, after 2028,
+    # so both are dropped. With discrete_nodes, each bus is the unit's geo_id.
+    expected = csv_str_to_df("""
+        name,      power_station,  capacity,  geo_id,  commissioning_date,  closure_year,  build_year,  lifetime,  bus,   p_nom_extendable,  capital_cost
+        BW01,      Bayswater,      660.0,     CNSW,    ,                    2033,          2025,        9.0,       CNSW,  False,             0.0
+        PLANNED1,  Wind Farm A,    100.0,     N3,      01/08/2026,          ,              2027,        ,          N3,    False,             0.0
+    """)
+    pd.testing.assert_frame_equal(result, expected)
+
+
+def test_build_new_entrant_units(csv_str_to_df, sample_model_config):
+    units = csv_str_to_df("""
+        name,       technology,  geo_id,  fom,      lcf_build,  lcf_om,  lifetime_technical,  lifetime_economic
+        CNSW OCGT,  OCGT,        CNSW,    20000.0,  110.0,      105.0,   30.0,                25.0
+    """)
+    build_costs = csv_str_to_df("""
+        technology,  year,  cost
+        OCGT,        2026,  1000000.0
+        OCGT,        ,      900000.0
+    """)
+    connection_costs = csv_str_to_df("""
+        geo_id,  technology,  year,  connection_cost,  system_strength_cost
+        CNSW,    OCGT,        2026,  100000.0,         50000.0
+        CNSW,    OCGT,        2028,  100000.0,         50000.0
+    """)
+    network_geography = csv_str_to_df("""
+        geo_id,  geo_type,   region_id,  subregion_id
+        CNSW,    subregion,  NSW,        CNSW
+    """)
+
+    result = _build_new_entrant_units(
+        units, build_costs, connection_costs, network_geography, sample_model_config
+    )
+
+    # One unit per investment period (2026 and 2028 in the sample config). The
+    # blank-year build cost (900000) is used for 2028. capital_cost is the
+    # annuity at the sample config's wacc of 6% over the 25-year economic
+    # lifetime of (build_cost + connection_cost) * 1.10 + system_strength_cost,
+    # plus fom * 1.05: 1260000 gives 119565.66, and 1150000 gives 110960.73.
+    expected = csv_str_to_df("""
+        name,            technology,  geo_id,  fom,      lcf_build,  lcf_om,  lifetime_technical,  lifetime_economic,  build_year,  build_cost,  connection_cost,  system_strength_cost,  capital_cost,  bus,   isp_name,   p_nom,  p_nom_extendable
+        CNSW OCGT_2026,  OCGT,        CNSW,    20000.0,  110.0,      105.0,   30.0,                25.0,               2026,        1000000.0,   100000.0,         50000.0,               119565.66,     CNSW,  CNSW OCGT,  0.0,    True
+        CNSW OCGT_2028,  OCGT,        CNSW,    20000.0,  110.0,      105.0,   30.0,                25.0,               2028,        900000.0,    100000.0,         50000.0,               110960.73,     CNSW,  CNSW OCGT,  0.0,    True
+    """)
+    pd.testing.assert_frame_equal(result, expected, rtol=1e-6)
 
 
 def test_build_years_from_commissioning_dates():
