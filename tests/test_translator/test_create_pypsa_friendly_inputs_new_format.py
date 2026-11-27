@@ -237,9 +237,25 @@ def test_create_pypsa_friendly_inputs_new_format_without_unserved_energy(
     assert len(result["generators"]) == 0
 
 
-@pytest.mark.parametrize("model_phase", ["capacity_expansion", "operational"])
+# The snapshots cover financial years 2026 to 2028: 1096 days (2028 includes a
+# leap day), of 24 hourly snapshots in the capacity expansion phase and 48
+# half-hourly snapshots in the operational phase. The stores weighting is the
+# length of a snapshot in hours.
+@pytest.mark.parametrize(
+    "model_phase, expected_snapshot_count, expected_stores_weighting",
+    [
+        ("capacity_expansion", 26304, 1.0),
+        ("operational", 52608, 0.5),
+    ],
+)
 def test_create_pypsa_friendly_timeseries_inputs_new_format(
-    csv_str_to_df, sample_model_config, new_table_format, tmp_path, model_phase
+    csv_str_to_df,
+    sample_model_config,
+    new_table_format,
+    tmp_path,
+    model_phase,
+    expected_snapshot_count,
+    expected_stores_weighting,
 ):
     # Wiring only: the snapshots themselves are covered by the snapshot tests
     # and the demand traces by test_demand.py.
@@ -248,6 +264,11 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
     config = sample_model_config.model_copy(deep=True)
     config.temporal.capacity_expansion.reference_year_cycle = [2018]
     config.temporal.operational.reference_year_cycle = [2018]
+    # The two phases are given different resolutions, so that each phase's
+    # snapshots can be seen to follow its own. Config validation only allows
+    # 30 min, which assigning to the attribute bypasses.
+    config.temporal.capacity_expansion.resolution_min = 60
+    config.temporal.operational.resolution_min = 30
     tables = {}
     tables["network_geography"] = csv_str_to_df("""
         geo_id,  geo_type
@@ -282,9 +303,8 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
         "stores",
         "model_year",
     ]
-    # Half-hourly snapshots for financial years 2026 to 2028: 1096 days
-    # (2028 includes a leap day) of 48 snapshots.
-    assert len(snapshots) == 52608
+    assert len(snapshots) == expected_snapshot_count
+    assert snapshots["stores"].unique().tolist() == [expected_stores_weighting]
 
     # No snapshots are merged into segments, so the snapshot map has no rows.
     assert list(snapshot_map.columns) == [
@@ -308,7 +328,7 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
     for file in expected_files:
         trace = pd.read_parquet(file)
         assert list(trace.columns) == ["investment_periods", "snapshots", "p_set"]
-        assert len(trace) == 52608
+        assert len(trace) == expected_snapshot_count
 
 
 def test_create_pypsa_friendly_timeslice_snapshots(
