@@ -70,6 +70,9 @@ def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         timeslice,             reference_year,  start_month_day,  end_month_day
         nsw_winter_reference,  2018,            04-01,            10-01
     """)
+    tables["carbon_budgets"] = csv_str_to_df("""
+        budget_id,  year_from,  year_to,  budget
+    """)
     return tables
 
 
