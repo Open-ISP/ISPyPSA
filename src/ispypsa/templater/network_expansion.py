@@ -31,10 +31,39 @@ def _extract_flow_path_options_from_iasr(
 def _extract_flow_path_costs_from_iasr(
     iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> dict[str, pd.DataFrame]:
-    """Discovers flow_path_augmentation_costs_<scenario>_<path> tables and keys them by path_id."""
-    return _iasr_tables_with_prefix(
+    """Discovers flow_path_augmentation_costs_<scenario>_<path> tables and keys them by path_id.
+
+    I/O Example:
+        iasr_tables (keys only):
+            flow_path_augmentation_costs_slower_growth_CQ-NQ
+            flow_path_augmentation_costs_slower_growth_MEL_WNV  # misnamed upstream
+            flow_path_augmentation_costs_step_change_CQ-NQ      # other scenario
+            renewable_energy_zones
+
+        scenario: "Slower Growth"
+
+        returns (keys only):
+            CQ-NQ
+            MEL-WNV
+    """
+    tables = _iasr_tables_with_prefix(
         iasr_tables, f"flow_path_augmentation_costs_{_snakecase_string(scenario)}_"
     )
+    costs = {}
+    for path_id, table in tables.items():
+        costs[_MISNAMED_FLOW_PATH_COST_TABLES.get(path_id, path_id)] = table
+    return costs
+
+
+# Workbook 7.5 names two Slower Growth cost tables with an underscore between the
+# sub-regions, where every other table in the family uses a hyphen. An underscore
+# marks a parallel-path suffix (NNSW-SQ_Terranora), so the misnamed keys can't be
+# split into their two sub-regions when aggregating to NEM regions. Drop this
+# mapping once Open-ISP/isp-workbook-parser#TBD is fixed.
+_MISNAMED_FLOW_PATH_COST_TABLES = {
+    "MEL_WNV": "MEL-WNV",
+    "SEV_MEL": "SEV-MEL",
+}
 
 
 def _extract_rez_options_from_iasr(
