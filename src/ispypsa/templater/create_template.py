@@ -23,6 +23,9 @@ from ispypsa.templater.existing_planned import (
     _template_generators_existing_planned,
     _template_storage_existing_planned,
 )
+
+# FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this import and
+# filter_template.py; region_filter.py replaces it for the new tables.
 from ispypsa.templater.filter_template import _filter_template
 from ispypsa.templater.flow_paths import (
     _template_regional_interconnectors,
@@ -57,6 +60,7 @@ from ispypsa.templater.nodes import (
     _template_regions,
     _template_sub_regions,
 )
+from ispypsa.templater.region_filter import _filter_template_to_regions
 from ispypsa.templater.renewable_energy_zones import (
     _template_rez_build_limits,
 )
@@ -194,6 +198,10 @@ def create_ispypsa_inputs_template(
 
     Raises:
         ValueError: If both filter_to_nem_regions and filter_to_isp_sub_regions are provided
+        ValueError: With the new table format, if none of the filter's regions
+            exists, or if the filter is finer than regional_granularity
+            (sub-regions at "nem_regions" or "single_region", NEM regions at
+            "single_region").
     """
     # Validate filtering parameters
     if filter_to_nem_regions is not None and filter_to_isp_sub_regions is not None:
@@ -320,6 +328,13 @@ def create_ispypsa_inputs_template(
         template["carbon_budgets"] = _template_carbon_budgets(
             iasr_tables["nem_carbon_budget"], scenario
         )
+        if filter_to_nem_regions or filter_to_isp_sub_regions:
+            template = _filter_template_to_regions(
+                template,
+                regional_granularity,
+                nem_regions=filter_to_nem_regions,
+                isp_sub_regions=filter_to_isp_sub_regions,
+            )
         return template
 
     template = {}

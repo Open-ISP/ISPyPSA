@@ -18,6 +18,7 @@ from ispypsa.templater.network_expansion import (
     _FLOW_PATH_REVERSE_MW_COL,
 )
 from ispypsa.templater.timeslices import _TIMESLICE_COLUMNS
+from ispypsa.translator import create_pypsa_friendly_inputs
 
 _FP_AUG_OPTION_COLS = [
     "Flow path",
@@ -1345,3 +1346,102 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # TAS (NEM at single_region), BOTN - Cethana, build
     resource_limits = result["resource_limits"]
     assert len(resource_limits) == 5
+
+
+@pytest.fixture(scope="module")
+def nsw_filtered_template_from_7_5_cache() -> dict[str, pd.DataFrame]:
+    """A sub_regions template of the frozen 7.5 workbook cache, filtered to NSW."""
+    iasr_tables = read_csvs(Path("tests", "test_workbook_table_cache", "7.5"))
+    manual_tables = load_manually_extracted_tables("7.5")
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        return create_ispypsa_inputs_template(
+            "Step Change",
+            "sub_regions",
+            iasr_tables,
+            manual_tables,
+            "7.5",
+            filter_to_nem_regions=["NSW"],
+        )
+
+
+def test_create_ispypsa_inputs_template_new_format_filtered_to_nem_regions(
+    nsw_filtered_template_from_7_5_cache,
+):
+    # Wiring only: what the filter keeps and drops is covered by
+    # test_region_filter.py.
+    result = nsw_filtered_template_from_7_5_cache
+
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        assert set(result) == set(list_templater_output_files("sub_regions"))
+
+    assert list(result["network_geography"].columns) == [
+        "geo_id",
+        "geo_type",
+        "region_id",
+        "subregion_id",
+    ]
+    assert list(result["network_geography_hierarchy"].columns) == [
+        "geo_id",
+        "subregion_id",
+        "region_id",
+        "nem_id",
+    ]
+    assert list(result["network_transmission_paths"].columns) == [
+        "path_id",
+        "geo_from",
+        "geo_to",
+        "carrier",
+    ]
+
+    # 4 NSW sub-regions + the 17 REZs and non-REZ geographies in them.
+    assert len(result["network_geography"]) == 21
+    # The same 21, plus the NSW and NEM rows that contain them.
+    assert len(result["network_geography_hierarchy"]) == 23
+    # 5 flow paths inside NSW + 17 REZ connections.
+    assert len(result["network_transmission_paths"]) == 22
+    assert len(result["network_transmission_path_limits"]) == 127
+    assert len(result["network_expansion_options"]) == 32
+    assert len(result["network_transmission_path_expansion_costs"]) == 496
+    assert len(result["generators_existing_planned"]) == 119
+    assert len(result["generators_new_entrant"]) == 86
+    assert len(result["storage_existing_planned"]) == 40
+    assert len(result["storage_new_entrant"]) == 74
+    assert len(result["costs_connection"]) == 4464
+    assert len(result["costs_fuel_prices"]) == 1083
+    assert len(result["resource_limits"]) == 96
+    # CNSW-SNW South GPG, CNSW1 and SWNSW1: the constraints with every term in
+    # NSW.
+    assert len(result["custom_constraints"]) == 3
+    assert len(result["custom_constraints_lhs"]) == 502
+    assert len(result["custom_constraints_rhs"]) == 12
+    # Not regional, so the same as in the unfiltered template.
+    assert len(result["timeslices"]) == 678
+    assert len(result["costs_new_entrant_build"]) == 600
+    assert len(result["emissions_reduction"]) == 30
+    assert len(result["carbon_budgets"]) == 3
+
+
+def test_filtered_new_format_template_translates(
+    nsw_filtered_template_from_7_5_cache, sample_model_config
+):
+    # A filter that left, say, a limit for a dropped path would fail in the
+    # translator. Wiring only: the translated tables are covered by the
+    # translator's tests.
+    with patch.dict(
+        "ispypsa.feature_flags.FEATURE_FLAGS", {"use_new_table_format": True}
+    ):
+        result = create_pypsa_friendly_inputs(
+            sample_model_config, nsw_filtered_template_from_7_5_cache
+        )
+
+    # One bus for each of the 21 NSW geographies.
+    assert len(result["buses"]) == 21
+    assert set(result["links"]["bus0"]) | set(result["links"]["bus1"]) == set(
+        result["buses"]["name"]
+    )
