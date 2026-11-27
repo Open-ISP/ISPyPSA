@@ -50,11 +50,17 @@ def _translate_generators(
     investment period (see _build_new_entrant_generators). The two tables are then
     stacked into one.
 
+    Each generator's name is unique, and its isp_name is the group it belongs
+    to: an existing unit's power station, or a new entrant's option name.
+    Custom constraint terms can name either (see
+    ispypsa.translator.constraints), and marginal_cost is the isp_name, so
+    all the generators in one group share a marginal cost timeseries file.
+
     I/O Example (columns abridged):
         Inputs:
             ispypsa_tables["generators_existing_planned"] (capacity in MW):
-                name  fuel_type   capacity  geo_id  commissioning_date  closure_year
-                BW01  Black Coal  660.0     CNSW                        2033
+                name  power_station  fuel_type   capacity  geo_id  commissioning_date  closure_year
+                BW01  Bayswater      Black Coal  660.0     CNSW                        2033
 
             ispypsa_tables["generators_new_entrant"] (fom in $/MW/year, lcf_build and lcf_om in %, lifetimes in years):
                 name       technology  fuel_type  geo_id  fom    lcf_build  lcf_om  lifetime_technical  lifetime_economic
@@ -83,7 +89,7 @@ def _translate_generators(
 
         returns (p_nom in MW, lifetime in years, capital_cost in $/MW/year):
             isp_name   name            carrier     bus   p_nom  p_nom_extendable  build_year  lifetime  capital_cost  marginal_cost
-            BW01       BW01            Black Coal  CNSW  660.0  False             2025        9.0       0.0           BW01        # already built when the model starts
+            Bayswater  BW01            Black Coal  CNSW  660.0  False             2025        9.0       0.0           Bayswater   # already built when the model starts
             CNSW OCGT  CNSW OCGT_2026  Gas         CNSW  0.0    True              2026        30.0      129121.25     CNSW OCGT
             CNSW OCGT  CNSW OCGT_2030  Gas         CNSW  0.0    True              2030        30.0      119682.09     CNSW OCGT   # the 2030 build cost
     """
@@ -125,11 +131,11 @@ def _build_existing_generators(
     I/O Example:
         Inputs:
             generators (capacity in MW):
-                name      technology          fuel_type   capacity  geo_id  commissioning_date  closure_year
-                BW01      Steam Sub Critical  Black Coal  660.0     CNSW                        2033          # already built
-                LIDDELL1  Steam Sub Critical  Black Coal  500.0     CNSW                        2023          # closed before 2026: dropped
-                PLANNED1  Wind                Wind        100.0     N3      01/08/2027                        # built in FY2028, no closure
-                PLANNED2  Wind                Wind        200.0     N3      01/08/2030                        # built in FY2031: dropped
+                name      power_station  technology          fuel_type   capacity  geo_id  commissioning_date  closure_year
+                BW01      Bayswater      Steam Sub Critical  Black Coal  660.0     CNSW                        2033          # already built
+                LIDDELL1  Liddell        Steam Sub Critical  Black Coal  500.0     CNSW                        2023          # closed before 2026: dropped
+                PLANNED1  Wind Farm A    Wind                Wind        100.0     N3      01/08/2027                        # built in FY2028, no closure
+                PLANNED2  Wind Farm B    Wind                Wind        200.0     N3      01/08/2030                        # built in FY2031: dropped
 
             network_geography:
                 geo_id  geo_type   region_id  subregion_id
@@ -143,9 +149,9 @@ def _build_existing_generators(
             config.network.nodes.regional_granularity: "sub_regions"
 
         returns (p_nom in MW, lifetime in years, capital_cost in $/MW/year; the input columns that pass through aren't shown):
-            isp_name  name      isp_technology_type  carrier     bus   p_nom  p_nom_extendable  build_year  lifetime  capital_cost  marginal_cost
-            BW01      BW01      Steam Sub Critical   Black Coal  CNSW  660.0  False             2025        9.0       0.0           BW01
-            PLANNED1  PLANNED1  Wind                 Wind        CNSW  100.0  False             2028        NaN       0.0           PLANNED1       # N3's parent node
+            isp_name     name      isp_technology_type  carrier     bus   p_nom  p_nom_extendable  build_year  lifetime  capital_cost  marginal_cost
+            Bayswater    BW01      Steam Sub Critical   Black Coal  CNSW  660.0  False             2025        9.0       0.0           Bayswater
+            Wind Farm A  PLANNED1  Wind                 Wind        CNSW  100.0  False             2028        NaN       0.0           Wind Farm A    # N3's parent node
     """
     generators = generators.copy()
     generators["build_year"] = _build_years_from_commissioning_dates(
@@ -250,34 +256,40 @@ def _build_new_entrant_generators(
 
 
 def _map_existing_generator_columns(generators: pd.DataFrame) -> pd.DataFrame:
-    """Sets the PyPSA columns for existing units: isp_name and name from name,
-    carrier from fuel_type, p_nom from capacity, isp_technology_type from
-    technology, p_nom_extendable False, capital_cost 0 and marginal_cost from
-    isp_name.
+    """Sets the PyPSA columns for existing units: isp_name from power_station,
+    name kept as the unit's name, carrier from fuel_type, p_nom from
+    capacity, isp_technology_type from technology, p_nom_extendable False,
+    capital_cost 0 and marginal_cost from isp_name, with any "/" replaced by
+    "-" so that it works as a file name.
 
     I/O Example (columns abridged):
         generators (capacity in MW):
-            name  fuel_type   capacity
-            BW01  Black Coal  660.0
+            name     power_station    fuel_type   capacity
+            BW01     Bayswater        Black Coal  660.0
+            BW02     Bayswater        Black Coal  685.0
+            BOGONG1  Bogong / Mackay  Water       70.0
 
         returns (p_nom in MW, capital_cost in $/MW/year):
-            isp_name  name  carrier     p_nom  p_nom_extendable  capital_cost  marginal_cost
-            BW01      BW01  Black Coal  660.0  False             0.0           BW01
+            name     isp_name         carrier     p_nom  p_nom_extendable  capital_cost  marginal_cost
+            BW01     Bayswater        Black Coal  660.0  False             0.0           Bayswater
+            BW02     Bayswater        Black Coal  685.0  False             0.0           Bayswater
+            BOGONG1  Bogong / Mackay  Water       70.0   False             0.0           Bogong - Mackay
     """
     generators = generators.rename(
         columns={
+            "power_station": "isp_name",
             "fuel_type": "carrier",
             "capacity": "p_nom",
             "technology": "isp_technology_type",
         }
     )
-    generators["isp_name"] = generators["name"]
     generators["p_nom_extendable"] = False
     # Existing units are already built, so there's no capital cost to recover.
     generators["capital_cost"] = 0.0
-    # A text marginal_cost is the name of the unit's marginal cost timeseries
-    # file, which pypsa_build reads in place of a fixed cost.
-    generators["marginal_cost"] = generators["isp_name"]
+    # A text marginal_cost is the name of the marginal cost timeseries file
+    # that pypsa_build reads in place of a fixed cost. Three 7.5 station names
+    # contain "/" (e.g. "Bogong / Mackay"), which a file name can't.
+    generators["marginal_cost"] = generators["isp_name"].str.replace("/", "-")
     return generators
 
 

@@ -56,13 +56,13 @@ def _links(csv_str_to_df) -> pd.DataFrame:
 
 
 def _generators(csv_str_to_df) -> pd.DataFrame:
-    """Existing units carry their own name as isp_name, a build year before
-    the first investment period, and an infinite lifetime (no scheduled
+    """Existing units carry their power station as isp_name, a build year
+    before the first investment period, and an infinite lifetime (no scheduled
     closure). LATEGEN backs the date_from-after-all-periods test."""
     return csv_str_to_df("""
-        isp_name,  name,      build_year,  lifetime
-        KINGASF1,  KINGASF1,  2025,        inf
-        LATEGEN,   LATEGEN,   2025,        inf
+        isp_name,             name,      build_year,  lifetime
+        Kingaroy Solar Farm,  KINGASF1,  2025,        inf
+        Late Gen Station,     LATEGEN,   2025,        inf
     """)
 
 
@@ -767,6 +767,128 @@ def test_new_entrant_storage_term_expands_to_per_build_year_components(
         expected_lhs.sort_values(sort_cols).reset_index(drop=True),
         check_dtype=False,
     )
+
+
+def test_power_station_term_covers_each_of_its_units(
+    csv_str_to_df, sample_model_config
+):
+    """A term naming an existing power station's isp_name covers each of the
+    station's units."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  Bayswater,      0.5,
+    """)
+    generators = csv_str_to_df("""
+        isp_name,   name,  build_year,  lifetime
+        Bayswater,  BW01,  2025,        inf
+        Bayswater,  BW02,  2025,        inf
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        generators,
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,     component,  attribute,  coefficient
+        SWQLD1,                   2026,               BW01,              Generator,  p,          0.5
+        SWQLD1,                   2026,               BW02,              Generator,  p,          0.5
+        SWQLD1,                   2028,               BW01,              Generator,  p,          0.5
+        SWQLD1,                   2028,               BW02,              Generator,  p,          0.5
+        SWQLD1,                   2026,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,   Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,   Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,  Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,   Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,   Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_unit_named_after_its_power_station_is_counted_once(
+    csv_str_to_df, sample_model_config
+):
+    """The only unit of a single-unit power station can share the station's
+    name, so its name and isp_name are the same. A term naming it gives one
+    LHS row per investment period, not two."""
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,       coefficient,  date_from
+        SWQLD1,         generator_output,  Aramara Solar Farm,  0.5,
+    """)
+    generators = csv_str_to_df("""
+        isp_name,            name,                build_year,  lifetime
+        Aramara Solar Farm,  Aramara Solar Farm,  2025,        inf
+    """)
+
+    result = _translate_custom_constraints(
+        ispypsa_tables,
+        _links(csv_str_to_df),
+        generators,
+        _storage(csv_str_to_df),
+        _demand_nodes(csv_str_to_df),
+        sample_model_config,
+    )
+
+    expected_lhs = csv_str_to_df("""
+        constraint_name,          investment_period,  variable_name,       component,  attribute,  coefficient
+        SWQLD1,                   2026,               Aramara Solar Farm,  Generator,  p,          0.5
+        SWQLD1,                   2028,               Aramara Solar Farm,  Generator,  p,          0.5
+        SWQLD1,                   2026,               SWQLD1_exp_2026,     Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2026,     Generator,  p_nom,      -1.0
+        SWQLD1,                   2028,               SWQLD1_exp_2028,     Generator,  p_nom,      -1.0
+        NSW-QLD_expansion_limit,  ,                   NSW-QLD_exp_2026,    Link,       p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2026,     Generator,  p_nom,      1.0
+        SWQLD1_expansion_limit,   ,                   SWQLD1_exp_2028,     Generator,  p_nom,      1.0
+    """)
+    sort_cols = ["constraint_name", "investment_period", "variable_name", "attribute"]
+    pd.testing.assert_frame_equal(
+        result["custom_constraints_lhs"].sort_values(sort_cols).reset_index(drop=True),
+        expected_lhs.sort_values(sort_cols).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_name_used_by_a_unit_and_a_different_group_raises(
+    csv_str_to_df, sample_model_config
+):
+    ispypsa_tables = _constraint_tables(csv_str_to_df)
+    ispypsa_tables["custom_constraints_lhs"] = csv_str_to_df("""
+        constraint_id,  term_type,         variable_name,  coefficient,  date_from
+        SWQLD1,         generator_output,  N2 Solar,       0.5,
+    """)
+    # The existing unit N2 Solar, at Solar Farm A, has the same name as the
+    # new entrant option N2 Solar.
+    generators = csv_str_to_df("""
+        isp_name,      name,           build_year,  lifetime
+        Solar Farm A,  N2 Solar,       2025,        inf
+        N2 Solar,      N2 Solar_2026,  2026,        30
+    """)
+
+    with pytest.raises(ValueError) as excinfo:
+        _translate_custom_constraints(
+            ispypsa_tables,
+            _links(csv_str_to_df),
+            generators,
+            _storage(csv_str_to_df),
+            _demand_nodes(csv_str_to_df),
+            sample_model_config,
+        )
+
+    assert (
+        "Generator names used both as a component's own name and as the "
+        "isp_name of a different group: ['N2 Solar']"
+    ) in str(excinfo.value)
 
 
 def test_generator_capacity_term_targets_p_nom_of_built_components(

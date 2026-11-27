@@ -10,15 +10,21 @@ from ispypsa.translator.generation import (
 
 def test_map_existing_generator_columns(csv_str_to_df):
     generators = csv_str_to_df("""
-        name,  technology,          fuel_type,      capacity
-        BW01,  Steam Sub Critical,  Black Coal,     660.0
+        name,     power_station,    technology,          fuel_type,   capacity
+        BW01,     Bayswater,        Steam Sub Critical,  Black Coal,  660.0
+        BW02,     Bayswater,        Steam Sub Critical,  Black Coal,  685.0
+        BOGONG1,  Bogong / Mackay,  Hydro,               Water,       70.0
     """)
 
     result = _map_existing_generator_columns(generators)
 
+    # BW01 and BW02 share their station's marginal_cost. The "/" in
+    # Bogong / Mackay becomes "-" in marginal_cost only.
     expected = csv_str_to_df("""
-        name,  isp_technology_type,     carrier,    p_nom,  isp_name,  p_nom_extendable,  capital_cost,  marginal_cost
-        BW01,  Steam Sub Critical,      Black Coal, 660.0,  BW01,      False,             0.0,           BW01
+        name,     isp_name,         isp_technology_type,  carrier,     p_nom,  p_nom_extendable,  capital_cost,  marginal_cost
+        BW01,     Bayswater,        Steam Sub Critical,   Black Coal,  660.0,  False,             0.0,           Bayswater
+        BW02,     Bayswater,        Steam Sub Critical,   Black Coal,  685.0,  False,             0.0,           Bayswater
+        BOGONG1,  Bogong / Mackay,  Hydro,                Water,       70.0,   False,             0.0,           Bogong - Mackay
     """)
     pd.testing.assert_frame_equal(result, expected)
 
@@ -43,10 +49,10 @@ def test_map_new_entrant_generator_columns(csv_str_to_df):
 def test_translate_generators(csv_str_to_df, sample_model_config):
     ispypsa_tables = {
         "generators_existing_planned": csv_str_to_df("""
-            name,      technology,            fuel_type,    capacity,  geo_id,  commissioning_date,  closure_year,  emissions_intensity
-            BW01,      Steam__Sub__Critical,  Black__Coal,  660.0,     CNSW,    ,                    2033,          0.9
-            LIDDELL1,  Steam__Sub__Critical,  Black__Coal,  500.0,     CNSW,    ,                    2023,          0.9
-            PLANNED1,  Wind,                  Wind,         100.0,     N3,      01/08/2029,          ,              0.0
+            name,      power_station,  technology,            fuel_type,    capacity,  geo_id,  commissioning_date,  closure_year,  emissions_intensity
+            BW01,      Bayswater,      Steam__Sub__Critical,  Black__Coal,  660.0,     CNSW,    ,                    2033,          0.9
+            LIDDELL1,  Liddell,        Steam__Sub__Critical,  Black__Coal,  500.0,     CNSW,    ,                    2023,          0.9
+            PLANNED1,  Wind__Farm__A,  Wind,                  Wind,         100.0,     N3,      01/08/2029,          ,              0.0
         """),
         "generators_new_entrant": csv_str_to_df("""
             name,        technology,  geo_id,  fuel_type,  fom,      lcf_build,  lcf_om,  lifetime_technical,  lifetime_economic,  emissions_intensity
