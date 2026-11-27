@@ -19,9 +19,8 @@ def test_build_required_tables_new_format():
     assert "flow_path_augmentation_costs_step_change_CQ-NQ" in result
     assert "rez_augmentation_options_NSW" in result
     assert "rez_augmentation_costs_step_change_NSW" in result
-    # Typo'd table is included so the templater can pick it up while
-    # Open-ISP/isp-workbook-parser#80 is open.
-    assert "flow_path_augmentation_cost_slower_growth_CNSW-NNSW" in result
+    assert "flow_path_augmentation_costs_slower_growth_CNSW-NNSW" in result
+    assert "flow_path_augmentation_cost_slower_growth_CNSW-NNSW" not in result
     assert "connection_cost_forecast_wind_and_solar" in result
     assert "connection_cost_forecast_other" in result
     assert "connection_costs_for_wind_and_solar" in result

@@ -32,15 +32,8 @@ def _extract_flow_path_costs_from_iasr(
     iasr_tables: dict[str, pd.DataFrame], scenario: str
 ) -> dict[str, pd.DataFrame]:
     """Discovers flow_path_augmentation_costs_<scenario>_<path> tables and keys them by path_id."""
-    snake = _snakecase_string(scenario)
     return _iasr_tables_with_prefix(
-        iasr_tables,
-        (
-            f"flow_path_augmentation_costs_{snake}_",
-            # v7.5 workbook has one mistyped table (singular "cost"); drop the
-            # second prefix once Open-ISP/isp-workbook-parser#80 is fixed.
-            f"flow_path_augmentation_cost_{snake}_",
-        ),
+        iasr_tables, f"flow_path_augmentation_costs_{_snakecase_string(scenario)}_"
     )
 
 
@@ -61,12 +54,9 @@ def _extract_rez_costs_from_iasr(
 
 
 def _iasr_tables_with_prefix(
-    iasr_tables: dict[str, pd.DataFrame], prefixes: str | tuple[str, ...]
+    iasr_tables: dict[str, pd.DataFrame], prefix: str
 ) -> dict[str, pd.DataFrame]:
-    """Returns the subset of iasr_tables whose names start with any of ``prefixes``, stripped of the matching prefix.
-
-    Accepts a single prefix or a tuple of alternative prefixes (used to absorb
-    upstream typos — see Open-ISP/isp-workbook-parser#80).
+    """Returns the subset of iasr_tables whose names start with prefix, stripped of the prefix.
 
     I/O Example:
         iasr_tables (keys only):
@@ -75,20 +65,16 @@ def _iasr_tables_with_prefix(
             rez_augmentation_options_NSW
             renewable_energy_zones
 
-        prefixes: "flow_path_augmentation_options_"
+        prefix: "flow_path_augmentation_options_"
 
         returns (keys only):
             CQ-NQ
             NNSW-SQ
     """
-    if isinstance(prefixes, str):
-        prefixes = (prefixes,)
     result = {}
     for name, df in iasr_tables.items():
-        for prefix in prefixes:
-            if name.startswith(prefix):
-                result[name[len(prefix) :]] = df
-                break
+        if name.startswith(prefix):
+            result[name.removeprefix(prefix)] = df
     return result
 
 

@@ -54,13 +54,10 @@ def test_iasr_tables_with_prefix_strips_prefix_and_filters_others():
     assert set(result.keys()) == {"CQ-NQ", "NNSW-SQ"}
 
 
-def test_extract_flow_path_costs_from_iasr_absorbs_workbook_typo():
-    # Workbook v7.5 has one mistyped table using singular "cost" instead of "costs".
-    # The extractor accepts either prefix and merges the results, while ignoring
-    # tables for other scenarios.
+def test_extract_flow_path_costs_from_iasr_keeps_only_the_scenario():
     iasr_tables = {
         "flow_path_augmentation_costs_step_change_CQ-NQ": pd.DataFrame({"x": [1]}),
-        "flow_path_augmentation_cost_step_change_NNSW-SQ": pd.DataFrame({"x": [2]}),
+        "flow_path_augmentation_costs_step_change_NNSW-SQ": pd.DataFrame({"x": [2]}),
         "flow_path_augmentation_costs_progressive_change_CQ-NQ": pd.DataFrame(
             {"x": [3]}
         ),
