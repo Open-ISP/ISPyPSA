@@ -193,9 +193,8 @@ def create_pypsa_friendly_inputs(
                 config.unserved_energy.cost,
                 config.unserved_energy.max_per_node,
             )
-            # isp_name is the name custom constraints refer to a generator by.
-            # No constraint refers to an unserved energy generator, so, as for
-            # an existing unit, it is the generator's own name.
+            # An unserved energy generator is a group of one, so its isp_name
+            # is its own name (see ispypsa.translator.constraints).
             generators["isp_name"] = generators["name"]
         pypsa_inputs["generators"] = generators
 
