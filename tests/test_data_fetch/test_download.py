@@ -6,16 +6,17 @@ import requests
 from ispypsa.data_fetch import fetch_workbook
 
 
-def test_fetch_workbook_success(tmp_path, requests_mock):
+@pytest.mark.parametrize("workbook_version", ["6.0", "7.5"])
+def test_fetch_workbook_success(workbook_version, tmp_path, requests_mock):
     """Test successful workbook download."""
     # Mock the HTTP request for the actual workbook manifest
     requests_mock.get(
-        "https://data.openisp.au/archive/workbooks/6.0.xlsx",
+        f"https://data.openisp.au/archive/workbooks/{workbook_version}.xlsx",
         content=b"fake workbook content",
     )
 
     save_path = tmp_path / "my_workbook.xlsx"
-    fetch_workbook("6.0", save_path)
+    fetch_workbook(workbook_version, save_path)
 
     assert save_path.exists()
     assert save_path.read_bytes() == b"fake workbook content"

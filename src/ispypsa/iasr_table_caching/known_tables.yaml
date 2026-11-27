@@ -1,6 +1,7 @@
 '7.5':
 - affine_heat_rates_existing_generators
 - affine_heat_rates_new_entrants
+- aggregated_storage_consultant_scenario_mapping
 - aggregated_storage_regional_energy_capacity
 - aggregated_storage_regional_power_capacity
 - appliance_uptake_forecasts_accelerate_transition
@@ -35,6 +36,7 @@
 - data_centre_forecasts_consultant_scenario_mapping
 - data_centre_forecasts_slower_growth
 - data_centre_forecasts_step_change
+- desalination_electricity_demand_for_h2
 - discount_rate
 - distribution_network_CER_augmentation_tranche_costs
 - distribution_network_CER_augmentation_tranche_costs_forecast
@@ -78,7 +80,6 @@
 - first_of_a_kind_premium
 - fixed_opex_existing_committed_anticipated_additional_generators
 - fixed_opex_new_entrants
-- flow_path_augmentation_cost_slower_growth_CNSW-NNSW
 - flow_path_augmentation_costs_accelerated_transition_CNSW-NNSW
 - flow_path_augmentation_costs_accelerated_transition_CNSW-SNW
 - flow_path_augmentation_costs_accelerated_transition_CQ-GG
@@ -93,6 +94,7 @@
 - flow_path_augmentation_costs_accelerated_transition_TAS-SEV
 - flow_path_augmentation_costs_accelerated_transition_WNV-SESA
 - flow_path_augmentation_costs_accelerated_transition_WNV-SNSW
+- flow_path_augmentation_costs_slower_growth_CNSW-NNSW
 - flow_path_augmentation_costs_slower_growth_CNSW-SNW
 - flow_path_augmentation_costs_slower_growth_CQ-GG
 - flow_path_augmentation_costs_slower_growth_CQ-NQ

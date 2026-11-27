@@ -2,7 +2,8 @@ version = 1
 revision = 3
 requires-python = ">=3.11, <3.15"
 resolution-markers = [
-    "python_full_version >= '3.13'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
     "python_full_version == '3.12.*'",
     "python_full_version < '3.12'",
 ]
@@ -919,7 +920,7 @@ wheels = [
 
 [[package]]
 name = "isp-trace-parser"
-version = "2.0.3"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "duckdb" },
@@ -932,25 +933,27 @@ dependencies = [
     { name = "requests" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/6a/7ceffb77448a7115bfdffe34fc4e70630dab2f09eda88d0c2c370048eb1c/isp_trace_parser-2.0.3.tar.gz", hash = "sha256:cfe3b6b2243c2302a5393a7797c75d91b74b5655b8b947af782860a4e48a9e96", size = 57882, upload-time = "2025-11-30T22:30:09.509Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/f0/567158c7777cfa30bd96fafe75effe9525e929876f902cfd19e227bf4884/isp_trace_parser-2.1.0.tar.gz", hash = "sha256:4f8d7e140275f2a0b568849defdecb53d56b354b218d59c491f606f7b35b91eb", size = 58614, upload-time = "2026-11-26T11:17:33.807Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/63/598df55262660963716dfb131feb7925ebb89525e5355738c6739d51892a/isp_trace_parser-2.0.3-py3-none-any.whl", hash = "sha256:79b01f72370ee4408f0f0155a538047f6c76e4be373af2a32ad8fa260a844098", size = 53325, upload-time = "2025-11-30T22:30:08.037Z" },
+    { url = "https://files.pythonhosted.org/packages/10/cd/937405b77fb902fdd66da3cef96e1805160bb6f4f88967ab2ab4e7ade673/isp_trace_parser-2.1.0-py3-none-any.whl", hash = "sha256:5f06b9c686e7e3fa036c50c2e70e457fff130dadc9a6b80ad0586a7d5db7b118", size = 53933, upload-time = "2026-11-26T11:17:32.731Z" },
 ]
 
 [[package]]
 name = "isp-workbook-parser"
-version = "2.8.0"
+version = "2.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "numpy", marker = "python_full_version >= '3.13'" },
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "rapidfuzz" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/33/c63d898caf5447a276408222a5c4ca8b9bb2f8fb8170f6352e74bf5a938d/isp_workbook_parser-2.8.0.tar.gz", hash = "sha256:fc3dbbbf51107f081e5b8c09ba148e6be74a768a09572581b781c9c18272d521", size = 72972, upload-time = "2026-01-28T23:32:20.825Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/5b/f54963d7cb79931dfb5b6d16346cb20f966017ef8dbc6db19756fc0e0f09/isp_workbook_parser-2.9.0.tar.gz", hash = "sha256:c2444c85ddd4be22ac94b5a5f9dfd94757f01e8fcc8a485dcc79b7d152220cda", size = 88156, upload-time = "2026-09-20T23:47:31.812Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/18/47a4be6d9e40a328027d55330125337996975138d23a41f2bc94ebd77370/isp_workbook_parser-2.8.0-py3-none-any.whl", hash = "sha256:7b718e86a11890556f91743418df12d142217565a5ab618be5b012693e87a48e", size = 144581, upload-time = "2026-01-28T23:32:19.188Z" },
+    { url = "https://files.pythonhosted.org/packages/df/61/18c39c3bdc2583f39dcb31c0807242fb7d070a5eaa45af0369952412013a/isp_workbook_parser-2.9.0-py3-none-any.whl", hash = "sha256:dfd931615d7854a2981e310245643a5ddc5da64e7676926012d5157f6ed3387f", size = 176533, upload-time = "2026-09-20T23:47:30.334Z" },
 ]
 
 [[package]]
@@ -999,8 +1002,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "doit", specifier = ">=0.36.0" },
-    { name = "isp-trace-parser", specifier = ">=2.0.3" },
-    { name = "isp-workbook-parser", specifier = ">=2.8.0" },
+    { name = "isp-trace-parser", specifier = ">=2.1.0" },
+    { name = "isp-workbook-parser", specifier = ">=2.9.0" },
     { name = "linopy", marker = "extra == 'solvers'", specifier = ">=0.4.4" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.2.2,<3.0.0" },
