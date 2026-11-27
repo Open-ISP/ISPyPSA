@@ -20,9 +20,9 @@ known differences:
    using the IASR unit summary tables. These are read from the directory of
    IASR tables the caller passes in -- in the full-pipeline test, the same
    workbook cache the templater read, so both routes describe the same units.
-   The frozen 7.5 cache has no ``rez_group_constraint_summary`` or
-   ``new_entrant_electrolysers_summary``, so those two tables come from the
-   fixture under ``data/custom_constraints_validation/workbook``.
+   The templater doesn't use ``rez_group_constraint_summary`` or
+   ``new_entrant_electrolysers_summary``; ``scripts/build_75_test_cache.py``
+   adds them to the frozen 7.5 cache for this check.
 
 If the two drift, the check fails and names the constraint.
 
@@ -97,9 +97,6 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from workbook_extract_constraint import workbook_extract_constraint_lhs  # noqa: E402
 
 from ispypsa.data_fetch.csv_read_write import read_csvs  # noqa: E402
-
-_FIXTURE_DIR = Path(__file__).parent / "data" / "custom_constraints_validation"
-
 
 # Each entry lists the (term_type, variable_name, coefficient) tuples that
 # we expect to be PLEXOS-only or workbook-only after running both routes.
@@ -187,8 +184,9 @@ def assert_lhs_matches_workbook_modulo_known_diffs(
         plexos_lhs: a templated custom_constraints_lhs table; columns used:
             constraint_id, term_type, variable_name, coefficient.
         iasr_tables_dir: directory of IASR table CSVs the workbook route reads
-            its unit summaries and flow paths from. Pass the cache plexos_lhs
-            was templated from, so both routes see the same units.
+            its constraint definitions, unit summaries and flow paths from.
+            Pass the cache plexos_lhs was templated from, so both routes see
+            the same units.
 
     I/O Example:
         plexos_lhs (abbreviated to two of NQ1's terms):
@@ -196,8 +194,7 @@ def assert_lhs_matches_workbook_modulo_known_diffs(
             NQ1            generator_output  KSP1           1.0
             NQ1            generator_output  EMERASF1       1.0
 
-        tables the workbook route reads (abbreviated). The first two are in
-        iasr_tables_dir; the last two are added from the fixture.
+        tables the workbook route reads from iasr_tables_dir (abbreviated):
 
             existing_committed_anticipated_additional_generator_summary:
                 IASR ID / DLT names  Sub-region  REZ ID
@@ -227,9 +224,6 @@ def assert_lhs_matches_workbook_modulo_known_diffs(
         missing from plexos_lhs, or KSP1 were, the assertion for NQ1 fails.
     """
     iasr_tables = read_csvs(iasr_tables_dir)
-    # rez_group_constraint_summary and new_entrant_electrolysers_summary, which
-    # the frozen 7.5 cache doesn't hold.
-    iasr_tables.update(read_csvs(_FIXTURE_DIR / "workbook"))
     for constraint_id, expected in EXPECTED_DELTAS.items():
         plexos_terms = _term_set(
             plexos_lhs[plexos_lhs["constraint_id"] == constraint_id]
