@@ -12,6 +12,11 @@ _GRANULARITIES_A_FILTER_APPLIES_AT = {
     "subregion_id": ["sub_regions"],
 }
 
+# Every templated table is in exactly one of the four lists below, so that a
+# table added to the templater has to be given a place here before the filter
+# is right for it (a test compares the lists with the templater's outputs).
+
+# Filtered on their geo_id column.
 _TABLES_WITH_A_GEO_ID = [
     "network_geography",
     "generators_existing_planned",
@@ -20,12 +25,36 @@ _TABLES_WITH_A_GEO_ID = [
     "storage_new_entrant",
     "costs_connection",
     "costs_fuel_prices",
+    "resource_limits",
 ]
 
+# Filtered on their constraint_id column.
 _CUSTOM_CONSTRAINT_TABLES = [
     "custom_constraints",
     "custom_constraints_lhs",
     "custom_constraints_rhs",
+]
+
+# Each filtered by its own lines in _filter_template_to_regions.
+_TABLES_FILTERED_ONE_BY_ONE = [
+    "network_geography_hierarchy",
+    "network_transmission_paths",
+    "network_transmission_path_limits",
+    "network_expansion_options",
+    "network_transmission_path_expansion_costs",
+]
+
+_TABLES_LEFT_UNCHANGED = [
+    # Region-prefixed, but left whole: the filter doesn't work out which
+    # regions' timeslices the kept path limits and constraints name.
+    "timeslices",
+    # Keyed on technology and year, with nothing regional in it.
+    "costs_new_entrant_build",
+    # Keyed on fuel type and year, with nothing regional in it.
+    "emissions_reduction",
+    # For the whole NEM. Not scaled to the selection: the translator warns
+    # when a filtered model has carbon budgets.
+    "carbon_budgets",
 ]
 
 
@@ -66,9 +95,9 @@ def _filter_template_to_regions(
       model geography, so a sub-region left in it would bring its demand into
       the model.
     - network_geography, the four generator and storage tables,
-      costs_connection and costs_fuel_prices: the geo_id, which must be in the
-      filtered hierarchy. A fuel price row that names a power station also
-      names its geo_id, so it goes with the station.
+      costs_connection, costs_fuel_prices and resource_limits: the geo_id,
+      which must be in the filtered hierarchy. A fuel price row that names a
+      power station also names its geo_id, so it goes with the station.
     - network_transmission_paths: geo_from and geo_to, both of which must be
       kept. A path from a kept geography to a dropped one is dropped.
     - network_transmission_path_limits: the path_id.
@@ -123,6 +152,11 @@ def _filter_template_to_regions(
             CNSW-SQ  forward               900       # dropped with its path
                                            1000      # a wildcard: kept
 
+        template["resource_limits"]:
+            geo_id  technology  limit_type  limit
+            N3      Wind        land_use    3000
+            SQ      PHES        build       1500   # dropped with SQ
+
         returns["network_geography_hierarchy"]:
             geo_id  subregion_id  region_id  nem_id
             NEM                              NEM
@@ -143,6 +177,10 @@ def _filter_template_to_regions(
             path_id  direction  timeslice  capacity
             N3-CNSW  forward               500
                                            1000
+
+        returns["resource_limits"]:
+            geo_id  technology  limit_type  limit
+            N3      Wind        land_use    3000
     """
     level = "region_id" if nem_regions else "subregion_id"
     if regional_granularity not in _GRANULARITIES_A_FILTER_APPLIES_AT[level]:

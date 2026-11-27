@@ -1414,6 +1414,7 @@ def test_create_ispypsa_inputs_template_new_format_filtered_to_nem_regions(
     assert len(result["storage_new_entrant"]) == 74
     assert len(result["costs_connection"]) == 4464
     assert len(result["costs_fuel_prices"]) == 1083
+    assert len(result["resource_limits"]) == 96
     # CNSW-SNW South GPG, CNSW1 and SWNSW1: the constraints with every term in
     # NSW.
     assert len(result["custom_constraints"]) == 3

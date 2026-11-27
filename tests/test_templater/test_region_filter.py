@@ -1,7 +1,12 @@
 import pandas as pd
 import pytest
 
+from ispypsa.templater.create_template import _NEW_FORMAT_TEMPLATE_OUTPUTS
 from ispypsa.templater.region_filter import (
+    _CUSTOM_CONSTRAINT_TABLES,
+    _TABLES_FILTERED_ONE_BY_ONE,
+    _TABLES_LEFT_UNCHANGED,
+    _TABLES_WITH_A_GEO_ID,
     _filter_hierarchy,
     _filter_template_to_regions,
     _keep_rows_referring_to,
@@ -88,6 +93,11 @@ def _template(csv_str_to_df) -> dict[str, pd.DataFrame]:
         fuel_type,   power_station,  geo_id,  year,  price
         Black Coal,  Bayswater,      CNSW,    2026,  4.0
         Black Coal,  Kogan Creek,    SQ,      2026,  2.0
+    """)
+    tables["resource_limits"] = csv_str_to_df("""
+        geo_id,  technology,  resource_type,  limit_type,  limit
+        N3,      Wind,        ,               land_use,    3000
+        Q8,      Wind,        ,               land_use,    2000
     """)
     tables["custom_constraints"] = csv_str_to_df("""
         constraint_id,  direction
@@ -356,6 +366,50 @@ def test_filter_drops_units_and_costs_at_dropped_geographies(csv_str_to_df):
     pd.testing.assert_frame_equal(
         result["costs_fuel_prices"].reset_index(drop=True), expected_fuel_prices
     )
+
+
+def test_filter_drops_resource_limits_at_dropped_geographies(csv_str_to_df):
+    template = _template(csv_str_to_df)
+    template["resource_limits"] = csv_str_to_df("""
+        geo_id,  technology,  resource_type,  limit_type,  limit
+        N3,      Wind,        ,               land_use,    3000
+        N3,      ,            wind_high,      resource,    1200
+        CNSW,    PHES,        ,               build,       900
+        Q8,      Wind,        ,               land_use,    2000
+        SQ,      PHES,        ,               build,       700
+        ,        PHES,        ,               build,       5000
+    """)
+
+    result = _filter_template_to_regions(
+        template, "sub_regions", nem_regions=["NSW"], isp_sub_regions=None
+    )
+
+    # The REZ Q8 and the sub-region SQ are dropped, and their limits with
+    # them. The last row has a blank geo_id, so it names no geography and
+    # stays.
+    expected = csv_str_to_df("""
+        geo_id,  technology,  resource_type,  limit_type,  limit
+        N3,      Wind,        ,               land_use,    3000
+        N3,      ,            wind_high,      resource,    1200
+        CNSW,    PHES,        ,               build,       900
+        ,        PHES,        ,               build,       5000
+    """)
+    pd.testing.assert_frame_equal(
+        result["resource_limits"].reset_index(drop=True), expected
+    )
+
+
+def test_filter_accounts_for_every_templated_table():
+    # A table added to the templater's outputs fails here until it is put in
+    # one of the filter's lists: filtered, or left unchanged on purpose.
+    accounted_for = (
+        _TABLES_WITH_A_GEO_ID
+        + _CUSTOM_CONSTRAINT_TABLES
+        + _TABLES_FILTERED_ONE_BY_ONE
+        + _TABLES_LEFT_UNCHANGED
+    )
+
+    assert sorted(accounted_for) == sorted(_NEW_FORMAT_TEMPLATE_OUTPUTS)
 
 
 def test_filter_drops_a_constraint_with_any_term_on_a_dropped_component(
