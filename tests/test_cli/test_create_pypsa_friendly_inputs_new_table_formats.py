@@ -18,6 +18,7 @@ import pandas as pd
 import pypsa
 import pytest
 
+from ispypsa.data_fetch import read_csvs
 from ispypsa.translator import list_translator_output_files
 
 from .cli_test_helpers import (
@@ -123,6 +124,19 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     expected_constraints = {f"{path}_expansion_limit" for path in expandable_paths}
     assert set(rhs["constraint_name"]) == expected_constraints
     assert set(lhs["constraint_name"]) == expected_constraints
+
+    # The test config models 2025 to 2026 and the earliest 7.5 carbon budget
+    # window starts in 2027, so every budget is dropped: the table is written
+    # with no rows, and is read back with the column types of its schema.
+    pypsa_friendly_tables = read_csvs(output_dir, schemas="pypsa_friendly_tables")
+    carbon_budgets = pypsa_friendly_tables["carbon_budgets"]
+    assert carbon_budgets.dtypes.astype(str).to_dict() == {
+        "constraint_name": "object",
+        "year_from": "int64",
+        "year_to": "int64",
+        "rhs": "float64",
+    }
+    assert len(carbon_budgets) == 0
 
     # Every snapshot has a timeslice for each of the five regions.
     snapshots = pd.read_csv(output_dir / "snapshots.csv")
