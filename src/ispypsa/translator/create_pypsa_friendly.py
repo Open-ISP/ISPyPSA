@@ -26,6 +26,10 @@ from ispypsa.translator.custom_constraints import (
     _append_if_not_empty,
     _translate_custom_constraints,
 )
+from ispypsa.translator.demand import (
+    _create_demand_node_traces,
+    _translate_demand_nodes,
+)
 from ispypsa.translator.generators import (
     _create_unserved_energy_generators,
     _get_new_entrant_generator_traces,
@@ -75,8 +79,8 @@ _BASE_TRANSLATOR_OUTPUTS = [
 ]
 
 # Outputs of the new-format translator path: only the tables translated from
-# the new format so far, plus a generators table (empty), which is a required
-# input for pypsa_build.
+# the new format so far, plus a generators table, which is a required input
+# for pypsa_build and holds only the unserved energy generators.
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: rename to _TRANSLATOR_OUTPUTS and
 # delete _BASE_TRANSLATOR_OUTPUTS above.
 _NEW_FORMAT_TRANSLATOR_OUTPUTS = [
@@ -92,9 +96,9 @@ _NEW_FORMAT_TRANSLATOR_OUTPUTS = [
     "custom_constraints_generators",
 ]
 
-# The columns of the header-only generators table the new-format path emits
-# until generators are translated from the new tables: the ones the custom
-# constraint translation and pypsa_build read.
+# The columns of the header-only table that stands in for the generators the
+# new-format path doesn't translate from the new tables yet: the ones the
+# custom constraint translation and pypsa_build read.
 # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete once generators are
 # translated from the new tables.
 _UNTRANSLATED_GENERATOR_COLUMNS = [
@@ -164,16 +168,35 @@ def create_pypsa_friendly_inputs(
         pypsa_inputs["links"] = links
         pypsa_inputs["link_timeslice_limits"] = link_timeslice_limits
 
-        # Header-only stand-ins until generators, storage and demand are
-        # translated from the new tables. The templated custom constraints
-        # have terms on those components, so they are left out with them:
-        # only the expansion limit constraints are built.
+        demand_nodes = _translate_demand_nodes(
+            ispypsa_tables["network_geography_hierarchy"],
+            ispypsa_tables["network_geography"],
+        )
+
+        # Header-only stand-ins until generators and storage are translated
+        # from the new tables. The templated custom constraints have terms on
+        # those components, so they are left out with them: only the
+        # expansion limit constraints are built.
         # FEATURE_FLAG_CLEANUP[use_new_table_format]: replace each stand-in
         # with the table translated from the new format.
         generators = pd.DataFrame(columns=_UNTRANSLATED_GENERATOR_COLUMNS)
         storage = pd.DataFrame(columns=["isp_name", "name", "build_year", "lifetime"])
-        demand_nodes = pd.DataFrame(columns=["name"])
         constraint_tables = ispypsa_tables | empty_custom_constraint_tables()
+
+        # The unserved energy generators are the only generators for now, so
+        # they replace the stand-in.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: append them to the
+        # generators translated from the new format instead.
+        if config.unserved_energy.cost is not None:
+            generators = _create_unserved_energy_generators(
+                demand_nodes,  # demand nodes only: a REZ bus has no demand to shed.
+                config.unserved_energy.cost,
+                config.unserved_energy.max_per_node,
+            )
+            # isp_name is the name custom constraints refer to a generator by.
+            # No constraint refers to an unserved energy generator, so, as for
+            # an existing unit, it is the generator's own name.
+            generators["isp_name"] = generators["name"]
         pypsa_inputs["generators"] = generators
 
         pypsa_inputs.update(
@@ -396,21 +419,6 @@ def create_pypsa_friendly_timeseries_inputs(
           not set, as no snapshots are merged.
     """
 
-    # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
-    # generators and demand are translated from the new tables. Until then
-    # there are no traces to save, and the snapshots can't use an aggregation
-    # that needs them (named_representative_weeks).
-    if FEATURE_FLAGS["use_new_table_format"]:
-        snapshots = create_pypsa_friendly_snapshots(config, model_phase)
-        snapshots = _add_snapshot_weightings(
-            snapshots, config.temporal.capacity_expansion.resolution_min
-        )
-        snapshots = _add_interval_model_year_and_month_day(
-            snapshots, config.temporal.year_type
-        ).drop(columns="month_day")
-        # No traces are loaded, so there is nothing to segment.
-        return snapshots, pd.DataFrame(columns=_SNAPSHOT_MAP_COLUMNS)
-
     if model_phase == "capacity_expansion":
         reference_year_cycle = config.temporal.capacity_expansion.reference_year_cycle
         resolution_min = config.temporal.capacity_expansion.resolution_min
@@ -425,6 +433,36 @@ def create_pypsa_friendly_timeseries_inputs(
         end_year=config.temporal.range.end_year,
         reference_years=reference_year_cycle,
     )
+
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
+    # generators are translated from the new tables, and load the demand
+    # traces below with _create_demand_node_traces. Until then demand is the
+    # only trace saved, the snapshots are built from the temporal config alone
+    # (not named_representative_weeks, which needs the generator traces too)
+    # and are not merged into segments (aggregation.tsam).
+    if FEATURE_FLAGS["use_new_table_format"]:
+        snapshots = create_pypsa_friendly_snapshots(config, model_phase)
+        demand_traces = _create_demand_node_traces(
+            ispypsa_tables["network_geography_hierarchy"],
+            ispypsa_tables["network_geography"],
+            parsed_traces_directory,
+            config.scenario,
+            reference_year_mapping,
+            config.temporal.year_type,
+        )
+        _filter_and_save_timeseries(
+            demand_traces,
+            snapshots,
+            pypsa_friendly_timeseries_inputs_location,
+            "demand_traces",
+        )
+        snapshots = _add_snapshot_weightings(
+            snapshots, config.temporal.capacity_expansion.resolution_min
+        )
+        snapshots = _add_interval_model_year_and_month_day(
+            snapshots, config.temporal.year_type
+        ).drop(columns="month_day")
+        return snapshots, pd.DataFrame(columns=_SNAPSHOT_MAP_COLUMNS)
 
     # Load generator timeseries data (organized by type)
     generator_traces_by_type = create_pypsa_friendly_ecaa_generator_timeseries(
@@ -538,11 +576,17 @@ def list_timeseries_files(
         KeyError: If required ISPyPSA tables are missing
         ValueError: If required columns are missing from tables
     """
-    # FEATURE_FLAG_CLEANUP[use_new_table_format]: delete this branch once
-    # generators and demand are translated from the new tables. Until then
-    # the new-format path saves no timeseries files.
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep this branch and delete
+    # the legacy body below it. Add the wind and solar trace files once
+    # generators are translated from the new tables: until then the new-format
+    # path saves demand traces only.
     if FEATURE_FLAGS["use_new_table_format"]:
-        return []
+        demand_nodes = _translate_demand_nodes(
+            ispypsa_tables["network_geography_hierarchy"],
+            ispypsa_tables["network_geography"],
+        )
+        file_names = demand_nodes["name"] + ".parquet"
+        return [output_base_path / "demand_traces" / name for name in file_names]
 
     files = []
 
