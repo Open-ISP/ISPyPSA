@@ -240,10 +240,12 @@ def _lifetimes_from_closure_years(
     unit isn't retired during the modelling horizon.
 
     OPINIONATED: the IASR gives closure_year as the calendar year in which the
-    unit expects to stop supplying electricity, with no month. Running the unit
-    through that model year puts its closure on 1 July of the closure year under
-    financial years (within six months of the real date), and up to 12 months
-    late under calendar years.
+    unit expects to stop supplying electricity, without saying when in that
+    year. Running the unit through the model year labelled with its closure
+    year matches the ISP under financial years: in the Draft 2026 ISP PLEXOS
+    model, most units stop on 1 July of their closure year, which is the start
+    of the next financial year. Under calendar years, the unit runs six months
+    longer than in the ISP.
     """
     return closure_years - build_years + 1
 

@@ -78,27 +78,11 @@ def test_build_new_entrant_units(csv_str_to_df, sample_model_config):
     # annuity at the sample config's wacc of 6% over the 25-year economic
     # lifetime of (build_cost + connection_cost) * 1.10 + system_strength_cost,
     # plus fom * 1.05: 1260000 gives 119565.66, and 1150000 gives 110960.73.
-    expected = pd.DataFrame(
-        {
-            "name": ["CNSW OCGT_2026", "CNSW OCGT_2028"],
-            "technology": ["OCGT", "OCGT"],
-            "geo_id": ["CNSW", "CNSW"],
-            "fom": [20000.0, 20000.0],
-            "lcf_build": [110.0, 110.0],
-            "lcf_om": [105.0, 105.0],
-            "lifetime_technical": [30.0, 30.0],
-            "lifetime_economic": [25.0, 25.0],
-            "build_year": [2026, 2028],
-            "build_cost": [1000000.0, 900000.0],
-            "connection_cost": [100000.0, 100000.0],
-            "system_strength_cost": [50000.0, 50000.0],
-            "capital_cost": [119565.66, 110960.73],
-            "bus": ["CNSW", "CNSW"],
-            "isp_name": ["CNSW OCGT", "CNSW OCGT"],
-            "p_nom": [0.0, 0.0],
-            "p_nom_extendable": [True, True],
-        }
-    )
+    expected = csv_str_to_df("""
+        name,            technology,  geo_id,  fom,      lcf_build,  lcf_om,  lifetime_technical,  lifetime_economic,  build_year,  build_cost,  connection_cost,  system_strength_cost,  capital_cost,  bus,   isp_name,   p_nom,  p_nom_extendable
+        CNSW OCGT_2026,  OCGT,        CNSW,    20000.0,  110.0,      105.0,   30.0,                25.0,               2026,        1000000.0,   100000.0,         50000.0,               119565.66,     CNSW,  CNSW OCGT,  0.0,    True
+        CNSW OCGT_2028,  OCGT,        CNSW,    20000.0,  110.0,      105.0,   30.0,                25.0,               2028,        900000.0,    100000.0,         50000.0,               110960.73,     CNSW,  CNSW OCGT,  0.0,    True
+    """)
     pd.testing.assert_frame_equal(result, expected, rtol=1e-6)
 
 
