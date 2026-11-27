@@ -18,13 +18,10 @@ from ..templater.mappings import (
 
 _KNOWN_TABLES_RESOURCE = files("ispypsa.iasr_table_caching") / "known_tables.yaml"
 
-# Augmentation table prefixes the new-format templater consumes. Two flow-path
-# cost prefixes are listed to absorb a known workbook typo — see
-# Open-ISP/isp-workbook-parser#80; drop the singular form once fixed upstream.
+# Augmentation table prefixes the new-format templater consumes.
 _AUGMENTATION_PREFIXES = (
     "flow_path_augmentation_options_",
     "flow_path_augmentation_costs_",
-    "flow_path_augmentation_cost_",
     "rez_augmentation_options_",
     "rez_augmentation_costs_",
 )

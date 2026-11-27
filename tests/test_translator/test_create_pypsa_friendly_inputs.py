@@ -142,6 +142,25 @@ def test_create_pypsa_inputs_template_sub_regions(
     assert "Central-West Orana REZ" in pypsa_tables["buses"]["name"].values
 
 
+def test_carbon_budgets_are_not_translated_from_the_old_table_format(
+    csv_str_to_df,
+    sample_model_config: ModelConfig,
+    sample_ispypsa_tables: dict[str, pd.DataFrame],
+):
+    # Carbon budgets are only translated under use_new_table_format, even when
+    # a carbon_budgets table is among the inputs.
+    tables = dict(sample_ispypsa_tables)
+    tables["carbon_budgets"] = csv_str_to_df("""
+        budget_id,         year_from,  year_to,  budget
+        nem_2027_to_2028,  2027,       2028,     100.0
+    """)
+
+    pypsa_tables = create_pypsa_friendly_inputs(sample_model_config, tables)
+
+    assert "carbon_budgets" not in pypsa_tables
+    assert "carbon_budgets" not in list_translator_output_files()
+
+
 def test_create_pypsa_inputs_template_sub_regions_rezs_not_nodes(
     sample_model_config: ModelConfig,
     sample_ispypsa_tables: dict[str, pd.DataFrame],

@@ -54,13 +54,10 @@ def test_iasr_tables_with_prefix_strips_prefix_and_filters_others():
     assert set(result.keys()) == {"CQ-NQ", "NNSW-SQ"}
 
 
-def test_extract_flow_path_costs_from_iasr_absorbs_workbook_typo():
-    # Workbook v7.5 has one mistyped table using singular "cost" instead of "costs".
-    # The extractor accepts either prefix and merges the results, while ignoring
-    # tables for other scenarios.
+def test_extract_flow_path_costs_from_iasr_keeps_only_the_scenario():
     iasr_tables = {
         "flow_path_augmentation_costs_step_change_CQ-NQ": pd.DataFrame({"x": [1]}),
-        "flow_path_augmentation_cost_step_change_NNSW-SQ": pd.DataFrame({"x": [2]}),
+        "flow_path_augmentation_costs_step_change_NNSW-SQ": pd.DataFrame({"x": [2]}),
         "flow_path_augmentation_costs_progressive_change_CQ-NQ": pd.DataFrame(
             {"x": [3]}
         ),
@@ -69,6 +66,20 @@ def test_extract_flow_path_costs_from_iasr_absorbs_workbook_typo():
     result = _extract_flow_path_costs_from_iasr(iasr_tables, "Step Change")
 
     assert set(result.keys()) == {"CQ-NQ", "NNSW-SQ"}
+
+
+def test_extract_flow_path_costs_from_iasr_corrects_underscore_path_names():
+    # Workbook 7.5 names the Slower Growth MEL-WNV and SEV-MEL tables with an
+    # underscore between the sub-regions (Open-ISP/isp-workbook-parser#TBD).
+    iasr_tables = {
+        "flow_path_augmentation_costs_slower_growth_CQ-NQ": pd.DataFrame({"x": [1]}),
+        "flow_path_augmentation_costs_slower_growth_MEL_WNV": pd.DataFrame({"x": [2]}),
+        "flow_path_augmentation_costs_slower_growth_SEV_MEL": pd.DataFrame({"x": [3]}),
+    }
+
+    result = _extract_flow_path_costs_from_iasr(iasr_tables, "Slower Growth")
+
+    assert set(result.keys()) == {"CQ-NQ", "MEL-WNV", "SEV-MEL"}
 
 
 def test_template_network_expansion_picks_least_cost_and_splits_directions(
