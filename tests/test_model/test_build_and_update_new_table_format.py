@@ -11,7 +11,11 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from ispypsa.pypsa_build import build_pypsa_network, update_network_timeseries
+from ispypsa.pypsa_build import (
+    build_pypsa_network,
+    optimize_with_rolling_horizon,
+    update_network_timeseries,
+)
 
 
 @pytest.fixture
@@ -178,6 +182,69 @@ def test_update_rebuilds_link_limits_and_custom_constraints_for_new_snapshots(
     # snapshot in neither timeslice takes the fallback limit (100 MW). The two
     # shared snapshots take their operational timeslices: a limit kept from
     # capacity expansion would give 50 MW at 01:00 and 30 MW at 02:00.
+    expected = csv_str_to_df("""
+        investment_periods,  snapshots,            flow
+        2025,                2025-01-01 01:00:00,  100.0
+        2025,                2025-01-01 02:00:00,  50.0
+        2025,                2025-06-01 00:00:00,  30.0
+        2025,                2025-06-01 01:00:00,  50.0
+    """)
+    expected["snapshots"] = pd.to_datetime(expected["snapshots"])
+    pd.testing.assert_frame_equal(
+        _link_flow(network, "A-B_existing"), expected, check_exact=False
+    )
+
+
+def test_rolling_horizon_applies_link_limits_and_custom_constraints_by_timeslice(
+    csv_str_to_df, tmp_path, new_table_format
+):
+    tables = _pypsa_friendly_tables(csv_str_to_df)
+    tables["snapshots"] = _snapshots(["2025-01-01 00:00"])
+    tables["timeslice_snapshots"] = csv_str_to_df("""
+        timeslice,  investment_periods,  snapshots
+    """)
+    _save_demand_trace(tables["snapshots"], tmp_path)
+    network = build_pypsa_network(tables, tmp_path)
+    network.optimize.solve_model(solver_name="highs")
+
+    operational_snapshots = _snapshots(
+        [
+            "2025-01-01 01:00",
+            "2025-01-01 02:00",
+            "2025-06-01 00:00",
+            "2025-06-01 01:00",
+        ]
+    )
+    operational_timeslice_snapshots = csv_str_to_df("""
+        timeslice,  investment_periods,  snapshots
+        peak,       2025,                2025-01-01 02:00:00
+        shoulder,   2025,                2025-06-01 00:00:00
+        peak,       2025,                2025-06-01 01:00:00
+    """)
+    _save_demand_trace(operational_snapshots, tmp_path)
+
+    # The operational model is run the way the CLI runs it. With horizon=2 and
+    # overlap=0 there are two windows, and only the second has a shoulder
+    # snapshot for CHEAP_CAP to apply at.
+    update_network_timeseries(
+        network,
+        tables,
+        operational_snapshots,
+        tmp_path,
+        timeslice_snapshots=operational_timeslice_snapshots,
+    )
+    network.optimize.fix_optimal_capacities()
+    optimize_with_rolling_horizon(
+        network,
+        tables,
+        horizon=2,
+        overlap=0,
+        timeslice_snapshots=operational_timeslice_snapshots,
+    )
+
+    # Peak is 0.5 per unit (50 MW), shoulder has CHEAP_CAP (30 MW), and a
+    # snapshot in neither timeslice takes the fallback limit (100 MW).
+    # CHEAP_CAP applied at every snapshot would give 30 MW throughout.
     expected = csv_str_to_df("""
         investment_periods,  snapshots,            flow
         2025,                2025-01-01 01:00:00,  100.0
