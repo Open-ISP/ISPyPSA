@@ -26,6 +26,37 @@ def test_every_7_5_edit_matches_the_frozen_7_5_cache(caplog):
     assert caplog.messages == []
 
 
+def test_7_5_edits_correct_flow_path_labels_in_the_frozen_cost_tables(csv_str_to_df):
+    iasr_tables = read_csvs(Path("tests", "test_workbook_table_cache", "7.5"))
+
+    edited = _apply_edits_to_iasr_tables(iasr_tables, "7.5")
+
+    # The workbook labels this row VIC-SNSW.
+    expected_wnv_snsw = csv_str_to_df("""
+        Flow path,  Option
+        WNV-SNSW,   WNV-SNSW Option 1 - VNI West
+    """)
+    pd.testing.assert_frame_equal(
+        edited["flow_path_augmentation_costs_step_change_WNV-SNSW"][
+            ["Flow path", "Option"]
+        ],
+        expected_wnv_snsw,
+    )
+
+    # The workbook spells the first two rows (Options 1 and 4) with an en dash.
+    expected_nnsw_sq = csv_str_to_df("""
+        Flow path
+        NNSW-SQ
+        NNSW-SQ
+        NNSW-SQ
+        NNSW-SQ
+    """)
+    pd.testing.assert_frame_equal(
+        edited["flow_path_augmentation_costs_step_change_NNSW-SQ"][["Flow path"]],
+        expected_nnsw_sq,
+    )
+
+
 # --- _load_edit_details ---
 
 

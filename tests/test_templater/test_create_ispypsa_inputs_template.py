@@ -348,6 +348,26 @@ def _build_limit_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
+def _mislabelled_flow_path_cost_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The WNV-SNSW and NNSW-SQ cost tables for every scenario, with no rows.
+
+    The 7.5 IASR table edits correct the Flow path labels in these six tables, and
+    an edit that names a table missing from the input raises. Empty tables keep the
+    edits satisfied without adding flow paths to the fixtures; a test that wants
+    rows in one of them lists its own table after this helper's.
+    """
+    names = [
+        "flow_path_augmentation_costs_step_change_WNV-SNSW",
+        "flow_path_augmentation_costs_slower_growth_WNV-SNSW",
+        "flow_path_augmentation_costs_accelerated_transition_WNV-SNSW",
+        "flow_path_augmentation_costs_step_change_NNSW-SQ",
+        "flow_path_augmentation_costs_slower_growth_NNSW-SQ",
+        "flow_path_augmentation_costs_accelerated_transition_NNSW-SQ",
+    ]
+    empty_costs = "Flow path,  Option,  2024-25,  2025-26"
+    return {name: csv_str_to_df(empty_costs) for name in names}
+
+
 def _stub_timeslice_calendar(csv_str_to_df) -> pd.DataFrame:
     """Minimal raw timeslice calendar: two windows that tile planning year
     FY2026 — a hot-day peak and a winter window that wraps back to it, so the
@@ -580,6 +600,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="sub_regions",
             iasr_tables={
+                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
@@ -857,6 +878,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
+    # WNV and SNSW have no paths or units here. They are listed because the empty
+    # WNV-SNSW cost tables from _mislabelled_flow_path_cost_tables are re-keyed to
+    # NEM regions, which looks up the region of both ends of the path.
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                  Sub-regional reference node
         Queensland,       Northern Queensland (NQ),        Ross 275 kV
@@ -866,6 +890,8 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
         New South Wales,  Northern NSW (NNSW),             Armidale 330 kV
         New South Wales,  Southern NSW (SNW),              Lower Tumut 330 kV
         Victoria,         South East Victoria (SEV),       Hazelwood 500kV
+        Victoria,         West and North Victoria (WNV),   Moorabool 220 kV
+        New South Wales,  Southern NSW (SNSW),             Canberra 330 kV
         Tasmania,         Tasmania (TAS),                        George Town 220 kV
     """)
     renewable_energy_zones = csv_str_to_df("""
@@ -961,6 +987,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="nem_regions",
             iasr_tables={
+                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
@@ -1008,8 +1035,8 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     }
     # The full hierarchy, though the model has no subregions: the NEM row
     # + 3 NEM regions (QLD, NSW, VIC; TAS shares its subregion row)
-    # + 8 subregions + 2 REZs + 2 non-REZs
-    assert len(hierarchy) == 16
+    # + 10 subregions + 2 REZs + 2 non-REZs
+    assert len(hierarchy) == 18
 
     paths = result["network_transmission_paths"]
     assert set(paths.columns) == {"path_id", "geo_from", "geo_to", "carrier"}
@@ -1206,6 +1233,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="single_region",
             iasr_tables={
+                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,

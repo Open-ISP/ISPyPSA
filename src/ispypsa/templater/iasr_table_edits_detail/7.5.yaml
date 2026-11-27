@@ -123,3 +123,40 @@
     2052-2053: 2052-53
     2053-2054: 2053-54
   reason: Financial year labelling format differs from everywhere else in the IASR workbook.
+
+# The flow path cost forecast tables label the WNV-SNSW row 'VIC-SNSW', although the
+# section it sits in is headed WNV-SNSW and its only option is 'WNV-SNSW Option 1 -
+# VNI West'. Left as is, the costs match no option and WNV-SNSW cannot be expanded.
+- table: flow_path_augmentation_costs_step_change_WNV-SNSW
+  column: Flow path
+  replace: {VIC-SNSW: WNV-SNSW}
+  reason: Flow path labelled VIC-SNSW; the options table and the option name give WNV-SNSW.
+
+- table: flow_path_augmentation_costs_slower_growth_WNV-SNSW
+  column: Flow path
+  replace: {VIC-SNSW: WNV-SNSW}
+  reason: Flow path labelled VIC-SNSW; the options table and the option name give WNV-SNSW.
+
+- table: flow_path_augmentation_costs_accelerated_transition_WNV-SNSW
+  column: Flow path
+  replace: {VIC-SNSW: WNV-SNSW}
+  reason: Flow path labelled VIC-SNSW; the options table and the option name give WNV-SNSW.
+
+# The cost rows for NNSW-SQ Options 1 and 4 spell the flow path with an en dash
+# (U+2013, written "\u2013" below) where the options table and the cost rows for
+# Options 2 and 5 use a hyphen. Left as is, the costs of Options 1 and 4 match no
+# option, so those two options are never considered.
+- table: flow_path_augmentation_costs_step_change_NNSW-SQ
+  column: Flow path
+  replace: {"NNSW\u2013SQ": NNSW-SQ}
+  reason: Flow path spelt with an en dash on some rows; the options table uses a hyphen.
+
+- table: flow_path_augmentation_costs_slower_growth_NNSW-SQ
+  column: Flow path
+  replace: {"NNSW\u2013SQ": NNSW-SQ}
+  reason: Flow path spelt with an en dash on some rows; the options table uses a hyphen.
+
+- table: flow_path_augmentation_costs_accelerated_transition_NNSW-SQ
+  column: Flow path
+  replace: {"NNSW\u2013SQ": NNSW-SQ}
+  reason: Flow path spelt with an en dash on some rows; the options table uses a hyphen.
