@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+from ispypsa.data_fetch import read_csvs, write_csvs
 from ispypsa.translator import (
     create_pypsa_friendly_inputs,
     create_pypsa_friendly_timeseries_inputs,
@@ -85,6 +86,13 @@ def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
         constraint_id,  timeslice,        rhs,   date_from
         NQ_EXPORT,      qld_peak_demand,  1200,
     """)
+    # sample_model_config models 2026 to 2028, so the first budget's window is
+    # modelled in full and the second's not at all.
+    tables["carbon_budgets"] = csv_str_to_df("""
+        budget_id,         year_from,  year_to,  budget
+        nem_2027_to_2028,  2027,       2028,     100.0
+        nem_2035_to_2035,  2035,       2035,     23.0
+    """)
     return tables
 
 
@@ -152,6 +160,67 @@ def test_create_pypsa_friendly_inputs_new_format(
 
     # No constraint is relaxable, so there are no relaxation generators.
     assert len(result["custom_constraints_generators"]) == 0
+
+    # Wiring only: the content is covered by test_carbon_budgets.py. The 2027
+    # to 2028 budget is kept and the 2035 budget, with no modelled year, is
+    # dropped.
+    assert list(result["carbon_budgets"].columns) == [
+        "constraint_name",
+        "year_from",
+        "year_to",
+        "rhs",
+    ]
+    assert len(result["carbon_budgets"]) == 1
+
+
+def test_create_pypsa_friendly_inputs_new_format_with_no_carbon_budgets(
+    csv_str_to_df, sample_model_config, new_table_format
+):
+    tables = _ispypsa_tables(csv_str_to_df)
+    tables["carbon_budgets"] = pd.DataFrame(
+        columns=["budget_id", "year_from", "year_to", "budget"]
+    )
+
+    result = create_pypsa_friendly_inputs(sample_model_config, tables)
+
+    assert list(result["carbon_budgets"].columns) == [
+        "constraint_name",
+        "year_from",
+        "year_to",
+        "rhs",
+    ]
+    assert len(result["carbon_budgets"]) == 0
+
+
+def test_carbon_budgets_keep_their_schema_types_when_saved_and_read_back(
+    csv_str_to_df, sample_model_config, new_table_format, tmp_path
+):
+    # The CLI saves the translated tables as CSVs and the model build reads
+    # them back with the column types of their schemas.
+    tables = _ispypsa_tables(csv_str_to_df)
+    result = create_pypsa_friendly_inputs(sample_model_config, tables)
+
+    write_csvs({"carbon_budgets": result["carbon_budgets"]}, tmp_path)
+    read_back = read_csvs(tmp_path, schemas="pypsa_friendly_tables")["carbon_budgets"]
+
+    expected = csv_str_to_df("""
+        constraint_name,   year_from,  year_to,  rhs
+        nem_2027_to_2028,  2027,       2028,     100.0
+    """)
+    pd.testing.assert_frame_equal(read_back, expected)
+
+    # With no rows there is nothing to infer the types from, so they can only
+    # come from the schema.
+    write_csvs({"carbon_budgets": result["carbon_budgets"].head(0)}, tmp_path)
+    read_back = read_csvs(tmp_path, schemas="pypsa_friendly_tables")["carbon_budgets"]
+
+    assert read_back.dtypes.astype(str).to_dict() == {
+        "constraint_name": "object",
+        "year_from": "int64",
+        "year_to": "int64",
+        "rhs": "float64",
+    }
+    assert len(read_back) == 0
 
 
 def test_create_pypsa_friendly_inputs_new_format_without_unserved_energy(

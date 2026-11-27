@@ -19,6 +19,7 @@ from ispypsa.translator.buses import (
     _translate_rezs_to_buses,
     create_pypsa_friendly_bus_demand_timeseries,
 )
+from ispypsa.translator.carbon_budgets import _translate_carbon_budgets
 from ispypsa.translator.constraints import (
     _translate_custom_constraints as _translate_custom_constraints_from_new_format_tables,
 )
@@ -94,6 +95,7 @@ _NEW_FORMAT_TRANSLATOR_OUTPUTS = [
     "custom_constraints_lhs",
     "custom_constraints_rhs",
     "custom_constraints_generators",
+    "carbon_budgets",
 ]
 
 # The columns of the header-only table that stands in for the generators the
@@ -167,6 +169,15 @@ def create_pypsa_friendly_inputs(
         )
         pypsa_inputs["links"] = links
         pypsa_inputs["link_timeslice_limits"] = link_timeslice_limits
+
+        # Translated but not yet added to the model: the carbon budget
+        # constraints need the emissions_intensity of the generators, which
+        # aren't translated from the new tables yet.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: drop this comment once
+        # pypsa_build adds the constraints.
+        pypsa_inputs["carbon_budgets"] = _translate_carbon_budgets(
+            ispypsa_tables["carbon_budgets"], config
+        )
 
         demand_nodes = _translate_demand_nodes(
             ispypsa_tables["network_geography_hierarchy"],

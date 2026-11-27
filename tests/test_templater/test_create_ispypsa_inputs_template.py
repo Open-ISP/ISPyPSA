@@ -1433,12 +1433,17 @@ def test_filtered_new_format_template_translates(
     # A filter that left, say, a limit for a dropped path would fail in the
     # translator. Wiring only: the translated tables are covered by the
     # translator's tests.
+    #
+    # sample_model_config models 2026 to 2028: only part of the templated 2027
+    # to 2030 and 2027 to 2050 carbon budget windows, which raises under the
+    # default carbon_budget_scaling. The budgets aren't regional, so the filter
+    # leaves them as they are and they are left out here.
+    tables = dict(nsw_filtered_template_from_7_5_cache)
+    tables["carbon_budgets"] = tables["carbon_budgets"].head(0)
     with patch.dict(
         "ispypsa.feature_flags.FEATURE_FLAGS", {"use_new_table_format": True}
     ):
-        result = create_pypsa_friendly_inputs(
-            sample_model_config, nsw_filtered_template_from_7_5_cache
-        )
+        result = create_pypsa_friendly_inputs(sample_model_config, tables)
 
     # One bus for each of the 21 NSW geographies.
     assert len(result["buses"]) == 21
