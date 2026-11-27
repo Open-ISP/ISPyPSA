@@ -1,7 +1,7 @@
 import pandas as pd
 
 from ispypsa.translator.energy_storage import (
-    _add_efficiencies_and_cyclic_state_of_charge,
+    _add_store_and_dispatch_efficiencies,
     _map_existing_storage_columns,
     _translate_storage,
 )
@@ -27,19 +27,19 @@ def test_map_existing_storage_columns(csv_str_to_df):
     pd.testing.assert_frame_equal(result, expected, check_exact=False)
 
 
-def test_add_efficiencies_and_cyclic_state_of_charge(csv_str_to_df):
+def test_add_store_and_dispatch_efficiencies(csv_str_to_df):
     storage = csv_str_to_df("""
         name,      efficiency_charge,  efficiency_discharge
         BATTERY1,  95.0,               90.0
         SNO2PH01,  87.178,             87.178
     """)
 
-    result = _add_efficiencies_and_cyclic_state_of_charge(storage)
+    result = _add_store_and_dispatch_efficiencies(storage)
 
     expected = csv_str_to_df("""
-        name,      efficiency_charge,  efficiency_discharge,  efficiency_store,  efficiency_dispatch,  cyclic_state_of_charge
-        BATTERY1,  95.0,               90.0,                  0.95,              0.90,                 True
-        SNO2PH01,  87.178,             87.178,                0.87178,           0.87178,              True
+        name,      efficiency_charge,  efficiency_discharge,  efficiency_store,  efficiency_dispatch
+        BATTERY1,  95.0,               90.0,                  0.95,              0.90
+        SNO2PH01,  87.178,             87.178,                0.87178,           0.87178
     """)
     pd.testing.assert_frame_equal(result, expected)
 
@@ -83,9 +83,9 @@ def test_translate_storage(csv_str_to_df, sample_model_config):
     # capital_cost is the annuity over 20 years of build_cost + 50000, plus
     # fom: 1250000 gives 118980.70, and 1050000 gives 101543.78.
     expected = csv_str_to_df("""
-        isp_name,               name,                  carrier,  bus,   p_nom,  p_nom_extendable,  max_hours,  build_year,  lifetime,  capital_cost,  efficiency_store,  efficiency_dispatch,  cyclic_state_of_charge,  isp_technology_type
-        Victorian Big Battery,  VBB1,                  Battery,  MEL,   300.0,  False,             1.566667,   2025,        17.0,      0.0,           0.92,              0.92,                 True,                    Battery 2h
-        CNSW Battery 2h,        CNSW Battery 2h_2026,  Battery,  CNSW,  0.0,    True,              2.0,        2026,        20.0,      118980.70,     0.92,              0.92,                 True,                    Battery 2h
-        CNSW Battery 2h,        CNSW Battery 2h_2028,  Battery,  CNSW,  0.0,    True,              2.0,        2028,        20.0,      101543.78,     0.92,              0.92,                 True,                    Battery 2h
+        isp_name,               name,                  carrier,  bus,   p_nom,  p_nom_extendable,  max_hours,  build_year,  lifetime,  capital_cost,  efficiency_store,  efficiency_dispatch,  isp_technology_type
+        Victorian Big Battery,  VBB1,                  Battery,  MEL,   300.0,  False,             1.566667,   2025,        17.0,      0.0,           0.92,              0.92,                 Battery 2h
+        CNSW Battery 2h,        CNSW Battery 2h_2026,  Battery,  CNSW,  0.0,    True,              2.0,        2026,        20.0,      118980.70,     0.92,              0.92,                 Battery 2h
+        CNSW Battery 2h,        CNSW Battery 2h_2028,  Battery,  CNSW,  0.0,    True,              2.0,        2028,        20.0,      101543.78,     0.92,              0.92,                 Battery 2h
     """)
     pd.testing.assert_frame_equal(result, expected, rtol=1e-6)

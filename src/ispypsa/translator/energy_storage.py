@@ -31,7 +31,6 @@ _STORAGE_COLUMNS = [
     "capital_cost",
     "efficiency_store",
     "efficiency_dispatch",
-    "cyclic_state_of_charge",
     "isp_technology_type",
 ]
 
@@ -59,8 +58,8 @@ def _translate_storage(
     _build_new_entrant_units), and its max_hours is the option's
     storage_hours. The generators translator shares both of these steps. The
     two tables are then stacked into one, and every unit gets its charge and
-    discharge efficiencies as fractions, with a state of charge that cycles
-    (see _add_efficiencies_and_cyclic_state_of_charge).
+    discharge efficiencies as fractions (see
+    _add_store_and_dispatch_efficiencies).
 
     Each storage unit's name is unique, and its isp_name is the group it
     belongs to: an existing unit's power station, or a new entrant's option
@@ -100,10 +99,10 @@ def _translate_storage(
             config.wacc: 0.07    # 7%
 
         returns (p_nom in MW, max_hours in hours, lifetime in years, capital_cost in $/MW/year, efficiencies as fractions):
-            isp_name               name                    carrier  bus   p_nom  p_nom_extendable  max_hours  build_year  lifetime  capital_cost  efficiency_store  efficiency_dispatch  cyclic_state_of_charge
-            Victorian Big Battery  VBB1                    Battery  MEL   300.0  False             1.567      2025        17.0      0.0           0.92              0.92                 True    # already built when the model starts
-            CNSW Battery - 2h      CNSW Battery - 2h_2026  Battery  CNSW  0.0    True              2.0        2026        20.0      149897.78     0.92              0.92                 True
-            CNSW Battery - 2h      CNSW Battery - 2h_2030  Battery  CNSW  0.0    True              2.0        2030        20.0      131019.19     0.92              0.92                 True    # the 2030 build cost
+            isp_name               name                    carrier  bus   p_nom  p_nom_extendable  max_hours  build_year  lifetime  capital_cost  efficiency_store  efficiency_dispatch
+            Victorian Big Battery  VBB1                    Battery  MEL   300.0  False             1.567      2025        17.0      0.0           0.92              0.92                 # already built when the model starts
+            CNSW Battery - 2h      CNSW Battery - 2h_2026  Battery  CNSW  0.0    True              2.0        2026        20.0      149897.78     0.92              0.92
+            CNSW Battery - 2h      CNSW Battery - 2h_2030  Battery  CNSW  0.0    True              2.0        2030        20.0      131019.19     0.92              0.92                 # the 2030 build cost
     """
     existing = _build_existing_units(
         ispypsa_tables["storage_existing_planned"],
@@ -123,7 +122,7 @@ def _translate_storage(
         columns=_NEW_ENTRANT_STORAGE_COLUMN_RENAMES, errors="raise"
     )
     storage = pd.concat([existing, new_entrants], ignore_index=True)
-    storage = _add_efficiencies_and_cyclic_state_of_charge(storage)
+    storage = _add_store_and_dispatch_efficiencies(storage)
     return storage.loc[:, _STORAGE_COLUMNS]
 
 
@@ -153,14 +152,10 @@ def _map_existing_storage_columns(storage: pd.DataFrame) -> pd.DataFrame:
     return storage
 
 
-def _add_efficiencies_and_cyclic_state_of_charge(
-    storage: pd.DataFrame,
-) -> pd.DataFrame:
-    """Sets the PyPSA columns that existing and new-entrant storage units
-    share: efficiency_store and efficiency_dispatch from efficiency_charge and
-    efficiency_discharge, converted from % to fractions, and
-    cyclic_state_of_charge True, so that each unit ends the modelled snapshots
-    with the same state of charge that it starts them with.
+def _add_store_and_dispatch_efficiencies(storage: pd.DataFrame) -> pd.DataFrame:
+    """Adds efficiency_store and efficiency_dispatch, PyPSA's names for the
+    charge and discharge efficiencies, from efficiency_charge and
+    efficiency_discharge, converted from % to fractions.
 
     I/O Example (columns abridged):
         storage (efficiencies in %):
@@ -169,12 +164,11 @@ def _add_efficiencies_and_cyclic_state_of_charge(
             SNO2PH01  87.178             87.178
 
         returns (efficiencies as fractions):
-            name      efficiency_charge  efficiency_discharge  efficiency_store  efficiency_dispatch  cyclic_state_of_charge
-            VBB1      92.0               92.0                  0.92              0.92                 True
-            SNO2PH01  87.178             87.178                0.87178           0.87178              True
+            name      efficiency_charge  efficiency_discharge  efficiency_store  efficiency_dispatch
+            VBB1      92.0               92.0                  0.92              0.92
+            SNO2PH01  87.178             87.178                0.87178           0.87178
     """
     storage = storage.copy()
     storage["efficiency_store"] = storage["efficiency_charge"] / 100
     storage["efficiency_dispatch"] = storage["efficiency_discharge"] / 100
-    storage["cyclic_state_of_charge"] = True
     return storage
