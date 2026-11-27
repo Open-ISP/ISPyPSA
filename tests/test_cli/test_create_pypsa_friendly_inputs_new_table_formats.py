@@ -16,21 +16,36 @@ from unittest.mock import patch
 
 import pandas as pd
 import pypsa
+import pytest
 
 from ispypsa.translator import list_translator_output_files
 
 from .cli_test_helpers import (
     assert_task_ran,
     assert_task_up_to_date,
+    build_mock_config,
     get_file_timestamps,
     mock_workbook_file,
     run_cli_command,
     verify_output_files,
 )
 from .cli_test_helpers_new_table_formats import (
-    mock_config_new_format,
     prepare_test_cache_new_format,
 )
+
+
+@pytest.fixture
+def mock_config_filtered_to_traces(tmp_path, mock_workbook_file):
+    """A 7.5 config filtered to the sub-regions with a demand trace in
+    tests/trace_data (CNSW, NNSW and SQ), as every sub-region in the model
+    needs one. The config models financial years 2025 and 2026 with reference
+    year 2018, which those traces cover."""
+    return build_mock_config(
+        tmp_path,
+        mock_workbook_file,
+        version="7.5",
+        filter_by_isp_sub_regions=["CNSW", "NNSW", "SQ"],
+    )
 
 
 def _expected_output_files() -> list[str]:
@@ -47,7 +62,7 @@ def _expected_output_files() -> list[str]:
 
 
 def test_create_pypsa_friendly_inputs_task_new_format(
-    mock_config_new_format,
+    mock_config_filtered_to_traces,
     prepare_test_cache_new_format,
     tmp_path,
     run_cli_command,
@@ -59,7 +74,7 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     monkeypatch.setenv("ISPYPSA_TEST_MOCK_CACHE", "true")
 
     result = run_cli_command(
-        [f"config={mock_config_new_format}", "create_pypsa_friendly_inputs"]
+        [f"config={mock_config_filtered_to_traces}", "create_pypsa_friendly_inputs"]
     )
     assert result.returncode == 0, (
         f"Command failed with return code {result.returncode}\n"
@@ -84,10 +99,12 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     assert set(limits["name"]) == existing_links
 
     # Generators aren't translated from the new tables yet, so the only ones
-    # are the unserved energy generators: one at each sub-region.
+    # are the unserved energy generators: one at each of the three
+    # sub-regions the config is filtered to.
     sub_regions = network_geography.loc[
         network_geography["geo_type"] == "subregion", "geo_id"
     ]
+    assert set(sub_regions) == {"CNSW", "NNSW", "SQ"}
     generators = pd.read_csv(output_dir / "generators.csv")
     assert set(generators["carrier"]) == {"Unserved Energy"}
     assert set(generators["bus"]) == set(sub_regions)
@@ -121,7 +138,7 @@ def test_create_pypsa_friendly_inputs_task_new_format(
     time.sleep(0.1)
 
     result = run_cli_command(
-        [f"config={mock_config_new_format}", "create_pypsa_friendly_inputs"]
+        [f"config={mock_config_filtered_to_traces}", "create_pypsa_friendly_inputs"]
     )
     assert result.returncode == 0
     assert_task_up_to_date(result.stdout, "create_pypsa_friendly_inputs")
@@ -129,7 +146,7 @@ def test_create_pypsa_friendly_inputs_task_new_format(
 
 
 def test_build_capacity_expansion_and_operational_models_new_format(
-    mock_config_new_format,
+    mock_config_filtered_to_traces,
     prepare_test_cache_new_format,
     tmp_path,
     run_cli_command,
@@ -148,7 +165,7 @@ def test_build_capacity_expansion_and_operational_models_new_format(
         "create_and_run_operational_model",
     ]:
         result = run_cli_command(
-            [f"config={mock_config_new_format}", "run_optimisation=False", task]
+            [f"config={mock_config_filtered_to_traces}", "run_optimisation=False", task]
         )
         assert result.returncode == 0, (
             f"{task} failed with return code {result.returncode}\n"
