@@ -4,6 +4,7 @@ FEATURE_FLAG_CLEANUP[use_new_table_format]: merge into
 test_create_pypsa_friendly_inputs.py and drop the flag fixture.
 """
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
@@ -18,6 +19,8 @@ from ispypsa.translator import (
 )
 from ispypsa.translator.create_pypsa_friendly import _UNTRANSLATED_GENERATOR_COLUMNS
 
+_TRACE_DATA_PATH = Path(__file__).parent.parent / "trace_data" / "isp_2024"
+
 
 @pytest.fixture
 def new_table_format():
@@ -28,15 +31,23 @@ def new_table_format():
 
 
 def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
-    """New-format tables with one expandable flow path (CQ-NQ), one REZ path
-    (Q1-NQ) and one custom constraint (NQ_EXPORT). sample_model_config has
-    investment periods 2026 and 2028."""
+    """New-format tables with two sub-regions (NQ and CQ), one expandable flow
+    path (CQ-NQ), one REZ path (Q1-NQ) and one custom constraint (NQ_EXPORT).
+    sample_model_config has investment periods 2026 and 2028."""
     tables = {}
     tables["network_geography"] = csv_str_to_df("""
         geo_id,  geo_type,   region_id
         NQ,      subregion,  QLD
         CQ,      subregion,  QLD
         Q1,      rez,        QLD
+    """)
+    tables["network_geography_hierarchy"] = csv_str_to_df("""
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        QLD,     ,              QLD,        NEM
+        NQ,      NQ,            QLD,        NEM
+        CQ,      CQ,            QLD,        NEM
+        Q1,      NQ,            QLD,        NEM
     """)
     tables["network_transmission_paths"] = csv_str_to_df("""
         path_id,  geo_from,  geo_to,  carrier
@@ -80,8 +91,8 @@ def _ispypsa_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
 def test_create_pypsa_friendly_inputs_new_format(
     csv_str_to_df, sample_model_config, new_table_format
 ):
-    # Wiring only: the content of each table is covered by test_network.py and
-    # test_constraints.py.
+    # Wiring only: the content of each table is covered by test_network.py,
+    # test_demand.py, test_unserved_energy_generators.py and test_constraints.py.
     tables = _ispypsa_tables(csv_str_to_df)
 
     result = create_pypsa_friendly_inputs(sample_model_config, tables)
@@ -109,9 +120,12 @@ def test_create_pypsa_friendly_inputs_new_format(
     ]
     assert len(result["link_timeslice_limits"]) == 6
 
-    # Header-only until generators are translated from the new tables.
-    assert list(result["generators"].columns) == _UNTRANSLATED_GENERATOR_COLUMNS
-    assert len(result["generators"]) == 0
+    # Generators aren't translated from the new tables yet, so the only ones
+    # are the unserved energy generators: one for each of the demand nodes NQ
+    # and CQ, and none for the REZ Q1. They have every column the header-only
+    # generators table has.
+    assert set(_UNTRANSLATED_GENERATOR_COLUMNS) <= set(result["generators"].columns)
+    assert len(result["generators"]) == 2
 
     # The templated custom constraints aren't translated yet, so NQ_EXPORT is
     # left out and only the CQ-NQ expansion limit is built.
@@ -140,18 +154,54 @@ def test_create_pypsa_friendly_inputs_new_format(
     assert len(result["custom_constraints_generators"]) == 0
 
 
-def test_create_pypsa_friendly_timeseries_inputs_new_format(
-    sample_model_config, new_table_format, tmp_path
+def test_create_pypsa_friendly_inputs_new_format_without_unserved_energy(
+    csv_str_to_df, sample_model_config, new_table_format
 ):
-    # Wiring only: the snapshots themselves are covered by the snapshot tests.
-    timeseries_location = tmp_path / "capacity_expansion_timeseries"
+    tables = _ispypsa_tables(csv_str_to_df)
+    config = sample_model_config.model_copy(deep=True)
+    config.unserved_energy.cost = None
+
+    result = create_pypsa_friendly_inputs(config, tables)
+
+    # Header-only until generators are translated from the new tables.
+    assert list(result["generators"].columns) == _UNTRANSLATED_GENERATOR_COLUMNS
+    assert len(result["generators"]) == 0
+
+
+@pytest.mark.parametrize("model_phase", ["capacity_expansion", "operational"])
+def test_create_pypsa_friendly_timeseries_inputs_new_format(
+    csv_str_to_df, sample_model_config, new_table_format, tmp_path, model_phase
+):
+    # Wiring only: the snapshots themselves are covered by the snapshot tests
+    # and the demand traces by test_demand.py.
+    # The test trace data has demand for CNSW and NNSW, for reference year
+    # 2018.
+    config = sample_model_config.model_copy(deep=True)
+    config.temporal.capacity_expansion.reference_year_cycle = [2018]
+    config.temporal.operational.reference_year_cycle = [2018]
+    tables = {}
+    tables["network_geography"] = csv_str_to_df("""
+        geo_id,  geo_type
+        CNSW,    subregion
+        NNSW,    subregion
+        N3,      rez
+    """)
+    tables["network_geography_hierarchy"] = csv_str_to_df("""
+        geo_id,  subregion_id,  region_id,  nem_id
+        NEM,     ,              ,           NEM
+        NSW,     ,              NSW,        NEM
+        CNSW,    CNSW,          NSW,        NEM
+        NNSW,    NNSW,          NSW,        NEM
+        N3,      CNSW,          NSW,        NEM
+    """)
+    timeseries_location = tmp_path / "timeseries"
 
     snapshots, snapshot_map = create_pypsa_friendly_timeseries_inputs(
-        sample_model_config,
-        "capacity_expansion",
-        {},
+        config,
+        model_phase,
+        tables,
         pd.DataFrame(),
-        tmp_path / "parsed_traces",
+        _TRACE_DATA_PATH,
         timeseries_location,
     )
 
@@ -175,10 +225,21 @@ def test_create_pypsa_friendly_timeseries_inputs_new_format(
     ]
     assert len(snapshot_map) == 0
 
-    # Generators and demand aren't translated from the new tables yet, so no
-    # timeseries files are saved or listed.
-    assert not timeseries_location.exists()
-    assert list_timeseries_files(sample_model_config, {}, timeseries_location) == []
+    # Generators aren't translated from the new tables yet, so the only
+    # timeseries files saved are the demand traces: one for each of the demand
+    # nodes CNSW and NNSW, and none for the REZ N3.
+    expected_files = [
+        timeseries_location / "demand_traces" / "CNSW.parquet",
+        timeseries_location / "demand_traces" / "NNSW.parquet",
+    ]
+    assert sorted(timeseries_location.rglob("*.parquet")) == expected_files
+    assert list_timeseries_files(config, tables, timeseries_location) == expected_files
+
+    # Each trace has a row for every snapshot.
+    for file in expected_files:
+        trace = pd.read_parquet(file)
+        assert list(trace.columns) == ["investment_periods", "snapshots", "p_set"]
+        assert len(trace) == 52608
 
 
 def test_create_pypsa_friendly_timeslice_snapshots(
