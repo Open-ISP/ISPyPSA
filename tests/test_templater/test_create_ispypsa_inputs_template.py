@@ -1397,14 +1397,12 @@ def test_create_ispypsa_inputs_template_new_format_gives_tas_sev_an_expansion_op
 
     # Stage 2 is the cheaper of the two Marinus stages per MW in 2035, the first
     # year both have a cost: $2,626M / 750 MW against $4,914M / 750 MW for Stage 1.
-    # Its reverse capacity cell is '750[footnote15]' in the frozen cache, which is
-    # not numeric and so becomes 0.
     options = result["network_expansion_options"]
     tas_sev_options = options[options["expansion_id"] == "TAS-SEV"]
     expected_options = csv_str_to_df("""
         expansion_id,  expansion_type,  allowed_expansion,  expansion_option
         TAS-SEV,       forward,         750,                TAS-SEV Option 2 (Project Marinus Stage 2)
-        TAS-SEV,       reverse,         0,                  TAS-SEV Option 2 (Project Marinus Stage 2)
+        TAS-SEV,       reverse,         750,                TAS-SEV Option 2 (Project Marinus Stage 2)
     """)
     pd.testing.assert_frame_equal(
         tas_sev_options.reset_index(drop=True), expected_options, check_dtype=False
