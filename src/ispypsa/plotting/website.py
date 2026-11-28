@@ -455,7 +455,7 @@ def generate_results_website(
 
         Extract results and create plots.
         >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
-        >>> results = extract_tabular_results(network, ispypsa_tables)
+        >>> results = extract_tabular_results(network, ispypsa_tables, snapshots)
         >>> plots = create_plot_suite(results)
 
         Save plots to disk first.

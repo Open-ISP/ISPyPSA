@@ -4,6 +4,7 @@ from ispypsa.results.extract import (
     list_results_files,
 )
 from ispypsa.results.generation import extract_demand, extract_generator_dispatch
+from ispypsa.results.timesteps import extract_timesteps
 from ispypsa.results.transmission import (
     extract_isp_sub_region_transmission_flows,
     extract_nem_region_transmission_flows,
@@ -16,6 +17,7 @@ __all__ = [
     "list_results_files",
     "extract_generator_dispatch",
     "extract_demand",
+    "extract_timesteps",
     "extract_rez_transmission_flows",
     "extract_isp_sub_region_transmission_flows",
     "extract_nem_region_transmission_flows",

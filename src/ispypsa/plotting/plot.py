@@ -75,7 +75,7 @@ def create_plot_suite(
 
         Extract tabular results from the solved network.
         >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
-        >>> results = extract_tabular_results(network, ispypsa_tables)
+        >>> results = extract_tabular_results(network, ispypsa_tables, snapshots)
 
         Create the plot suite from the results.
         >>> plots = create_plot_suite(results)

@@ -9,6 +9,7 @@ from ispypsa.results.generation import (
     extract_generation_expansion_results,
     extract_generator_dispatch,
 )
+from ispypsa.results.timesteps import extract_timesteps
 from ispypsa.results.transmission import (
     _extract_raw_link_flows,
     extract_isp_sub_region_transmission_flows,
@@ -122,17 +123,25 @@ RESULTS_FILES = {
     "generation_expansion": extract_generation_expansion_results,
     "generator_dispatch": extract_generator_dispatch,
     "demand": extract_demand,
+    "timesteps": extract_timesteps,
 }
 
 
 def extract_tabular_results(
     network: pypsa.Network,
     ispypsa_tables: dict[str, pd.DataFrame],
+    snapshots: pd.DataFrame,
 ) -> dict[str : pd.DataFrame]:
     """Extract the results from the PyPSA network and return a dictionary of results.
 
     Extracts generation expansion, transmission expansion, dispatch, demand, and
     transmission flow results from the solved PyPSA network.
+
+    The dispatch, demand and flow tables give a value in MW for each timestep.
+    The "timesteps" table gives each timestep's model year, its length and the
+    hours of its model year it stands for, which are needed to turn those
+    values into energy: timesteps are of unequal length when tsam segments are
+    used, and with representative weeks each stands for many hours of the year.
 
     Examples:
         Perform required imports.
@@ -143,13 +152,39 @@ def extract_tabular_results(
         Load ISPyPSA input tables (needed for regions mapping).
         >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
 
+        Load the snapshots the network was built with.
+        >>> pypsa_friendly_tables = read_csvs(
+        ...     Path("pypsa_friendly"), schemas="pypsa_friendly_tables"
+        ... )
+        >>> snapshots = pypsa_friendly_tables["snapshots"]
+
         After solving the network, extract the results.
         >>> network.optimize.solve_model(solver_name="highs")
-        >>> results = extract_tabular_results(network, ispypsa_tables)
+        >>> results = extract_tabular_results(network, ispypsa_tables, snapshots)
+
+        For an operational model, pass the operational snapshots the network
+        was updated with instead.
+        >>> operational_snapshots = pypsa_friendly_tables["operational_snapshots"]
+        >>> results = extract_tabular_results(
+        ...     network, ispypsa_tables, operational_snapshots
+        ... )
 
         Access specific result tables.
         >>> generation_expansion = results["generation_expansion"]
         >>> transmission_flows = results["transmission_flows"]
+
+        Work out each generator's energy in MWh in each model year, by
+        weighting its dispatch in MW by the hours of its model year each
+        timestep stands for.
+        >>> dispatch = results["generator_dispatch"].merge(
+        ...     results["timesteps"], on=["investment_period", "timestep"]
+        ... )
+        >>> dispatch["energy_mwh"] = (
+        ...     dispatch["dispatch_mw"] * dispatch["hours_represented"]
+        ... )
+        >>> annual_energy = dispatch.groupby(["generator", "model_year"])[
+        ...     "energy_mwh"
+        ... ].sum()
 
         Write results to CSV files.
         >>> write_csvs(results, Path("outputs/results"))
@@ -157,6 +192,12 @@ def extract_tabular_results(
     Args:
         network: The PyPSA network object.
         ispypsa_tables: Dictionary of ISPyPSA input tables (needed for regions mapping).
+        snapshots: The PyPSA-friendly snapshots table of the model that was
+            solved, as returned by `create_pypsa_friendly_timeseries_inputs`:
+            the capacity expansion snapshots for a capacity expansion network,
+            the operational snapshots for a network updated with
+            `update_network_timeseries`. Its investment_periods, snapshots,
+            model_year and stores columns give the "timesteps" table.
 
     Returns:
         A dictionary of results with the file name as the key and the results as the value.
@@ -179,8 +220,11 @@ def extract_tabular_results(
     # Extract first transmission flows to be used in other functions that require it.
     results["transmission_flows"] = extract_transmission_flows(network)
 
+    # The timesteps come from the snapshots table, not the network.
+    results["timesteps"] = extract_timesteps(snapshots)
+
     for file, function in RESULTS_FILES.items():
-        if file in ["transmission_flows", "regions_and_zones_mapping"]:
+        if file in ["transmission_flows", "regions_and_zones_mapping", "timesteps"]:
             continue
 
         if file in geographic_transmission_functions:
