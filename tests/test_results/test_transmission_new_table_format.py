@@ -450,7 +450,7 @@ def test_geographic_flows_at_single_region_granularity(csv_str_to_df, new_table_
 
     result = _geographic_flows(link_flows, ispypsa_tables)
 
-    # Both ends are in the one region, NEM, and there are no sub-regions.
+    # No node has a region or a sub-region at single_region granularity.
     expected = csv_str_to_df(f"""
         nem_region_id,  {_GEOGRAPHIC_FLOW_COLUMNS}
     """)

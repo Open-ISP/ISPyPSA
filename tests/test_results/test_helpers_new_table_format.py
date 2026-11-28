@@ -59,13 +59,13 @@ def test_maps_no_node_to_a_level_blank_in_every_row(csv_str_to_df, new_table_for
 
 
 def test_mapping_read_back_from_csv(csv_str_to_df, tmp_path, new_table_format):
-    # At single_region granularity the sub-region column is blank in every
-    # row, so read_csvs reads it back as numbers. The plot tasks build their
-    # lookups from the saved file.
+    # At single_region granularity the region and sub-region columns are
+    # blank in every row, so read_csvs reads them back as numbers. The plot
+    # tasks build their lookups from the saved file.
     mapping = csv_str_to_df("""
         node,  nem_region_id,  isp_sub_region_id,  rez_id
-        NEM,   NEM,            ,
-        N3,    NEM,            ,                   N3
+        NEM,   ,               ,
+        N3,    ,               ,                   N3
     """)
     write_csvs({"regions_and_zones_mapping": mapping}, tmp_path)
     saved = read_csvs(tmp_path)["regions_and_zones_mapping"]
@@ -76,7 +76,7 @@ def test_mapping_read_back_from_csv(csv_str_to_df, tmp_path, new_table_format):
     }
 
     assert result == {
-        "nem_region_id": {"NEM": "NEM", "N3": "NEM"},
+        "nem_region_id": {},
         "isp_sub_region_id": {},
         "rez_id": {"N3": "N3"},
     }

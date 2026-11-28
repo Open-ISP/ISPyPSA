@@ -74,13 +74,14 @@ def test_mapping_at_single_region_granularity(csv_str_to_df, new_table_format):
 
     result = extract_regions_and_zones_mapping({"network_geography": network_geography})
 
-    # Every node's region is the one the model has, NEM.
+    # The region_id of every node is NEM, which is not a region to total by,
+    # so no node has a region.
     expected = csv_str_to_df("""
         node,  nem_region_id,  isp_sub_region_id,  rez_id
-        NEM,   NEM,            ,
-        N3,    NEM,            ,                   N3
+        NEM,   ,               ,
+        N3,    ,               ,                   N3
     """)
-    pd.testing.assert_frame_equal(result, expected)
+    pd.testing.assert_frame_equal(result, expected, check_dtype=False)
 
 
 def test_mapping_of_a_region_filtered_template(csv_str_to_df, new_table_format):

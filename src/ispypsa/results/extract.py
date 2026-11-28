@@ -58,8 +58,9 @@ def extract_regions_and_zones_mapping(
         New table format: a table with one row per node and the columns:
 
             - node: the node's geo_id, which is also its bus name.
-            - nem_region_id: network_geography's region_id. "NEM" for every
-              node at "single_region" granularity.
+            - nem_region_id: network_geography's region_id. Blank at
+              "single_region" granularity, where that is "NEM" for every
+              node: the whole NEM is not a region to total by.
             - isp_sub_region_id: network_geography's subregion_id. Blank at
               "nem_regions" and "single_region" granularity, where the table
               has no subregion_id.
@@ -77,10 +78,12 @@ def extract_regions_and_zones_mapping(
             columns=["geo_id", "geo_type", "region_id", "subregion_id"]
         )
         is_rez = geography["geo_type"] == "rez"
+        # At single_region granularity every node's region_id is "NEM".
+        is_in_a_region = geography["region_id"] != "NEM"
         return pd.DataFrame(
             {
                 "node": geography["geo_id"],
-                "nem_region_id": geography["region_id"],
+                "nem_region_id": geography["region_id"].where(is_in_a_region),
                 "isp_sub_region_id": geography["subregion_id"],
                 "rez_id": geography["geo_id"].where(is_rez),
             }
