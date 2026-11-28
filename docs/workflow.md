@@ -484,8 +484,9 @@ computational complexity.
 !!! note "New table format"
 
     With the `use_new_table_format` feature flag on, also pass the operational timeslice
-    table, so the transmission limits and custom constraints are rebuilt for the
-    operational snapshots:
+    table to both calls, so the transmission limits and custom constraints are rebuilt
+    for the operational snapshots, and each rolling horizon window applies the custom
+    constraints at their timeslices' snapshots:
 
     ```Python
     update_network_timeseries(
@@ -493,6 +494,16 @@ computational complexity.
         pypsa_tables,
         pypsa_tables["operational_snapshots"],
         operational_timeseries_location,
+        timeslice_snapshots=pypsa_tables["operational_timeslice_snapshots"],
+    )
+
+    network.optimize.fix_optimal_capacities()
+
+    optimize_with_rolling_horizon(
+        network,
+        pypsa_tables,
+        horizon=config.temporal.operational.horizon,
+        overlap=config.temporal.operational.overlap,
         timeslice_snapshots=pypsa_tables["operational_timeslice_snapshots"],
     )
     ```

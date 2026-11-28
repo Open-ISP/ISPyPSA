@@ -267,6 +267,124 @@ def _subtract_fixed_capacity_terms(
     return rhs
 
 
+def _move_fixed_capacity_terms_to_rhs_by_investment_period(
+    network: pypsa.Network,
+    custom_constraints_rhs: pd.DataFrame,
+    custom_constraints_lhs: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Rewrites the new-format custom constraints so they only reference
+    capacities that are still decision variables in the network's model.
+
+    This is _move_fixed_capacity_terms_to_rhs for the new table format, where
+    a constraint has its own LHS terms and RHS rows in each investment
+    period. Each p_nom term on a non-extendable generator or link is taken
+    off the LHS, and coefficient x p_nom is subtracted from the rhs of every
+    RHS row with the term's constraint_name and investment_period, a blank
+    investment_period matching a blank one.
+
+    An RHS row left with no LHS terms on model variables in its investment
+    period is dropped. An expansion limit is the usual case: its terms are
+    all capacities, so it would compare two constants, and the capacity
+    expansion model that chose the capacities already enforced it. Load terms
+    are demand data, not model variables, so a row left with only those is
+    dropped too.
+
+    p_nom terms on extendable components are left alone, so on a network
+    whose capacities haven't been fixed the tables come back unchanged.
+
+    FEATURE_FLAG_CLEANUP[use_new_table_format]: delete
+    _move_fixed_capacity_terms_to_rhs and _subtract_fixed_capacity_terms, and
+    drop "_by_investment_period" from the names of this function and its
+    helper.
+
+    I/O Example:
+        network.generators:
+            name             p_nom  p_nom_extendable
+            SWQLD1_exp_2025  20     False
+            SWQLD1_exp_2030  10     False
+
+        network.links:
+            name            p_nom  p_nom_extendable
+            CQ-NQ_exp_2025  300    False
+
+        custom_constraints_rhs:
+            constraint_name        investment_period  timeslice        rhs   constraint_type
+            SWQLD1                 2025               qld_peak_demand  3000  <=
+            SWQLD1                 2025               ,                3500  <=
+            SWQLD1                 2030               ,                3500  <=
+            CQ-NQ_expansion_limit  ,                  ,                1000  <=
+
+        custom_constraints_lhs:
+            constraint_name        investment_period  variable_name    component  attribute  coefficient
+            SWQLD1                 2025               NSW-QLD          Link       p          0.84
+            SWQLD1                 2025               SWQLD1_exp_2025  Generator  p_nom      -1.0   # fixed: moved to the RHS
+            SWQLD1                 2030               NSW-QLD          Link       p          0.84
+            SWQLD1                 2030               SWQLD1_exp_2025  Generator  p_nom      -1.0   # fixed: moved to the RHS
+            SWQLD1                 2030               SWQLD1_exp_2030  Generator  p_nom      -1.0   # fixed: moved to the RHS
+            CQ-NQ_expansion_limit  ,                  CQ-NQ_exp_2025   Link       p_nom      1.0    # fixed: moved to the RHS
+
+        returns (rhs, lhs):
+            constraint_name  investment_period  timeslice        rhs   constraint_type
+            SWQLD1           2025               qld_peak_demand  3020  <=   # 3000 - (-1.0 x 20)
+            SWQLD1           2025               ,                3520  <=   # 3500 - (-1.0 x 20)
+            SWQLD1           2030               ,                3530  <=   # 3500 - (-1.0 x 20) - (-1.0 x 10)
+                                                                            # CQ-NQ_expansion_limit has no LHS terms left: dropped
+
+            constraint_name  investment_period  variable_name  component  attribute  coefficient
+            SWQLD1           2025               NSW-QLD        Link       p          0.84
+            SWQLD1           2030               NSW-QLD        Link       p          0.84
+    """
+    lhs = _add_fixed_capacity_column(custom_constraints_lhs, network)
+    is_fixed = lhs["fixed_capacity"].notna()
+    rhs = _subtract_fixed_capacity_terms_by_investment_period(
+        custom_constraints_rhs, lhs[is_fixed]
+    )
+    lhs = lhs.loc[~is_fixed, custom_constraints_lhs.columns]
+    # An inner merge on the rows' key keeps the RHS rows that still have a
+    # term on a model variable. pandas matches a blank key to a blank key.
+    key = ["constraint_name", "investment_period"]
+    variable_terms = lhs[lhs["component"] != _LOAD_COMPONENT]
+    rhs = rhs.merge(variable_terms[key].drop_duplicates(), on=key)
+    return rhs, lhs
+
+
+def _subtract_fixed_capacity_terms_by_investment_period(
+    custom_constraints_rhs: pd.DataFrame, fixed_capacity_terms: pd.DataFrame
+) -> pd.DataFrame:
+    """Subtracts the fixed capacity terms of each constraint in each
+    investment period, summed as coefficient x fixed_capacity, from the rhs
+    of every RHS row of that constraint and investment period.
+
+    I/O Example:
+        custom_constraints_rhs:
+            constraint_name  investment_period  timeslice        rhs
+            SWQLD1           2025               qld_peak_demand  3000
+            SWQLD1           2025               ,                3500
+            SWQLD1           2030               ,                3500
+            NQ1              2025               ,                70
+
+        fixed_capacity_terms:
+            constraint_name  investment_period  coefficient  fixed_capacity
+            SWQLD1           2025               -1.0         20
+            SWQLD1           2030               -1.0         20
+            SWQLD1           2030               -1.0         10
+
+        returns:
+            constraint_name  investment_period  timeslice        rhs
+            SWQLD1           2025               qld_peak_demand  3020   # 3000 - (-1.0 x 20)
+            SWQLD1           2025               ,                3520   # 3500 - (-1.0 x 20)
+            SWQLD1           2030               ,                3530   # 3500 - (-1.0 x 20) - (-1.0 x 10)
+            NQ1              2025               ,                70     # no fixed capacity terms
+    """
+    key = ["constraint_name", "investment_period"]
+    terms = fixed_capacity_terms.copy()
+    terms["constant"] = terms["coefficient"] * terms["fixed_capacity"]
+    constants = terms.groupby(key, dropna=False, as_index=False)["constant"].sum()
+    rhs = custom_constraints_rhs.merge(constants, how="left", on=key)
+    rhs["rhs"] = rhs["rhs"] - rhs["constant"].fillna(0.0)
+    return rhs.drop(columns="constant")
+
+
 # The variable types each supported (component, attribute) LHS term sums,
 # with the sign each enters at. A Storage "p" term is net dispatch:
 # discharging counts positive and charging negative, matching PLEXOS's paired
@@ -320,6 +438,14 @@ def _add_custom_constraints_with_temporal_scope(
     demand data rather than variables: coefficient x p_set becomes a
     per-snapshot constant, which linopy moves to the right-hand side.
 
+    Only the snapshots of the network's model count. Usually the model has
+    every snapshot of the network. A rolling horizon window's model
+    (ispypsa.pypsa_build.rolling_horizon) has only the window's snapshots, so
+    each constraint is added there for the snapshots it shares with the
+    window: the rows of timeslice_snapshots outside the model are ignored,
+    and a fallback takes the model's snapshots that its constraint's named
+    timeslices don't cover.
+
     Implementation note (linopy): flow and storage-dispatch variables take a
     value at every snapshot, so a constraint containing one is enforced
     separately at each snapshot it applies at (SWQLD1_2025_qld_peak_demand at
@@ -327,8 +453,9 @@ def _add_custom_constraints_with_temporal_scope(
     so a constraint made only of them, with no load terms, is enforced once.
 
     A linopy constraint whose investment_period and timeslice select no
-    snapshots isn't created. For a named timeslice this is expected under
-    snapshot aggregation, and the translator warns about each timeslice with
+    snapshots isn't created. For a named timeslice this is expected in a
+    rolling horizon window the timeslice doesn't fall in, and also under
+    snapshot aggregation, where the translator warns about each timeslice with
     no snapshots in a constraint's investment period
     (ispypsa.translator.timeslices._log_referenced_timeslices_without_snapshots).
     A fallback with no snapshots isn't warned about: every snapshot in its
@@ -362,7 +489,7 @@ def _add_custom_constraints_with_temporal_scope(
             qld_peak_demand  2025                2025-01-01 01:00
             qld_peak_demand  2025                2025-01-01 02:00
 
-        network.snapshots:
+        the model's snapshots:
             period  timestep
             2025    2025-01-01 00:00   # no timeslice
             2025    2025-01-01 01:00   # qld_peak_demand
@@ -378,9 +505,15 @@ def _add_custom_constraints_with_temporal_scope(
                 Link-p_nom[CQ-NQ_exp_2025] <= 1000
     """
     _raise_on_unsupported_terms(custom_constraints_lhs)
+    # The model's snapshots, which for a rolling horizon window are fewer than
+    # the network's. PyPSA records them on the model when it builds it.
+    snapshots = network.model.parameters.snapshots.to_index()
+    timeslice_snapshots = _select_timeslice_snapshots_in_model(
+        timeslice_snapshots, snapshots
+    )
     for rhs_row in custom_constraints_rhs.itertuples():
         scope = _linopy_constraint_snapshots(
-            rhs_row, custom_constraints_rhs, timeslice_snapshots, network.snapshots
+            rhs_row, custom_constraints_rhs, timeslice_snapshots, snapshots
         )
         if scope.empty:
             continue
@@ -388,6 +521,37 @@ def _add_custom_constraints_with_temporal_scope(
         terms = _select_lhs_terms(custom_constraints_lhs, rhs_row)
         expression = _build_lhs_expression(network, terms, scope, name)
         _add_linopy_constraint(network.model, expression, rhs_row, name)
+
+
+def _select_timeslice_snapshots_in_model(
+    timeslice_snapshots: pd.DataFrame, snapshots: pd.MultiIndex
+) -> pd.DataFrame:
+    """The rows of timeslice_snapshots whose snapshot is one of the model's
+    snapshots.
+
+    I/O Example:
+        timeslice_snapshots:
+            timeslice        investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-01 01:00
+            qld_peak_demand  2025                2025-01-01 02:00   # not in the model
+            qld_peak_demand  2030                2025-01-01 01:00   # not in the model
+
+        snapshots:
+            period  timestep
+            2025    2025-01-01 00:00
+            2025    2025-01-01 01:00
+
+        returns:
+            timeslice        investment_periods  snapshots
+            qld_peak_demand  2025                2025-01-01 01:00
+    """
+    timeslice_index = pd.MultiIndex.from_arrays(
+        [
+            timeslice_snapshots["investment_periods"],
+            pd.to_datetime(timeslice_snapshots["snapshots"]),
+        ]
+    )
+    return timeslice_snapshots[timeslice_index.isin(snapshots)]
 
 
 def _raise_on_unsupported_terms(custom_constraints_lhs: pd.DataFrame) -> None:

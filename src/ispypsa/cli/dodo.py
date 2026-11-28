@@ -674,11 +674,16 @@ def create_and_run_operational_model() -> None:
     if run_optimisation:
         # Never use network.optimize.optimize_with_rolling_horizon() directly, as
         # PyPSA rebuilds the model for each window without the custom constraints.
+        # FEATURE_FLAG_CLEANUP[use_new_table_format]: index the table directly; it
+        # is only absent under the old table format.
         optimize_with_rolling_horizon(
             network,
             pypsa_friendly_input_tables,
             horizon=config.temporal.operational.horizon,
             overlap=config.temporal.operational.overlap,
+            timeslice_snapshots=pypsa_friendly_input_tables.get(
+                "operational_timeslice_snapshots"
+            ),
         )
 
         # Save the network for operational optimization
