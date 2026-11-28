@@ -256,9 +256,10 @@ _NUM_PARALLEL_PATHS_INJECTED_75_SUB_REGIONS = 1
 _NUM_INTER_REGIONAL_FLOW_PATHS_75 = 7
 
 # REZ-only constraint relaxations (granularity-independent — they live on REZs
-# and so survive every granularity collapse). One per REZ that has at least
-# one augmentation option, capped at 8 in the 7.5 inputs.
-_NUM_REZ_CONSTRAINT_OPTIONS_75 = 8
+# and so survive every granularity collapse). One per group constraint that has
+# at least one augmentation option with a numeric capacity: CQ1, MN1, NQ1, NSA1,
+# SEVIC1, SQ1, SWQLD1, SWV1 and WV1.
+_NUM_REZ_CONSTRAINT_OPTIONS_75 = 9
 
 # Number of distinct flow-path expansion options surviving at each granularity
 # (each emits a forward + reverse row in network_expansion_options, so they
@@ -292,9 +293,9 @@ _PATHS_PER_GRANULARITY_75 = {
 
 # Drift-detection only — per-option year coverage varies.
 _EXPECTED_EXPANSION_COST_ROWS_75 = {
-    "sub_regions": 1612,
-    "nem_regions": 1302,
-    "single_region": 1209,
+    "sub_regions": 1643,
+    "nem_regions": 1333,
+    "single_region": 1240,
 }
 
 _EXPECTED_COSTS_CONNECTION_ROWS_75 = {

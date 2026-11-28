@@ -1,0 +1,77 @@
+Term,Description,Group constraint ID,Transmission-limited total build_Summer peak,Transmission-limited total build_Summer typical,Transmission-limited total build_Winter reference,Import limit,Indicative transmission expansion cost ($M/MW),Indicative transmission expansion cost ($M/MW) Tranche 2,Notes
+Q1,Far North QLD,NQ1,2420,2420,2650,2650,2.64577987921,1.60498988047773,Limit assumes Powerlink upgrades limiting 8km of line into Ross from Strathmore 275kV.
+Q2,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub,North QLD Clean Energy Hub
+Q3,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD,Northern QLD
+- CQ-NQ,Central Queensland - North Queensland,CQ1,1700,1700,2070,2070,0.3334846898519813,0.8434474317195667,0.8434474317195667
+Q4,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac,Isaac
+-0.5 * SQ-CQ,Central Queensland - South Queensland flow,SQ1,1400,1400,1400,1400,0.8349291715793181,0.9397623312934545,0.9397623312934545
+Q7,Wide Bay,Wide Bay,Wide Bay,Wide Bay,Wide Bay,Wide Bay,Wide Bay,Wide Bay,Wide Bay
+Q7,Wide Bay,SQ1 (after CQ-SQ Upgrades),2500,2500,2500,2500,,,This reflects an increase of 1100 MW to the RHS of this group constraint for SQ-CQ Option 5 or SQ-CQ Option 6
+0.15 * WD,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area,Generation in Western Downs area
+0.15 * DD,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area,Generation in Darling Downs area
+0.12 * SD,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area,Generation in Southern Downs area
+0.15 * NSW-QLD,North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI),North New South Wales to South Queensland flow (QNI)
+-0.57 * SQ-CQ,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow,Central Queensland - South Queensland flow
+0.27 * BPH,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro,Borumba Pumped Hydro
+V8,SEVIC1 group constraint for option 1,SEVIC1,4200,4200,4200,4200,0.0869565217391304,0.0869565217391304,0.0869565217391304
+Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang
+Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power
+TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV
+0.5 * V8,0.5 * V8,SEVIC1 Post V8 Option 2,6200,6200,6200,6200,6200,6200,6200
+Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang,Loy Yang
+Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power,Valley Power
+TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV,TAS-SEV
+- Heywood Interconnector,Heywood Interconnector,SWV1,2495,2495,2495,2495,0.4511885169724792,0.4511885169724792,0.4511885169724792
+V5,South West Victoria,South West Victoria,South West Victoria,South West Victoria,South West Victoria,South West Victoria,South West Victoria,South West Victoria,South West Victoria
+V9,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean,Southern Ocean
+S3,Mid-North SA,MN1,1630,1630,1860,1860,0.5166666666666667,0.6666666666666666,Combined from TEOR and Draft IASR 2025 new limit
+S4,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula,Yorke Peninsula
+- CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA,Flow from CSA-NSA
+0.2 * SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA,Flow of SNSW-CSA
+0.75 * S5,Northern SA new entrant VRE,NSA1,585,585,585,590,0.5377777777777778,0.5377777777777778,"S5 West includes Mt Millar WF, Cathedral Rocks WF, Lincoln Gap WF and BESS, Cultana SF, Port Lincoln GT, and SA Hydrogen Turbine Assumes completion of the Davenport-Cultana NCIPAP ratings upgrade project. The coefficient for the NSA demand term is subject to change for the final 2025 IASR based on updates to the relevant demand forecast."
+S5 West,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5,Existing generation in west of S5
+S7,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula,Eastern Eyre Peninsula
+S8,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula,Western Eyre Peninsula
+-0.1 * NSA demand,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area,Industrial load in NSA area
+T1,North East Tasmania,NET1,1600,1600,1600,1600,1600,1600,1600
+T4,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast,North Tasmania Coast
+N4,Southwest NSW 2 group constraint,SWNSW2,4400,4400,4400,4400,4400,4400,4400
+N5,N5,N5,N5,N5,N5,N5,N5,N5,N5
+N13,N13,N13,N13,N13,N13,N13,N13,N13,N13
+- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA,- SNSW-CSA
+0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW,0.8 * WNV-SNSW
+Limondale SF,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area,Existing BESS and solar generation in South West New South Wales area
+Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF,Limondale 2 SF
+Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF,Sunraysia SF
+Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF,Coleambally SF
+Finley SF,Finley SF,Finley SF,Finley SF,Finley SF,Finley SF,Finley SF,Finley SF,Finley SF,Finley SF
+Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF,Darlington Pt SF
+Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF,Hillston SF
+Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS,Darlington Point BESS
+Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2,Riverina BESS 1 & 2
+Broken Hill SF,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area,Existing generation in Broken Hill area
+Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS,Broken Hill BESS
+Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF,Silverton WF
+Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage,Silver City Energy Storage
+V3,combined V3 + V4 + Existing wind generation in Western Victoria West of Ballarat,WV1,780,780,980,980,2.25,2.25,2.25
+V4,V4,V4,V4,V4,V4,V4,V4,V4,V4
+DN1,DN1,CNSW1,815,815,815,815,815,815,815
+Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm,Beryl Solar Farm
+Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm,Bodangora Wind Farm
+Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm,Crudine Ridge Wind Farm
+Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm,Flyers Creek Wind Farm
+Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm,Goonumbla Solar Farm
+Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar,Jemalong Solar
+Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm,Manildra Solar Farm
+Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm,Molong Solar Farm
+Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm,Narromine Solar Farm
+Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm,Nevertire Solar Farm
+Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant,Nyngan Solar Plant
+Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm,Parkes Solar Farm
+Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub,Dubbo Solar Hub
+Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm,Suntop Solar Farm
+Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm,Wellington Solar Farm
+Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm,Wollar Solar Farm
+Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS,Orana BESS
+Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm,Uungula Wind Farm
+Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm,Wellington North Solar Farm
