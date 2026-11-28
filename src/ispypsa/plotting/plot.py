@@ -66,6 +66,9 @@ def create_plot_suite(
 
     Works for both capacity expansion and operational model results.
 
+    The dispatch and flow charts draw each value as a flat step over the interval
+    ending at its timestep, using the interval lengths in the timesteps table.
+
     Examples:
         Perform required imports.
         >>> from pathlib import Path
@@ -93,6 +96,7 @@ def create_plot_suite(
             - generator_dispatch
             - generation_expansion
             - demand
+            - timesteps
 
     Returns:
         A dictionary of plots with the file path as the key and the plot as the value.
@@ -108,7 +112,9 @@ def create_plot_suite(
                 results["transmission_expansion"], results["regions_and_zones_mapping"]
             ),
             "flows": plot_flows(
-                results["transmission_flows"], results["transmission_expansion"]
+                results["transmission_flows"],
+                results["transmission_expansion"],
+                results["timesteps"],
             ),
             "regional_expansion": plot_regional_capacity_expansion(
                 results["transmission_expansion"], results["regions_and_zones_mapping"]
@@ -121,10 +127,12 @@ def create_plot_suite(
             "system": plot_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
+                results["timesteps"],
             ),
             "regional": plot_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
+                results["timesteps"],
                 results["regions_and_zones_mapping"],
                 "nem_region_id",
                 nem_region_flows,
@@ -132,6 +140,7 @@ def create_plot_suite(
             "sub_regional": plot_dispatch(
                 results["generator_dispatch"],
                 results["demand"],
+                results["timesteps"],
                 results["regions_and_zones_mapping"],
                 "isp_sub_region_id",
                 isp_sub_region_flows,

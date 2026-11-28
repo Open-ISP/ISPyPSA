@@ -4,7 +4,12 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ispypsa.helpers import csv_str_to_df
-from ispypsa.plotting.helpers import _calculate_week_starting
+from ispypsa.plotting.helpers import (
+    _STEP_LINE_SHAPE,
+    _add_interval_starts,
+    _build_step_coordinates,
+    _calculate_week_starting,
+)
 from ispypsa.plotting.style import create_plotly_professional_layout
 from ispypsa.results.helpers import _build_node_to_geography_mapping
 
@@ -228,17 +233,25 @@ def prepare_flow_data(
 
 
 def plot_flows(
-    flows: pd.DataFrame, transmission_expansion: pd.DataFrame
+    flows: pd.DataFrame,
+    transmission_expansion: pd.DataFrame,
+    timesteps: pd.DataFrame,
 ) -> dict[str, dict]:
     """Plot the time varying flows for all transmission lines.
 
     Plot the flows for each transmission line for each week separately.
+
+    Each flow is drawn as a flat step over the interval ending at its timestep,
+    whose length is the timestep's duration_hours, so the area under the flow
+    is the energy transferred.
 
     Args:
         flows: The flows dataframe.
             Expected columns: isp_name, investment_period, timestep, flow
         transmission_expansion: The transmission expansion dataframe.
             Expected columns: isp_name, isp_type, investment_period, forward_capacity_mw, reverse_capacity_mw
+        timesteps: The length of each timestep from extract_timesteps().
+            Expected columns: investment_period, timestep, duration_hours
 
     Returns:
         A dictionary of plots with the structure:
@@ -257,6 +270,7 @@ def plot_flows(
     plots = {}
 
     flows = prepare_flow_data(flows, transmission_expansion)
+    flows = _add_interval_starts(flows, timesteps)
 
     # Group by isp_type, isp_name, investment_period, and week_starting
     grouped = flows.groupby(
@@ -270,14 +284,15 @@ def plot_flows(
         # Create Plotly figure
         fig = go.Figure()
 
-        # Add the flow data
+        # Add the flow data, each value held flat over its interval
+        flow_steps = _build_step_coordinates(week_data, "flow_mw")
         fig.add_trace(
             go.Scatter(
-                x=week_data["timestep"],
-                y=week_data["flow_mw"],
+                x=flow_steps["time"],
+                y=flow_steps["value"],
                 name="Flow",
                 mode="lines",
-                line=dict(color="#1f77b4", width=2),
+                line=dict(color="#1f77b4", width=2, shape=_STEP_LINE_SHAPE),
                 hovertemplate="<b>Flow</b><br>%{y:.2f} MW<extra></extra>",
             )
         )
@@ -288,31 +303,32 @@ def plot_flows(
             forward_limit = week_data["forward_capacity_mw"].iloc[0]
             reverse_limit = week_data["reverse_capacity_mw"].iloc[0]
 
-            # Add horizontal lines for capacity limits
+            # Add horizontal lines for capacity limits, over the same intervals
+            # as the flow
+            forward_steps = _build_step_coordinates(week_data, "forward_capacity_mw")
+            reverse_steps = _build_step_coordinates(week_data, "reverse_capacity_mw")
             fig.add_trace(
                 go.Scatter(
-                    x=[
-                        week_data["timestep"].iloc[0],
-                        week_data["timestep"].iloc[-1],
-                    ],
-                    y=[forward_limit, forward_limit],
+                    x=forward_steps["time"],
+                    y=forward_steps["value"],
                     name="Forward Limit",
                     mode="lines",
-                    line=dict(color="red", width=2, dash="dash"),
+                    line=dict(
+                        color="red", width=2, dash="dash", shape=_STEP_LINE_SHAPE
+                    ),
                     hovertemplate=f"<b>Forward Limit</b><br>{forward_limit:.2f} MW<extra></extra>",
                 )
             )
 
             fig.add_trace(
                 go.Scatter(
-                    x=[
-                        week_data["timestep"].iloc[0],
-                        week_data["timestep"].iloc[-1],
-                    ],
-                    y=[reverse_limit, reverse_limit],
+                    x=reverse_steps["time"],
+                    y=reverse_steps["value"],
                     name="Reverse Limit",
                     mode="lines",
-                    line=dict(color="orange", width=2, dash="dash"),
+                    line=dict(
+                        color="orange", width=2, dash="dash", shape=_STEP_LINE_SHAPE
+                    ),
                     hovertemplate=f"<b>Reverse Limit</b><br>{reverse_limit:.2f} MW<extra></extra>",
                 )
             )
