@@ -71,7 +71,7 @@ def test_extract_flow_path_costs_from_iasr_keeps_only_the_scenario():
 
 def test_extract_flow_path_costs_from_iasr_corrects_underscore_path_names():
     # Workbook 7.5 names the Slower Growth MEL-WNV and SEV-MEL tables with an
-    # underscore between the sub-regions (Open-ISP/isp-workbook-parser#TBD).
+    # underscore between the sub-regions (Open-ISP/isp-workbook-parser#100).
     iasr_tables = {
         "flow_path_augmentation_costs_slower_growth_CQ-NQ": pd.DataFrame({"x": [1]}),
         "flow_path_augmentation_costs_slower_growth_MEL_WNV": pd.DataFrame({"x": [2]}),
