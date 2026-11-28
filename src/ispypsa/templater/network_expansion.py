@@ -59,7 +59,7 @@ def _extract_flow_path_costs_from_iasr(
 # sub-regions, where every other table in the family uses a hyphen. An underscore
 # marks a parallel-path suffix (NNSW-SQ_Terranora), so the misnamed keys can't be
 # split into their two sub-regions when aggregating to NEM regions. Drop this
-# mapping once Open-ISP/isp-workbook-parser#TBD is fixed.
+# mapping once Open-ISP/isp-workbook-parser#100 is fixed.
 _MISNAMED_FLOW_PATH_COST_TABLES = {
     "MEL_WNV": "MEL-WNV",
     "SEV_MEL": "SEV-MEL",
