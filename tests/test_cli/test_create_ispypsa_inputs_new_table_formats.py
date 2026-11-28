@@ -265,8 +265,8 @@ _NUM_REZ_CONSTRAINT_OPTIONS_75 = 9
 # (each emits a forward + reverse row in network_expansion_options, so they
 # contribute 2× to the row count and 1× to the unique-id count).
 _NUM_FLOW_PATH_OPTIONS_AT_GRANULARITY_75 = {
-    "sub_regions": 44,
-    "nem_regions": 34,
+    "sub_regions": 45,
+    "nem_regions": 35,
     "single_region": 31,
 }
 
@@ -293,8 +293,8 @@ _PATHS_PER_GRANULARITY_75 = {
 
 # Drift-detection only — per-option year coverage varies.
 _EXPECTED_EXPANSION_COST_ROWS_75 = {
-    "sub_regions": 1643,
-    "nem_regions": 1333,
+    "sub_regions": 1664,
+    "nem_regions": 1354,
     "single_region": 1240,
 }
 

@@ -650,24 +650,26 @@ def _align_option_names_to_options(
 ) -> pd.DataFrame:
     """Fuzzy-matches each expansion's cost option_names to its option_names in the options frame.
 
-    Bridges systematic mismatches between the two source tables (em-dash vs hyphen,
-    path prefix variations, optional ``(Project Marinus …)``-style annotations).
+    Bridges small, systematic mismatches between the two source tables: an en dash
+    in one where the other has a hyphen, and a REZ ID prefix that only the cost
+    tables carry. A cost option_name too far from every option_name to match (a
+    fuzz.ratio score under 60) is left as it is, and so pairs with no option.
 
     I/O Example:
         options:
             expansion_id  option_name
-            NNSW-SQ       NNSW-SQ Option 1
-            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1)
+            NNSW-SQ       NNSW–SQ Option 2     # en dash
+            N3-CNSW       Option 1
 
         costs:
             expansion_id  option_name       year  cost
-            NNSW-SQ       NNSW–SQ Option 1  2025  500000000      # em-dash
-            TAS-SEV       TAS-SEV Option 1  2025  3750000000     # no annotation
+            NNSW-SQ       NNSW-SQ Option 2  2025  2900000000     # hyphen
+            N3-CNSW       N3 Option 1       2025  850000000      # REZ ID prefix
 
         returns:
-            expansion_id  option_name                                year  cost
-            NNSW-SQ       NNSW-SQ Option 1                           2025  500000000
-            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1) 2025  3750000000
+            expansion_id  option_name       year  cost
+            NNSW-SQ       NNSW–SQ Option 2  2025  2900000000
+            N3-CNSW       Option 1          2025  850000000
     """
     aligned = []
     for expansion_id, cost_group in costs.groupby("expansion_id"):
