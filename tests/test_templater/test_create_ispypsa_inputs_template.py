@@ -348,13 +348,14 @@ def _build_limit_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
     }
 
 
-def _mislabelled_flow_path_cost_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
-    """The WNV-SNSW and NNSW-SQ cost tables for every scenario, with no rows.
+def _edited_flow_path_cost_tables(csv_str_to_df) -> dict[str, pd.DataFrame]:
+    """The WNV-SNSW, NNSW-SQ and TAS-SEV cost tables for every scenario, with no rows.
 
-    The 7.5 IASR table edits correct the Flow path labels in these six tables, and
-    an edit that names a table missing from the input raises. Empty tables keep the
-    edits satisfied without adding flow paths to the fixtures; a test that wants
-    rows in one of them lists its own table after this helper's.
+    The 7.5 IASR table edits correct the Flow path labels in the WNV-SNSW and
+    NNSW-SQ tables and the Option names in the TAS-SEV tables, and an edit that
+    names a table missing from the input raises. Empty tables keep the edits
+    satisfied without adding flow paths to the fixtures; a test that wants rows in
+    one of them lists its own table after this helper's.
     """
     names = [
         "flow_path_augmentation_costs_step_change_WNV-SNSW",
@@ -363,6 +364,9 @@ def _mislabelled_flow_path_cost_tables(csv_str_to_df) -> dict[str, pd.DataFrame]
         "flow_path_augmentation_costs_step_change_NNSW-SQ",
         "flow_path_augmentation_costs_slower_growth_NNSW-SQ",
         "flow_path_augmentation_costs_accelerated_transition_NNSW-SQ",
+        "flow_path_augmentation_costs_step_change_TAS-SEV",
+        "flow_path_augmentation_costs_slower_growth_TAS-SEV",
+        "flow_path_augmentation_costs_accelerated_transition_TAS-SEV",
     ]
     empty_costs = "Flow path,  Option,  2024-25,  2025-26"
     return {name: csv_str_to_df(empty_costs) for name in names}
@@ -600,7 +604,7 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="sub_regions",
             iasr_tables={
-                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
+                **_edited_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
@@ -879,8 +883,9 @@ def test_create_ispypsa_inputs_template_new_format(csv_str_to_df):
 
 def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
     # WNV and SNSW have no paths or units here. They are listed because the empty
-    # WNV-SNSW cost tables from _mislabelled_flow_path_cost_tables are re-keyed to
-    # NEM regions, which looks up the region of both ends of the path.
+    # WNV-SNSW cost tables from _edited_flow_path_cost_tables are re-keyed to
+    # NEM regions, which looks up the region of both ends of the path. The empty
+    # TAS-SEV cost tables are re-keyed the same way, using the TAS and SEV rows.
     sub_regional_reference_nodes = csv_str_to_df("""
         NEM region,       ISP sub-region,                  Sub-regional reference node
         Queensland,       Northern Queensland (NQ),        Ross 275 kV
@@ -987,7 +992,7 @@ def test_create_ispypsa_inputs_template_new_format_nem_regions(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="nem_regions",
             iasr_tables={
-                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
+                **_edited_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
@@ -1233,7 +1238,7 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
             scenario="Step Change",
             regional_granularity="single_region",
             iasr_tables={
-                **_mislabelled_flow_path_cost_tables(csv_str_to_df),
+                **_edited_flow_path_cost_tables(csv_str_to_df),
                 "sub_regional_reference_nodes": sub_regional_reference_nodes,
                 "renewable_energy_zones": renewable_energy_zones,
                 "flow_path_transfer_capability": flow_path_transfer_capability,
@@ -1374,6 +1379,68 @@ def test_create_ispypsa_inputs_template_new_format_single_region(csv_str_to_df):
     # TAS (NEM at single_region), BOTN - Cethana, build
     resource_limits = result["resource_limits"]
     assert len(resource_limits) == 5
+
+
+def test_create_ispypsa_inputs_template_new_format_gives_tas_sev_an_expansion_option(
+    csv_str_to_df,
+):
+    iasr_tables = read_csvs(Path("tests", "test_workbook_table_cache", "7.5"))
+    manual_tables = load_manually_extracted_tables("7.5")
+
+    with patch(
+        "ispypsa.templater.create_template.FEATURE_FLAGS",
+        {"use_new_table_format": True},
+    ):
+        result = create_ispypsa_inputs_template(
+            "Step Change", "sub_regions", iasr_tables, manual_tables, "7.5"
+        )
+
+    # Stage 2 is the cheaper of the two Marinus stages per MW in 2035, the first
+    # year both have a cost: $2,626M / 750 MW against $4,914M / 750 MW for Stage 1.
+    options = result["network_expansion_options"]
+    tas_sev_options = options[options["expansion_id"] == "TAS-SEV"]
+    expected_options = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+        TAS-SEV,       forward,         750,                TAS-SEV Option 2 (Project Marinus Stage 2)
+        TAS-SEV,       reverse,         750,                TAS-SEV Option 2 (Project Marinus Stage 2)
+    """)
+    pd.testing.assert_frame_equal(
+        tas_sev_options.reset_index(drop=True), expected_options, check_dtype=False
+    )
+
+    # Stage 2 has costs from 2034-35 on, in $/MW (the option's cost / 750 MW).
+    costs = result["network_transmission_path_expansion_costs"]
+    tas_sev_costs = costs[costs["expansion_id"] == "TAS-SEV"]
+    expected_costs = csv_str_to_df("""
+        expansion_id,  year,  cost
+        TAS-SEV,       2035,  3501254.51
+        TAS-SEV,       2036,  3521247.49
+        TAS-SEV,       2037,  3542862.67
+        TAS-SEV,       2038,  3565512.63
+        TAS-SEV,       2039,  3588576.44
+        TAS-SEV,       2040,  3612219.08
+        TAS-SEV,       2041,  3636705.43
+        TAS-SEV,       2042,  3661952.86
+        TAS-SEV,       2043,  3687945.18
+        TAS-SEV,       2044,  3714700.08
+        TAS-SEV,       2045,  3742235.48
+        TAS-SEV,       2046,  3770565.86
+        TAS-SEV,       2047,  3799708.59
+        TAS-SEV,       2048,  3829681.90
+        TAS-SEV,       2049,  3860505.86
+        TAS-SEV,       2050,  3892200.84
+        TAS-SEV,       2051,  3924789.48
+        TAS-SEV,       2052,  3958295.90
+        TAS-SEV,       2053,  3992744.16
+        TAS-SEV,       2054,  4028162.40
+        TAS-SEV,       2055,  4064578.68
+    """)
+    pd.testing.assert_frame_equal(
+        tas_sev_costs.reset_index(drop=True),
+        expected_costs,
+        check_dtype=False,
+        rtol=1e-5,
+    )
 
 
 @pytest.fixture(scope="module")

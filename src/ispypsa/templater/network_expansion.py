@@ -521,7 +521,9 @@ def _load_all_costs(
     flow = _extract_flow_path_costs(flow_path_costs)
     rez = _extract_rez_costs(rez_costs, rez_paths)
     costs = pd.concat([flow, rez], ignore_index=True)
-    return _align_option_names_to_options(costs, options)
+    costs = _align_option_names_to_options(costs, options)
+    _warn_of_expansions_with_no_paired_costs(costs, options)
+    return costs
 
 
 def _extract_flow_path_costs(
@@ -650,24 +652,26 @@ def _align_option_names_to_options(
 ) -> pd.DataFrame:
     """Fuzzy-matches each expansion's cost option_names to its option_names in the options frame.
 
-    Bridges systematic mismatches between the two source tables (em-dash vs hyphen,
-    path prefix variations, optional ``(Project Marinus …)``-style annotations).
+    Bridges small, systematic mismatches between the two source tables: an en dash
+    in one where the other has a hyphen, and a REZ ID prefix that only the cost
+    tables carry. A cost option_name too far from every option_name to match (a
+    fuzz.ratio score under 60) is left as it is, and so pairs with no option.
 
     I/O Example:
         options:
             expansion_id  option_name
-            NNSW-SQ       NNSW-SQ Option 1
-            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1)
+            NNSW-SQ       NNSW–SQ Option 2     # en dash
+            N3-CNSW       Option 1
 
         costs:
             expansion_id  option_name       year  cost
-            NNSW-SQ       NNSW–SQ Option 1  2025  500000000      # em-dash
-            TAS-SEV       TAS-SEV Option 1  2025  3750000000     # no annotation
+            NNSW-SQ       NNSW-SQ Option 2  2025  2900000000     # hyphen
+            N3-CNSW       N3 Option 1       2025  850000000      # REZ ID prefix
 
         returns:
-            expansion_id  option_name                                year  cost
-            NNSW-SQ       NNSW-SQ Option 1                           2025  500000000
-            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1) 2025  3750000000
+            expansion_id  option_name       year  cost
+            NNSW-SQ       NNSW–SQ Option 2  2025  2900000000
+            N3-CNSW       Option 1          2025  850000000
     """
     aligned = []
     for expansion_id, cost_group in costs.groupby("expansion_id"):
@@ -692,6 +696,80 @@ def _align_option_names_to_options(
         )
         aligned.append(cost_group)
     return pd.concat(aligned, ignore_index=True) if aligned else costs.iloc[0:0]
+
+
+def _warn_of_expansions_with_no_paired_costs(
+    costs: pd.DataFrame, options: pd.DataFrame
+) -> None:
+    """Warns of the expansions left with no expansion option because none of their
+    costs pair with any of their options.
+
+    An option is only considered for an expansion when a cost row has the same
+    expansion_id and option_name. An expansion that has options and has costs, but
+    with no option_name in common, therefore drops out of the templated tables.
+    One warning names every such expansion, with its cost option_names and its
+    option_names side by side so the mismatch can be seen.
+
+    I/O Example:
+        costs (after their option_names were aligned to the options):
+            expansion_id  option_name       year  cost
+            CQ-NQ         CQ-NQ Option 1    2025  500000000
+            TAS-SEV       TAS-SEV Option 1  2031  4758000000     # pairs with no option
+            SWNSW1        Option 1          2025  1000000        # no options at all: not reported here
+
+        options:
+            expansion_id  option_name                                 forward_mw  reverse_mw
+            CQ-NQ         CQ-NQ Option 1                              1000        1200
+            CQ-NQ         CQ-NQ Option 2                              1500        1500  # no cost, but CQ-NQ keeps Option 1: not reported
+            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1)  750         750
+
+        logs (WARNING):
+            Expansions with no expansion option, because none of their cost option
+            names match any of their option names: ['TAS-SEV']. Cost option names:
+            ['TAS-SEV: TAS-SEV Option 1']. Option names: ['TAS-SEV: TAS-SEV Option 1
+            (Project Marinus Stage 1)'].
+    """
+    unpaired_ids = _find_expansions_with_no_paired_costs(costs, options)
+    if unpaired_ids:
+        unpaired_costs = costs[costs["expansion_id"].isin(unpaired_ids)]
+        unpaired_options = options[options["expansion_id"].isin(unpaired_ids)]
+        cost_names = (
+            unpaired_costs["expansion_id"] + ": " + unpaired_costs["option_name"]
+        )
+        option_names = (
+            unpaired_options["expansion_id"] + ": " + unpaired_options["option_name"]
+        )
+        logging.warning(
+            "Expansions with no expansion option, because none of their cost option "
+            f"names match any of their option names: {unpaired_ids}. "
+            f"Cost option names: {sorted(set(cost_names))}. "
+            f"Option names: {sorted(set(option_names))}."
+        )
+
+
+def _find_expansions_with_no_paired_costs(
+    costs: pd.DataFrame, options: pd.DataFrame
+) -> list[str]:
+    """Finds the expansion_ids that have options and costs but no option_name in common.
+
+    I/O Example:
+        costs:
+            expansion_id  option_name       year  cost
+            CQ-NQ         CQ-NQ Option 1    2025  500000000
+            TAS-SEV       TAS-SEV Option 1  2031  4758000000
+            SWNSW1        Option 1          2025  1000000     # no options: left out
+
+        options:
+            expansion_id  option_name
+            CQ-NQ         CQ-NQ Option 1
+            TAS-SEV       TAS-SEV Option 1 (Project Marinus Stage 1)
+
+        returns: ["TAS-SEV"]
+    """
+    paired = costs.merge(options, on=["expansion_id", "option_name"])
+    has_options = costs["expansion_id"].isin(options["expansion_id"])
+    has_paired_costs = costs["expansion_id"].isin(paired["expansion_id"])
+    return sorted(set(costs.loc[has_options & ~has_paired_costs, "expansion_id"]))
 
 
 def _first_year_with_complete_costs_per_expansion(costs: pd.DataFrame) -> pd.DataFrame:

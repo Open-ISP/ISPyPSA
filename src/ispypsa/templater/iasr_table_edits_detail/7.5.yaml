@@ -160,3 +160,28 @@
   column: Flow path
   replace: {"NNSW\u2013SQ": NNSW-SQ}
   reason: Flow path spelt with an en dash on some rows; the options table uses a hyphen.
+
+# The cost rows for TAS-SEV name the options 'TAS-SEV Option 1' and 'TAS-SEV Option
+# 2', where the options table adds the project stage in brackets. The two spellings
+# are too far apart for the fuzzy match that pairs costs with options, so left as is
+# the costs match no option and TAS-SEV (Project Marinus) cannot be expanded.
+- table: flow_path_augmentation_costs_step_change_TAS-SEV
+  column: Option
+  replace:
+    TAS-SEV Option 1: TAS-SEV Option 1 (Project Marinus Stage 1)
+    TAS-SEV Option 2: TAS-SEV Option 2 (Project Marinus Stage 2)
+  reason: Option names lack the '(Project Marinus Stage N)' suffix the options table gives them.
+
+- table: flow_path_augmentation_costs_slower_growth_TAS-SEV
+  column: Option
+  replace:
+    TAS-SEV Option 1: TAS-SEV Option 1 (Project Marinus Stage 1)
+    TAS-SEV Option 2: TAS-SEV Option 2 (Project Marinus Stage 2)
+  reason: Option names lack the '(Project Marinus Stage N)' suffix the options table gives them.
+
+- table: flow_path_augmentation_costs_accelerated_transition_TAS-SEV
+  column: Option
+  replace:
+    TAS-SEV Option 1: TAS-SEV Option 1 (Project Marinus Stage 1)
+    TAS-SEV Option 2: TAS-SEV Option 2 (Project Marinus Stage 2)
+  reason: Option names lack the '(Project Marinus Stage N)' suffix the options table gives them.

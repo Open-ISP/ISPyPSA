@@ -24,6 +24,7 @@ from ispypsa.templater.network_expansion import (
     _parse_numeric,
     _rekey_augmentation_path_to_region,
     _template_network_expansion,
+    _warn_of_expansions_with_no_paired_costs,
 )
 
 _FP_OPT_COLS = [
@@ -536,6 +537,131 @@ def test_align_option_names_rewrites_em_dash_to_hyphen(csv_str_to_df):
         expected.reset_index(drop=True),
         check_dtype=False,
     )
+
+
+def test_warns_of_expansions_whose_costs_pair_with_none_of_their_options(
+    csv_str_to_df, caplog
+):
+    # TAS-SEV and N1-NNSW each have options and costs with no option_name in common.
+    # CQ-NQ pairs. SWNSW1 has costs but no options at all, which
+    # _align_option_names_to_options reports, so it is left out here.
+    costs = csv_str_to_df("""
+        expansion_id,  option_name,       year,  cost
+        TAS-SEV,       TAS-SEV Option 2,  2035,  2600000
+        TAS-SEV,       TAS-SEV Option 1,  2035,  4900000
+        TAS-SEV,       TAS-SEV Option 1,  2036,  4950000
+        N1-NNSW,       Stage 1,           2025,  1000000
+        CQ-NQ,         CQ-NQ Option 1,    2025,  500000
+        SWNSW1,        Option 1,          2025,  1000000
+    """)
+    options = csv_str_to_df("""
+        expansion_id,  option_name,                                 forward_mw,  reverse_mw
+        TAS-SEV,       TAS-SEV Option 1 (Project Marinus Stage 1),  750,         750
+        TAS-SEV,       TAS-SEV Option 2 (Project Marinus Stage 2),  750,         750
+        N1-NNSW,       Option 1,                                    1660,        1660
+        CQ-NQ,         CQ-NQ Option 1,                              1000,        1200
+    """)
+
+    with caplog.at_level(logging.WARNING):
+        _warn_of_expansions_with_no_paired_costs(costs, options)
+
+    assert (
+        "Expansions with no expansion option, because none of their cost option "
+        "names match any of their option names: ['N1-NNSW', 'TAS-SEV']. "
+        "Cost option names: ['N1-NNSW: Stage 1', 'TAS-SEV: TAS-SEV Option 1', "
+        "'TAS-SEV: TAS-SEV Option 2']. "
+        "Option names: ['N1-NNSW: Option 1', "
+        "'TAS-SEV: TAS-SEV Option 1 (Project Marinus Stage 1)', "
+        "'TAS-SEV: TAS-SEV Option 2 (Project Marinus Stage 2)']."
+    ) in caplog.text
+
+
+def test_does_not_warn_when_every_expansion_has_a_paired_cost(csv_str_to_df, caplog):
+    # CQ-NQ Option 2 has no cost and N1-NNSW Option 9 has no option, but each
+    # expansion still has an option with a cost, so neither is left without an
+    # expansion option.
+    costs = csv_str_to_df("""
+        expansion_id,  option_name,     year,  cost
+        CQ-NQ,         CQ-NQ Option 1,  2025,  500000
+        N1-NNSW,       Option 1,        2025,  1000000
+        N1-NNSW,       Option 9,        2025,  2000000
+    """)
+    options = csv_str_to_df("""
+        expansion_id,  option_name,     forward_mw,  reverse_mw
+        CQ-NQ,         CQ-NQ Option 1,  1000,        1200
+        CQ-NQ,         CQ-NQ Option 2,  1500,        1500
+        N1-NNSW,       Option 1,        1660,        1660
+    """)
+
+    with caplog.at_level(logging.WARNING):
+        _warn_of_expansions_with_no_paired_costs(costs, options)
+
+    assert caplog.messages == []
+
+
+def test_template_network_expansion_warns_of_expansion_with_no_paired_costs(
+    csv_str_to_df, caplog
+):
+    # The TAS-SEV cost option names are too far from the option names for the fuzzy
+    # match (fuzz.ratio 55, threshold 60), so TAS-SEV gets no expansion option.
+    flow_path_options = {
+        "CQ-NQ": _fp_options([("CQ-NQ", "CQ-NQ Option 1", 1000, 1000)]),
+        "TAS-SEV": _fp_options(
+            [
+                ("TAS-SEV", "TAS-SEV Option 1 (Project Marinus Stage 1)", 750, 750),
+                ("TAS-SEV", "TAS-SEV Option 2 (Project Marinus Stage 2)", 750, 750),
+            ]
+        ),
+    }
+    flow_path_costs = {
+        "CQ-NQ": csv_str_to_df("""
+            Flow path,  Option,          2024-25,  2025-26
+            CQ-NQ,      CQ-NQ Option 1,  1000000,  1010000
+        """),
+        "TAS-SEV": csv_str_to_df("""
+            Flow path,  Option,            2024-25,  2025-26
+            TAS-SEV,    TAS-SEV Option 1,  4900000,  4950000
+            TAS-SEV,    TAS-SEV Option 2,  2600000,  2650000
+        """),
+    }
+    network_transmission_paths = csv_str_to_df("""
+        path_id,  geo_from
+        CQ-NQ,    CQ
+        TAS-SEV,  TAS
+    """)
+
+    with caplog.at_level(logging.WARNING):
+        options, costs = _template_network_expansion(
+            flow_path_options=flow_path_options,
+            flow_path_costs=flow_path_costs,
+            rez_options={},
+            rez_costs={},
+            network_transmission_paths=network_transmission_paths,
+            rez_ids=set(),
+        )
+
+    expected_options = csv_str_to_df("""
+        expansion_id,  expansion_type,  allowed_expansion,  expansion_option
+        CQ-NQ,         forward,         1000,               CQ-NQ Option 1
+        CQ-NQ,         reverse,         1000,               CQ-NQ Option 1
+    """)
+    pd.testing.assert_frame_equal(options, expected_options, check_dtype=False)
+
+    expected_costs = csv_str_to_df("""
+        expansion_id,  year,  cost
+        CQ-NQ,         2025,  1000.0
+        CQ-NQ,         2026,  1010.0
+    """)
+    pd.testing.assert_frame_equal(costs, expected_costs, check_dtype=False)
+
+    assert (
+        "Expansions with no expansion option, because none of their cost option "
+        "names match any of their option names: ['TAS-SEV']. "
+        "Cost option names: ['TAS-SEV: TAS-SEV Option 1', "
+        "'TAS-SEV: TAS-SEV Option 2']. "
+        "Option names: ['TAS-SEV: TAS-SEV Option 1 (Project Marinus Stage 1)', "
+        "'TAS-SEV: TAS-SEV Option 2 (Project Marinus Stage 2)']."
+    ) in caplog.text
 
 
 def test_first_year_with_complete_costs_warns_and_skips_when_no_complete_year(

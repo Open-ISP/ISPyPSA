@@ -57,6 +57,41 @@ def test_7_5_edits_correct_flow_path_labels_in_the_frozen_cost_tables(csv_str_to
     )
 
 
+@pytest.mark.parametrize(
+    "scenario", ["step_change", "slower_growth", "accelerated_transition"]
+)
+def test_7_5_edits_name_tas_sev_cost_options_as_the_options_table_does(
+    scenario, csv_str_to_df
+):
+    iasr_tables = read_csvs(Path("tests", "test_workbook_table_cache", "7.5"))
+
+    edited = _apply_edits_to_iasr_tables(iasr_tables, "7.5")
+
+    # The workbook's cost rows stop at 'TAS-SEV Option 1' and 'TAS-SEV Option 2'.
+    expected_cost_options = csv_str_to_df("""
+        Flow path,  Option
+        TAS-SEV,    TAS-SEV Option 1 (Project Marinus Stage 1)
+        TAS-SEV,    TAS-SEV Option 2 (Project Marinus Stage 2)
+    """)
+    pd.testing.assert_frame_equal(
+        edited[f"flow_path_augmentation_costs_{scenario}_TAS-SEV"][
+            ["Flow path", "Option"]
+        ],
+        expected_cost_options,
+    )
+
+    # The options table is not edited: these are the names it already uses.
+    expected_options = csv_str_to_df("""
+        Flow path,  Option name
+        TAS-SEV,    TAS-SEV Option 1 (Project Marinus Stage 1)
+        TAS-SEV,    TAS-SEV Option 2 (Project Marinus Stage 2)
+    """)
+    pd.testing.assert_frame_equal(
+        edited["flow_path_augmentation_options_TAS-SEV"][["Flow path", "Option name"]],
+        expected_options,
+    )
+
+
 # --- _load_edit_details ---
 
 
