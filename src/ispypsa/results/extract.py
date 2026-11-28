@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pypsa
 
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.results.generation import (
     extract_demand,
     extract_generation_expansion_results,
@@ -21,22 +22,73 @@ from ispypsa.results.transmission import (
 def extract_regions_and_zones_mapping(
     ispypsa_tables: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
-    """Create a reference table mapping REZs and sub-regions to NEM regions.
+    """Maps the model's nodes to the NEM regions, ISP sub-regions and REZs they
+    are or sit inside.
 
-    This function creates a mapping showing the geographic hierarchy of zones and regions,
-    which can be used for regional analysis and plotting.
+    The results name the node (bus) each link, generator and load is at. The
+    regional results and plots total them by NEM region, sub-region or REZ,
+    and this table says which region, sub-region and REZ each node is or sits
+    inside.
+
+    Under the new table format the nodes are the geographies in
+    network_geography, which already gives each one's region and sub-region
+    at the granularity the model is built at. A REZ has those of the node it
+    connects to: at "nem_regions" granularity the REZ N3 has the region NSW
+    and no sub-region, so a flow from N3 to NSW is not counted as leaving a
+    sub-region the model doesn't have.
+
+    Under the old table format the table lists every sub-region and REZ from
+    sub_regions and renewable_energy_zones, with no node column: a node is
+    matched by its id in the sub-region or REZ column.
+
+    Examples:
+        >>> from pathlib import Path
+        >>> from ispypsa.data_fetch import read_csvs
+        >>> from ispypsa.results import extract_regions_and_zones_mapping
+
+        >>> ispypsa_tables = read_csvs(Path("ispypsa_inputs"))
+        >>> mapping = extract_regions_and_zones_mapping(ispypsa_tables)
 
     Args:
-        ispypsa_tables: Dictionary of ISPyPSA input tables containing at minimum:
-            - "sub_regions": Table with isp_sub_region_id and nem_region_id columns
-            - "renewable_energy_zones": Table with rez_id and isp_sub_region_id columns
+        ispypsa_tables: The ISPyPSA input tables. The new table format reads
+            network_geography, the old format sub_regions and
+            renewable_energy_zones.
 
     Returns:
-        A DataFrame with columns:
-            - nem_region_id: The NEM region identifier
-            - isp_sub_region_id: The sub-region identifier
-            - rez_id: The REZ identifier (NaN for sub-regions without REZs)
+        New table format: a table with one row per node and the columns:
+
+            - node: the node's geo_id, which is also its bus name.
+            - nem_region_id: network_geography's region_id. Blank at
+              "single_region" granularity, where that is "NEM" for every
+              node: the whole NEM is not a region to total by.
+            - isp_sub_region_id: network_geography's subregion_id. Blank at
+              "nem_regions" and "single_region" granularity, where the table
+              has no subregion_id.
+            - rez_id: the node's own id for a REZ, blank otherwise.
+
+        Old table format: a table with one row per sub-region and REZ, and
+        the columns nem_region_id, isp_sub_region_id and rez_id (blank for a
+        sub-region with no REZ).
     """
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch,
+    # dedented, and delete the legacy body below it.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        # Reindexed: subregion_id is only there at sub_regions granularity.
+        geography = ispypsa_tables["network_geography"].reindex(
+            columns=["geo_id", "geo_type", "region_id", "subregion_id"]
+        )
+        is_rez = geography["geo_type"] == "rez"
+        # At single_region granularity every node's region_id is "NEM".
+        is_in_a_region = geography["region_id"] != "NEM"
+        return pd.DataFrame(
+            {
+                "node": geography["geo_id"],
+                "nem_region_id": geography["region_id"].where(is_in_a_region),
+                "isp_sub_region_id": geography["subregion_id"],
+                "rez_id": geography["geo_id"].where(is_rez),
+            }
+        )
+
     if "sub_regions" not in ispypsa_tables:
         return pd.DataFrame(columns=["nem_region_id", "isp_sub_region_id", "rez_id"])
 

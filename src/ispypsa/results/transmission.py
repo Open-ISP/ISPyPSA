@@ -1,28 +1,51 @@
 import pandas as pd
 import pypsa
 
+from ispypsa.feature_flags import FEATURE_FLAGS
 from ispypsa.results.helpers import _build_node_to_geography_mapping
 
 
 def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFrame:
     """Extract transmission expansion results from PyPSA network and rename columns according to ISP conventions.
 
-    Existing capacity is reported with a build year of 0.
+    A path (isp_name) is modelled by its existing link and any expansion
+    links, one per investment period it can be expanded in. The capacity
+    reported for a path at an investment_period is the total over its links
+    built in or before it, and existing capacity is reported at the existing
+    link's build year.
+
+    Under the new table format an existing link's flow limits change from one
+    snapshot to the next (they are set per timeslice), so a link's capacity in
+    each direction is defined as the largest flow its limits allow at any
+    snapshot of the network:
+
+    - forward_capacity_mw: the largest of p_nom_opt * p_max_pu.
+    - reverse_capacity_mw: the most negative of p_nom_opt * p_min_pu.
+
+    The per-snapshot limits are read from the network itself, using the static
+    p_max_pu / p_min_pu where a link has no series. A network reloaded from
+    netCDF gives the same numbers: PyPSA doesn't save a series equal to its
+    default at every snapshot, and an existing link's static values are
+    placeholders equal to those defaults (1.0 and 0.0). Under the old table
+    format the limits are static: forward is p_nom_opt and reverse
+    p_nom_opt * p_min_pu.
 
     Examples:
 
     >>> extract_transmission_expansion_results(network)
        isp_name node_from node_to investment_period  forward_capacity_mw reverse_capacity_mw
-    0       A-B         A       B                 0                  100                 100
-    1       A-B         A       B              2026                  300                 300
-    2       A-B         A       B              2027                  400                 400
+    0       A-B         A       B              2024                  100                -100
+    1       A-B         A       B              2026                  300                -300
+    2       A-B         A       B              2027                  400                -400
 
     Args:
         network: PyPSA network object
 
     Returns:
-        pd.DataFrame: Transmission expansion results in ISP format. Columns: isp_name, node_from, node_to,
-            investment_period, forward_capacity_mw, and reverse_capacity_mw.
+        pd.DataFrame: Transmission expansion results in ISP format. Columns: isp_name, isp_type,
+            node_from, node_to, investment_period, forward_capacity_mw, and
+            reverse_capacity_mw. Reverse capacity is negative: flow from node_to to
+            node_from.
 
     """
 
@@ -36,8 +59,12 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
 
     results = results.rename(columns=columns_to_rename)
 
-    results["forward_capacity_mw"] = results["p_nom_opt"]
-    results["reverse_capacity_mw"] = results["p_nom_opt"] * results["p_min_pu"]
+    # FEATURE_FLAG_CLEANUP[use_new_table_format]: keep the first branch only.
+    if FEATURE_FLAGS["use_new_table_format"]:
+        results = results.join(_largest_flow_limits(network))
+    else:
+        results["forward_capacity_mw"] = results["p_nom_opt"]
+        results["reverse_capacity_mw"] = results["p_nom_opt"] * results["p_min_pu"]
 
     cols_to_keep = [
         "isp_name",
@@ -49,7 +76,9 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
         "reverse_capacity_mw",
     ]
 
-    results = results.loc[:, cols_to_keep].reset_index(drop=True)
+    # Reindexed rather than selected: a network with no links has none of the
+    # custom columns, isp_name and isp_type.
+    results = results.reindex(columns=cols_to_keep).reset_index(drop=True)
 
     cumsum_cols = ["forward_capacity_mw", "reverse_capacity_mw"]
     results = results.sort_values("investment_period")
@@ -77,6 +106,45 @@ def extract_transmission_expansion_results(network: pypsa.Network) -> pd.DataFra
     results = results.reset_index()
 
     return results
+
+
+def _largest_flow_limits(network: pypsa.Network) -> pd.DataFrame:
+    """Works out the largest flow each link allows in each direction, in MW,
+    across the network's snapshots.
+
+    A link's limit at a snapshot is p_nom_opt times its p_max_pu (forward) or
+    p_min_pu (reverse, negative) there: the per-snapshot series where the link
+    has one, else the static value.
+
+    I/O Example:
+        network.links:
+            name            p_nom_opt  p_max_pu  p_min_pu
+            A-B_existing    200        1.0       0.0       # placeholders: series below
+            A-B_exp_2030    300        0.5       -1.0      # static: no series
+
+        network.links_t.p_max_pu:
+            snapshot          A-B_existing
+            2025-01-01 00:00  0.5
+            2025-01-01 01:00  0.25
+
+        network.links_t.p_min_pu:
+            snapshot          A-B_existing
+            2025-01-01 00:00  -1.0
+            2025-01-01 01:00  -1.0
+
+        returns:
+            name            forward_capacity_mw  reverse_capacity_mw
+            A-B_existing    100.0                -200.0
+            A-B_exp_2030    150.0                -300.0
+    """
+    p_max_pu = network.get_switchable_as_dense("Link", "p_max_pu")
+    p_min_pu = network.get_switchable_as_dense("Link", "p_min_pu")
+    return pd.DataFrame(
+        {
+            "forward_capacity_mw": network.links["p_nom_opt"] * p_max_pu.max(),
+            "reverse_capacity_mw": network.links["p_nom_opt"] * p_min_pu.min(),
+        }
+    )
 
 
 def _extract_raw_link_flows(network: pypsa.Network) -> pd.DataFrame:
