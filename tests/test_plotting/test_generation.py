@@ -10,6 +10,8 @@ from ispypsa.plotting.generation import (
     prepare_generation_capacity,
 )
 
+from .plot_test_helpers import drawn_areas_mwh
+
 
 def test_prepare_dispatch_data(csv_str_to_df):
     """Test prepare_dispatch_data aggregation and mapping."""
@@ -151,14 +153,21 @@ def test_plot_dispatch_with_geography(csv_str_to_df):
     RegionA,       2024,              2024-01-01 12:00:00,  10,         20,         -10
     """
 
+    timesteps_csv = """
+    investment_period, timestep,             duration_hours
+    2024,              2024-01-01 12:00:00,  0.5
+    """
+
     regions_and_zones_mapping = csv_str_to_df(mapping_csv)
     dispatch = csv_str_to_df(dispatch_csv)
     demand = csv_str_to_df(demand_csv)
     transmission_flows = csv_str_to_df(transmission_csv)
+    timesteps = csv_str_to_df(timesteps_csv)
 
     result = plot_dispatch(
         dispatch,
         demand,
+        timesteps,
         regions_and_zones_mapping,
         geography_level="nem_region_id",
         transmission_flows=transmission_flows,
@@ -203,10 +212,17 @@ def test_plot_dispatch_system_level(csv_str_to_df):
     SubB, Load2, 2024,              2024-01-01 13:00:00,  70
     """
 
+    timesteps_csv = """
+    investment_period, timestep,             duration_hours
+    2024,              2024-01-01 12:00:00,  1.0
+    2024,              2024-01-01 13:00:00,  1.0
+    """
+
     dispatch = csv_str_to_df(dispatch_csv)
     demand = csv_str_to_df(demand_csv)
+    timesteps = csv_str_to_df(timesteps_csv)
 
-    result = plot_dispatch(dispatch, demand)
+    result = plot_dispatch(dispatch, demand, timesteps)
 
     # Check structure - no node level, just investment_period and week_starting
     assert "2024" in result
@@ -226,6 +242,108 @@ def test_plot_dispatch_system_level(csv_str_to_df):
     assert "Battery Charging" in trace_names
     # Raw "Battery" should not appear as a trace (it's split)
     assert "Battery" not in trace_names
+
+
+def test_plot_dispatch_draws_the_energy_of_unequal_segments(csv_str_to_df):
+    """The area under each trace of a system dispatch chart is the energy: each
+    value times the length of its own segment."""
+    dispatch = csv_str_to_df("""
+        generator,  node,  fuel_type,  investment_period,  timestep,             dispatch_mw
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 00:30:00,  100
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 02:00:00,  200
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 06:00:00,  300
+        Bat1,       SubA,  Battery,    2025,               2024-07-01 00:30:00,  40
+        Bat1,       SubA,  Battery,    2025,               2024-07-01 02:00:00,  -20
+        Bat1,       SubA,  Battery,    2025,               2024-07-01 06:00:00,  0
+    """)
+    demand = csv_str_to_df("""
+        load,   node,  investment_period,  timestep,             demand_mw
+        Load1,  SubA,  2025,               2024-07-01 00:30:00,  140
+        Load1,  SubA,  2025,               2024-07-01 02:00:00,  180
+        Load1,  SubA,  2025,               2024-07-01 06:00:00,  300
+    """)
+    timesteps = csv_str_to_df("""
+        investment_period,  timestep,             duration_hours
+        2025,               2024-07-01 00:30:00,  0.5
+        2025,               2024-07-01 02:00:00,  1.5
+        2025,               2024-07-01 06:00:00,  4.0
+    """)
+
+    result = plot_dispatch(dispatch, demand, timesteps)
+
+    # Coal: 100 x 0.5 + 200 x 1.5 + 300 x 4 = 1550. Demand: 140 x 0.5 +
+    # 180 x 1.5 + 300 x 4 = 1540. The battery discharges 40 MW for the first
+    # half hour (20 MWh) and charges 20 MW for the next hour and a half (-30).
+    # Joining the points at 00:30, 02:00 and 06:00 with straight lines would
+    # instead give coal (100 + 200) / 2 x 1.5 + (200 + 300) / 2 x 4 = 1225.
+    expected = csv_str_to_df("""
+        trace,                 area_mwh
+        Battery__Discharging,  20.0
+        Coal,                  1550.0
+        Battery__Charging,     -30.0
+        Demand,                1540.0
+    """)
+    areas = drawn_areas_mwh(result["2025"]["2024-07-01"]["plot"])
+    pd.testing.assert_frame_equal(areas, expected)
+
+
+def test_plot_dispatch_with_geography_draws_the_energy_of_unequal_segments(
+    csv_str_to_df,
+):
+    """The same for a regional dispatch chart, which adds the transmission
+    traces."""
+    regions_and_zones_mapping = csv_str_to_df("""
+        nem_region_id,  isp_sub_region_id,  rez_id
+        RegionA,        SubA,               Rez1
+    """)
+    dispatch = csv_str_to_df("""
+        generator,  node,  fuel_type,  investment_period,  timestep,             dispatch_mw
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 00:30:00,  100
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 02:00:00,  200
+        Gen1,       SubA,  Coal,       2025,               2024-07-01 06:00:00,  300
+    """)
+    demand = csv_str_to_df("""
+        load,   node,  investment_period,  timestep,             demand_mw
+        Load1,  SubA,  2025,               2024-07-01 00:30:00,  110
+        Load1,  SubA,  2025,               2024-07-01 02:00:00,  210
+        Load1,  SubA,  2025,               2024-07-01 06:00:00,  260
+    """)
+    transmission_flows = csv_str_to_df("""
+        nem_region_id,  investment_period,  timestep,             imports_mw,  exports_mw,  net_imports_mw
+        RegionA,        2025,               2024-07-01 00:30:00,  10,          0,           10
+        RegionA,        2025,               2024-07-01 02:00:00,  30,          20,          10
+        RegionA,        2025,               2024-07-01 06:00:00,  0,           40,          -40
+    """)
+    timesteps = csv_str_to_df("""
+        investment_period,  timestep,             duration_hours
+        2025,               2024-07-01 00:30:00,  0.5
+        2025,               2024-07-01 02:00:00,  1.5
+        2025,               2024-07-01 06:00:00,  4.0
+    """)
+
+    result = plot_dispatch(
+        dispatch,
+        demand,
+        timesteps,
+        regions_and_zones_mapping,
+        geography_level="nem_region_id",
+        transmission_flows=transmission_flows,
+    )
+
+    # Imports: 10 x 0.5 + 30 x 1.5 = 50. Exports: 20 x 1.5 + 40 x 4 = 190, drawn
+    # as negative, and twice: once hidden under the generation stack and once
+    # in the load stack. Coal: 100 x 0.5 + 200 x 1.5 + 300 x 4 = 1550. Demand:
+    # 110 x 0.5 + 210 x 1.5 + 260 x 4 = 1410.
+    expected = csv_str_to_df("""
+        trace,                           area_mwh
+        Transmission__Exports__Hidden,   -190.0
+        Transmission__Imports,           50.0
+        Coal,                            1550.0
+        Transmission__Exports,           -190.0
+        Demand,                          1410.0
+    """)
+    areas = drawn_areas_mwh(result["RegionA"]["2025"]["2024-07-01"]["plot"])
+    pd.testing.assert_frame_equal(areas, expected)
 
 
 def test_prepare_generation_capacity(csv_str_to_df):

@@ -159,6 +159,12 @@ def test_create_plot_suite(csv_str_to_df):
     Gen2,      Wind,      S2,   50,          2030,              2050
     """
 
+    # Timesteps (the length of each interval, which sets the width it is drawn at)
+    timesteps_csv = """
+    investment_period, timestep,             duration_hours
+    2030,              2030-01-01 00:00:00,  0.5
+    """
+
     # Compile results dictionary
     results = {
         "regions_and_zones_mapping": csv_str_to_df(mapping_csv),
@@ -169,6 +175,7 @@ def test_create_plot_suite(csv_str_to_df):
         "generator_dispatch": csv_str_to_df(dispatch_csv),
         "demand": csv_str_to_df(demand_csv),
         "generation_expansion": csv_str_to_df(generation_csv),
+        "timesteps": csv_str_to_df(timesteps_csv),
     }
 
     # 2. Run the function

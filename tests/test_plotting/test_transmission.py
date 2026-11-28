@@ -9,6 +9,8 @@ from ispypsa.plotting.transmission import (
     prepare_transmission_capacity_by_region,
 )
 
+from .plot_test_helpers import drawn_areas_mwh
+
 
 def test_prepare_transmission_capacity_by_region(csv_str_to_df):
     """
@@ -319,10 +321,17 @@ def test_plot_flows(csv_str_to_df):
     REZ2,     rez_no_limit, 2030,              0,                   0
     """
 
+    timesteps_csv = """
+    investment_period, timestep,            duration_hours
+    2030,              2030-01-01 00:00:00, 24.0
+    2030,              2030-01-02 00:00:00, 24.0
+    """
+
     flows = csv_str_to_df(flows_csv)
     transmission_expansion = csv_str_to_df(transmission_expansion_csv)
+    timesteps = csv_str_to_df(timesteps_csv)
 
-    result = plot_flows(flows, transmission_expansion)
+    result = plot_flows(flows, transmission_expansion, timesteps)
 
     # Structure check
     # Link1 2030-01-01 is Tuesday, so week starting is Monday 2029-12-31
@@ -367,6 +376,43 @@ def test_plot_flows(csv_str_to_df):
         expected_data_rez2.reset_index(drop=True),
         check_dtype=False,
     )
+
+
+def test_plot_flows_draws_the_energy_of_unequal_segments(csv_str_to_df):
+    """The area under the flow is the energy transferred: each flow times the
+    length of its own segment. The limits are drawn over the same segments."""
+    flows = csv_str_to_df("""
+        isp_name,  investment_period,  timestep,             flow_mw
+        Link1,     2025,               2024-07-01 00:30:00,  100
+        Link1,     2025,               2024-07-01 02:00:00,  -200
+        Link1,     2025,               2024-07-01 06:00:00,  300
+    """)
+    transmission_expansion = csv_str_to_df("""
+        isp_name,  isp_type,   investment_period,  forward_capacity_mw,  reverse_capacity_mw
+        Link1,     flow_path,  2025,               500,                  -450
+    """)
+    timesteps = csv_str_to_df("""
+        investment_period,  timestep,             duration_hours
+        2025,               2024-07-01 00:30:00,  0.5
+        2025,               2024-07-01 02:00:00,  1.5
+        2025,               2024-07-01 06:00:00,  4.0
+    """)
+
+    result = plot_flows(flows, transmission_expansion, timesteps)
+
+    # Flow: 100 x 0.5 - 200 x 1.5 + 300 x 4 = 950. The segments cover six
+    # hours, so the limits give 500 x 6 = 3000 and -450 x 6 = -2700. Joining
+    # the points at 00:30, 02:00 and 06:00 with straight lines would instead
+    # give a flow of (100 - 200) / 2 x 1.5 + (-200 + 300) / 2 x 4 = 125, and
+    # limits over five and a half hours.
+    expected = csv_str_to_df("""
+        trace,            area_mwh
+        Flow,             950.0
+        Forward__Limit,   3000.0
+        Reverse__Limit,   -2700.0
+    """)
+    areas = drawn_areas_mwh(result["flow_path"]["Link1"]["2025"]["2024-07-01"]["plot"])
+    pd.testing.assert_frame_equal(areas, expected)
 
 
 def test_plot_regional_capacity_expansion(csv_str_to_df):

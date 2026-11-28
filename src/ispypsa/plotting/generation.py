@@ -3,7 +3,12 @@ from typing import Literal
 import pandas as pd
 import plotly.graph_objects as go
 
-from ispypsa.plotting.helpers import _calculate_week_starting
+from ispypsa.plotting.helpers import (
+    _STEP_LINE_SHAPE,
+    _add_interval_starts,
+    _build_step_coordinates,
+    _calculate_week_starting,
+)
 from ispypsa.plotting.style import (
     create_plotly_professional_layout,
     get_fuel_type_color,
@@ -310,7 +315,7 @@ def _create_generation_trace(
         mode="lines",
         stackgroup="one",
         fillcolor=get_fuel_type_color(carrier),
-        line=dict(width=0),
+        line=dict(width=0, shape=_STEP_LINE_SHAPE),
         legendgroup="Generation",
         showlegend=carrier != "Transmission Exports Hidden",
         legendgrouptitle_text="Generation",
@@ -325,7 +330,7 @@ def _create_demand_trace(timesteps: pd.DatetimeIndex, values: list) -> go.Scatte
         y=values,
         name="Demand",
         mode="lines",
-        line=dict(color="black", width=2, dash="dash"),
+        line=dict(color="black", width=2, dash="dash", shape=_STEP_LINE_SHAPE),
         legendgroup="Demand",
         legendgrouptitle_text="Demand",
         hovertemplate="<b>Demand</b><br>%{y:.2f} MW<extra></extra>",
@@ -341,7 +346,7 @@ def _create_export_trace(timesteps: pd.DatetimeIndex, values: list) -> go.Scatte
         mode="lines",
         stackgroup="two",
         fillcolor=get_fuel_type_color("Transmission Exports"),
-        line=dict(width=0),
+        line=dict(width=0, shape=_STEP_LINE_SHAPE),
         legendgroup="Load",  # Appears in Load legend group
         legendgrouptitle_text="Load",
         visible="legendonly",
@@ -360,7 +365,7 @@ def _create_battery_charging_trace(
         mode="lines",
         stackgroup="two",
         fillcolor=get_fuel_type_color("Battery Charging"),
-        line=dict(width=0),
+        line=dict(width=0, shape=_STEP_LINE_SHAPE),
         legendgroup="Load",  # Appears in Load legend group
         legendgrouptitle_text="Load",
         visible="legendonly",
@@ -378,6 +383,9 @@ def _create_plotly_figure(
 
     Battery storage is split into discharging (positive, stacks with generation)
     and charging (negative, stacks with load/exports).
+
+    Every trace is drawn as steps: each value is held flat from its interval_start
+    to its timestep (see _build_step_coordinates).
     """
     fig = go.Figure()
 
@@ -390,7 +398,9 @@ def _create_plotly_figure(
     if has_battery_data:
         # Aggregate battery dispatch by timestep
         battery_by_timestep = (
-            battery_dispatch.groupby("timestep")["dispatch_mw"].sum().reset_index()
+            battery_dispatch.groupby(["interval_start", "timestep"])["dispatch_mw"]
+            .sum()
+            .reset_index()
         )
         # Discharging = positive values
         battery_discharging = battery_by_timestep.copy()
@@ -403,62 +413,61 @@ def _create_plotly_figure(
 
     # Add transmission traces if provided (hidden offset trace first)
     if transmission is not None and not transmission.empty:
+        export_steps = _build_step_coordinates(transmission, "exports_mw")
+        import_steps = _build_step_coordinates(transmission, "imports_mw")
         fig.add_trace(
             _create_generation_trace(
                 "Transmission Exports Hidden",
-                transmission["timestep"],
-                -1 * transmission["exports_mw"],
+                export_steps["time"],
+                -1 * export_steps["value"],
             )
         )
         fig.add_trace(
             _create_generation_trace(
                 "Transmission Imports",
-                transmission["timestep"],
-                transmission["imports_mw"],
+                import_steps["time"],
+                import_steps["value"],
             )
         )
 
     # Add battery discharging trace (stacks with generation)
     if has_battery_data and battery_discharging["dispatch_mw"].sum() > 0:
+        steps = _build_step_coordinates(battery_discharging, "dispatch_mw")
         fig.add_trace(
             _create_generation_trace(
-                "Battery Discharging",
-                battery_discharging["timestep"],
-                battery_discharging["dispatch_mw"],
+                "Battery Discharging", steps["time"], steps["value"]
             )
         )
 
     # Add generation traces (sorted alphabetically, excluding Battery)
     fuel_types = sorted(non_battery_dispatch["fuel_type"].unique())
     for fuel_type in fuel_types:
+        fuel_dispatch = non_battery_dispatch[
+            non_battery_dispatch["fuel_type"] == fuel_type
+        ]
+        steps = _build_step_coordinates(fuel_dispatch, "dispatch_mw")
         fig.add_trace(
-            _create_generation_trace(
-                fuel_type,
-                non_battery_dispatch["timestep"],
-                non_battery_dispatch[non_battery_dispatch["fuel_type"] == fuel_type][
-                    "dispatch_mw"
-                ],
-            )
+            _create_generation_trace(fuel_type, steps["time"], steps["value"])
         )
 
     # Add export trace if transmission provided
     if transmission is not None and not transmission.empty:
         fig.add_trace(
-            _create_export_trace(
-                transmission["timestep"], -1 * transmission["exports_mw"]
-            )
+            _create_export_trace(export_steps["time"], -1 * export_steps["value"])
         )
 
     # Add battery charging trace (stacks with load/exports, shown as negative)
     if has_battery_data and battery_charging["dispatch_mw"].sum() < 0:
+        steps = _build_step_coordinates(battery_charging, "dispatch_mw")
         fig.add_trace(
             _create_battery_charging_trace(
-                battery_charging["timestep"],
-                battery_charging["dispatch_mw"],  # Already negative
+                steps["time"],
+                steps["value"],  # Already negative
             )
         )
 
-    fig.add_trace(_create_demand_trace(demand["timestep"], demand["demand_mw"]))
+    steps = _build_step_coordinates(demand, "demand_mw")
+    fig.add_trace(_create_demand_trace(steps["time"], steps["value"]))
 
     # Apply professional styling with timeseries formatting
     layout = create_plotly_professional_layout(title=title, timeseries=True)
@@ -469,6 +478,7 @@ def _create_plotly_figure(
 def plot_dispatch(
     dispatch: pd.DataFrame,
     demand: pd.DataFrame,
+    timesteps: pd.DataFrame,
     regions_and_zones_mapping: pd.DataFrame | None = None,
     geography_level: Literal["nem_region_id", "isp_sub_region_id"] | None = None,
     transmission_flows: pd.DataFrame | None = None,
@@ -479,11 +489,17 @@ def plot_dispatch(
     week, with demand overlaid as a line. When geography_level is specified,
     creates separate charts per node with transmission flows.
 
+    Each value is drawn as a flat step over the interval ending at its timestep,
+    whose length is the timestep's duration_hours, so the area under a trace is
+    its energy.
+
     Args:
         dispatch: Generator dispatch data from extract_generator_dispatch().
             Expected columns: generator, node, fuel_type, investment_period, timestep, dispatch_mw
         demand: Demand data from extract_demand().
             Expected columns: load, node, investment_period, timestep, demand_mw
+        timesteps: The length of each timestep from extract_timesteps().
+            Expected columns: investment_period, timestep, duration_hours
         regions_and_zones_mapping: Geographic mapping from extract_regions_and_zones_mapping().
             Required if geography_level is specified.
         geography_level: Level of geography to map to. One of:
@@ -515,11 +531,14 @@ def plot_dispatch(
     demand_prepared = prepare_demand_data(
         demand, regions_and_zones_mapping, geography_level
     )
+    dispatch_prepared = _add_interval_starts(dispatch_prepared, timesteps)
+    demand_prepared = _add_interval_starts(demand_prepared, timesteps)
 
     if geography_level is not None:
         transmission_prepared = _prepare_transmission_data(
             transmission_flows, geography_level
         )
+        transmission_prepared = _add_interval_starts(transmission_prepared, timesteps)
         group_cols = ["node", "investment_period", "week_starting"]
     else:
         group_cols = ["investment_period", "week_starting"]
@@ -555,7 +574,7 @@ def plot_dispatch(
             dispatch_group, demand_group, title, transmission_group
         )
 
-        plot_data = dispatch_group.copy()
+        plot_data = dispatch_group.drop(columns="interval_start")
         plot_data["data_type"] = "dispatch"
 
         if geography_level is not None:
