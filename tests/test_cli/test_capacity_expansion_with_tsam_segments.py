@@ -59,3 +59,21 @@ def test_capacity_expansion_model_solves_on_tsam_segments(
     assert len(network.snapshots) == 42
     assert network.snapshot_weightings["stores"].sum() == 168
     assert network.generators_t.p.shape[0] == 42
+
+    # The results say how long each segment the model was solved on lasts, so
+    # the per-timestep results can be turned into energy.
+    timesteps = pd.read_csv(
+        run_dir / "outputs" / "capacity_expansion_tables" / "timesteps.csv"
+    )
+    assert list(timesteps.columns) == [
+        "investment_period",
+        "timestep",
+        "model_year",
+        "duration_hours",
+        "hours_represented",
+    ]
+    assert len(timesteps) == 42
+    # The lengths are the ones the network was solved with.
+    assert list(timesteps["duration_hours"]) == list(
+        network.snapshot_weightings["stores"]
+    )

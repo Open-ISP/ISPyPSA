@@ -8,7 +8,9 @@ description: >
   table, and has rows only when the capacity expansion phase sets
   temporal.capacity_expansion.aggregation.tsam. Nothing in the model build reads
   it: it is kept so that results reported per segment can be related back to
-  the intervals each segment covers.
+  the intervals each segment covers. It is not needed to find a segment's
+  length: the timesteps results table gives the length of each segment and the
+  hours of its model year it stands for.
 
   Source tables:
     - none: built from the model's snapshots and trace data.

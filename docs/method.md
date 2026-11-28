@@ -224,6 +224,15 @@ config input. The operational phase is solved in windows of a fixed number of in
 assumes every interval is the same length.
 - The table recording which time intervals each segment replaced is saved next to the
 snapshots table, as `snapshot_map.csv`. It has no rows when segments are not used.
+- The results give a value in MW for each segment, and the segments differ in length. The
+`timesteps` results table has one row per segment with its model year (`model_year`), its
+length (`duration_hours`) and the hours of its model year it stands for (`hours_represented`:
+its length, scaled so the segments of each model year add up to 8760). Merge it onto a results
+table on `investment_period` and `timestep` and multiply by one of the two to get energy in
+MWh: `duration_hours` for the energy within the modelled time, `hours_represented` summed by
+`model_year` for each year's energy. An unweighted sum or average over the segments treats a
+one hour segment and an eight hour segment alike. The table is written for every model run,
+with or without segments, and for the operational phase too.
 
 ## Capacity expansion
 

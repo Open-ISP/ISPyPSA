@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
+from ispypsa.pypsa_build.initialise import _initialise_network
 from ispypsa.results.extract import (
     RESULTS_FILES,
     extract_regions_and_zones_mapping,
@@ -113,6 +114,7 @@ def test_extract_tabular_results_includes_all_expected_files():
     assert "nem_region_transmission_flows" in RESULTS_FILES
     assert "generator_dispatch" in RESULTS_FILES
     assert "demand" in RESULTS_FILES
+    assert "timesteps" in RESULTS_FILES
 
 
 def test_extract_tabular_results(csv_str_to_df):
@@ -150,6 +152,11 @@ def test_extract_tabular_results(csv_str_to_df):
     # Create mock network
     network = MagicMock()
 
+    snapshots = csv_str_to_df("""
+        investment_periods,  snapshots,            stores,  model_year
+        2025,                2024-07-01 00:30:00,  0.5,     2025
+    """)
+
     # Patch RESULTS_FILES
     with patch.dict(
         "ispypsa.results.extract.RESULTS_FILES",
@@ -157,7 +164,7 @@ def test_extract_tabular_results(csv_str_to_df):
         clear=True,
     ):
         # Execute
-        result = extract_tabular_results(network, ispypsa_tables)
+        result = extract_tabular_results(network, ispypsa_tables, snapshots)
 
     # Verify all expected keys are present
     assert "regions_and_zones_mapping" in result
@@ -168,3 +175,41 @@ def test_extract_tabular_results(csv_str_to_df):
     assert "rez_transmission_flows" in result
     assert "isp_sub_region_transmission_flows" in result
     assert "nem_region_transmission_flows" in result
+
+
+def test_extract_tabular_results_includes_the_timesteps_table(csv_str_to_df):
+    snapshots = csv_str_to_df("""
+        investment_periods,  snapshots,            objective,  generators,  stores,  model_year
+        2025,                2024-07-01 00:30:00,  2190.0,     2190.0,      0.5,     2025
+        2025,                2024-07-01 02:00:00,  6570.0,     6570.0,      1.5,     2025
+    """)
+    network = _initialise_network(snapshots)
+    sub_regions = csv_str_to_df("""
+        nem_region_id,  isp_sub_region_id
+        NSW1,           CNSW
+    """)
+
+    # The network has nothing but snapshots, so the extractors for the other
+    # tables are mocked.
+    other_extractors = {
+        file: MagicMock(return_value=pd.DataFrame())
+        for file in RESULTS_FILES
+        if file != "timesteps"
+    }
+    with (
+        patch.dict("ispypsa.results.extract.RESULTS_FILES", other_extractors),
+        patch("ispypsa.results.extract.extract_transmission_flows"),
+    ):
+        results = extract_tabular_results(
+            network, {"sub_regions": sub_regions}, snapshots
+        )
+
+    # Wiring only: the content is covered by the tests in test_timesteps.py.
+    assert list(results["timesteps"].columns) == [
+        "investment_period",
+        "timestep",
+        "model_year",
+        "duration_hours",
+        "hours_represented",
+    ]
+    assert len(results["timesteps"]) == 2

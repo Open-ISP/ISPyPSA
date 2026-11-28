@@ -132,7 +132,7 @@ network.optimize.solve_model(solver_name=config.solver)
 
 # Save capacity expansion results
 save_pypsa_network(network, pypsa_outputs_directory, "capacity_expansion")
-capacity_expansion_results = extract_tabular_results(network, ispypsa_tables)
+capacity_expansion_results = extract_tabular_results(network, ispypsa_tables, snapshots)
 capacity_expansion_results["regions_and_zones_mapping"] = (
     extract_regions_and_zones_mapping(ispypsa_tables)
 )
@@ -188,7 +188,9 @@ optimize_with_rolling_horizon(
 save_pypsa_network(network, pypsa_outputs_directory, "operational")
 
 # Extract and save operational results
-operational_results = extract_tabular_results(network, ispypsa_tables)
+operational_results = extract_tabular_results(
+    network, ispypsa_tables, operational_snapshots
+)
 operational_results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
     ispypsa_tables
 )

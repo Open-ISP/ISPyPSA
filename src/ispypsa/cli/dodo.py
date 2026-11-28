@@ -559,7 +559,9 @@ def create_and_run_capacity_expansion_model() -> None:
         # Never use network.optimize() as this will remove custom constraints.
         network.optimize.solve_model(solver_name=config.solver)
         save_pypsa_network(network, get_pypsa_outputs_directory(), "capacity_expansion")
-        results = extract_tabular_results(network, ispypsa_tables)
+        results = extract_tabular_results(
+            network, ispypsa_tables, pypsa_friendly_input_tables["snapshots"]
+        )
 
         # Load ispypsa_tables to create regions and zones mapping
         ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
@@ -691,7 +693,11 @@ def create_and_run_operational_model() -> None:
 
         # Load ispypsa_tables to create regions and zones mapping
         ispypsa_tables = read_csvs(get_ispypsa_input_tables_directory())
-        results = extract_tabular_results(network, ispypsa_tables)
+        results = extract_tabular_results(
+            network,
+            ispypsa_tables,
+            pypsa_friendly_input_tables["operational_snapshots"],
+        )
         results["regions_and_zones_mapping"] = extract_regions_and_zones_mapping(
             ispypsa_tables
         )
